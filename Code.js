@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name          Mega Ad Dodger 3000 (Stealth Reactor Core) - V3.66 COMPOSABLE PIPELINES
-// @version       3.67
-// @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing and remote configuration.
-// @author        Senior Expert AI (Refactored)
+// @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
+// @version       1.00
+// @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
+// @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
 // @run-at        document-start
 // @grant         none
@@ -12,10 +12,10 @@
     'use strict';
 
     /**
-     * MEGA AD DODGER 3000 (Refactored v3.67)
+     * MEGA AD DODGER 3000 (Stealth Reactor Core)
      * A monolithic, self-contained userscript for Twitch ad blocking.
      * 
-     * CHANGES v3.67:
+     * CHANGES v1.00:
      * - Reinstated Video Listener Cleanup to prevent memory leaks.
      * - Added Initial Acquisition Flag for faster first-load blocking.
      * - Enhanced Player Element Removal Detection for edge cases.
@@ -39,7 +39,7 @@
                 LOG_EXPIRY_MIN: 5,
                 REVERSION_DELAY_MS: 2,
                 FORCE_PLAY_DEFER_MS: 1,
-                REATTEMPT_DELAY_MS: 15 * 60 * 1000,
+                REATTEMPT_DELAY_MS: 60 * 1000,
             },
             network: {
                 AD_PATTERNS: ['/ad/v1/', '/usher/v1/ad/', '/api/v5/ads/', 'pubads.g.doubleclick.net'],
@@ -294,12 +294,13 @@
                         if (CONFIG.debug) console.warn('[MAD-3000] Blob detected, skipping src reload.');
                         video.play();
                     } else {
-                        const bust = '?t=' + Math.random().toString(36).substring(2);
+                        const separator = src.includes('?') ? '&' : '?';
+                        const bust = separator + 't=' + Math.random().toString(36).substring(2);
                         video.src = '';
                         video.load();
 
                         await Fn.sleep(CONFIG.timing.FORCE_PLAY_DEFER_MS);
-                        video.src = src.split('?')[0] + bust;
+                        video.src = src + bust;
                         video.load();
                         video.play();
                     }
@@ -332,6 +333,8 @@
     const HealthMonitor = {
         timer: null,
         videoRef: null,
+        lastTime: 0,
+        stuckCount: 0,
 
         start: (container) => {
             const video = container.querySelector(CONFIG.selectors.VIDEO);
@@ -340,6 +343,8 @@
             if (HealthMonitor.videoRef !== video) {
                 HealthMonitor.stop();
                 HealthMonitor.videoRef = video;
+                HealthMonitor.lastTime = video.currentTime;
+                HealthMonitor.stuckCount = 0;
             }
 
             if (HealthMonitor.timer) return;
@@ -349,7 +354,22 @@
                     HealthMonitor.stop();
                     return;
                 }
-                if (HealthMonitor.videoRef.readyState < 4 && !HealthMonitor.videoRef.paused && !HealthMonitor.videoRef.ended) {
+
+                // Check if video is stuck (time not advancing while not paused)
+                if (!HealthMonitor.videoRef.paused && !HealthMonitor.videoRef.ended && HealthMonitor.videoRef.readyState < 4) {
+                    if (Math.abs(HealthMonitor.videoRef.currentTime - HealthMonitor.lastTime) < 0.1) {
+                        HealthMonitor.stuckCount++;
+                    } else {
+                        HealthMonitor.stuckCount = 0;
+                        HealthMonitor.lastTime = HealthMonitor.videoRef.currentTime;
+                    }
+                } else {
+                    HealthMonitor.stuckCount = 0;
+                    HealthMonitor.lastTime = HealthMonitor.videoRef.currentTime;
+                }
+
+                // Trigger if stuck for ~4 seconds (2 checks * 2000ms)
+                if (HealthMonitor.stuckCount >= 2) {
                     HealthMonitor.stop();
                     Adapters.EventBus.emit(CONFIG.events.AD_DETECTED);
                 }
@@ -360,6 +380,7 @@
             if (HealthMonitor.timer) clearInterval(HealthMonitor.timer);
             HealthMonitor.timer = null;
             HealthMonitor.videoRef = null;
+            HealthMonitor.stuckCount = 0;
         }
     };
 
@@ -450,6 +471,12 @@
                 const updates = { errorCount: count, lastError: `${status}: ${detail}` };
                 if (count < CONFIG.timing.LOG_THROTTLE) updates.lastAttempt = Date.now();
                 Store.update(updates);
+            });
+
+            Adapters.EventBus.on(CONFIG.events.REPORT, ({ status }) => {
+                if (status === 'SUCCESS') {
+                    Store.update({ errorCount: 0, lastError: null });
+                }
             });
         },
 
