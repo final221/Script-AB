@@ -42,7 +42,7 @@
                 REATTEMPT_DELAY_MS: 15 * 60 * 1000,
             },
             network: {
-                AD_PATTERNS: ['video-weaver.syd03.hls.ttvnw.net/ad/v1/', '/usher/v1/ad/', '/api/v5/ads/', 'pubads.g.doubleclick.net'],
+                AD_PATTERNS: ['/ad/v1/', '/usher/v1/ad/', '/api/v5/ads/', 'pubads.g.doubleclick.net'],
                 TRIGGER_PATTERNS: ['/ad_state/', 'vod_ad_manifest'],
             },
             mock: {
@@ -287,23 +287,27 @@
             const video = container.querySelector(CONFIG.selectors.VIDEO);
 
             try {
-                if (video) { video.src = ''; video.load(); }
+                if (video) {
+                    const src = video.src;
+                    // Fix: Do not attempt to reload blob URLs as they are not network-addressable
+                    if (src.startsWith('blob:')) {
+                        if (CONFIG.debug) console.warn('[MAD-3000] Blob detected, skipping src reload.');
+                        video.play();
+                    } else {
+                        const bust = '?t=' + Math.random().toString(36).substring(2);
+                        video.src = '';
+                        video.load();
+
+                        await Fn.sleep(CONFIG.timing.FORCE_PLAY_DEFER_MS);
+                        video.src = src.split('?')[0] + bust;
+                        video.load();
+                        video.play();
+                    }
+                }
 
                 await Fn.sleep(CONFIG.timing.REVERSION_DELAY_MS);
                 ctx[keys.k1]();      // Pause
                 ctx[keys.k0](true);  // Mute/Toggle
-
-                if (video) {
-                    const src = video.src;
-                    const bust = '?t=' + Math.random().toString(36).substring(2);
-                    video.src = '';
-                    video.load();
-
-                    await Fn.sleep(CONFIG.timing.FORCE_PLAY_DEFER_MS);
-                    video.src = src.split('?')[0] + bust;
-                    video.load();
-                    video.play();
-                }
 
                 Adapters.EventBus.emit(CONFIG.events.REPORT, { status: 'SUCCESS' });
             } catch (e) {
