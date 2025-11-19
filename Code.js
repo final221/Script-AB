@@ -380,6 +380,13 @@
                 activeElement = video;
                 activeHandler = () => Adapters.EventBus.emit(CONFIG.events.ACQUIRE);
                 activeElement.addEventListener('loadstart', activeHandler);
+            },
+            detach: () => {
+                if (activeElement && activeHandler) {
+                    activeElement.removeEventListener('loadstart', activeHandler);
+                }
+                activeElement = null;
+                activeHandler = null;
             }
         };
     })();
@@ -388,6 +395,10 @@
     // 6. CORE ORCHESTRATOR
     // ============================================================================
     const Core = {
+        rootObserver: null,
+        playerObserver: null,
+        activeContainer: null,
+
         init: () => {
             if (window.self !== window.top) return;
 
@@ -402,10 +413,14 @@
             Network.init();
             Core.setupEvents();
 
-            setTimeout(() => {
-                Core.inject();
-                Core.observeLifecycle();
-            }, CONFIG.timing.INJECTION_MS);
+            const start = () => {
+                if (document.body) {
+                    Core.startRootObservation();
+                } else {
+                    setTimeout(start, 50);
+                }
+            };
+            start();
         },
 
         inject: () => {
@@ -415,16 +430,14 @@
 
         setupEvents: () => {
             Adapters.EventBus.on(CONFIG.events.ACQUIRE, () => {
-                const container = Adapters.DOM.find(CONFIG.selectors.PLAYER);
-                if (container) {
-                    const ctx = PlayerContext.get(container);
-                    if (ctx) HealthMonitor.start(container);
+                if (Core.activeContainer) {
+                    const ctx = PlayerContext.get(Core.activeContainer);
+                    if (ctx) HealthMonitor.start(Core.activeContainer);
                 }
             });
 
             Adapters.EventBus.on(CONFIG.events.AD_DETECTED, () => {
-                const c = Adapters.DOM.find(CONFIG.selectors.PLAYER);
-                if (c) Resilience.execute(c);
+                if (Core.activeContainer) Resilience.execute(Core.activeContainer);
             });
 
             Adapters.EventBus.on(CONFIG.events.LOG, ({ status, detail }) => {
@@ -436,54 +449,67 @@
             });
         },
 
-        observeLifecycle: () => {
-            const container = Adapters.DOM.find(CONFIG.selectors.PLAYER);
-            if (!container) {
-                setTimeout(Core.observeLifecycle, CONFIG.timing.RETRY_MS);
-                return;
-            }
+        startRootObservation: () => {
+            const existing = Adapters.DOM.find(CONFIG.selectors.PLAYER);
+            if (existing) Core.handlePlayerMount(existing);
 
-            // Feature #2: Initial Acquisition Flag
-            let isInitialAcquisition = true;
-
-            if (Core.observer) Core.observer.disconnect();
-
-            const debouncedAcquire = Fn.debounce(() => {
-                Adapters.EventBus.emit(CONFIG.events.ACQUIRE);
-            }, CONFIG.timing.INJECTION_MS * 2);
-
-            const handleMutations = (mutations) => {
-                let shouldReacquire = isInitialAcquisition;
-                if (isInitialAcquisition) isInitialAcquisition = false;
-
+            Core.rootObserver = Adapters.DOM.observe(document.body, (mutations) => {
                 for (const m of mutations) {
-                    if (shouldReacquire) break;
-
                     if (m.type === 'childList') {
-                        const hasVideo = (nodes) => Array.from(nodes).some(n => n.matches && n.matches(CONFIG.selectors.VIDEO));
-                        // Feature #3: Player Element Removal Detection
-                        const hasPlayer = (nodes) => Array.from(nodes).some(n => (n.matches && n.matches(CONFIG.selectors.PLAYER)) || (n.closest && n.closest(CONFIG.selectors.PLAYER)));
-
-                        if (hasVideo(m.addedNodes) || hasVideo(m.removedNodes) || hasPlayer(m.removedNodes)) {
-                            shouldReacquire = true;
-                            break;
-                        }
-                    }
-                    // Feature #3: Attribute mutations scoped to player
-                    if (m.type === 'attributes' && m.attributeName === 'class') {
-                        if (m.target.closest(CONFIG.selectors.PLAYER)) {
-                            shouldReacquire = true;
-                            break;
-                        }
+                        m.addedNodes.forEach(n => {
+                            if (n.nodeType === 1) {
+                                if (n.matches(CONFIG.selectors.PLAYER)) Core.handlePlayerMount(n);
+                                else if (n.querySelector) {
+                                    const p = n.querySelector(CONFIG.selectors.PLAYER);
+                                    if (p) Core.handlePlayerMount(p);
+                                }
+                            }
+                        });
+                        m.removedNodes.forEach(n => {
+                            if (n === Core.activeContainer) Core.handlePlayerUnmount();
+                            else if (n.contains && Core.activeContainer && n.contains(Core.activeContainer)) Core.handlePlayerUnmount();
+                        });
                     }
                 }
-                if (shouldReacquire) debouncedAcquire();
-            };
+            }, { childList: true, subtree: true });
+        },
 
-            Core.observer = Adapters.DOM.observe(container, handleMutations, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] });
+        handlePlayerMount: (container) => {
+            if (Core.activeContainer === container) return;
+            if (Core.activeContainer) Core.handlePlayerUnmount();
 
-            // Feature #1: Video Listener Cleanup
+            if (CONFIG.debug) console.log('[MAD-3000] Player mounted');
+            Core.activeContainer = container;
+
+            Core.playerObserver = Adapters.DOM.observe(container, (mutations) => {
+                let shouldReacquire = false;
+                for (const m of mutations) {
+                    if (m.type === 'childList') {
+                        const hasVideo = (nodes) => Array.from(nodes).some(n => n.matches && n.matches(CONFIG.selectors.VIDEO));
+                        if (hasVideo(m.addedNodes) || hasVideo(m.removedNodes)) shouldReacquire = true;
+                    }
+                    if (m.type === 'attributes' && m.attributeName === 'class') shouldReacquire = true;
+                }
+                if (shouldReacquire) Core.inject();
+            }, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] });
+
             VideoListenerManager.attach(container);
+            Core.inject();
+        },
+
+        handlePlayerUnmount: () => {
+            if (!Core.activeContainer) return;
+            if (CONFIG.debug) console.log('[MAD-3000] Player unmounted');
+
+            if (Core.playerObserver) {
+                Core.playerObserver.disconnect();
+                Core.playerObserver = null;
+            }
+
+            VideoListenerManager.detach();
+            HealthMonitor.stop();
+            PlayerContext.reset();
+            Core.activeContainer = null;
         }
     };
 
