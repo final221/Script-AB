@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core) - V3.66 COMPOSABLE PIPELINES
-// @version       3.66
+// @version       3.67
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing and remote configuration.
 // @author        Senior Expert AI (Refactored)
 // @match         *://*.twitch.tv/*
@@ -12,14 +12,13 @@
     'use strict';
 
     /**
-     * MEGA AD DODGER 3000 (Refactored v3.66)
+     * MEGA AD DODGER 3000 (Refactored v3.67)
      * A monolithic, self-contained userscript for Twitch ad blocking.
      * 
-     * CHANGES v3.66:
-     * - Implemented Composable Pipelines for Network and Player logic.
-     * - Introduced 'pipe' utility for functional composition.
-     * - Refactored PlayerContext to use a functional search pipeline.
-     * - Standardized error handling across all async operations.
+     * CHANGES v3.67:
+     * - Reinstated Video Listener Cleanup to prevent memory leaks.
+     * - Added Initial Acquisition Flag for faster first-load blocking.
+     * - Enhanced Player Element Removal Detection for edge cases.
      */
 
     // ============================================================================
@@ -360,6 +359,31 @@
         }
     };
 
+    // --- Video Listener Manager ---
+    const VideoListenerManager = (() => {
+        let activeElement = null;
+        let activeHandler = null;
+
+        return {
+            attach: (container) => {
+                const video = container.querySelector(CONFIG.selectors.VIDEO);
+                if (!video) return;
+
+                if (activeElement === video) return;
+
+                if (activeElement) {
+                    activeElement.removeEventListener('loadstart', activeHandler);
+                    activeElement = null;
+                    activeHandler = null;
+                }
+
+                activeElement = video;
+                activeHandler = () => Adapters.EventBus.emit(CONFIG.events.ACQUIRE);
+                activeElement.addEventListener('loadstart', activeHandler);
+            }
+        };
+    })();
+
     // ============================================================================
     // 6. CORE ORCHESTRATOR
     // ============================================================================
@@ -419,6 +443,9 @@
                 return;
             }
 
+            // Feature #2: Initial Acquisition Flag
+            let isInitialAcquisition = true;
+
             if (Core.observer) Core.observer.disconnect();
 
             const debouncedAcquire = Fn.debounce(() => {
@@ -426,18 +453,28 @@
             }, CONFIG.timing.INJECTION_MS * 2);
 
             const handleMutations = (mutations) => {
-                let shouldReacquire = false;
+                let shouldReacquire = isInitialAcquisition;
+                if (isInitialAcquisition) isInitialAcquisition = false;
+
                 for (const m of mutations) {
+                    if (shouldReacquire) break;
+
                     if (m.type === 'childList') {
                         const hasVideo = (nodes) => Array.from(nodes).some(n => n.matches && n.matches(CONFIG.selectors.VIDEO));
-                        if (hasVideo(m.addedNodes) || hasVideo(m.removedNodes)) {
+                        // Feature #3: Player Element Removal Detection
+                        const hasPlayer = (nodes) => Array.from(nodes).some(n => (n.matches && n.matches(CONFIG.selectors.PLAYER)) || (n.closest && n.closest(CONFIG.selectors.PLAYER)));
+
+                        if (hasVideo(m.addedNodes) || hasVideo(m.removedNodes) || hasPlayer(m.removedNodes)) {
                             shouldReacquire = true;
                             break;
                         }
                     }
+                    // Feature #3: Attribute mutations scoped to player
                     if (m.type === 'attributes' && m.attributeName === 'class') {
-                        shouldReacquire = true;
-                        break;
+                        if (m.target.closest(CONFIG.selectors.PLAYER)) {
+                            shouldReacquire = true;
+                            break;
+                        }
                     }
                 }
                 if (shouldReacquire) debouncedAcquire();
@@ -445,10 +482,8 @@
 
             Core.observer = Adapters.DOM.observe(container, handleMutations, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] });
 
-            const video = container.querySelector(CONFIG.selectors.VIDEO);
-            if (video) {
-                video.addEventListener('loadstart', () => Adapters.EventBus.emit(CONFIG.events.ACQUIRE));
-            }
+            // Feature #1: Video Listener Cleanup
+            VideoListenerManager.attach(container);
         }
     };
 
