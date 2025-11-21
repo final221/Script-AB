@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       1.00
+// @version       1.01
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
