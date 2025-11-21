@@ -37,7 +37,7 @@
                 HEALTH_CHECK_MS: 2000,
                 LOG_THROTTLE: 5,
                 LOG_EXPIRY_MIN: 5,
-                REVERSION_DELAY_MS: 2,
+                REVERSION_DELAY_MS: 100,
                 FORCE_PLAY_DEFER_MS: 1,
                 REATTEMPT_DELAY_MS: 60 * 1000,
             },
@@ -269,146 +269,128 @@
                 }
                 return null;
             },
-            getKeys: () => keyMap,
-            reset: () => { cachedContext = null; keyMap = { k0: null, k1: null, k2: null }; }
+            reset: () => {
+                cachedContext = null;
+            }
+        };
+    })();
+
+    // --- Health Monitor ---
+    const HealthMonitor = (() => {
+        let timer = null;
+        let videoRef = null;
+        let lastTime = 0;
+        let stuckCount = 0;
+
+        return {
+            start: (container) => {
+                const video = container.querySelector(CONFIG.selectors.VIDEO);
+                if (!video) return;
+
+                if (videoRef !== video) {
+                    HealthMonitor.stop();
+                    videoRef = video;
+                    lastTime = video.currentTime;
+                    stuckCount = 0;
+                }
+
+                if (timer) return;
+
+                timer = setInterval(() => {
+                    if (!document.body.contains(videoRef)) {
+                        HealthMonitor.stop();
+                        return;
+                    }
+
+                    // Check if video is stuck (time not advancing while not paused)
+                    if (!videoRef.paused && !videoRef.ended && videoRef.readyState < 4) {
+                        if (Math.abs(videoRef.currentTime - lastTime) < 0.1) {
+                            stuckCount++;
+                        } else {
+                            stuckCount = 0;
+                            lastTime = videoRef.currentTime;
+                        }
+                    } else {
+                        stuckCount = 0;
+                        lastTime = videoRef.currentTime;
+                    }
+
+                    // Trigger if stuck for ~4 seconds (2 checks * 2000ms)
+                    if (stuckCount >= 2) {
+                        HealthMonitor.stop();
+                        Adapters.EventBus.emit(CONFIG.events.AD_DETECTED);
+                    }
+                }, CONFIG.timing.HEALTH_CHECK_MS);
+            },
+
+            stop: () => {
+                if (timer) clearInterval(timer);
+                timer = null;
+                videoRef = null;
+                stuckCount = 0;
+            }
         };
     })();
 
     // --- Resilience ---
     const Resilience = {
         execute: async (container) => {
-            const ctx = PlayerContext.get(container);
-            if (!ctx) {
-                Adapters.EventBus.emit(CONFIG.events.LOG, { status: 'REVERT_FAIL', detail: 'No player context' });
-                return;
-            }
-
-            const keys = PlayerContext.getKeys();
-            const video = container.querySelector(CONFIG.selectors.VIDEO);
-
-            try {
-                if (video) {
-                    const src = video.src;
-                    // Fix: Do not attempt to reload blob URLs as they are not network-addressable
-                    if (src.startsWith('blob:')) {
-                        if (CONFIG.debug) console.warn('[MAD-3000] Blob detected, skipping src reload.');
-                        video.play();
-                    } else {
-                        // Capture state
-                        const currentTime = video.currentTime;
-                        const playbackRate = video.playbackRate;
-                        const wasPaused = video.paused;
-                        const volume = video.volume;
-                        const muted = video.muted;
-
-                        const separator = src.includes('?') ? '&' : '?';
-                        const bust = separator + 't=' + Math.random().toString(36).substring(2);
-
-                        video.src = '';
-                        video.load();
-
-                        // Increased delay to allow proper cleanup
-                        await Fn.sleep(100);
-
-                        video.src = src + bust;
-                        video.load();
-
-                        // Restore state
-                        video.currentTime = currentTime;
-                        video.playbackRate = playbackRate;
-                        video.volume = volume;
-                        video.muted = muted;
-
-                        // Wait for canplay event
-                        await new Promise((resolve) => {
-                            const handler = () => {
-                                video.removeEventListener('canplay', handler);
-                                resolve();
-                            };
-                            video.addEventListener('canplay', handler);
-                            // Timeout fallback
-                            setTimeout(handler, 3000);
-                        });
-
-                        if (!wasPaused) {
-                            video.play();
-                        }
-                    }
-                }
-
-                // Removed immediate pause/mute to prevent race conditions
-
-                Adapters.EventBus.emit(CONFIG.events.REPORT, { status: 'SUCCESS' });
-            } catch (e) {
-                Resilience.fallback(container);
-            }
-        },
-
-        fallback: (container) => {
-            if (CONFIG.debug) console.warn('[MAD-3000] Reversion failed, attempting DOM replacement.');
-            const clone = Adapters.DOM.clone(container);
-            Adapters.DOM.replace(container, clone);
-            PlayerContext.reset();
-
-            setTimeout(() => {
-                const v = clone.querySelector(CONFIG.selectors.VIDEO);
-                if (v) v.play();
-            }, CONFIG.timing.REVERSION_DELAY_MS);
-        }
-    };
-
-    // --- Health Monitor ---
-    const HealthMonitor = {
-        timer: null,
-        videoRef: null,
-        lastTime: 0,
-        stuckCount: 0,
-
-        start: (container) => {
             const video = container.querySelector(CONFIG.selectors.VIDEO);
             if (!video) return;
 
-            if (HealthMonitor.videoRef !== video) {
-                HealthMonitor.stop();
-                HealthMonitor.videoRef = video;
-                HealthMonitor.lastTime = video.currentTime;
-                HealthMonitor.stuckCount = 0;
+            // 1. Capture State
+            const wasPaused = video.paused;
+            const currentTime = video.currentTime;
+            const playbackRate = video.playbackRate;
+            const volume = video.volume;
+            const muted = video.muted;
+
+            // 2. Clear Source
+            video.src = '';
+            video.load();
+            await Fn.sleep(100); // Increased delay for cleanup
+
+            // 3. Restore Source with Cache Busting
+            const currentSrc = window.location.href;
+            // Handle existing hash
+            const [baseUrl, hash] = currentSrc.split('#');
+            const separator = baseUrl.includes('?') ? '&' : '?';
+            const newSrc = `${baseUrl}${separator}t=${Date.now()}${hash ? '#' + hash : ''}`;
+
+            // Wait for canplay event before playing
+            await new Promise((resolve) => {
+                const handler = () => {
+                    video.removeEventListener('canplay', handler);
+                    resolve();
+                };
+                video.addEventListener('canplay', handler);
+
+                // Set source after listener is attached
+                video.src = newSrc;
+                video.load();
+
+                // Timeout fallback
+                setTimeout(() => {
+                    video.removeEventListener('canplay', handler);
+                    resolve();
+                }, CONFIG.timing.REVERSION_DELAY_MS + 100); // Increased fallback
+            });
+
+            // 4. Restore State
+            video.currentTime = currentTime;
+            video.playbackRate = playbackRate;
+            video.volume = volume;
+            video.muted = muted;
+
+            if (!wasPaused) {
+                try {
+                    await video.play();
+                } catch (e) {
+                    // Ignore play errors
+                }
             }
 
-            if (HealthMonitor.timer) return;
-
-            HealthMonitor.timer = setInterval(() => {
-                if (!document.body.contains(HealthMonitor.videoRef)) {
-                    HealthMonitor.stop();
-                    return;
-                }
-
-                // Check if video is stuck (time not advancing while not paused)
-                if (!HealthMonitor.videoRef.paused && !HealthMonitor.videoRef.ended && HealthMonitor.videoRef.readyState < 4) {
-                    if (Math.abs(HealthMonitor.videoRef.currentTime - HealthMonitor.lastTime) < 0.1) {
-                        HealthMonitor.stuckCount++;
-                    } else {
-                        HealthMonitor.stuckCount = 0;
-                        HealthMonitor.lastTime = HealthMonitor.videoRef.currentTime;
-                    }
-                } else {
-                    HealthMonitor.stuckCount = 0;
-                    HealthMonitor.lastTime = HealthMonitor.videoRef.currentTime;
-                }
-
-                // Trigger if stuck for ~4 seconds (2 checks * 2000ms)
-                if (HealthMonitor.stuckCount >= 2) {
-                    HealthMonitor.stop();
-                    Adapters.EventBus.emit(CONFIG.events.AD_DETECTED);
-                }
-            }, CONFIG.timing.HEALTH_CHECK_MS);
-        },
-
-        stop: () => {
-            if (HealthMonitor.timer) clearInterval(HealthMonitor.timer);
-            HealthMonitor.timer = null;
-            HealthMonitor.videoRef = null;
-            HealthMonitor.stuckCount = 0;
+            Adapters.EventBus.emit(CONFIG.events.REPORT, { status: 'SUCCESS' });
         }
     };
 
