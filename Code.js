@@ -15,15 +15,40 @@
      * MEGA AD DODGER 3000 (Stealth Reactor Core)
      * A monolithic, self-contained userscript for Twitch ad blocking.
      * 
-     * CHANGES v1.00:
-     * - Reinstated Video Listener Cleanup to prevent memory leaks.
-     * - Added Initial Acquisition Flag for faster first-load blocking.
-     * - Enhanced Player Element Removal Detection for edge cases.
+    */
+    /**
+     * ARCHITECTURE MAP
+     * 
+     * [Core] -------------------------> [Network] (Intercepts XHR/Fetch)
+     *   |                                 |
+     *   +-> [PlayerContext]               +-> [Logic.Network] (Ad detection)
+     *   |      |
+     *   |      +-> [Logic.Player] (Signature scanning)
+     *   |
+     *   +-> [HealthMonitor] (Stuck detection)
+     *   |
+     *   +-> [Resilience] (Ad blocking execution)
+     *          |
+     *          +-> [VideoListenerManager] (Event cleanup)
+     * 
+     * EVENT BUS FLOW:
+     * [Network] -> AD_DETECTED -> [Core] -> [Resilience]
+     * [HealthMonitor] -> AD_DETECTED -> [Core] -> [Resilience]
+     * [Core] -> ACQUIRE -> [PlayerContext] -> [HealthMonitor]
      */
 
     // ============================================================================
     // 1. CONFIGURATION & CONSTANTS
     // ============================================================================
+    /**
+     * Central configuration object.
+     * @typedef {Object} Config
+     * @property {boolean} debug - Toggles console logging.
+     * @property {Object} selectors - DOM selectors for player elements.
+     * @property {Object} timing - Timeouts and delays (in ms).
+     * @property {Object} network - URL patterns for ad detection.
+     * @property {Object} mock - Mock response bodies for blocked requests.
+     */
     const CONFIG = (() => {
         const raw = {
             debug: false,
@@ -63,8 +88,8 @@
                 LOG: 'LOG',
             },
             regex: {
-                AD_BLOCK: new RegExp(raw.network.AD_PATTERNS.map(p => p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')),
-                AD_TRIGGER: new RegExp(raw.network.AD_PATTERNS.concat(raw.network.TRIGGER_PATTERNS).map(p => p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')),
+                AD_BLOCK: new RegExp(raw.network.AD_PATTERNS.map(p => p.replace(/[.*+?^${}()|[\\]\\]/g, '\\$&')).join('|')),
+                AD_TRIGGER: new RegExp(raw.network.AD_PATTERNS.concat(raw.network.TRIGGER_PATTERNS).map(p => p.replace(/[.*+?^${}()|[\\]\\]/g, '\\$&')).join('|')),
             }
         });
     })();
@@ -72,6 +97,10 @@
     // ============================================================================
     // 2. FUNCTIONAL UTILITIES
     // ============================================================================
+    /**
+     * Pure utility functions for functional composition and async handling.
+     * @namespace Fn
+     */
     const Fn = {
         pipe: (...fns) => (x) => fns.reduce((v, f) => f(v), x),
 
@@ -93,6 +122,11 @@
     // ============================================================================
     // 3. ADAPTERS (Side-Effects)
     // ============================================================================
+    /**
+     * Side-effect wrappers for DOM, Storage, and Event handling.
+     * Isolate impure operations here to keep Logic kernels pure.
+     * @namespace Adapters
+     */
     const Adapters = {
         DOM: {
             find: (sel) => document.querySelector(sel),
@@ -126,6 +160,10 @@
     // ============================================================================
     // 4. LOGIC KERNELS
     // ============================================================================
+    /**
+     * Pure business logic for Network analysis and Player signature matching.
+     * @namespace Logic
+     */
     const Logic = {
         Network: {
             isAd: (url) => CONFIG.regex.AD_BLOCK.test(url),
@@ -153,6 +191,14 @@
     // ============================================================================
 
     // --- Store ---
+    /**
+     * Persistent state management using localStorage.
+     * @typedef {Object} State
+     * @property {number} errorCount - Consecutive error counter.
+     * @property {number} timestamp - Last update timestamp.
+     * @property {string|null} lastError - Last error message.
+     * @property {number} lastAttempt - Timestamp of last injection attempt.
+     */
     const Store = (() => {
         let state = { errorCount: 0, timestamp: 0, lastError: null, lastAttempt: 0 };
 
@@ -175,6 +221,13 @@
     })();
 
     // --- Network ---
+    /**
+     * Intercepts XHR and Fetch requests to detect and block ads.
+     * @responsibility
+     * 1. Monitor network traffic for ad patterns.
+     * 2. Mock responses for blocked ads to prevent player errors.
+     * 3. Emit AD_DETECTED events.
+     */
     const Network = {
         init: () => {
             const process = (url) => {
@@ -188,6 +241,9 @@
             XMLHttpRequest.prototype.open = hook(XMLHttpRequest.prototype.open, (target, thisArg, args) => {
                 const [method, url] = args;
                 if (method === 'GET' && typeof url === 'string' && process(url)) {
+                    // !CRITICAL: Mocking responses is essential.
+                    // REASON: If we just block the request, the player will retry indefinitely or crash.
+                    // We must return a valid (but empty) response to satisfy the player's state machine.
                     const { body } = Logic.Network.getMock(url);
                     thisArg.addEventListener('readystatechange', function inject() {
                         if (this.readyState === 2) {
@@ -218,6 +274,11 @@
     };
 
     // --- Player Context ---
+    /**
+     * React/Vue internal state scanner.
+     * @responsibility Finds the internal React/Vue component instance associated with the DOM element.
+     * @invariant This is a heuristic search; it may fail if Twitch changes their internal property names.
+     */
     const PlayerContext = (() => {
         let cachedContext = null;
         let keyMap = { k0: null, k1: null, k2: null };
@@ -276,6 +337,10 @@
     })();
 
     // --- Health Monitor ---
+    /**
+     * Monitors video playback health to detect "stuck" states caused by ad injection.
+     * @responsibility Detects when the player is technically "playing" but time is not advancing.
+     */
     const HealthMonitor = (() => {
         let timer = null;
         let videoRef = null;
@@ -303,6 +368,7 @@
                     }
 
                     // Check if video is stuck (time not advancing while not paused)
+                    // !INVARIANT: A playing video MUST advance its currentTime.
                     if (!videoRef.paused && !videoRef.ended && videoRef.readyState < 4) {
                         if (Math.abs(videoRef.currentTime - lastTime) < 0.1) {
                             stuckCount++;
@@ -333,6 +399,13 @@
     })();
 
     // --- Resilience ---
+    /**
+     * Executes the ad-blocking / recovery logic.
+     * @responsibility
+     * 1. Capture current player state.
+     * 2. Force-reload the video source to skip the ad segment.
+     * 3. Restore player state (time, volume, etc.).
+     */
     const Resilience = {
         execute: async (container) => {
             const video = container.querySelector(CONFIG.selectors.VIDEO);
@@ -348,7 +421,10 @@
             // 2. Clear Source
             video.src = '';
             video.load();
-            await Fn.sleep(100); // Increased delay for cleanup
+            // !CRITICAL: Wait for cleanup.
+            // REASON: Twitch's player needs time to unmount internal handlers.
+            // < 50ms causes race conditions where the old stream isn't fully detached.
+            await Fn.sleep(100);
 
             // 3. Restore Source with Cache Busting
             const currentSrc = window.location.href;
@@ -395,6 +471,10 @@
     };
 
     // --- Video Listener Manager ---
+    /**
+     * Manages event listeners on the video element to detect stream changes.
+     * @responsibility Ensures we re-acquire the player context when the stream reloads (e.g., channel switch).
+     */
     const VideoListenerManager = (() => {
         let activeElement = null;
         let activeHandler = null;
@@ -429,6 +509,13 @@
     // ============================================================================
     // 6. CORE ORCHESTRATOR
     // ============================================================================
+    /**
+     * Main entry point and event orchestrator.
+     * @responsibility
+     * 1. Initialize all modules.
+     * 2. Observe DOM for player mounting/unmounting.
+     * 3. Wire up EventBus listeners.
+     */
     const Core = {
         rootObserver: null,
         playerObserver: null,
