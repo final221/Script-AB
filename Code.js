@@ -294,21 +294,49 @@
                         if (CONFIG.debug) console.warn('[MAD-3000] Blob detected, skipping src reload.');
                         video.play();
                     } else {
+                        // Capture state
+                        const currentTime = video.currentTime;
+                        const playbackRate = video.playbackRate;
+                        const wasPaused = video.paused;
+                        const volume = video.volume;
+                        const muted = video.muted;
+
                         const separator = src.includes('?') ? '&' : '?';
                         const bust = separator + 't=' + Math.random().toString(36).substring(2);
+
                         video.src = '';
                         video.load();
 
-                        await Fn.sleep(CONFIG.timing.FORCE_PLAY_DEFER_MS);
+                        // Increased delay to allow proper cleanup
+                        await Fn.sleep(100);
+
                         video.src = src + bust;
                         video.load();
-                        video.play();
+
+                        // Restore state
+                        video.currentTime = currentTime;
+                        video.playbackRate = playbackRate;
+                        video.volume = volume;
+                        video.muted = muted;
+
+                        // Wait for canplay event
+                        await new Promise((resolve) => {
+                            const handler = () => {
+                                video.removeEventListener('canplay', handler);
+                                resolve();
+                            };
+                            video.addEventListener('canplay', handler);
+                            // Timeout fallback
+                            setTimeout(handler, 3000);
+                        });
+
+                        if (!wasPaused) {
+                            video.play();
+                        }
                     }
                 }
 
-                await Fn.sleep(CONFIG.timing.REVERSION_DELAY_MS);
-                ctx[keys.k1]();      // Pause
-                ctx[keys.k0](true);  // Mute/Toggle
+                // Removed immediate pause/mute to prevent race conditions
 
                 Adapters.EventBus.emit(CONFIG.events.REPORT, { status: 'SUCCESS' });
             } catch (e) {
