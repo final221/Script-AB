@@ -68,7 +68,7 @@
                 PLAYBACK_TIMEOUT_MS: 2500,
             },
             network: {
-                AD_PATTERNS: ['/ad/v1/', '/usher/v1/ad/', '/api/v5/ads/', 'pubads.g.doubleclick.net'],
+                AD_PATTERNS: ['/ad/v1/', '/usher/v1/ad/', '/api/v5/ads/', 'pubads.g.doubleclick.net', 'supervisor.ext-twitch.tv', 'vod-secure.twitch.tv'],
                 TRIGGER_PATTERNS: ['/ad_state/', 'vod_ad_manifest'],
             },
             mock: {
