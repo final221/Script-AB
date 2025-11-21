@@ -1,6 +1,6 @@
 // ==UserScript==
-// @name          Mega Ad Dodger 3000 (Stealth Reactor Core) 1.09
-// @version       1.09
+// @name          Mega Ad Dodger 3000 (Stealth Reactor Core) 1.10
+// @version       1.10
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -208,6 +208,43 @@
                     message,
                     detail
                 });
+            },
+            init: () => {
+                // Capture global errors
+                window.addEventListener('error', (event) => {
+                    Logger.add('Global Error', {
+                        message: event.message,
+                        filename: event.filename,
+                        lineno: event.lineno,
+                        colno: event.colno
+                    });
+                });
+
+                // Capture unhandled promise rejections
+                window.addEventListener('unhandledrejection', (event) => {
+                    Logger.add('Unhandled Rejection', {
+                        reason: event.reason ? event.reason.toString() : 'Unknown'
+                    });
+                });
+
+                // Intercept console.error to catch player errors
+                const originalError = console.error;
+                console.error = (...args) => {
+                    // Avoid infinite loops if Logger itself errors
+                    try {
+                        Logger.add('Console Error', { args: args.map(a => String(a)) });
+                    } catch (e) { }
+                    originalError.apply(console, args);
+                };
+
+                // Intercept console.warn (useful for player warnings)
+                const originalWarn = console.warn;
+                console.warn = (...args) => {
+                    try {
+                        Logger.add('Console Warn', { args: args.map(a => String(a)) });
+                    } catch (e) { }
+                    originalWarn.apply(console, args);
+                };
             },
             export: () => {
                 console.log("logging is initiated");
@@ -627,6 +664,7 @@
             }
 
             Network.init();
+            Logger.init();
             Core.setupEvents();
 
             // Script Blocker for Supervisor and other unwanted scripts
