@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       1.01
+// @version       1.02
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -65,6 +65,7 @@
                 REVERSION_DELAY_MS: 100,
                 FORCE_PLAY_DEFER_MS: 1,
                 REATTEMPT_DELAY_MS: 60 * 1000,
+                PLAYBACK_TIMEOUT_MS: 2500,
             },
             network: {
                 AD_PATTERNS: ['/ad/v1/', '/usher/v1/ad/', '/api/v5/ads/', 'pubads.g.doubleclick.net'],
@@ -278,6 +279,8 @@
      * React/Vue internal state scanner.
      * @responsibility Finds the internal React/Vue component instance associated with the DOM element.
      * @invariant This is a heuristic search; it may fail if Twitch changes their internal property names.
+     * @volatile This module relies on obfuscated property names (k0, k1, k2). 
+     *           If the script fails, CHECK THIS MODULE FIRST.
      */
     const PlayerContext = (() => {
         let cachedContext = null;
@@ -427,6 +430,8 @@
             await Fn.sleep(100);
 
             // 3. Restore Source with Cache Busting
+            // @strategy Force the browser to treat this as a new stream by appending a timestamp.
+            //           This bypasses internal player caches that might still hold the ad segment.
             const currentSrc = window.location.href;
             // Handle existing hash
             const [baseUrl, hash] = currentSrc.split('#');
@@ -449,7 +454,7 @@
                 setTimeout(() => {
                     video.removeEventListener('canplay', handler);
                     resolve();
-                }, CONFIG.timing.REVERSION_DELAY_MS + 100); // Increased fallback
+                }, CONFIG.timing.PLAYBACK_TIMEOUT_MS);
             });
 
             // 4. Restore State
