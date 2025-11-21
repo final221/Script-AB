@@ -1,6 +1,6 @@
 // ==UserScript==
-// @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       1.02
+// @name          Mega Ad Dodger 3000 (Stealth Reactor Core) 1.03
+// @version       1.03
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -191,6 +191,50 @@
     // 5. MODULES
     // ============================================================================
 
+    // --- Logger ---
+    /**
+     * High-level logging and telemetry export.
+     * @responsibility Collects logs and exports them as a file.
+     */
+    const Logger = (() => {
+        const logs = [];
+        const MAX_LOGS = 5000;
+
+        return {
+            add: (message, detail = null) => {
+                if (logs.length >= MAX_LOGS) logs.shift();
+                logs.push({
+                    timestamp: new Date().toISOString(),
+                    message,
+                    detail
+                });
+            },
+            export: () => {
+                console.log("logging is initiated");
+
+                let content;
+                if (logs.length === 0) {
+                    content = "Logging is initiated. No logs recorded yet.";
+                } else {
+                    content = logs.map(l => `[${l.timestamp}] ${l.message}${l.detail ? ' | ' + JSON.stringify(l.detail) : ''}`).join('\n');
+                }
+
+                const blob = new Blob([content], { type: 'text/plain' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `twitch_ad_logs_${new Date().toISOString().replace(/[:.]/g, '-')}.txt`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            }
+        };
+    })();
+
+    // Expose to global scope for user interaction
+    window.exportTwitchAdLogs = Logger.export;
+
     // --- Store ---
     /**
      * Persistent state management using localStorage.
@@ -232,8 +276,13 @@
     const Network = {
         init: () => {
             const process = (url) => {
-                if (Logic.Network.isTrigger(url)) Adapters.EventBus.emit(CONFIG.events.AD_DETECTED);
-                return Logic.Network.isAd(url);
+                if (Logic.Network.isTrigger(url)) {
+                    Logger.add('Trigger pattern detected', { url });
+                    Adapters.EventBus.emit(CONFIG.events.AD_DETECTED);
+                }
+                const isAd = Logic.Network.isAd(url);
+                if (isAd) Logger.add('Ad pattern detected', { url });
+                return isAd;
             };
 
             const hook = (target, handler) => new Proxy(target, { apply: handler });
@@ -386,6 +435,7 @@
 
                     // Trigger if stuck for ~4 seconds (2 checks * 2000ms)
                     if (stuckCount >= 2) {
+                        Logger.add('Player stuck detected', { stuckCount, currentTime: videoRef.currentTime });
                         HealthMonitor.stop();
                         Adapters.EventBus.emit(CONFIG.events.AD_DETECTED);
                     }
@@ -411,6 +461,7 @@
      */
     const Resilience = {
         execute: async (container) => {
+            Logger.add('Resilience execution started');
             const video = container.querySelector(CONFIG.selectors.VIDEO);
             if (!video) return;
 
@@ -428,6 +479,7 @@
             // REASON: Twitch's player needs time to unmount internal handlers.
             // < 50ms causes race conditions where the old stream isn't fully detached.
             await Fn.sleep(100);
+            Logger.add('Video source cleared');
 
             // 3. Restore Source with Cache Busting
             // @strategy Force the browser to treat this as a new stream by appending a timestamp.
@@ -437,6 +489,7 @@
             const [baseUrl, hash] = currentSrc.split('#');
             const separator = baseUrl.includes('?') ? '&' : '?';
             const newSrc = `${baseUrl}${separator}t=${Date.now()}${hash ? '#' + hash : ''}`;
+            Logger.add('Video source restored', { newSrc });
 
             // Wait for canplay event before playing
             await new Promise((resolve) => {
@@ -462,6 +515,7 @@
             video.playbackRate = playbackRate;
             video.volume = volume;
             video.muted = muted;
+            Logger.add('Player state restored');
 
             if (!wasPaused) {
                 try {
@@ -527,6 +581,7 @@
         activeContainer: null,
 
         init: () => {
+            Logger.add('Core initialized');
             if (window.self !== window.top) return;
 
             const { lastAttempt, errorCount } = Store.get();
@@ -559,11 +614,19 @@
             Adapters.EventBus.on(CONFIG.events.ACQUIRE, () => {
                 if (Core.activeContainer) {
                     const ctx = PlayerContext.get(Core.activeContainer);
-                    if (ctx) HealthMonitor.start(Core.activeContainer);
+                    if (ctx) {
+                        Logger.add('Event: ACQUIRE - Success (Player Context Found)');
+                        HealthMonitor.start(Core.activeContainer);
+                    } else {
+                        Logger.add('Event: ACQUIRE - Failed (Player Context Not Found)');
+                    }
+                } else {
+                    Logger.add('Event: ACQUIRE - No Active Container');
                 }
             });
 
             Adapters.EventBus.on(CONFIG.events.AD_DETECTED, () => {
+                Logger.add('Event: AD_DETECTED');
                 if (Core.activeContainer) Resilience.execute(Core.activeContainer);
             });
 
@@ -576,6 +639,7 @@
             });
 
             Adapters.EventBus.on(CONFIG.events.REPORT, ({ status }) => {
+                Logger.add('Event: REPORT', { status });
                 if (status === 'SUCCESS') {
                     Store.update({ errorCount: 0, lastError: null });
                 }
@@ -612,6 +676,7 @@
             if (Core.activeContainer) Core.handlePlayerUnmount();
 
             if (CONFIG.debug) console.log('[MAD-3000] Player mounted');
+            Logger.add('Player mounted');
             Core.activeContainer = container;
 
             Core.playerObserver = Adapters.DOM.observe(container, (mutations) => {
@@ -633,6 +698,7 @@
         handlePlayerUnmount: () => {
             if (!Core.activeContainer) return;
             if (CONFIG.debug) console.log('[MAD-3000] Player unmounted');
+            Logger.add('Player unmounted');
 
             if (Core.playerObserver) {
                 Core.playerObserver.disconnect();
