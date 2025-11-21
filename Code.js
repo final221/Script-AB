@@ -1,6 +1,6 @@
 // ==UserScript==
-// @name          Mega Ad Dodger 3000 (Stealth Reactor Core) 1.06
-// @version       1.06
+// @name          Mega Ad Dodger 3000 (Stealth Reactor Core) 1.07
+// @version       1.07
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -391,6 +391,7 @@
             },
             reset: () => {
                 cachedContext = null;
+                keyMap = { k0: null, k1: null, k2: null };
             }
         };
     })();
@@ -405,6 +406,7 @@
         let videoRef = null;
         let lastTime = 0;
         let stuckCount = 0;
+        let lastDroppedFrames = 0;
 
         return {
             start: (container) => {
@@ -416,6 +418,7 @@
                     videoRef = video;
                     lastTime = video.currentTime;
                     stuckCount = 0;
+                    lastDroppedFrames = 0;
                 }
 
                 if (timer) return;
@@ -426,9 +429,8 @@
                         return;
                     }
 
-                    // Check if video is stuck (time not advancing while not paused)
+                    // 1. Check for Stuck State
                     // !INVARIANT: A playing video MUST advance its currentTime.
-                    // Removed readyState check: Sometimes player reports readyState=4 even when frozen by ad injection.
                     if (!videoRef.paused && !videoRef.ended) {
                         if (Math.abs(videoRef.currentTime - lastTime) < 0.1) {
                             stuckCount++;
@@ -441,7 +443,21 @@
                         lastTime = videoRef.currentTime;
                     }
 
-                    // Trigger if stuck for ~4 seconds (2 checks * 2000ms)
+                    // 2. Check for Dropped Frames (Rendering Performance)
+                    if (videoRef.getVideoPlaybackQuality) {
+                        const quality = videoRef.getVideoPlaybackQuality();
+                        const dropped = quality.droppedVideoFrames;
+                        if (dropped - lastDroppedFrames > 0) {
+                            Logger.add('Frame Drop Detected', {
+                                newDropped: dropped - lastDroppedFrames,
+                                totalDropped: dropped,
+                                totalFrames: quality.totalVideoFrames
+                            });
+                            lastDroppedFrames = dropped;
+                        }
+                    }
+
+                    // Trigger if stuck for ~2 seconds (2 checks * 1000ms)
                     if (stuckCount >= 2) {
                         Logger.add('Player stuck detected', { stuckCount, currentTime: videoRef.currentTime });
                         HealthMonitor.stop();
@@ -455,6 +471,7 @@
                 timer = null;
                 videoRef = null;
                 stuckCount = 0;
+                lastDroppedFrames = 0;
             }
         };
     })();
@@ -541,12 +558,20 @@
 
     // --- Video Listener Manager ---
     /**
-     * Manages event listeners on the video element to detect stream changes.
-     * @responsibility Ensures we re-acquire the player context when the stream reloads (e.g., channel switch).
+     * Manages event listeners on the video element to detect stream changes and performance issues.
      */
     const VideoListenerManager = (() => {
         let activeElement = null;
-        let activeHandler = null;
+
+        // Diagnostic handlers to detect sync/performance issues
+        const handlers = {
+            loadstart: () => Adapters.EventBus.emit(CONFIG.events.ACQUIRE),
+            waiting: () => Logger.add('Video Event: waiting', { currentTime: activeElement?.currentTime }),
+            stalled: () => Logger.add('Video Event: stalled', { currentTime: activeElement?.currentTime }),
+            ratechange: () => Logger.add('Video Event: ratechange', { rate: activeElement?.playbackRate, currentTime: activeElement?.currentTime }),
+            seeked: () => Logger.add('Video Event: seeked', { currentTime: activeElement?.currentTime }),
+            resize: () => Logger.add('Video Event: resize', { width: activeElement?.videoWidth, height: activeElement?.videoHeight })
+        };
 
         return {
             attach: (container) => {
@@ -555,22 +580,21 @@
 
                 if (activeElement === video) return;
 
-                if (activeElement) {
-                    activeElement.removeEventListener('loadstart', activeHandler);
-                    activeElement = null;
-                    activeHandler = null;
-                }
+                if (activeElement) VideoListenerManager.detach();
 
                 activeElement = video;
-                activeHandler = () => Adapters.EventBus.emit(CONFIG.events.ACQUIRE);
-                activeElement.addEventListener('loadstart', activeHandler);
+
+                Object.entries(handlers).forEach(([event, handler]) => {
+                    activeElement.addEventListener(event, handler);
+                });
             },
             detach: () => {
-                if (activeElement && activeHandler) {
-                    activeElement.removeEventListener('loadstart', activeHandler);
+                if (activeElement) {
+                    Object.entries(handlers).forEach(([event, handler]) => {
+                        activeElement.removeEventListener(event, handler);
+                    });
                 }
                 activeElement = null;
-                activeHandler = null;
             }
         };
     })();
