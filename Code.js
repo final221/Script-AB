@@ -1,6 +1,6 @@
 // ==UserScript==
-// @name          Mega Ad Dodger 3000 (Stealth Reactor Core) 1.03
-// @version       1.03
+// @name          Mega Ad Dodger 3000 (Stealth Reactor Core) 1.04
+// @version       1.04
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -275,13 +275,19 @@
      */
     const Network = {
         init: () => {
-            const process = (url) => {
+            const process = (url, type) => {
                 if (Logic.Network.isTrigger(url)) {
-                    Logger.add('Trigger pattern detected', { url });
+                    Logger.add('Trigger pattern detected', { type, url });
                     Adapters.EventBus.emit(CONFIG.events.AD_DETECTED);
                 }
                 const isAd = Logic.Network.isAd(url);
-                if (isAd) Logger.add('Ad pattern detected', { url });
+                if (isAd) Logger.add('Ad pattern detected', { type, url });
+
+                // @debug: Catch potential missed ad patterns
+                if (!isAd && (url.includes('usher') || url.includes('.m3u8') || url.includes('/ad/'))) {
+                    Logger.add('Suspicious network request (Not blocked)', { type, url });
+                }
+
                 return isAd;
             };
 
@@ -290,7 +296,7 @@
             // XHR
             XMLHttpRequest.prototype.open = hook(XMLHttpRequest.prototype.open, (target, thisArg, args) => {
                 const [method, url] = args;
-                if (method === 'GET' && typeof url === 'string' && process(url)) {
+                if (method === 'GET' && typeof url === 'string' && process(url, 'XHR')) {
                     // !CRITICAL: Mocking responses is essential.
                     // REASON: If we just block the request, the player will retry indefinitely or crash.
                     // We must return a valid (but empty) response to satisfy the player's state machine.
@@ -314,7 +320,7 @@
             // Fetch
             window.fetch = hook(window.fetch, (target, thisArg, args) => {
                 const url = (typeof args[0] === 'string') ? args[0] : (args[0] instanceof Request ? args[0].url : '');
-                if (url && process(url)) {
+                if (url && process(url, 'FETCH')) {
                     const { body, type } = Logic.Network.getMock(url);
                     return Promise.resolve(new Response(body, { status: 200, statusText: 'OK', headers: { 'Content-Type': type } }));
                 }
@@ -345,6 +351,7 @@
                 const foundKey = Object.keys(obj).find(k => Logic.Player.validate(obj, k, sig));
                 if (foundKey) {
                     keyMap[sig.id] = foundKey;
+                    Logger.add('Player signature found', { id: sig.id, key: foundKey });
                     foundCount++;
                 }
             }
@@ -421,7 +428,8 @@
 
                     // Check if video is stuck (time not advancing while not paused)
                     // !INVARIANT: A playing video MUST advance its currentTime.
-                    if (!videoRef.paused && !videoRef.ended && videoRef.readyState < 4) {
+                    // Removed readyState check: Sometimes player reports readyState=4 even when frozen by ad injection.
+                    if (!videoRef.paused && !videoRef.ended) {
                         if (Math.abs(videoRef.currentTime - lastTime) < 0.1) {
                             stuckCount++;
                         } else {
@@ -472,6 +480,8 @@
             const volume = video.volume;
             const muted = video.muted;
 
+            Logger.add('Captured player state', { currentTime, wasPaused, volume, muted });
+
             // 2. Clear Source
             video.src = '';
             video.load();
@@ -515,7 +525,7 @@
             video.playbackRate = playbackRate;
             video.volume = volume;
             video.muted = muted;
-            Logger.add('Player state restored');
+            Logger.add('Restoring player state', { currentTime, wasPaused });
 
             if (!wasPaused) {
                 try {
@@ -679,6 +689,8 @@
             Logger.add('Player mounted');
             Core.activeContainer = container;
 
+            const debouncedInject = Fn.debounce(() => Core.inject(), 100);
+
             Core.playerObserver = Adapters.DOM.observe(container, (mutations) => {
                 let shouldReacquire = false;
                 for (const m of mutations) {
@@ -686,9 +698,12 @@
                         const hasVideo = (nodes) => Array.from(nodes).some(n => n.matches && n.matches(CONFIG.selectors.VIDEO));
                         if (hasVideo(m.addedNodes) || hasVideo(m.removedNodes)) shouldReacquire = true;
                     }
-                    if (m.type === 'attributes' && m.attributeName === 'class') shouldReacquire = true;
+                    // Only react to class changes on the main container, not every child element
+                    if (m.type === 'attributes' && m.attributeName === 'class' && m.target === container) {
+                        shouldReacquire = true;
+                    }
                 }
-                if (shouldReacquire) Core.inject();
+                if (shouldReacquire) debouncedInject();
             }, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] });
 
             VideoListenerManager.attach(container);

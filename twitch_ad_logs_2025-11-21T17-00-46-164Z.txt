@@ -1,0 +1,4 @@
+[2025-11-21T17:00:20.477Z] Core initialized
+[2025-11-21T17:00:21.364Z] Player mounted
+[2025-11-21T17:00:21.367Z] Event: ACQUIRE - Success (Player Context Found)
+[2025-11-21T17:00:21.869Z] Event: ACQUIRE - Success (Player Context Found)
