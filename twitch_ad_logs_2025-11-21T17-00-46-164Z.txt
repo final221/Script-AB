@@ -1,123 +1,141 @@
-AVC finishFrame called without active frame amazon-ivs-wasmworker.min-96ae2717290f1bdba0b6.js:1:49765
-    _emscripten_log_js https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-96ae2717290f1bdba0b6.js:1
-    logMessage https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-96ae2717290f1bdba0b6.js:1
-    x https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-96ae2717290f1bdba0b6.js:1
-    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-822d371c32d3620af2e6.wasm:737037
-    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-822d371c32d3620af2e6.wasm:13372
-    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-822d371c32d3620af2e6.wasm:944788
-    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-822d371c32d3620af2e6.wasm:544510
-    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-822d371c32d3620af2e6.wasm:941545
-    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-822d371c32d3620af2e6.wasm:1058609
-    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-822d371c32d3620af2e6.wasm:675579
-    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-822d371c32d3620af2e6.wasm:1081573
-    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-822d371c32d3620af2e6.wasm:1060630
-    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-822d371c32d3620af2e6.wasm:1059295
-    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-822d371c32d3620af2e6.wasm:716815
-    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-822d371c32d3620af2e6.wasm:201257
-    Ie https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-96ae2717290f1bdba0b6.js:1
-    a https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-96ae2717290f1bdba0b6.js:1
-    (Async: promise callback)
-    readBody https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-96ae2717290f1bdba0b6.js:1
-    x https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-96ae2717290f1bdba0b6.js:1
-    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-822d371c32d3620af2e6.wasm:1180040
-    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-822d371c32d3620af2e6.wasm:1059800
-    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-822d371c32d3620af2e6.wasm:718038
-    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-822d371c32d3620af2e6.wasm:550289
-    Ie https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-96ae2717290f1bdba0b6.js:1
-    sendFetchRequest https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-96ae2717290f1bdba0b6.js:1
-    (Async: promise callback)
-    sendFetchRequest https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-96ae2717290f1bdba0b6.js:1
-    sendFetchRequest https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-96ae2717290f1bdba0b6.js:1
-    x https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-96ae2717290f1bdba0b6.js:1
-    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-822d371c32d3620af2e6.wasm:733266
-    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-822d371c32d3620af2e6.wasm:649623
-    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-822d371c32d3620af2e6.wasm:349306
-    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-822d371c32d3620af2e6.wasm:1088972
-    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-822d371c32d3620af2e6.wasm:1055666
-    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-822d371c32d3620af2e6.wasm:400098
-    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-822d371c32d3620af2e6.wasm:159428
-    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-822d371c32d3620af2e6.wasm:438762
-    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-822d371c32d3620af2e6.wasm:734039
-    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-822d371c32d3620af2e6.wasm:340485
-    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-822d371c32d3620af2e6.wasm:1081615
-    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-822d371c32d3620af2e6.wasm:1074308
-    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-822d371c32d3620af2e6.wasm:1069377
-    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-822d371c32d3620af2e6.wasm:946321
-    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-822d371c32d3620af2e6.wasm:716383
-    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-822d371c32d3620af2e6.wasm:141990
-    Ie https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-96ae2717290f1bdba0b6.js:1
-    a https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-96ae2717290f1bdba0b6.js:1
-    (Async: promise callback)
-    a https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-96ae2717290f1bdba0b6.js:1
-    (Async: promise callback)
-    readBody https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-96ae2717290f1bdba0b6.js:1
-    x https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-96ae2717290f1bdba0b6.js:1
-    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-822d371c32d3620af2e6.wasm:1180040
-    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-822d371c32d3620af2e6.wasm:184327
-    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-822d371c32d3620af2e6.wasm:1071462
-    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-822d371c32d3620af2e6.wasm:718038
-    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-822d371c32d3620af2e6.wasm:550289
-    Ie https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-96ae2717290f1bdba0b6.js:1
-AVC finishFrame called without active frame amazon-ivs-wasmworker.min-96ae2717290f1bdba0b6.js:1:49765
-    _emscripten_log_js https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-96ae2717290f1bdba0b6.js:1
-    logMessage https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-96ae2717290f1bdba0b6.js:1
-    x https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-96ae2717290f1bdba0b6.js:1
-    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-822d371c32d3620af2e6.wasm:737037
-    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-822d371c32d3620af2e6.wasm:13372
-    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-822d371c32d3620af2e6.wasm:944788
-    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-822d371c32d3620af2e6.wasm:544510
-    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-822d371c32d3620af2e6.wasm:941545
-    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-822d371c32d3620af2e6.wasm:1058609
-    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-822d371c32d3620af2e6.wasm:675579
-    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-822d371c32d3620af2e6.wasm:1081573
-    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-822d371c32d3620af2e6.wasm:1060630
-    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-822d371c32d3620af2e6.wasm:1059295
-    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-822d371c32d3620af2e6.wasm:716815
-    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-822d371c32d3620af2e6.wasm:201257
-    Ie https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-96ae2717290f1bdba0b6.js:1
-    a https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-96ae2717290f1bdba0b6.js:1
-    (Async: promise callback)
-    readBody https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-96ae2717290f1bdba0b6.js:1
-    x https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-96ae2717290f1bdba0b6.js:1
-    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-822d371c32d3620af2e6.wasm:1180040
-    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-822d371c32d3620af2e6.wasm:1059800
-    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-822d371c32d3620af2e6.wasm:718038
-    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-822d371c32d3620af2e6.wasm:550289
-    Ie https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-96ae2717290f1bdba0b6.js:1
-    sendFetchRequest https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-96ae2717290f1bdba0b6.js:1
-    (Async: promise callback)
-    sendFetchRequest https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-96ae2717290f1bdba0b6.js:1
-    sendFetchRequest https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-96ae2717290f1bdba0b6.js:1
-    x https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-96ae2717290f1bdba0b6.js:1
-    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-822d371c32d3620af2e6.wasm:733266
-    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-822d371c32d3620af2e6.wasm:649623
-    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-822d371c32d3620af2e6.wasm:349306
-    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-822d371c32d3620af2e6.wasm:1088972
-    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-822d371c32d3620af2e6.wasm:1055666
-    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-822d371c32d3620af2e6.wasm:400098
-    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-822d371c32d3620af2e6.wasm:159428
-    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-822d371c32d3620af2e6.wasm:438762
-    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-822d371c32d3620af2e6.wasm:734039
-    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-822d371c32d3620af2e6.wasm:340485
-    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-822d371c32d3620af2e6.wasm:1081615
-    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-822d371c32d3620af2e6.wasm:1074308
-    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-822d371c32d3620af2e6.wasm:1069377
-    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-822d371c32d3620af2e6.wasm:946321
-    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-822d371c32d3620af2e6.wasm:716383
-    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-822d371c32d3620af2e6.wasm:141990
-    Ie https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-96ae2717290f1bdba0b6.js:1
-    a https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-96ae2717290f1bdba0b6.js:1
-    (Async: promise callback)
-    a https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-96ae2717290f1bdba0b6.js:1
-    (Async: promise callback)
-    readBody https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-96ae2717290f1bdba0b6.js:1
-    x https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-96ae2717290f1bdba0b6.js:1
-    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-822d371c32d3620af2e6.wasm:1180040
-    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-822d371c32d3620af2e6.wasm:184327
-    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-822d371c32d3620af2e6.wasm:1071462
-    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-822d371c32d3620af2e6.wasm:718038
-    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-822d371c32d3620af2e6.wasm:550289
-    Ie https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-96ae2717290f1bdba0b6.js:1
+[2025-11-21T18:14:39.054Z] Core initialized
+[2025-11-21T18:14:39.184Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql"}
+[2025-11-21T18:14:39.853Z] Player mounted
+[2025-11-21T18:14:39.855Z] Player signature found | {"id":"k0","key":"ref"}
+[2025-11-21T18:14:39.855Z] Player signature found | {"id":"k1","key":"ref"}
+[2025-11-21T18:14:39.855Z] Player signature found | {"id":"k2","key":"ref"}
+[2025-11-21T18:14:39.855Z] Event: ACQUIRE - Success (Player Context Found)
+[2025-11-21T18:14:39.998Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/integrity"}
+[2025-11-21T18:14:40.340Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-21T18:14:40.377Z] Event: ACQUIRE - Success (Player Context Found)
+[2025-11-21T18:14:40.588Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-21T18:14:40.664Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-21T18:14:41.140Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-21T18:14:41.258Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-21T18:14:41.552Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-21T18:14:41.605Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-21T18:14:42.241Z] Network Request (Allowed) | {"type":"FETCH","url":"https://assets.twitch.tv/config/manifest.json?v=1"}
+[2025-11-21T18:14:42.715Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-21T18:14:42.795Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-21T18:14:43.436Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-21T18:14:43.607Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-21T18:14:43.807Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-21T18:14:44.024Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-21T18:14:44.405Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-21T18:14:44.649Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-21T18:14:44.766Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-21T18:14:45.540Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-21T18:14:48.141Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-21T18:14:58.123Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-21T18:15:28.126Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-21T18:15:35.634Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-21T18:15:40.476Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-21T18:15:41.693Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-21T18:15:44.001Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-21T18:15:53.063Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-21T18:16:35.628Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-21T18:16:41.472Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-21T18:17:35.640Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-21T18:17:41.484Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-21T18:18:35.641Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-21T18:18:41.498Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-21T18:19:27.118Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-21T18:19:27.694Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-21T18:19:28.621Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-21T18:19:35.635Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-21T18:19:41.512Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-21T18:19:41.587Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-21T18:19:42.250Z] Network Request (Allowed) | {"type":"FETCH","url":"https://assets.twitch.tv/config/manifest.json?v=1"}
+[2025-11-21T18:20:20.543Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-21T18:20:35.648Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-21T18:20:41.504Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-21T18:21:10.239Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-21T18:21:10.976Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-21T18:21:11.980Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-21T18:21:36.228Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-21T18:21:42.269Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-21T18:22:24.036Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-21T18:22:35.807Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-21T18:22:36.818Z] Frame Drop Detected | {"newDropped":2,"totalDropped":2,"totalFrames":28455}
+[2025-11-21T18:22:39.406Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-21T18:22:42.268Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-21T18:23:35.624Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-21T18:23:42.274Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-21T18:24:14.959Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-21T18:24:16.450Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-21T18:24:35.646Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-21T18:24:41.838Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-21T18:24:42.253Z] Network Request (Allowed) | {"type":"FETCH","url":"https://assets.twitch.tv/config/manifest.json?v=1"}
+[2025-11-21T18:24:42.285Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-21T18:24:43.986Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-21T18:25:35.643Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-21T18:25:42.302Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-21T18:26:34.893Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-21T18:26:35.330Z] Frame Drop Detected | {"newDropped":52,"totalDropped":54,"totalFrames":42764}
+[2025-11-21T18:26:37.339Z] Frame Drop Detected | {"newDropped":1,"totalDropped":55,"totalFrames":42884}
+[2025-11-21T18:26:42.301Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-21T18:26:42.828Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-21T18:26:43.328Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-21T18:26:43.531Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-21T18:26:44.155Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-21T18:26:46.178Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+
+
+
+
+
+----------------- Console messages -----------------    
+
+Content-Security-Policy: Die Einstellungen der Seite haben die Ausführung eines Inline-Skripts (script-src-elem) blockiert, da es gegen folgende Direktive verstößt: "script-src 'self' https://9zqhb3hba48m0c382uno7k2t74isfi.ext-twitch.tv https://extension-files.twitch.tv". Ziehen Sie die Verwendung eines Hashs ('sha256-jHRymoWpX/G1UN93sLvOZ0jns2+9joiABzpMmVTyQaM=') oder einer Nonce in Erwägung. inpage.js:1:372464
+Content-Security-Policy: Die Einstellungen der Seite haben die Ausführung eines Inline-Skripts (script-src-elem) blockiert, da es gegen folgende Direktive verstößt: "script-src 'self' https://9zqhb3hba48m0c382uno7k2t74isfi.ext-twitch.tv https://extension-files.twitch.tv". Ziehen Sie die Verwendung eines Hashs ('sha256-Y8EpcuUwL0OIDfif4CWn2amrkQq+IfsYUvIny6Ery6E=') oder einer Nonce in Erwägung. content.js:71:183
+Content-Security-Policy: Die Einstellungen der Seite haben die Ausführung eines Inline-Skripts (script-src-elem) blockiert, da es gegen folgende Direktive verstößt: "script-src 'self' https://9zqhb3hba48m0c382uno7k2t74isfi.ext-twitch.tv https://extension-files.twitch.tv". Ziehen Sie die Verwendung eines Hashs ('sha256-y4J2Q/NRj9IvIsSMKubfq1se7iYFUks+oS7ZlEC1F1s=') oder einer Nonce in Erwägung. content.js:71:183
+Got message from unexpected source https://supervisor.ext-twitch.tv {"target":"metamask-inpage","data":{"name":"metamask-provider","data":{"method":"metamask_chainChanged","params":{"chainId":"0x1","networkVersion":"loading","isConnected":false}}}} supervisor.js:1:490
+    handleAction https://supervisor.ext-twitch.tv/supervisor/v1/supervisor.js:1
+    (Async: EventListener.handleEvent)
+    e https://supervisor.ext-twitch.tv/supervisor/v1/supervisor.js:1
+    init https://supervisor.ext-twitch.tv/supervisor/v1/supervisor.js:1
+    <anonym> https://supervisor.ext-twitch.tv/supervisor/v1/supervisor.js:1
+    (Async: EventListener.handleEvent)
+    <anonym> https://supervisor.ext-twitch.tv/supervisor/v1/supervisor.js:1
+    <anonym> https://supervisor.ext-twitch.tv/supervisor/v1/supervisor.js:1
+Got message from unexpected source https://supervisor.ext-twitch.tv {"target":"metamask-inpage","data":{"name":"metamask-provider","data":{"method":"metamask_chainChanged","params":{"chainId":"0x1","networkVersion":"loading","isConnected":false}}}} supervisor.js:1:490
+    handleAction https://supervisor.ext-twitch.tv/supervisor/v1/supervisor.js:1
+    (Async: EventListener.handleEvent)
+    e https://supervisor.ext-twitch.tv/supervisor/v1/supervisor.js:1
+    init https://supervisor.ext-twitch.tv/supervisor/v1/supervisor.js:1
+    <anonym> https://supervisor.ext-twitch.tv/supervisor/v1/supervisor.js:1
+    (Async: EventListener.handleEvent)
+    <anonym> https://supervisor.ext-twitch.tv/supervisor/v1/supervisor.js:1
+    <anonym> https://supervisor.ext-twitch.tv/supervisor/v1/supervisor.js:1
+exportTwitchAdLogs()
+undefined
+Got message from unexpected source https://supervisor.ext-twitch.tv {"target":"metamask-inpage","data":{"name":"metamask-provider","data":{"method":"metamask_chainChanged","params":{"chainId":"0x1","networkVersion":"loading","isConnected":false}}}} supervisor.js:1:490
+    handleAction https://supervisor.ext-twitch.tv/supervisor/v1/supervisor.js:1
+    (Async: EventListener.handleEvent)
+    e https://supervisor.ext-twitch.tv/supervisor/v1/supervisor.js:1
+    init https://supervisor.ext-twitch.tv/supervisor/v1/supervisor.js:1
+    <anonym> https://supervisor.ext-twitch.tv/supervisor/v1/supervisor.js:1
+    (Async: EventListener.handleEvent)
+    <anonym> https://supervisor.ext-twitch.tv/supervisor/v1/supervisor.js:1
+    <anonym> https://supervisor.ext-twitch.tv/supervisor/v1/supervisor.js:1
+Got message from unexpected source https://supervisor.ext-twitch.tv {"target":"metamask-inpage","data":{"name":"metamask-provider","data":{"method":"metamask_chainChanged","params":{"chainId":"0x1","networkVersion":"loading","isConnected":false}}}} supervisor.js:1:490
+    handleAction https://supervisor.ext-twitch.tv/supervisor/v1/supervisor.js:1
+    (Async: EventListener.handleEvent)
+    e https://supervisor.ext-twitch.tv/supervisor/v1/supervisor.js:1
+    init https://supervisor.ext-twitch.tv/supervisor/v1/supervisor.js:1
+    <anonym> https://supervisor.ext-twitch.tv/supervisor/v1/supervisor.js:1
+    (Async: EventListener.handleEvent)
+    <anonym> https://supervisor.ext-twitch.tv/supervisor/v1/supervisor.js:1
+    <anonym> https://supervisor.ext-twitch.tv/supervisor/v1/supervisor.js:1
+Got message from unexpected source https://supervisor.ext-twitch.tv {"target":"metamask-inpage","data":{"name":"metamask-provider","data":{"method":"metamask_chainChanged","params":{"chainId":"0x1","networkVersion":"loading","isConnected":false}}}} supervisor.js:1:490
+    handleAction https://supervisor.ext-twitch.tv/supervisor/v1/supervisor.js:1
+    (Async: EventListener.handleEvent)
+    e https://supervisor.ext-twitch.tv/supervisor/v1/supervisor.js:1
+    init https://supervisor.ext-twitch.tv/supervisor/v1/supervisor.js:1
+    <anonym> https://supervisor.ext-twitch.tv/supervisor/v1/supervisor.js:1
+    (Async: EventListener.handleEvent)
+    <anonym> https://supervisor.ext-twitch.tv/supervisor/v1/supervisor.js:1
+    <anonym> https://supervisor.ext-twitch.tv/supervisor/v1/supervisor.js:1
 
 ​
 
