@@ -1,6 +1,6 @@
 // ==UserScript==
-// @name          Mega Ad Dodger 3000 (Stealth Reactor Core) 1.21
-// @version       1.21
+// @name          Mega Ad Dodger 3000 (Stealth Reactor Core) 1.22
+// @version       1.22
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing. 
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -971,6 +971,21 @@
                         const seekTarget = bufferEnd - 0.5;
                         const timeDiff = Math.abs(currentTime - seekTarget);
                         const isStuckAtBufferEnd = Math.abs(currentTime - bufferEnd) < 0.5;
+
+                        // Check buffer health before attempting aggressive recovery
+                        const bufferStart = buffered.start(0);
+                        const bufferLength = bufferEnd - bufferStart;
+
+                        if (isStuckAtBufferEnd && bufferLength < 5) {
+                            Logger.add('Insufficient buffer for recovery - waiting for buffer to grow', {
+                                bufferLength: bufferLength.toFixed(2),
+                                bufferStart: bufferStart.toFixed(2),
+                                bufferEnd: bufferEnd.toFixed(2),
+                                currentTime: currentTime.toFixed(2)
+                            });
+                            isFixing = false;
+                            return; // Don't attempt recovery with low buffer
+                        }
 
                         // CRITICAL: If stuck at buffer end, player can't advance because next segment is blocked
                         // This requires aggressive recovery to force stream refresh
