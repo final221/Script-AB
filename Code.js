@@ -1,6 +1,6 @@
 // ==UserScript==
-// @name          Mega Ad Dodger 3000 (Stealth Reactor Core) 1.33
-// @version       1.33
+// @name          Mega Ad Dodger 3000 (Stealth Reactor Core) 1.34
+// @version       1.34
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing. 
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -222,6 +222,156 @@
     // 5. MODULES
     // ============================================================================
 
+// --- Metrics ---
+/**
+ * High-level telemetry and metrics tracking.
+ * @responsibility Collects and calculates application metrics.
+ */
+const Metrics = (() => {
+    const counters = {
+        ads_detected: 0,
+        ads_blocked: 0,
+        resilience_executions: 0,
+        aggressive_recoveries: 0,
+        health_triggers: 0,
+        errors: 0,
+        session_start: Date.now(),
+    };
+
+    const increment = (category, value = 1) => {
+        if (counters[category] !== undefined) {
+            counters[category] += value;
+        }
+    };
+
+    const getSummary = () => ({
+        ...counters,
+        uptime_ms: Date.now() - counters.session_start,
+        block_rate: counters.ads_detected > 0 ? (counters.ads_blocked / counters.ads_detected * 100).toFixed(2) + '%' : 'N/A',
+    });
+
+    return {
+        increment,
+        getSummary,
+    };
+})();
+
+// --- Instrumentation ---
+/**
+ * Hooks into global events and console methods to monitor application behavior,
+ * log relevant data, and update metrics.
+ * @responsibility Observes, interprets, and reacts to system-wide events and console output.
+ */
+const Instrumentation = (() => {
+    const setupGlobalErrorHandlers = () => {
+        window.addEventListener('error', (event) => {
+            Logger.add('Global Error', {
+                message: event.message,
+                filename: event.filename,
+                lineno: event.lineno,
+                colno: event.colno,
+            });
+            Metrics.increment('errors');
+        });
+
+        window.addEventListener('unhandledrejection', (event) => {
+            Logger.add('Unhandled Rejection', {
+                reason: event.reason ? event.reason.toString() : 'Unknown',
+            });
+            Metrics.increment('errors');
+        });
+    };
+
+    const interceptConsoleError = () => {
+        const originalError = console.error;
+        const benignErrorSignatures = ['[GraphQL]', 'unauthenticated', 'PinnedChatSettings'];
+
+        console.error = (...args) => {
+            originalError.apply(console, args);
+            try {
+                const msg = args.map(String).join(' ');
+                const isBenign = benignErrorSignatures.some(sig => msg.includes(sig));
+                Logger.add('Console Error', { args: args.map(String), benign: isBenign });
+
+                if (!isBenign) {
+                    Metrics.increment('errors');
+                    if (msg.includes('Error #4000') || msg.includes('MediaLoadInvalidURI')) {
+                        Logger.add('Player crash detected, triggering recovery');
+                        setTimeout(() => Adapters.EventBus.emit(CONFIG.events.AD_DETECTED), 300);
+                    }
+                }
+            } catch (e) {
+                // Avoid recursion if logging fails
+            }
+        };
+    };
+
+    const interceptConsoleWarn = () => {
+        const originalWarn = console.warn;
+        const stallingDebounced = Fn.debounce(() => {
+            Logger.add('Critical warning: Playhead stalling (debounced)');
+            Adapters.EventBus.emit(CONFIG.events.AD_DETECTED);
+        }, 10000);
+
+        console.warn = (...args) => {
+            originalWarn.apply(console, args);
+            try {
+                const msg = args.map(String).join(' ');
+                if (msg.includes('Playhead stalling')) {
+                    Logger.add('Playhead stalling warning detected (raw)');
+                    stallingDebounced();
+                } else if (CONFIG.logging.LOG_CSP_WARNINGS && msg.includes('Content-Security-Policy')) {
+                    Logger.add('CSP Warning', { args: args.map(String) });
+                }
+            } catch (e) {
+                 // Avoid recursion if logging fails
+            }
+        };
+    };
+
+    return {
+        init: () => {
+            setupGlobalErrorHandlers();
+            interceptConsoleError();
+            interceptConsoleWarn();
+        },
+    };
+})();
+
+// --- ReportGenerator ---
+/**
+ * Generates and facilitates the download of a comprehensive report
+ * based on collected logs and metrics.
+ * @responsibility Formats log and metric data into a report and handles file download.
+ */
+const ReportGenerator = (() => {
+    const generateContent = (metricsSummary, logs) => {
+        const header = `[METRICS]\nUptime: ${(metricsSummary.uptime_ms / 1000).toFixed(1)}s\nAds Detected: ${metricsSummary.ads_detected}\nAds Blocked: ${metricsSummary.ads_blocked}\nResilience Executions: ${metricsSummary.resilience_executions}\nAggressive Recoveries: ${metricsSummary.aggressive_recoveries}\nHealth Triggers: ${metricsSummary.health_triggers}\nErrors: ${metricsSummary.errors}\n\n[LOGS]\n`;
+        const logContent = logs.map(l => `[${l.timestamp}] ${l.message}${l.detail ? ' | ' + JSON.stringify(l.detail) : ''}`).join('\n');
+        return header + logContent;
+    };
+
+    const downloadFile = (content) => {
+        const blob = new Blob([content], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `twitch_ad_logs_${new Date().toISOString().replace(/[:.]/g, '-')}.txt`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    };
+
+    return {
+        exportReport: (metricsSummary, logs) => {
+            console.log("Generating and exporting report...");
+            const content = generateContent(metricsSummary, logs);
+            downloadFile(content);
+        },
+    };
+})();
+
     // --- Logger ---
     /**
      * High-level logging and telemetry export.
@@ -230,16 +380,6 @@
     const Logger = (() => {
         const logs = [];
         const MAX_LOGS = 5000;
-
-        const metrics = {
-            ads_detected: 0,
-            ads_blocked: 0,
-            resilience_executions: 0,
-            aggressive_recoveries: 0,
-            health_triggers: 0,
-            errors: 0,
-            session_start: Date.now(),
-        };
 
         const add = (message, detail = null) => {
             if (logs.length >= MAX_LOGS) logs.shift();
@@ -250,106 +390,16 @@
             });
         };
 
-        const addMetric = (category, increment = 1) => {
-            if (metrics[category] !== undefined) {
-                metrics[category] += increment;
-            }
-        };
-
-        const setupGlobalErrorHandlers = () => {
-            window.addEventListener('error', (event) => {
-                add('Global Error', {
-                    message: event.message,
-                    filename: event.filename,
-                    lineno: event.lineno,
-                    colno: event.colno,
-                });
-                addMetric('errors');
-            });
-
-            window.addEventListener('unhandledrejection', (event) => {
-                add('Unhandled Rejection', {
-                    reason: event.reason ? event.reason.toString() : 'Unknown',
-                });
-                addMetric('errors');
-            });
-        };
-
-        const interceptConsoleError = () => {
-            const originalError = console.error;
-            const benignErrorSignatures = ['[GraphQL]', 'unauthenticated', 'PinnedChatSettings'];
-
-            console.error = (...args) => {
-                originalError.apply(console, args);
-                try {
-                    const msg = args.map(String).join(' ');
-                    const isBenign = benignErrorSignatures.some(sig => msg.includes(sig));
-                    add('Console Error', { args: args.map(String), benign: isBenign });
-
-                    if (!isBenign) {
-                        addMetric('errors');
-                        if (msg.includes('Error #4000') || msg.includes('MediaLoadInvalidURI')) {
-                            add('Player crash detected, triggering recovery');
-                            setTimeout(() => Adapters.EventBus.emit(CONFIG.events.AD_DETECTED), 300);
-                        }
-                    }
-                } catch (e) {
-                    // Avoid recursion if logging fails
-                }
-            };
-        };
-
-        const interceptConsoleWarn = () => {
-            const originalWarn = console.warn;
-            const stallingDebounced = Fn.debounce(() => {
-                add('Critical warning: Playhead stalling (debounced)');
-                Adapters.EventBus.emit(CONFIG.events.AD_DETECTED);
-            }, 10000);
-
-            console.warn = (...args) => {
-                originalWarn.apply(console, args);
-                try {
-                    const msg = args.map(String).join(' ');
-                    if (msg.includes('Playhead stalling')) {
-                        add('Playhead stalling warning detected (raw)');
-                        stallingDebounced();
-                    } else if (CONFIG.logging.LOG_CSP_WARNINGS && msg.includes('Content-Security-Policy')) {
-                        add('CSP Warning', { args: args.map(String) });
-                    }
-                } catch (e) {
-                     // Avoid recursion if logging fails
-                }
-            };
-        };
-
         return {
             add,
-            addMetric,
-            getMetrics: () => ({
-                ...metrics,
-                uptime_ms: Date.now() - metrics.session_start,
-                block_rate: metrics.ads_detected > 0 ? (metrics.ads_blocked / metrics.ads_detected * 100).toFixed(2) + '%' : 'N/A',
-            }),
             init: () => {
-                setupGlobalErrorHandlers();
-                interceptConsoleError();
-                interceptConsoleWarn();
+                // Global error and console interception are now handled by the Instrumentation module.
+                // This Logger.init is intentionally left empty.
             },
             export: () => {
-                console.log("Exporting logs...");
-                const m = Logger.getMetrics();
-                const header = `[METRICS]\nUptime: ${(m.uptime_ms / 1000).toFixed(1)}s\nAds Detected: ${m.ads_detected}\nAds Blocked: ${m.ads_blocked}\nResilience Executions: ${m.resilience_executions}\nAggressive Recoveries: ${m.aggressive_recoveries}\nHealth Triggers: ${m.health_triggers}\nErrors: ${m.errors}\n\n[LOGS]\n`;
-                const content = header + logs.map(l => `[${l.timestamp}] ${l.message}${l.detail ? ' | ' + JSON.stringify(l.detail) : ''}`).join('\n');
-
-                const blob = new Blob([content], { type: 'text/plain' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `twitch_ad_logs_${new Date().toISOString().replace(/[:.]/g, '-')}.txt`;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
+                const metricsSummary = Metrics.getSummary();
+                const rawLogs = logs; // Access the private logs array
+                ReportGenerator.exportReport(metricsSummary, rawLogs);
             },
         };
     })();
@@ -412,7 +462,7 @@
             const isAd = Logic.Network.isAd(url);
             if (isAd) {
                 Logger.add('Ad pattern detected', { type, url });
-                Logger.addMetric('ads_detected');
+                Metrics.increment('ads_detected');
             }
             // Detailed logging is handled inside process to avoid duplication
             logNetworkRequest(url, type, isAd);
@@ -443,7 +493,7 @@
         const mockXhrResponse = (xhr, url) => {
             const { body } = Logic.Network.getMock(url);
             Logger.add('Ad request blocked (XHR)', { url });
-            Logger.addMetric('ads_blocked');
+            Metrics.increment('ads_blocked');
 
             Object.defineProperties(xhr, {
                 readyState: { value: 4, writable: false },
@@ -486,7 +536,7 @@
                 if (url && process(url, 'FETCH')) {
                     const { body, type } = Logic.Network.getMock(url);
                     Logger.add('Ad request blocked (FETCH)', { url });
-                    Logger.addMetric('ads_blocked');
+                    Metrics.increment('ads_blocked');
                     return Promise.resolve(new Response(body, {
                         status: 200,
                         statusText: 'OK',
@@ -624,7 +674,7 @@
 
         const triggerRecovery = (reason, details) => {
             Logger.add(`HealthMonitor triggering recovery: ${reason}`, details);
-            Logger.addMetric('health_triggers');
+            Metrics.increment('health_triggers');
             HealthMonitor.stop();
             Adapters.EventBus.emit(CONFIG.events.AD_DETECTED);
         };
@@ -819,7 +869,7 @@
         };
 
         const aggressiveRecovery = async (video) => {
-            Logger.addMetric('aggressive_recoveries');
+            Metrics.increment('aggressive_recoveries');
             Logger.add('Executing aggressive recovery: forcing stream refresh');
             const recoveryStartTime = performance.now();
 
@@ -882,7 +932,7 @@
 
                 try {
                     Logger.add('Resilience execution started');
-                    Logger.addMetric('resilience_executions');
+                    Metrics.increment('resilience_executions');
                     const video = container.querySelector(CONFIG.selectors.VIDEO);
                     if (!video) {
                         Logger.add('Resilience aborted: No video element found');
@@ -959,7 +1009,7 @@
                 };
 
                 Logger.add('Video Event: ERROR - Player crashed', errorDetails);
-                Logger.addMetric('errors');
+                Metrics.increment('errors');
 
                 // Error code 4 = MEDIA_ELEMENT_ERROR: Format error / Not supported
                 // This often indicates the player is in an unrecoverable state
@@ -1032,7 +1082,7 @@
             }
 
             Network.init();
-            Logger.init();
+            Instrumentation.init();
             Core.setupEvents();
             Core.setupScriptBlocker();
 
