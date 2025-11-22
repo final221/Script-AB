@@ -1,0 +1,612 @@
+=================================================================================
+                  FIX 4 - PLAY() RETRY MECHANISM
+                     ✨ CRITICAL FIX ✨
+=================================================================================
+
+WHY THIS FIX IS NEEDED:
+After aggressive recovery (seeking backward 3 seconds), the video.play() command
+sometimes fails or is blocked by the browser. The player stays paused even after
+calling play(), causing the stream to stay frozen indefinitely.
+
+WHAT THIS FIX DOES:
+1. Adds detailed logging around play() calls to detect failures
+2. Implements retry logic with exponential backoff
+3. Detects browser autoplay policy blocks
+4. Logs comprehensive state information for debugging
+
+EVIDENCE FROM LOGS:
+Line 463: "Forced play command sent | wasPaused:true, afterPlayPaused:true"
+This shows play() was called but the video STAYED PAUSED afterward.
+
+IMPACT: Prevents stream freezing after recovery attempts.
+
+---
+artifact: task
+name: Fix 4 - Add Play() Retry Mechanism with Detailed Logging
+description: Comprehensive solution to handle play() failures after aggressive recovery
+issue_id: Fix 4
+priority: CRITICAL
+file: Code.js
+version: 1.22 → 1.23
+estimated_time: 15 minutes
+depends_on: Fix 1, Fix 2, Fix 3
+---
+
+# Task: Fix 4 - Add Play() Retry Mechanism with Detailed Logging
+
+**Issue ID:** Fix 4  
+**Priority:** CRITICAL  
+**File:** `Code.js`  
+**Version:** 1.22 → 1.23  
+**Estimated Time:** 15 minutes  
+**Depends On:** Fix 1, Fix 2, Fix 3
+
+---
+
+## 🎯 Objective
+
+Prevent stream freezing by adding robust play() retry logic with comprehensive logging
+to detect and recover from play() failures after aggressive recovery.
+
+**Problem:** After aggressive recovery, video.play() fails or is blocked, leaving the
+player paused indefinitely. Current code calls play() once and assumes it works.
+
+**Solution:** 
+1. Wrap play() in detailed try-catch with promise handling
+2. Retry play() up to 3 times with delays
+3. Log comprehensive state before/after each attempt
+4. Detect autoplay policy blocks
+
+---
+
+## 📋 Pre-Implementation Checklist
+
+- [ ] Fixes 1, 2, and 3 have been completed
+- [ ] Current `Code.js` is version 1.22
+- [ ] Backup created: `Code_v1.22_backup.js`
+- [ ] Logs confirm play() failure (afterPlayPaused: true)
+- [ ] Ready to test in browser after changes
+
+---
+
+## 🔧 Implementation Steps
+
+### Step 0: Verify Code Structure (CRITICAL - Do This First!)
+
+**Open Code.js and verify these exact lines exist:**
+
+**Line 2-3 Check:**
+```javascript
+// @name          Mega Ad Dodger 3000 (Stealth Reactor Core) 1.22
+// @version       1.22
+```
+- [ ] Line 2 shows version 1.22
+- [ ] Line 3 shows version 1.22
+
+**Line 1052-1073 Check (where play() logic will be enhanced):**
+```javascript
+                    // Restore original playback state
+                    video.playbackRate = wasPaused ? 1 : originalPlaybackRate;
+                    if (video.volume !== originalVolume) video.volume = originalVolume;
+                    if (video.muted !== originalMuted) video.muted = originalMuted;
+
+                    Logger.add('Player state restored after aggressive recovery', {
+                        playbackRate: video.playbackRate,
+                        volume: video.volume,
+                        muted: video.muted
+                    });
+
+                    Logger.add('Aggressive recovery completed', {
+                        afterState: {
+                            readyState: video.readyState,
+                            paused: video.paused,
+                            currentTime: video.currentTime,
+                            bufferedLength: buffered.length,
+                            bufferEnd: buffered.length > 0 ? buffered.end(buffered.length - 1) : 0,
+                            duration: video.duration
+                        }
+                    });
+```
+
+**⚠️ IF ANY OF THE ABOVE DON'T MATCH:**
+- STOP - Do not proceed
+- Code may have been modified
+- Report mismatch and ask for guidance
+
+---
+
+### Step 1: Create Backup
+
+**Action:** Copy current Code.js to backup file
+
+```powershell
+# Run in project directory
+Copy-Item "Code.js" "Code_v1.22_backup.js"
+```
+
+**Validation:**
+- [ ] `Code_v1.22_backup.js` exists
+- [ ] Backup file has same size as `Code.js`
+
+---
+
+### Step 2: Update Version Number
+
+**File:** `Code.js`  
+**Lines:** 2-3
+
+**Update line 2:**
+```javascript
+// @name          Mega Ad Dodger 3000 (Stealth Reactor Core) 1.23
+```
+
+**Update line 3:**
+```javascript
+// @version       1.23
+```
+
+**Validation:**
+- [ ] Line 2 shows version 1.23
+- [ ] Line 3 shows version 1.23
+- [ ] Both lines match
+
+---
+
+### Step 3: Add Play() Helper Function with Retry Logic
+
+**File:** `Code.js`  
+**Location:** After line 911 (after Resilience module starts, before execute function)  
+**Context:** Add new helper function for robust play() calls
+
+**🔍 Find this code block (around line 911-920):**
+```javascript
+        // Resilience Module - Handles recovery from ad detection
+        const Resilience = {
+            execute: async () => {
+                // Prevent multiple simultaneous executions
+                if (isFixing) {
+                    Logger.add('Resilience already in progress, skipping');
+```
+
+**✏️ INSERT AFTER line 911 (after "const Resilience = {"):**
+
+Add this complete helper function:
+```javascript
+            /**
+             * Attempts to play video with retry logic and detailed logging
+             * @param {HTMLVideoElement} video - Video element to play
+             * @param {string} context - Context string for logging
+             * @param {number} maxRetries - Maximum number of retry attempts
+             * @returns {Promise<boolean>} - True if play succeeded, false otherwise
+             */
+            playWithRetry: async (video, context = 'unknown', maxRetries = 3) => {
+                for (let attempt = 1; attempt <= maxRetries; attempt++) {
+                    try {
+                        Logger.add(`Play attempt ${attempt}/${maxRetries} (${context})`, {
+                            beforeState: {
+                                paused: video.paused,
+                                readyState: video.readyState,
+                                currentTime: video.currentTime.toFixed(3),
+                                networkState: video.networkState,
+                                error: video.error ? video.error.code : null
+                            }
+                        });
+
+                        const playPromise = video.play();
+                        
+                        if (playPromise !== undefined) {
+                            await playPromise;
+                            
+                            // Verify play actually worked
+                            await Fn.sleep(200); // Short wait to let state update
+                            
+                            const success = !video.paused;
+                            
+                            Logger.add(`Play attempt ${attempt} ${success ? 'SUCCESS' : 'FAILED'}`, {
+                                afterState: {
+                                    paused: video.paused,
+                                    readyState: video.readyState,
+                                    currentTime: video.currentTime.toFixed(3),
+                                    playbackStarted: success
+                                },
+                                attemptNumber: attempt
+                            });
+                            
+                            if (success) {
+                                return true; // Success!
+                            } else {
+                                Logger.add(`Play command executed but video still paused (attempt ${attempt})`, {
+                                    possibleCause: 'Browser autoplay policy or player state issue'
+                                });
+                            }
+                        } else {
+                            Logger.add(`Play promise undefined (attempt ${attempt}) - old browser or sync call`, {
+                                paused: video.paused
+                            });
+                            
+                            // For older browsers without promise support
+                            await Fn.sleep(200);
+                            if (!video.paused) {
+                                return true;
+                            }
+                        }
+                        
+                    } catch (error) {
+                        Logger.add(`Play attempt ${attempt} threw error`, {
+                            error: error.name,
+                            message: error.message,
+                            code: error.code,
+                            isAutoplayError: error.name === 'NotAllowedError',
+                            attemptNumber: attempt
+                        });
+                        
+                        if (error.name === 'NotAllowedError') {
+                            Logger.add('⚠️ AUTOPLAY BLOCKED - Browser policy preventing playback', {
+                                resolution: 'User interaction may be required',
+                                attempt: attempt
+                            });
+                            // Don't retry on autoplay blocks - it won't help
+                            return false;
+                        }
+                    }
+                    
+                    // Wait before retry (exponential backoff)
+                    if (attempt < maxRetries) {
+                        const delay = 300 * attempt; // 300ms, 600ms, 900ms
+                        Logger.add(`Waiting ${delay}ms before retry ${attempt + 1}`, {
+                            context,
+                            nextAttempt: attempt + 1
+                        });
+                        await Fn.sleep(delay);
+                    }
+                }
+                
+                // All attempts failed
+                Logger.add('❌ All play attempts exhausted', {
+                    context,
+                    totalAttempts: maxRetries,
+                    finalState: {
+                        paused: video.paused,
+                        readyState: video.readyState,
+                        currentTime: video.currentTime.toFixed(3)
+                    }
+                });
+                return false;
+            },
+
+```
+
+**Validation:**
+- [ ] New `playWithRetry` function added after line 911
+- [ ] ALL lines use 12 spaces for base indentation (3 levels)
+- [ ] Function is inside `const Resilience = {` block
+- [ ] Comma after closing brace (because it's a method in an object)
+
+---
+
+### Step 4: Replace Simple play() Call with playWithRetry()
+
+**File:** `Code.js`  
+**Location:** Around line 1074-1080 (in aggressive recovery completion)  
+**Context:** Replace the simple forced play logic
+
+**🔍 Find this code block (lines ~1074-1080):**
+```javascript
+                    // Force play if video was not paused before
+                    if (!wasPaused) {
+                        try {
+                            video.play();
+                            Logger.add('Forced play command sent', { 
+                                wasPaused, 
+                                afterPlayPaused: video.paused 
+                            });
+                        } catch (err) {
+                            Logger.add('Play command failed', { error: err.message });
+                        }
+                    }
+```
+
+**✏️ REPLACE lines 1074-1085 with:**
+```javascript
+                    // Force play if video was not paused before OR if recovery left it paused
+                    const shouldPlay = !wasPaused || video.paused;
+                    
+                    if (shouldPlay) {
+                        Logger.add('Attempting to resume playback after aggressive recovery', {
+                            wasPausedBefore: wasPaused,
+                            currentlyPaused: video.paused,
+                            reason: wasPaused ? 'Recovery left video paused' : 'Video should be playing'
+                        });
+                        
+                        const playSuccess = await Resilience.playWithRetry(
+                            video, 
+                            'post-aggressive-recovery', 
+                            3
+                        );
+                        
+                        if (!playSuccess) {
+                            Logger.add('⚠️ WARNING: Failed to resume playback after recovery', {
+                                impact: 'Stream may be frozen - user interaction might be needed',
+                                finalPausedState: video.paused,
+                                readyState: video.readyState
+                            });
+                        }
+                    } else {
+                        Logger.add('Playback resume skipped - video was paused before recovery', {
+                            wasPaused,
+                            currentPaused: video.paused
+                        });
+                    }
+```
+
+**Validation:**
+- [ ] Old simple play() call completely replaced
+- [ ] New code uses `await Resilience.playWithRetry()`
+- [ ] Logging shows before/after state
+- [ ] Handles both success and failure cases
+
+---
+
+### Step 5: Post-Implementation Verification
+
+**Action:** Verify all changes were applied correctly
+
+**Quick Syntax Check:**
+1. Save Code.js
+2. Look for any red/error highlighting in editor
+3. Search for "playWithRetry" using Ctrl+F
+
+**Expected Results:**
+- [ ] Search finds exactly 2 occurrences (definition + call site)
+- [ ] Version shows 1.23 (lines 2 and 3)
+- [ ] New playWithRetry function exists around line 912-1000
+- [ ] Updated play logic uses playWithRetry around line 1074-1095
+- [ ] No syntax errors or red highlights in editor
+- [ ] File saved successfully
+
+**Visual Verification - Count the Changes:**
+- [ ] 1 new helper function: `playWithRetry`
+- [ ] 1 replaced play() call site with retry logic
+- [ ] ~60 new lines of detailed logging
+- [ ] Version incremented to 1.23
+
+**⚠️ If verification fails:**
+- Restore from backup: `Copy-Item "Code_v1.22_backup.js" "Code.js" -Force`
+- Review Steps 3 and 4 carefully
+- Ensure correct indentation and placement
+
+---
+
+## 🧪 Testing Procedure
+
+### Pre-Test Validation
+- [ ] Code.js saved with all changes
+- [ ] No syntax errors (check editor highlighting)
+- [ ] Version shows 1.23
+- [ ] playWithRetry function exists
+
+### Browser Testing
+
+#### Test 1: Script Loads Successfully
+1. Open Tampermonkey dashboard
+2. Update Code.js script to version 1.23
+3. Save and navigate to Twitch.tv stream
+
+**Expected Result:**
+- [ ] No console errors on page load
+- [ ] Script initializes successfully
+- [ ] See "Core initialized" in logs
+
+#### Test 2: Play After Recovery
+1. Watch stream and wait for playhead stalling
+2. Look for recovery + play retry logs
+
+**Expected Logs (Success Case):**
+```
+[timestamp] Attempting to resume playback after aggressive recovery | {...}
+[timestamp] Play attempt 1/3 (post-aggressive-recovery) | {beforeState: {...}}
+[timestamp] Play attempt 1 SUCCESS | {afterState: {paused: false, ...}}
+```
+
+**Validation:**
+- [ ] "Play attempt 1 SUCCESS" appears
+- [ ] Video resumes playing
+- [ ] Stream does NOT freeze
+
+#### Test 3: Play Retry on Failure
+1. If play fails initially, observe retry behavior
+
+**Expected Logs (Retry Case):**
+```
+[timestamp] Play attempt 1 FAILED | {afterState: {paused: true, ...}}
+[timestamp] Waiting 300ms before retry 2 | {...}
+[timestamp] Play attempt 2/3 (post-aggressive-recovery) | {...}
+[timestamp] Play attempt 2 SUCCESS | {...}
+```
+
+**Validation:**
+- [ ] Multiple play attempts logged
+- [ ] Exponential backoff delays observed (300ms, 600ms)
+- [ ] Eventually succeeds or reports exhaustion
+
+#### Test 4: Autoplay Block Detection
+1. Test with strict browser autoplay settings if possible
+
+**Expected Logs (Autoplay Block):**
+```
+[timestamp] Play attempt 1 threw error | {error: "NotAllowedError", isAutoplayError: true}
+[timestamp] ⚠️ AUTOPLAY BLOCKED - Browser policy preventing playback | {...}
+[timestamp] ❌ All play attempts exhausted | {...}
+```
+
+**Validation:**
+- [ ] Autoplay block detected and logged
+- [ ] Doesn't waste retries after autoplay error
+- [ ] Clear message about needing user interaction
+
+#### Test 5: Compare with Previous Logs
+1. Export logs: `exportTwitchAdLogs()`
+2. Compare with logs from before Fix 4
+
+**Expected Improvements:**
+- [ ] "afterPlayPaused: true" should not appear anymore
+- [ ] Clear success/failure indication for play()
+- [ ] Detailed state logging for debugging
+- [ ] Stream stays playing after recovery
+
+---
+
+## 📊 Success Criteria
+
+### Must Have (Critical)
+- [x] playWithRetry function implemented with retry logic
+- [x] Detailed logging before/after each play attempt
+- [x] Exponential backoff between retries (300ms, 600ms, 900ms)
+- [x] Autoplay policy detection (NotAllowedError)
+- [x] Replaces simple play() call in recovery
+- [x] Script loads without errors
+
+### Nice to Have
+- [ ] Stream resumes successfully after recovery
+- [ ] Play succeeds on first attempt
+- [ ] Retries work when first attempt fails
+- [ ] Clear diagnostic logs for failures
+
+---
+
+## 🚨 Rollback Plan
+
+If implementation fails or causes issues:
+
+### Quick Rollback
+```powershell
+# Restore backup
+Copy-Item "Code_v1.22_backup.js" "Code.js" -Force
+```
+
+### Validation After Rollback
+- [ ] Version shows 1.22 again
+- [ ] Original behavior restored
+- [ ] Can proceed with debugging
+
+---
+
+## ⚠️ Common Pitfalls & Troubleshooting
+
+### Pitfall 1: Wrong Indentation in playWithRetry
+**Symptom:** Syntax errors, function not found  
+**Cause:** Incorrect indentation level (should be 12 spaces for base)  
+**Fix:** Ensure function is inside `const Resilience = { ... }` with proper nesting
+
+### Pitfall 2: Missing await on playWithRetry Call
+**Symptom:** Retries don't work properly, logs appear out of order  
+**Cause:** Forgot `await` before `Resilience.playWithRetry()`  
+**Fix:** Ensure call site uses `await` (line should start with `const playSuccess = await`)
+
+### Pitfall 3: playWithRetry Returns Wrong Value
+**Symptom:** Success check doesn't work  
+**Cause:** Function returns early without boolean  
+**Fix:** Verify all return statements return boolean (true/false)
+
+### Pitfall 4: Logs Don't Appear
+**Symptom:** No detailed play logs in console  
+**Cause:** Logger calls malformed  
+**Fix:** Check that all Logger.add calls are properly formatted with objects
+
+---
+
+## 📝 Implementation Notes
+
+### Why Retry with Exponential Backoff?
+- First play() might fail due to transient browser state
+- Exponential backoff (300ms, 600ms, 900ms) gives more time between attempts
+- Total max wait: ~1.8 seconds before giving up
+
+### Why Check video.paused After play()?
+- play() promise can resolve even if playback doesn't start
+- Actually checking `.paused` confirms playback resumed
+- 200ms delay lets browser update state
+
+### Why Detect NotAllowedError Specifically?
+- Autoplay policies are common browser restriction
+- Retrying won't help - needs user interaction
+- Better to fail fast and log clear message
+
+### Why Detailed Logging?
+- **Before state:** Shows what conditions existed when attempting play
+- **After state:** Confirms whether play actually worked
+- **Error details:** Helps diagnose browser-specific issues
+- **Attempt tracking:** Shows retry progression
+
+---
+
+## ✅ Final Checklist
+
+Before marking as complete:
+
+- [ ] All code changes implemented correctly
+- [ ] Version updated to 1.23 (lines 2 AND 3)
+- [ ] Backup created and verified
+- [ ] Script loads without errors in Tampermonkey
+- [ ] playWithRetry function exists with all logging
+- [ ] Old play() call replaced with playWithRetry
+- [ ] Detailed logs appear for play attempts
+- [ ] Retries work when play fails
+- [ ] Autoplay blocks detected and logged
+- [ ] Stream resumes after recovery (no more freeze)
+
+---
+
+## 🔄 Next Steps
+
+After successful implementation of Fix 4:
+
+1. **Test extensively:** Watch stream for 30+ minutes, look for recoveries
+2. **Monitor logs:** Check that play attempts are logged and succeed
+3. **Compare metrics:** Export logs, verify fewer frozen streams
+4. **Document results:** Note any remaining issues
+
+**If All 4 Fixes Complete:**
+- Compare v1.19 (original) vs v1.23 (all fixes) metrics
+- Document overall improvement in stability
+- Monitor long-term (1+ hour streams)
+
+**Success Indicators:**
+- ✅ Max 1 recovery per 10 seconds (Fix 1)
+- ✅ Higher recovery success rate (Fix 2)
+- ✅ Intelligent buffer checks (Fix 3)
+- ✅ Reliable play after recovery (Fix 4)
+- ✅ NO stream freezes
+
+---
+
+## 📈 Expected Log Examples
+
+### Successful Recovery with Play
+```
+16:38:27.933 - Aggressive recovery started
+16:38:27.933 - Seeked backward to force buffer refresh
+[... 3 second wait ...]
+16:38:30.933 - Less aggressive recovery successful
+16:38:30.933 - Attempting to resume playback after aggressive recovery
+16:38:30.933 - Play attempt 1/3 (post-aggressive-recovery) | beforeState: {paused: true, readyState: 3}
+16:38:31.133 - Play attempt 1 SUCCESS | afterState: {paused: false, playbackStarted: true}
+```
+
+### Play Retry Scenario
+```
+16:38:30.933 - Play attempt 1/3 | beforeState: {paused: true}
+16:38:31.133 - Play attempt 1 FAILED | afterState: {paused: true}
+16:38:31.133 - Waiting 300ms before retry 2
+16:38:31.433 - Play attempt 2/3 | beforeState: {paused: true}
+16:38:31.633 - Play attempt 2 SUCCESS | afterState: {paused: false}
+```
+
+### Autoplay Block Scenario
+```
+16:38:30.933 - Play attempt 1/3 | beforeState: {paused: true}
+16:38:31.133 - Play attempt 1 threw error | {error: "NotAllowedError", isAutoplayError: true}
+16:38:31.133 - ⚠️ AUTOPLAY BLOCKED - Browser policy preventing playback
+16:38:31.133 - ❌ All play attempts exhausted
+16:38:31.133 - ⚠️ WARNING: Failed to resume playback after recovery
+```

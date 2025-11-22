@@ -10,7 +10,7 @@ Status
 VersionHTTP/2
 Übertragen489 B (0 B Größe)
 Referrer Policystrict-origin-when-cross-origin
-Anfrage-PrioritätHigh
+Anfrage-PrioritätLow
 DNS-AuflösungSystem
 
 	
@@ -19,7 +19,7 @@ content-length
 content-type
 	text/html
 date
-	Sat, 22 Nov 2025 15:17:14 GMT
+	Sat, 22 Nov 2025 16:38:44 GMT
 etag
 	"f2ba37ab539401d32d53e77d7527788e"
 last-modified
@@ -27,9 +27,9 @@ last-modified
 server
 	AmazonS3
 via
-	1.1 7fbac6ee13ac9fa5ab42252ac40e04a8.cloudfront.net (CloudFront)
+	1.1 01c2e8de72140867daecf63b07211c44.cloudfront.net (CloudFront)
 x-amz-cf-id
-	CAJJMiCpCN4x3xsypcqKWIIL_uW4LimcFYCXVxVkIjLxldGFt_qkzg==
+	AtVi3SjlMF9O1ZPT6ssHoIQ7_OntU0kgbbbgXQZhIBsvyvK799zC2w==
 x-amz-cf-pop
 	HAM50-P4
 x-amz-error-code
@@ -50,7 +50,7 @@ Accept-Language
 Connection
 	keep-alive
 Cookie
-	unique_id=MyJILP1jfuUz2VBuUB2ZPajiR0aXfrYe; unique_id_durable=MyJILP1jfuUz2VBuUB2ZPajiR0aXfrYe; twitch.lohp.countryCode=DE; experiment_overrides={%22experiments%22:{}%2C%22disabled%22:[]}; api_token=twilight.2257da65fb6f05bd0fc4bb137648d036; server_session_id=b0159c655cd04ef89ec00cc58d6b71e9
+	unique_id=MyJILP1jfuUz2VBuUB2ZPajiR0aXfrYe; unique_id_durable=MyJILP1jfuUz2VBuUB2ZPajiR0aXfrYe; twitch.lohp.countryCode=DE; experiment_overrides={%22experiments%22:{}%2C%22disabled%22:[]}; api_token=twilight.2257da65fb6f05bd0fc4bb137648d036; server_session_id=e2e6077674fc45929d057528cae1827b
 Host
 	vod-secure.twitch.tv
 Priority
