@@ -1,6 +1,6 @@
 // ==UserScript==
-// @name          Mega Ad Dodger 3000 (Stealth Reactor Core) 1.29
-// @version       1.29
+// @name          Mega Ad Dodger 3000 (Stealth Reactor Core) 1.30
+// @version       1.30
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing. 
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -420,18 +420,16 @@
         };
 
         const logNetworkRequest = (url, type, isAd) => {
-            if (isAd) return; // Ad requests are already logged
+            if (isAd) return;
 
-            const isSuspicious = url.includes('/ad/') || url.includes('ads.') || url.includes('advertising');
-            const sampleRate = CONFIG.logging.NETWORK_SAMPLE_RATE;
+            // --- START OF DIAGNOSTIC CHANGE ---
+            // Temporarily increase logging to find new ad patterns.
+            const isRelevant = url.includes('twitch') || url.includes('ttvnw') || url.includes('.m3u8');
 
-            if (isSuspicious && Math.random() < sampleRate) {
-                Logger.add('Network Request (Suspicious Pattern - sample)', { type, url });
-            } else if (CONFIG.logging.LOG_NORMAL_NETWORK && CONFIG.debug && Math.random() < sampleRate) {
-                if (url.includes('usher') || url.includes('.m3u8') || url.includes('ttvnw')) {
-                    Logger.add('Network Request (Normal - debug sample)', { type, url });
-                }
+            if (isRelevant && Math.random() < 0.25) { // Log 25% of relevant requests
+                Logger.add('Network Request (DIAGNOSTIC)', { type, url });
             }
+            // --- END OF DIAGNOSTIC CHANGE ---
         };
 
         /**
