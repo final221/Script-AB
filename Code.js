@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name          Mega Ad Dodger 3000 (Stealth Reactor Core) 1.18
-// @version       1.18
-// @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
+// @name          Mega Ad Dodger 3000 (Stealth Reactor Core) 1.19
+// @version       1.19
+// @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing. 
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
 // @run-at        document-start
@@ -66,6 +66,16 @@
                 FORCE_PLAY_DEFER_MS: 1,
                 REATTEMPT_DELAY_MS: 60 * 1000,
                 PLAYBACK_TIMEOUT_MS: 2500,
+                FRAME_DROP_SEVERE_THRESHOLD: 15, // Frames dropped in one check period
+                FRAME_DROP_MODERATE_THRESHOLD: 10, // Frames dropped for rate-based check
+                FRAME_DROP_RATE_THRESHOLD: 1.0, // Percentage threshold for drop rate
+                AV_SYNC_THRESHOLD_MS: 250, // Audio/video sync threshold in milliseconds
+                AV_SYNC_CHECK_INTERVAL_MS: 2000, // Check A/V sync every 2 seconds
+            },
+            logging: {
+                NETWORK_SAMPLE_RATE: 0.05, // 5% sample rate for normal network requests
+                LOG_CSP_WARNINGS: true, // Log CSP warnings for evaluation
+                LOG_NORMAL_NETWORK: false, // Only log normal network when debug=true
             },
             network: {
                 AD_PATTERNS: ['/ad/v1/', '/usher/v1/ad/', '/api/v5/ads/', 'pubads.g.doubleclick.net', 'supervisor.ext-twitch.tv', 'vod-secure.twitch.tv', 'edge.ads.twitch.tv', '/3p/ads'],
@@ -269,19 +279,36 @@
                 console.error = (...args) => {
                     try {
                         const msg = args.map(a => String(a)).join(' ');
-                        Logger.add('Console Error', { args: args.map(a => String(a)) });
-                        Logger.addMetric('errors');
+                        const errorArgs = args.map(a => String(a));
                         
-                        // Detect player crash errors
-                        if (msg.includes('Error #4000') || 
-                            msg.includes('unavailable or not supported') ||
-                            msg.includes('MediaLoadInvalidURI') ||
-                            msg.includes('NS_ERROR_DOM_INVALID_STATE_ERR')) {
-                            Logger.add('Player crash detected in console - triggering recovery', { message: msg });
-                            // Trigger recovery after a short delay
-                            setTimeout(() => {
-                                Adapters.EventBus.emit(CONFIG.events.AD_DETECTED);
-                            }, 300);
+                        // Filter benign errors that shouldn't count as critical errors
+                        const isBenignError = msg.includes('[GraphQL]') && 
+                            (msg.includes('unauthenticated') || 
+                             msg.includes('PinnedChatSettings') ||
+                             msg.includes('OneClickEligibility') ||
+                             msg.includes('SubscriptionRewardPreviews') ||
+                             msg.includes('ChannelGoalConnection'));
+                        
+                        // Log all errors but only count critical ones
+                        Logger.add('Console Error', { 
+                            args: errorArgs,
+                            benign: isBenignError 
+                        });
+                        
+                        if (!isBenignError) {
+                            Logger.addMetric('errors');
+                            
+                            // Detect player crash errors (critical errors only)
+                            if (msg.includes('Error #4000') || 
+                                msg.includes('unavailable or not supported') ||
+                                msg.includes('MediaLoadInvalidURI') ||
+                                msg.includes('NS_ERROR_DOM_INVALID_STATE_ERR')) {
+                                Logger.add('Player crash detected in console - triggering recovery', { message: msg });
+                                // Trigger recovery after a short delay
+                                setTimeout(() => {
+                                    Adapters.EventBus.emit(CONFIG.events.AD_DETECTED);
+                                }, 300);
+                            }
                         }
                     } catch (e) { }
                     originalError.apply(console, args);
@@ -292,8 +319,47 @@
                 console.warn = (...args) => {
                     try {
                         const msg = args.map(a => String(a)).join(' ');
-                        Logger.add('Console Warn', { args: args.map(a => String(a)) });
+                        const errorArgs = args.map(a => String(a));
+                        
+                        // Detect CSP warnings (may be from Tampermonkey injection)
+                        const isCSPWarning = msg.includes('Content-Security-Policy') || 
+                                            msg.includes('script-src-elem') ||
+                                            msg.includes('script-src') ||
+                                            (msg.includes('content.js') && msg.includes('blockiert'));
+                        
+                        // Detect if it's related to userscript injection
+                        const isTampermonkeyRelated = isCSPWarning && (
+                            msg.includes('extension-files.twitch.tv') ||
+                            msg.includes('ext-twitch.tv') ||
+                            msg.includes('Tampermonkey') ||
+                            msg.includes('userscript')
+                        );
+                        
+                        // Filter benign warnings that don't need logging
+                        const isBenignWarning = msg.includes('React Router Future Flag Warning') ||
+                                                msg.includes('v7_startTransition') ||
+                                                msg.includes('v7_relativeSplatPath') ||
+                                                msg.includes('Moving to buffered region');
+                        
+                        // Log CSP warnings if enabled (for evaluation even though we can't fix them)
+                        if (CONFIG.logging.LOG_CSP_WARNINGS && isCSPWarning) {
+                            Logger.add('CSP Warning (Tampermonkey/Extension Related)', {
+                                args: errorArgs,
+                                isTampermonkeyRelated,
+                                note: isTampermonkeyRelated 
+                                    ? 'This warning is from Tampermonkey/extension script injection and cannot be fixed by the userscript'
+                                    : 'CSP warning from page/extension - evaluate if it affects functionality'
+                            });
+                        }
+                        
+                        // Only log non-benign, non-CSP warnings to reduce noise
+                        if (!isBenignWarning && !isCSPWarning) {
+                            Logger.add('Console Warn', { args: errorArgs });
+                        }
+                        
+                        // Critical warnings that trigger recovery
                         if (msg.includes('Playhead stalling')) {
+                            Logger.add('Critical warning detected: Playhead stalling');
                             Adapters.EventBus.emit(CONFIG.events.AD_DETECTED);
                         }
                     } catch (e) { }
@@ -387,9 +453,25 @@
                     Logger.addMetric('ads_detected');
                 }
 
-                // @debug: Catch potential missed ad patterns
-                if (!isAd && (url.includes('usher') || url.includes('.m3u8') || url.includes('/ad/') || url.includes('twitch') || url.includes('ttvnw'))) {
-                    Logger.add('Network Request (Allowed)', { type, url });
+                // Granular network logging: Keep important logs, reduce noise
+                if (!isAd) {
+                    // Always log potentially suspicious patterns (but throttled)
+                    const isSuspiciousPattern = url.includes('/ad/') || 
+                                              url.includes('ads.') || 
+                                              url.includes('advertising') ||
+                                              (url.includes('usher') && url.includes('.m3u8'));
+                    
+                    if (isSuspiciousPattern && Math.random() < CONFIG.logging.NETWORK_SAMPLE_RATE) {
+                        Logger.add('Network Request (Suspicious Pattern - sample)', { type, url });
+                    }
+                    
+                    // Log normal requests only in debug mode (for troubleshooting)
+                    if (CONFIG.logging.LOG_NORMAL_NETWORK && CONFIG.debug && 
+                        Math.random() < CONFIG.logging.NETWORK_SAMPLE_RATE) {
+                        if (url.includes('usher') || url.includes('.m3u8') || url.includes('twitch') || url.includes('ttvnw')) {
+                            Logger.add('Network Request (Normal - debug sample)', { type, url });
+                        }
+                    }
                 }
 
                 return isAd;
@@ -588,13 +670,19 @@
     /**
      * Monitors video playback health to detect "stuck" states caused by ad injection.
      * @responsibility Detects when the player is technically "playing" but time is not advancing.
+     * Also monitors audio/video synchronization issues.
      */
     const HealthMonitor = (() => {
         let timer = null;
+        let syncTimer = null;
         let videoRef = null;
         let lastTime = 0;
         let stuckCount = 0;
         let lastDroppedFrames = 0;
+        let lastTotalFrames = 0; // Track total frames for interval drop rate calculation
+        let lastSyncCheckTime = 0; // Timestamp for sync check
+        let lastSyncVideoTime = 0; // Video currentTime for sync check
+        let syncIssueCount = 0;
 
         return {
             start: (container) => {
@@ -607,9 +695,16 @@
                     lastTime = video.currentTime;
                     stuckCount = 0;
                     lastDroppedFrames = 0;
+                    lastTotalFrames = 0;
+                    lastSyncCheckTime = 0;
+                    lastSyncVideoTime = video.currentTime;
+                    syncIssueCount = 0;
                 }
 
                 if (timer) return;
+
+                // Start A/V sync monitoring
+                HealthMonitor.startSyncMonitoring();
 
                 timer = setInterval(() => {
                     if (!document.body.contains(videoRef)) {
@@ -635,16 +730,47 @@
                     if (videoRef.getVideoPlaybackQuality) {
                         const quality = videoRef.getVideoPlaybackQuality();
                         const dropped = quality.droppedVideoFrames;
-                        if (dropped - lastDroppedFrames > 0) {
+                        const totalFrames = quality.totalVideoFrames;
+                        const newDropped = dropped - lastDroppedFrames;
+                        
+                        if (newDropped > 0 || totalFrames > lastTotalFrames) {
+                            // Calculate recent drop rate (for current interval only)
+                            // This avoids mixing cumulative stats with recent drop counts
+                            const newTotalFrames = totalFrames - lastTotalFrames;
+                            const recentDropRate = newTotalFrames > 0 
+                                ? (newDropped / newTotalFrames * 100) 
+                                : 0;
+                            
+                            // Also log cumulative drop rate for context (but don't use for threshold)
+                            const cumulativeDropRate = totalFrames > 0 
+                                ? (dropped / totalFrames * 100).toFixed(2) 
+                                : '0.00';
+                            
                             Logger.add('Frame Drop Detected', {
-                                newDropped: dropped - lastDroppedFrames,
+                                newDropped: newDropped,
+                                newTotalFrames: newTotalFrames,
+                                recentDropRate: recentDropRate.toFixed(2) + '%',
                                 totalDropped: dropped,
-                                totalFrames: quality.totalVideoFrames
+                                totalFrames: totalFrames,
+                                cumulativeDropRate: cumulativeDropRate + '%'
                             });
 
-                            // Trigger recovery if significant frames are dropped (indicating a freeze/crash)
-                            if (dropped - lastDroppedFrames > 5) {
-                                Logger.add('Severe frame drop detected, triggering recovery');
+                            // Fixed threshold logic: Use recent drop rate, not cumulative
+                            // Trigger recovery if:
+                            // - More than 15 frames dropped in one check (severe freeze)
+                            // - OR recent drop rate exceeds threshold AND more than 10 frames dropped (consistent degradation in current interval)
+                            const recentDropRateThreshold = recentDropRate > CONFIG.timing.FRAME_DROP_RATE_THRESHOLD;
+                            const severeDrop = newDropped > CONFIG.timing.FRAME_DROP_SEVERE_THRESHOLD;
+                            const moderateDropWithHighRate = newDropped > CONFIG.timing.FRAME_DROP_MODERATE_THRESHOLD && recentDropRateThreshold;
+                            
+                            if (severeDrop || moderateDropWithHighRate) {
+                                Logger.add('Severe frame drop detected, triggering recovery', {
+                                    reason: severeDrop ? 'absolute_threshold' : 'recent_rate_threshold',
+                                    newDropped,
+                                    newTotalFrames,
+                                    recentDropRate: recentDropRate.toFixed(2) + '%',
+                                    cumulativeDropRate: cumulativeDropRate + '%'
+                                });
                                 Logger.addMetric('health_triggers');
                                 HealthMonitor.stop();
                                 Adapters.EventBus.emit(CONFIG.events.AD_DETECTED);
@@ -652,6 +778,10 @@
                             }
 
                             lastDroppedFrames = dropped;
+                            lastTotalFrames = totalFrames;
+                        } else if (totalFrames !== lastTotalFrames) {
+                            // Update tracking even if no drops (in case frames advanced)
+                            lastTotalFrames = totalFrames;
                         }
                     }
 
@@ -665,12 +795,101 @@
                 }, CONFIG.timing.HEALTH_CHECK_MS);
             },
 
+            startSyncMonitoring: () => {
+                if (syncTimer) return;
+                
+                syncTimer = setInterval(() => {
+                    if (!videoRef || !document.body.contains(videoRef)) {
+                        HealthMonitor.stop();
+                        return;
+                    }
+
+                    // A/V Sync Detection
+                    // Check for audio/video synchronization issues by monitoring timing discrepancies
+                    if (!videoRef.paused && !videoRef.ended && videoRef.readyState >= 2) {
+                        const currentTime = videoRef.currentTime;
+                        const now = Date.now();
+                        
+                        // Check if we have audio tracks (for context, not always available)
+                        const audioTracks = videoRef.audioTracks;
+                        const videoTracks = videoRef.videoTracks;
+                        
+                        // Monitor playback timing discrepancies to detect A/V sync issues
+                        if (lastSyncCheckTime > 0) {
+                            const elapsedRealTime = (now - lastSyncCheckTime) / 1000; // Real elapsed time in seconds
+                            const expectedTimeAdvancement = elapsedRealTime * videoRef.playbackRate;
+                            const actualTimeAdvancement = currentTime - lastSyncVideoTime;
+                            const timeDiscrepancy = Math.abs(expectedTimeAdvancement - actualTimeAdvancement);
+                            
+                            // Check for significant timing discrepancies that indicate sync/stutter issues
+                            // This detects when video time doesn't advance as expected, which can indicate:
+                            // - Audio/video desynchronization
+                            // - Playback stuttering
+                            // - Buffer underruns affecting sync
+                            if (timeDiscrepancy > CONFIG.timing.AV_SYNC_THRESHOLD_MS / 1000 && 
+                                expectedTimeAdvancement > 0.1 && 
+                                actualTimeAdvancement >= 0) { // Ignore backward seeks during check
+                                syncIssueCount++;
+                                
+                                Logger.add('A/V Sync Issue Detected', {
+                                    timeDiscrepancy: (timeDiscrepancy * 1000).toFixed(2) + 'ms',
+                                    expected: expectedTimeAdvancement.toFixed(3) + 's',
+                                    actual: actualTimeAdvancement.toFixed(3) + 's',
+                                    elapsedRealTime: elapsedRealTime.toFixed(3) + 's',
+                                    currentTime: currentTime.toFixed(2),
+                                    playbackRate: videoRef.playbackRate,
+                                    syncIssueCount,
+                                    hasAudioTracks: audioTracks && audioTracks.length > 0,
+                                    hasVideoTracks: videoTracks && videoTracks.length > 0
+                                });
+                                
+                                // If sync issues persist (3 checks = ~6 seconds), trigger recovery
+                                if (syncIssueCount >= 3) {
+                                    Logger.add('Persistent A/V sync issues detected, triggering recovery', {
+                                        syncIssueCount,
+                                        timeDiscrepancy: (timeDiscrepancy * 1000).toFixed(2) + 'ms',
+                                        note: 'A/V sync issues may be caused by ad segments or playback corruption'
+                                    });
+                                    Logger.addMetric('health_triggers');
+                                    HealthMonitor.stop();
+                                    Adapters.EventBus.emit(CONFIG.events.AD_DETECTED);
+                                    return;
+                                }
+                            } else if (timeDiscrepancy <= CONFIG.timing.AV_SYNC_THRESHOLD_MS / 1000 / 2) {
+                                // Reset counter if sync is good (half threshold for recovery)
+                                if (syncIssueCount > 0) {
+                                    Logger.add('A/V sync recovered', { 
+                                        previousIssues: syncIssueCount,
+                                        timeDiscrepancy: (timeDiscrepancy * 1000).toFixed(2) + 'ms'
+                                    });
+                                    syncIssueCount = 0;
+                                }
+                            }
+                        }
+                        
+                        // Update sync tracking
+                        lastSyncCheckTime = now;
+                        lastSyncVideoTime = currentTime;
+                    } else {
+                        // Reset tracking when paused/ended
+                        lastSyncCheckTime = 0;
+                        syncIssueCount = 0;
+                    }
+                }, CONFIG.timing.AV_SYNC_CHECK_INTERVAL_MS);
+            },
+
             stop: () => {
                 if (timer) clearInterval(timer);
+                if (syncTimer) clearInterval(syncTimer);
                 timer = null;
+                syncTimer = null;
                 videoRef = null;
                 stuckCount = 0;
                 lastDroppedFrames = 0;
+                lastTotalFrames = 0;
+                lastSyncCheckTime = 0;
+                lastSyncVideoTime = 0;
+                syncIssueCount = 0;
             }
         };
     })();
