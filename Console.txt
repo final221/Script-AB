@@ -1,12 +1,11 @@
-Player stopping playback - error :2 (ErrorNotSupported code 4 - NS_ERROR_DOM_INVALID_STATE_ERR (0x8053000b) - MediaLoadInvalidURI) amazon-ivs-wasmworker.min-96ae2717290f1bdba0b6.js:1:49765
-    _emscripten_log_js https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-96ae2717290f1bdba0b6.js:1
-    logMessage https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-96ae2717290f1bdba0b6.js:1
-    x https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-96ae2717290f1bdba0b6.js:1
-    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-822d371c32d3620af2e6.wasm:737037
-    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-822d371c32d3620af2e6.wasm:932877
-    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-822d371c32d3620af2e6.wasm:61610
-    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-822d371c32d3620af2e6.wasm:226239
-    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-822d371c32d3620af2e6.wasm:410238
-    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-822d371c32d3620af2e6.wasm:759420
-    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-822d371c32d3620af2e6.wasm:141990
-    Ie https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-96ae2717290f1bdba0b6.js:1
+'postMessage' konnte auf 'DOMWindow' nicht ausgeführt werden: Der angegebene Ziel-Ursprung (origin - 'https://supervisor.ext-twitch.tv') stimmt nicht mit dem Empfängerfenster-Ursprung überein ('https://www.twitch.tv'). 2 yamatocannon
+Content-Security-Policy: Die Einstellungen der Seite haben die Ausführung eines Inline-Skripts (script-src-elem) blockiert, da es gegen folgende Direktive verstößt: "script-src 'self' https://dy9or3jkex4hkrfm6nhsww2821g8eu.ext-twitch.tv https://extension-files.twitch.tv". Ziehen Sie die Verwendung eines Hashs ('sha256-DZsxMG40K/7ZOINwgeGMKWRaTKwHcUb4vKxMuiOzHb4=') oder einer Nonce in Erwägung. content.js:71:183
+Content-Security-Policy: Die Einstellungen der Seite haben die Ausführung eines Inline-Skripts (script-src-elem) blockiert, da es gegen folgende Direktive verstößt: "script-src 'self' https://dy9or3jkex4hkrfm6nhsww2821g8eu.ext-twitch.tv https://extension-files.twitch.tv". Ziehen Sie die Verwendung eines Hashs ('sha256-lgMH1FmCAjHzg1i/QM5qb2flxnFt+4KlYYLd1Y78xDc=') oder einer Nonce in Erwägung. content.js:71:183
+Content-Security-Policy: Die Einstellungen der Seite haben die Ausführung eines Inline-Skripts (script-src-elem) blockiert, da es gegen folgende Direktive verstößt: "script-src 'self' https://9gxdmz93ockiljbh4c24cmuvgo4r86.ext-twitch.tv https://extension-files.twitch.tv". Ziehen Sie die Verwendung eines Hashs ('sha256-MiUl2jXG8kATPhlGdvLjpAHRR6PH3iVGhbgYNH6LmYg=') oder einer Nonce in Erwägung. content.js:71:183
+Content-Security-Policy: Die Einstellungen der Seite haben die Ausführung eines Inline-Skripts (script-src-elem) blockiert, da es gegen folgende Direktive verstößt: "script-src 'self' https://9gxdmz93ockiljbh4c24cmuvgo4r86.ext-twitch.tv https://extension-files.twitch.tv". Ziehen Sie die Verwendung eines Hashs ('sha256-Ah+7E5GCA4/pb7AKEN359qz7gpy+mKaig0Q5OZ8mZzw=') oder einer Nonce in Erwägung. content.js:71:183
+Das Cookie "ph_phc_asFC1Ri1uLBshzCpxbtNQ1Af2NV7m2Gl5IFE0kuoUp2_posthog" wurde abgelehnt, weil es sich in einem seitenübergreifenden Kontext befindet und sein "SameSite" auf "Lax" oder "Strict" gesetzt ist. video_overlay.html
+Das Cookie "dmn_chk_019aabc8-2205-7f93-9371-10d2e021acab" wurde wegen ungültiger Domain abgelehnt. video_overlay.html
+Das Cookie "ph_phc_asFC1Ri1uLBshzCpxbtNQ1Af2NV7m2Gl5IFE0kuoUp2_posthog" wurde abgelehnt, weil es sich in einem seitenübergreifenden Kontext befindet und sein "SameSite" auf "Lax" oder "Strict" gesetzt ist. 6 video_overlay.html
+Content-Security-Policy: Die Einstellungen der Seite haben die Anwendung eines Scripts (script-src-elem) auf https://www.googletagmanager.com/gtag/js?id=G-CC81LBYX2W blockiert, da es gegen folgende Direktive verstößt: "script-src 'self' https://9gxdmz93ockiljbh4c24cmuvgo4r86.ext-twitch.tv https://extension-files.twitch.tv" useTwitchSetup-CM8S2gBO.js:27623:27
+Das Cookie "ph_phc_asFC1Ri1uLBshzCpxbtNQ1Af2NV7m2Gl5IFE0kuoUp2_posthog" wurde abgelehnt, weil es sich in einem seitenübergreifenden Kontext befindet und sein "SameSite" auf "Lax" oder "Strict" gesetzt ist. 5 video_overlay.html
+Das Cookie "ph_phc_asFC1Ri1uLBshzCpxbtNQ1Af2NV7m2Gl5IFE0kuoUp2_posthog" wurde abgelehnt, weil es sich in einem seitenübergreifenden Kontext befindet und sein "SameSite" auf "Lax" oder "Strict" gesetzt ist.

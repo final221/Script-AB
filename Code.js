@@ -1,6 +1,6 @@
 // ==UserScript==
-// @name          Mega Ad Dodger 3000 (Stealth Reactor Core) 1.17
-// @version       1.17
+// @name          Mega Ad Dodger 3000 (Stealth Reactor Core) 1.18
+// @version       1.18
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -405,18 +405,70 @@
                     // REASON: If we just block the request, the player will retry indefinitely or crash.
                     // We must return a valid (but empty) response to satisfy the player's state machine.
                     const { body } = Logic.Network.getMock(url);
-                    thisArg.addEventListener('readystatechange', function inject() {
-                        if (this.readyState === 2) {
+                    Logger.add('Ad request blocked (XHR)', { url });
+                    Logger.addMetric('ads_blocked');
+                    
+                    // Store the URL and mock body for later use
+                    thisArg._blockedAd = { url, body };
+                    
+                    // Intercept send to prevent actual network request and mock response immediately
+                    const originalSend = thisArg.send;
+                    thisArg.send = function(...sendArgs) {
+                        if (this._blockedAd) {
+                            // Mock the response immediately without sending network request
                             Object.defineProperties(this, {
-                                responseText: { value: body, writable: false },
-                                response: { value: body, writable: false },
+                                readyState: { value: 4, writable: false, configurable: true },
+                                responseText: { value: this._blockedAd.body, writable: false },
+                                response: { value: this._blockedAd.body, writable: false },
                                 status: { value: 200, writable: false },
                                 statusText: { value: 'OK', writable: false },
                             });
-                            this.removeEventListener('readystatechange', inject);
+                            
+                            // Trigger callbacks asynchronously to mimic real XHR behavior
+                            queueMicrotask(() => {
+                                // Create a proper ProgressEvent for readystatechange
+                                if (this.onreadystatechange) {
+                                    try {
+                                        const readystatechangeEvent = new ProgressEvent('readystatechange', {
+                                            bubbles: false,
+                                            cancelable: false,
+                                            lengthComputable: true,
+                                            loaded: this.responseText ? this.responseText.length : 0,
+                                            total: this.responseText ? this.responseText.length : 0
+                                        });
+                                        // Set target and currentTarget to the XHR object
+                                        Object.defineProperty(readystatechangeEvent, 'target', { value: this, writable: false });
+                                        Object.defineProperty(readystatechangeEvent, 'currentTarget', { value: this, writable: false });
+                                        this.onreadystatechange.call(this, readystatechangeEvent);
+                                    } catch (e) {
+                                        Logger.add('XHR onreadystatechange error', { error: e.message });
+                                    }
+                                }
+                                // Create a proper ProgressEvent for load
+                                if (this.onload) {
+                                    try {
+                                        const loadEvent = new ProgressEvent('load', {
+                                            bubbles: false,
+                                            cancelable: false,
+                                            lengthComputable: true,
+                                            loaded: this.responseText ? this.responseText.length : 0,
+                                            total: this.responseText ? this.responseText.length : 0
+                                        });
+                                        // Set target and currentTarget to the XHR object
+                                        Object.defineProperty(loadEvent, 'target', { value: this, writable: false });
+                                        Object.defineProperty(loadEvent, 'currentTarget', { value: this, writable: false });
+                                        this.onload.call(this, loadEvent);
+                                    } catch (e) {
+                                        Logger.add('XHR onload error', { error: e.message });
+                                    }
+                                }
+                            });
+                            
+                            delete this._blockedAd;
+                            return undefined;
                         }
-                    });
-                    return;
+                        return originalSend.apply(this, sendArgs);
+                    };
                 }
                 return Reflect.apply(target, thisArg, args);
             });
@@ -426,6 +478,8 @@
                 const url = (typeof args[0] === 'string') ? args[0] : (args[0] instanceof Request ? args[0].url : '');
                 if (url && process(url, 'FETCH')) {
                     const { body, type } = Logic.Network.getMock(url);
+                    Logger.add('Ad request blocked (FETCH)', { url });
+                    Logger.addMetric('ads_blocked');
                     return Promise.resolve(new Response(body, { status: 200, statusText: 'OK', headers: { 'Content-Type': type } }));
                 }
                 return Reflect.apply(target, thisArg, args);
