@@ -1,6 +1,6 @@
 // ==UserScript==
-// @name          Mega Ad Dodger 3000 (Stealth Reactor Core) 1.23
-// @version       1.23
+// @name          Mega Ad Dodger 3000 (Stealth Reactor Core) 1.24
+// @version       1.24
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing. 
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -502,70 +502,58 @@
         let keyMap = { k0: null, k1: null, k2: null };
 
         const findKeys = (obj) => {
-            let foundCount = 0;
             for (const sig of Logic.Player.signatures) {
-                if (keyMap[sig.id] && Logic.Player.validate(obj, keyMap[sig.id], sig)) {
-                    foundCount++;
-                    continue;
-                }
-                const foundKey = Object.keys(obj).find(k => Logic.Player.validate(obj, k, sig));
-                if (foundKey) {
-                    keyMap[sig.id] = foundKey;
-                    Logger.add('Player signature found', { id: sig.id, key: foundKey });
-                    foundCount++;
+                if (!keyMap[sig.id] || !Logic.Player.validate(obj, keyMap[sig.id], sig)) {
+                    const foundKey = Object.keys(obj).find(k => Logic.Player.validate(obj, k, sig));
+                    if (foundKey) {
+                        keyMap[sig.id] = foundKey;
+                        Logger.add('Player signature found', { id: sig.id, key: foundKey });
+                    }
                 }
             }
-            return foundCount === Logic.Player.signatures.length;
+            return Object.values(keyMap).every(k => k !== null);
         };
 
         const searchRecursive = (obj, depth = 0, visited = new WeakSet()) => {
-            if (depth > CONFIG.player.MAX_SEARCH_DEPTH || !obj || typeof obj !== 'object') return null;
-            if (visited.has(obj)) return null;
+            if (depth > CONFIG.player.MAX_SEARCH_DEPTH || !obj || typeof obj !== 'object' || visited.has(obj)) {
+                return null;
+            }
             visited.add(obj);
 
-            if (findKeys(obj)) return obj;
+            if (findKeys(obj)) {
+                return obj;
+            }
 
             for (const k in obj) {
-                if (obj[k] && typeof obj[k] === 'object') {
+                // Prioritize properties that are more likely to contain the context
+                if (k.startsWith('__react') || k.startsWith('__vue') || k.startsWith('__next') || k.toLowerCase().includes('props')) {
                     const found = searchRecursive(obj[k], depth + 1, visited);
                     if (found) return found;
                 }
             }
             return null;
         };
+        
+        const validateCache = () => {
+            if (!cachedContext) return false;
+            const isValid = Object.keys(keyMap).every(
+                (key) => keyMap[key] && typeof cachedContext[keyMap[key]] === 'function'
+            );
+            if (!isValid) {
+                Logger.add('PlayerContext: ⚠️ CACHED CONTEXT INVALID', { keyMap });
+                PlayerContext.reset();
+                return false;
+            }
+            return true;
+        };
 
         return {
             get: (element) => {
-                if (cachedContext) {
-                    // Validate cached context structure
-                    const hasK0 = keyMap.k0 && typeof cachedContext[keyMap.k0] === 'function';
-                    const hasK1 = keyMap.k1 && typeof cachedContext[keyMap.k1] === 'function';
-                    const hasK2 = keyMap.k2 && typeof cachedContext[keyMap.k2] === 'function';
-                    const isValid = hasK0 && hasK1 && hasK2;
-
-                    // Get current video element for comparison
-                    const currentVideo = element?.querySelector(CONFIG.selectors.VIDEO);
-
-                    Logger.add('PlayerContext: Cache validation', {
-                        isValid,
-                        hasK0,
-                        hasK1,
-                        hasK2,
-                        videoElementExists: !!currentVideo
-                    });
-
-                    if (!isValid) {
-                        Logger.add('PlayerContext: ⚠️ CACHED CONTEXT INVALID - resetting cache and searching for fresh context');
-                        // Reset invalid cache
-                        cachedContext = null;
-                        keyMap = { k0: null, k1: null, k2: null };
-                        // Fall through to search for fresh context below
-                    } else {
-                        // Cache is valid, return it
-                        return cachedContext;
-                    }
+                if (validateCache()) {
+                    return cachedContext;
                 }
                 if (!element) return null;
+
                 for (const k in element) {
                     if (k.startsWith('__react') || k.startsWith('__vue') || k.startsWith('__next')) {
                         const ctx = searchRecursive(element[k]);
@@ -582,7 +570,7 @@
             reset: () => {
                 cachedContext = null;
                 keyMap = { k0: null, k1: null, k2: null };
-            }
+            },
         };
     })();
 
@@ -593,224 +581,129 @@
      * Also monitors audio/video synchronization issues.
      */
     const HealthMonitor = (() => {
-        let timer = null;
-        let syncTimer = null;
-        let videoRef = null;
-        let lastTime = 0;
-        let stuckCount = 0;
-        let lastDroppedFrames = 0;
-        let lastTotalFrames = 0; // Track total frames for interval drop rate calculation
-        let lastSyncCheckTime = 0; // Timestamp for sync check
-        let lastSyncVideoTime = 0; // Video currentTime for sync check
-        let syncIssueCount = 0;
+        let state = {};
+        const timers = { main: null, sync: null };
+
+        const resetState = (video = null) => {
+            state = {
+                videoRef: video,
+                lastTime: video ? video.currentTime : 0,
+                stuckCount: 0,
+                lastDroppedFrames: 0,
+                lastTotalFrames: 0,
+                lastSyncCheckTime: 0,
+                lastSyncVideoTime: video ? video.currentTime : 0,
+                syncIssueCount: 0,
+            };
+        };
+
+        const triggerRecovery = (reason, details) => {
+            Logger.add(`HealthMonitor triggering recovery: ${reason}`, details);
+            Logger.addMetric('health_triggers');
+            HealthMonitor.stop();
+            Adapters.EventBus.emit(CONFIG.events.AD_DETECTED);
+        };
+
+        const checkStuckState = () => {
+            if (state.videoRef.paused || state.videoRef.ended) {
+                state.stuckCount = 0;
+                state.lastTime = state.videoRef.currentTime;
+                return;
+            }
+            if (Math.abs(state.videoRef.currentTime - state.lastTime) < 0.1) {
+                state.stuckCount++;
+            } else {
+                state.stuckCount = 0;
+                state.lastTime = state.videoRef.currentTime;
+            }
+            if (state.stuckCount >= 2) {
+                triggerRecovery('Player stuck', { stuckCount: state.stuckCount });
+            }
+        };
+
+        const checkDroppedFrames = () => {
+            if (!state.videoRef.getVideoPlaybackQuality) return;
+
+            const quality = state.videoRef.getVideoPlaybackQuality();
+            const newDropped = quality.droppedVideoFrames - state.lastDroppedFrames;
+            const newTotal = quality.totalVideoFrames - state.lastTotalFrames;
+
+            if (newDropped > 0 && newTotal > 0) {
+                const recentDropRate = (newDropped / newTotal) * 100;
+                if (newDropped > CONFIG.timing.FRAME_DROP_SEVERE_THRESHOLD || (newDropped > CONFIG.timing.FRAME_DROP_MODERATE_THRESHOLD && recentDropRate > CONFIG.timing.FRAME_DROP_RATE_THRESHOLD)) {
+                    triggerRecovery('Severe frame drop', { newDropped, newTotal, recentDropRate });
+                }
+            }
+            state.lastDroppedFrames = quality.droppedVideoFrames;
+            state.lastTotalFrames = quality.totalVideoFrames;
+        };
+
+        const checkAVSync = () => {
+            if (state.videoRef.paused || state.videoRef.ended || state.videoRef.readyState < 2) {
+                state.syncIssueCount = 0;
+                return;
+            }
+
+            const now = Date.now();
+            if (state.lastSyncCheckTime > 0) {
+                const elapsedRealTime = (now - state.lastSyncCheckTime) / 1000;
+                const expectedTimeAdvancement = elapsedRealTime * state.videoRef.playbackRate;
+                const actualTimeAdvancement = state.videoRef.currentTime - state.lastSyncVideoTime;
+                const discrepancy = Math.abs(expectedTimeAdvancement - actualTimeAdvancement);
+
+                if (discrepancy > CONFIG.timing.AV_SYNC_THRESHOLD_MS / 1000 && expectedTimeAdvancement > 0.1) {
+                    state.syncIssueCount++;
+                } else if (discrepancy < CONFIG.timing.AV_SYNC_THRESHOLD_MS / 2000) {
+                    state.syncIssueCount = 0; // Reset if sync is good
+                }
+
+                if (state.syncIssueCount >= 3) {
+                    triggerRecovery('Persistent A/V sync issue', { syncIssueCount: state.syncIssueCount, discrepancy });
+                    return;
+                }
+            }
+            state.lastSyncCheckTime = now;
+            state.lastSyncVideoTime = state.videoRef.currentTime;
+        };
 
         return {
             start: (container) => {
                 const video = container.querySelector(CONFIG.selectors.VIDEO);
                 if (!video) return;
 
-                if (videoRef !== video) {
+                if (state.videoRef !== video) {
                     HealthMonitor.stop();
-                    videoRef = video;
-                    lastTime = video.currentTime;
-                    stuckCount = 0;
-                    lastDroppedFrames = 0;
-                    lastTotalFrames = 0;
-                    lastSyncCheckTime = 0;
-                    lastSyncVideoTime = video.currentTime;
-                    syncIssueCount = 0;
+                    resetState(video);
                 }
 
-                if (timer) return;
-
-                // Start A/V sync monitoring
-                HealthMonitor.startSyncMonitoring();
-
-                timer = setInterval(() => {
-                    if (!document.body.contains(videoRef)) {
-                        HealthMonitor.stop();
-                        return;
-                    }
-
-                    // 1. Check for Stuck State
-                    // !INVARIANT: A playing video MUST advance its currentTime.
-                    if (!videoRef.paused && !videoRef.ended) {
-                        if (Math.abs(videoRef.currentTime - lastTime) < 0.1) {
-                            stuckCount++;
-                        } else {
-                            stuckCount = 0;
-                            lastTime = videoRef.currentTime;
+                if (!timers.main) {
+                    timers.main = setInterval(() => {
+                        if (!state.videoRef || !document.body.contains(state.videoRef)) {
+                            HealthMonitor.stop();
+                            return;
                         }
-                    } else {
-                        stuckCount = 0;
-                        lastTime = videoRef.currentTime;
-                    }
+                        checkStuckState();
+                        checkDroppedFrames();
+                    }, CONFIG.timing.HEALTH_CHECK_MS);
+                }
 
-                    // 2. Check for Dropped Frames (Rendering Performance)
-                    if (videoRef.getVideoPlaybackQuality) {
-                        const quality = videoRef.getVideoPlaybackQuality();
-                        const dropped = quality.droppedVideoFrames;
-                        const totalFrames = quality.totalVideoFrames;
-                        const newDropped = dropped - lastDroppedFrames;
-
-                        if (newDropped > 0 || totalFrames > lastTotalFrames) {
-                            // Calculate recent drop rate (for current interval only)
-                            // This avoids mixing cumulative stats with recent drop counts
-                            const newTotalFrames = totalFrames - lastTotalFrames;
-                            const recentDropRate = newTotalFrames > 0
-                                ? (newDropped / newTotalFrames * 100)
-                                : 0;
-
-                            // Also log cumulative drop rate for context (but don't use for threshold)
-                            const cumulativeDropRate = totalFrames > 0
-                                ? (dropped / totalFrames * 100).toFixed(2)
-                                : '0.00';
-
-                            Logger.add('Frame Drop Detected', {
-                                newDropped: newDropped,
-                                newTotalFrames: newTotalFrames,
-                                recentDropRate: recentDropRate.toFixed(2) + '%',
-                                totalDropped: dropped,
-                                totalFrames: totalFrames,
-                                cumulativeDropRate: cumulativeDropRate + '%'
-                            });
-
-                            // Fixed threshold logic: Use recent drop rate, not cumulative
-                            // Trigger recovery if:
-                            // - More than 15 frames dropped in one check (severe freeze)
-                            // - OR recent drop rate exceeds threshold AND more than 10 frames dropped (consistent degradation in current interval)
-                            const recentDropRateThreshold = recentDropRate > CONFIG.timing.FRAME_DROP_RATE_THRESHOLD;
-                            const severeDrop = newDropped > CONFIG.timing.FRAME_DROP_SEVERE_THRESHOLD;
-                            const moderateDropWithHighRate = newDropped > CONFIG.timing.FRAME_DROP_MODERATE_THRESHOLD && recentDropRateThreshold;
-
-                            if (severeDrop || moderateDropWithHighRate) {
-                                Logger.add('Severe frame drop detected, triggering recovery', {
-                                    reason: severeDrop ? 'absolute_threshold' : 'recent_rate_threshold',
-                                    newDropped,
-                                    newTotalFrames,
-                                    recentDropRate: recentDropRate.toFixed(2) + '%',
-                                    cumulativeDropRate: cumulativeDropRate + '%'
-                                });
-                                Logger.addMetric('health_triggers');
-                                HealthMonitor.stop();
-                                Adapters.EventBus.emit(CONFIG.events.AD_DETECTED);
-                                return;
-                            }
-
-                            lastDroppedFrames = dropped;
-                            lastTotalFrames = totalFrames;
-                        } else if (totalFrames !== lastTotalFrames) {
-                            // Update tracking even if no drops (in case frames advanced)
-                            lastTotalFrames = totalFrames;
+                if (!timers.sync) {
+                    timers.sync = setInterval(() => {
+                        if (!state.videoRef || !document.body.contains(state.videoRef)) {
+                            HealthMonitor.stop();
+                            return;
                         }
-                    }
-
-                    // Trigger if stuck for ~2 seconds (2 checks * 1000ms)
-                    if (stuckCount >= 2) {
-                        Logger.add('Player stuck detected', { stuckCount, currentTime: videoRef.currentTime });
-                        Logger.addMetric('health_triggers');
-                        HealthMonitor.stop();
-                        Adapters.EventBus.emit(CONFIG.events.AD_DETECTED);
-                    }
-                }, CONFIG.timing.HEALTH_CHECK_MS);
+                        checkAVSync();
+                    }, CONFIG.timing.AV_SYNC_CHECK_INTERVAL_MS);
+                }
             },
-
-            startSyncMonitoring: () => {
-                if (syncTimer) return;
-
-                syncTimer = setInterval(() => {
-                    if (!videoRef || !document.body.contains(videoRef)) {
-                        HealthMonitor.stop();
-                        return;
-                    }
-
-                    // A/V Sync Detection
-                    // Check for audio/video synchronization issues by monitoring timing discrepancies
-                    if (!videoRef.paused && !videoRef.ended && videoRef.readyState >= 2) {
-                        const currentTime = videoRef.currentTime;
-                        const now = Date.now();
-
-                        // Check if we have audio tracks (for context, not always available)
-                        const audioTracks = videoRef.audioTracks;
-                        const videoTracks = videoRef.videoTracks;
-
-                        // Monitor playback timing discrepancies to detect A/V sync issues
-                        if (lastSyncCheckTime > 0) {
-                            const elapsedRealTime = (now - lastSyncCheckTime) / 1000; // Real elapsed time in seconds
-                            const expectedTimeAdvancement = elapsedRealTime * videoRef.playbackRate;
-                            const actualTimeAdvancement = currentTime - lastSyncVideoTime;
-                            const timeDiscrepancy = Math.abs(expectedTimeAdvancement - actualTimeAdvancement);
-
-                            // Check for significant timing discrepancies that indicate sync/stutter issues
-                            // This detects when video time doesn't advance as expected, which can indicate:
-                            // - Audio/video desynchronization
-                            // - Playback stuttering
-                            // - Buffer underruns affecting sync
-                            if (timeDiscrepancy > CONFIG.timing.AV_SYNC_THRESHOLD_MS / 1000 &&
-                                expectedTimeAdvancement > 0.1 &&
-                                actualTimeAdvancement >= 0) { // Ignore backward seeks during check
-                                syncIssueCount++;
-
-                                Logger.add('A/V Sync Issue Detected', {
-                                    timeDiscrepancy: (timeDiscrepancy * 1000).toFixed(2) + 'ms',
-                                    expected: expectedTimeAdvancement.toFixed(3) + 's',
-                                    actual: actualTimeAdvancement.toFixed(3) + 's',
-                                    elapsedRealTime: elapsedRealTime.toFixed(3) + 's',
-                                    currentTime: currentTime.toFixed(2),
-                                    playbackRate: videoRef.playbackRate,
-                                    syncIssueCount,
-                                    hasAudioTracks: audioTracks && audioTracks.length > 0,
-                                    hasVideoTracks: videoTracks && videoTracks.length > 0
-                                });
-
-                                // If sync issues persist (3 checks = ~6 seconds), trigger recovery
-                                if (syncIssueCount >= 3) {
-                                    Logger.add('Persistent A/V sync issues detected, triggering recovery', {
-                                        syncIssueCount,
-                                        timeDiscrepancy: (timeDiscrepancy * 1000).toFixed(2) + 'ms',
-                                        note: 'A/V sync issues may be caused by ad segments or playback corruption'
-                                    });
-                                    Logger.addMetric('health_triggers');
-                                    HealthMonitor.stop();
-                                    Adapters.EventBus.emit(CONFIG.events.AD_DETECTED);
-                                    return;
-                                }
-                            } else if (timeDiscrepancy <= CONFIG.timing.AV_SYNC_THRESHOLD_MS / 1000 / 2) {
-                                // Reset counter if sync is good (half threshold for recovery)
-                                if (syncIssueCount > 0) {
-                                    Logger.add('A/V sync recovered', {
-                                        previousIssues: syncIssueCount,
-                                        timeDiscrepancy: (timeDiscrepancy * 1000).toFixed(2) + 'ms'
-                                    });
-                                    syncIssueCount = 0;
-                                }
-                            }
-                        }
-
-                        // Update sync tracking
-                        lastSyncCheckTime = now;
-                        lastSyncVideoTime = currentTime;
-                    } else {
-                        // Reset tracking when paused/ended
-                        lastSyncCheckTime = 0;
-                        syncIssueCount = 0;
-                    }
-                }, CONFIG.timing.AV_SYNC_CHECK_INTERVAL_MS);
-            },
-
             stop: () => {
-                if (timer) clearInterval(timer);
-                if (syncTimer) clearInterval(syncTimer);
-                timer = null;
-                syncTimer = null;
-                videoRef = null;
-                stuckCount = 0;
-                lastDroppedFrames = 0;
-                lastTotalFrames = 0;
-                lastSyncCheckTime = 0;
-                lastSyncVideoTime = 0;
-                syncIssueCount = 0;
-            }
+                clearInterval(timers.main);
+                clearInterval(timers.sync);
+                timers.main = null;
+                timers.sync = null;
+                resetState();
+            },
         };
     })();
 
@@ -1083,9 +976,7 @@
             if (window.self !== window.top) return;
 
             const { lastAttempt, errorCount } = Store.get();
-            const isThrottled = errorCount >= CONFIG.timing.LOG_THROTTLE && (Date.now() - lastAttempt < CONFIG.timing.REATTEMPT_DELAY_MS);
-
-            if (isThrottled) {
+            if (errorCount >= CONFIG.timing.LOG_THROTTLE && Date.now() - lastAttempt < CONFIG.timing.REATTEMPT_DELAY_MS) {
                 if (CONFIG.debug) console.warn('[MAD-3000] Core throttled.');
                 return;
             }
@@ -1093,34 +984,29 @@
             Network.init();
             Logger.init();
             Core.setupEvents();
+            Core.setupScriptBlocker();
 
-            // Script Blocker for Supervisor and other unwanted scripts
+            if (document.body) {
+                Core.startRootObservation();
+            } else {
+                document.addEventListener('DOMContentLoaded', () => Core.startRootObservation(), { once: true });
+            }
+        },
+
+        setupScriptBlocker: () => {
             const scriptObserver = new MutationObserver((mutations) => {
                 for (const m of mutations) {
-                    if (m.type === 'childList') {
-                        m.addedNodes.forEach(n => {
-                            if (n.tagName === 'SCRIPT' && n.src) {
-                                if (n.src.includes('supervisor.ext-twitch.tv') || n.src.includes('pubads.g.doubleclick.net')) {
-                                    n.remove();
-                                    Logger.add('Blocked Script', { src: n.src });
-                                }
-                            }
-                        });
-                    }
+                    m.addedNodes.forEach(n => {
+                        if (n.tagName === 'SCRIPT' && n.src && (n.src.includes('supervisor.ext-twitch.tv') || n.src.includes('pubads.g.doubleclick.net'))) {
+                            n.remove();
+                            Logger.add('Blocked Script', { src: n.src });
+                        }
+                    });
                 }
             });
             scriptObserver.observe(document.documentElement, { childList: true, subtree: true });
-
-            const start = () => {
-                if (document.body) {
-                    Core.startRootObservation();
-                } else {
-                    setTimeout(start, 50);
-                }
-            };
-            start();
         },
-
+        
         inject: () => {
             Store.update({ lastAttempt: Date.now() });
             Adapters.EventBus.emit(CONFIG.events.ACQUIRE);
@@ -1129,15 +1015,12 @@
         setupEvents: () => {
             Adapters.EventBus.on(CONFIG.events.ACQUIRE, () => {
                 if (Core.activeContainer) {
-                    const ctx = PlayerContext.get(Core.activeContainer);
-                    if (ctx) {
-                        Logger.add('Event: ACQUIRE - Success (Player Context Found)');
+                    if (PlayerContext.get(Core.activeContainer)) {
+                        Logger.add('Event: ACQUIRE - Success');
                         HealthMonitor.start(Core.activeContainer);
                     } else {
-                        Logger.add('Event: ACQUIRE - Failed (Player Context Not Found)');
+                        Logger.add('Event: ACQUIRE - Failed');
                     }
-                } else {
-                    Logger.add('Event: ACQUIRE - No Active Container');
                 }
             });
 
@@ -1145,21 +1028,18 @@
                 Logger.add('Event: AD_DETECTED');
                 if (Core.activeContainer) Resilience.execute(Core.activeContainer);
             });
+        },
 
-            Adapters.EventBus.on(CONFIG.events.LOG, ({ status, detail }) => {
-                const current = Store.get();
-                const count = current.errorCount + 1;
-                const updates = { errorCount: count, lastError: `${status}: ${detail}` };
-                if (count < CONFIG.timing.LOG_THROTTLE) updates.lastAttempt = Date.now();
-                Store.update(updates);
-            });
+        findAndMountPlayer: (node) => {
+            if (node.nodeType !== 1) return;
+            const player = node.matches(CONFIG.selectors.PLAYER) ? node : node.querySelector(CONFIG.selectors.PLAYER);
+            if (player) Core.handlePlayerMount(player);
+        },
 
-            Adapters.EventBus.on(CONFIG.events.REPORT, ({ status }) => {
-                Logger.add('Event: REPORT', { status });
-                if (status === 'SUCCESS') {
-                    Store.update({ errorCount: 0, lastError: null });
-                }
-            });
+        findAndUnmountPlayer: (node) => {
+            if (Core.activeContainer && (node === Core.activeContainer || (node.contains && node.contains(Core.activeContainer)))) {
+                Core.handlePlayerUnmount();
+            }
         },
 
         startRootObservation: () => {
@@ -1169,19 +1049,8 @@
             Core.rootObserver = Adapters.DOM.observe(document.body, (mutations) => {
                 for (const m of mutations) {
                     if (m.type === 'childList') {
-                        m.addedNodes.forEach(n => {
-                            if (n.nodeType === 1) {
-                                if (n.matches(CONFIG.selectors.PLAYER)) Core.handlePlayerMount(n);
-                                else if (n.querySelector) {
-                                    const p = n.querySelector(CONFIG.selectors.PLAYER);
-                                    if (p) Core.handlePlayerMount(p);
-                                }
-                            }
-                        });
-                        m.removedNodes.forEach(n => {
-                            if (n === Core.activeContainer) Core.handlePlayerUnmount();
-                            else if (n.contains && Core.activeContainer && n.contains(Core.activeContainer)) Core.handlePlayerUnmount();
-                        });
+                        m.addedNodes.forEach(Core.findAndMountPlayer);
+                        m.removedNodes.forEach(Core.findAndUnmountPlayer);
                     }
                 }
             }, { childList: true, subtree: true });
@@ -1191,24 +1060,19 @@
             if (Core.activeContainer === container) return;
             if (Core.activeContainer) Core.handlePlayerUnmount();
 
-            if (CONFIG.debug) console.log('[MAD-3000] Player mounted');
             Logger.add('Player mounted');
             Core.activeContainer = container;
 
             const debouncedInject = Fn.debounce(() => Core.inject(), 100);
-
             Core.playerObserver = Adapters.DOM.observe(container, (mutations) => {
-                let shouldReacquire = false;
-                for (const m of mutations) {
+                const shouldReacquire = mutations.some(m => {
+                    if (m.type === 'attributes' && m.attributeName === 'class' && m.target === container) return true;
                     if (m.type === 'childList') {
                         const hasVideo = (nodes) => Array.from(nodes).some(n => n.matches && n.matches(CONFIG.selectors.VIDEO));
-                        if (hasVideo(m.addedNodes) || hasVideo(m.removedNodes)) shouldReacquire = true;
+                        return hasVideo(m.addedNodes) || hasVideo(m.removedNodes);
                     }
-                    // Only react to class changes on the main container, not every child element
-                    if (m.type === 'attributes' && m.attributeName === 'class' && m.target === container) {
-                        shouldReacquire = true;
-                    }
-                }
+                    return false;
+                });
                 if (shouldReacquire) debouncedInject();
             }, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] });
 
@@ -1218,7 +1082,6 @@
 
         handlePlayerUnmount: () => {
             if (!Core.activeContainer) return;
-            if (CONFIG.debug) console.log('[MAD-3000] Player unmounted');
             Logger.add('Player unmounted');
 
             if (Core.playerObserver) {
