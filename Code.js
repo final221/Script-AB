@@ -1,6 +1,6 @@
 // ==UserScript==
-// @name          Mega Ad Dodger 3000 (Stealth Reactor Core) 1.27
-// @version       1.27
+// @name          Mega Ad Dodger 3000 (Stealth Reactor Core) 1.28
+// @version       1.28
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing. 
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -518,36 +518,36 @@
     const PlayerContext = (() => {
         let cachedContext = null;
         let keyMap = { k0: null, k1: null, k2: null };
+        const contextHintKeywords = ['react', 'vue', 'next', 'props', 'fiber', 'internal'];
 
-        const findKeys = (obj) => {
+        const findKeysInObject = (obj) => {
             for (const sig of Logic.Player.signatures) {
-                if (!keyMap[sig.id] || !Logic.Player.validate(obj, keyMap[sig.id], sig)) {
-                    const foundKey = Object.keys(obj).find(k => Logic.Player.validate(obj, k, sig));
-                    if (foundKey) {
-                        keyMap[sig.id] = foundKey;
-                        Logger.add('Player signature found', { id: sig.id, key: foundKey });
-                    }
+                // If a key is already mapped and still valid, skip searching for it again.
+                if (keyMap[sig.id] && Logic.Player.validate(obj, keyMap[sig.id], sig)) {
+                    continue;
+                }
+                const foundKey = Object.keys(obj).find(k => Logic.Player.validate(obj, k, sig));
+                if (foundKey) {
+                    keyMap[sig.id] = foundKey;
+                    Logger.add('Player signature found', { id: sig.id, key: foundKey });
                 }
             }
             return Object.values(keyMap).every(k => k !== null);
         };
-
+        
         const searchRecursive = (obj, depth = 0, visited = new WeakSet()) => {
             if (depth > CONFIG.player.MAX_SEARCH_DEPTH || !obj || typeof obj !== 'object' || visited.has(obj)) {
                 return null;
             }
             visited.add(obj);
 
-            if (findKeys(obj)) {
+            if (findKeysInObject(obj)) {
                 return obj;
             }
 
-            for (const k in obj) {
-                // Prioritize properties that are more likely to contain the context
-                if (k.startsWith('__react') || k.startsWith('__vue') || k.startsWith('__next') || k.toLowerCase().includes('props')) {
-                    const found = searchRecursive(obj[k], depth + 1, visited);
-                    if (found) return found;
-                }
+            for (const key of Object.keys(obj)) {
+                const found = searchRecursive(obj[key], depth + 1, visited);
+                if (found) return found;
             }
             return null;
         };
@@ -572,16 +572,25 @@
                 }
                 if (!element) return null;
 
-                for (const k in element) {
-                    if (k.startsWith('__react') || k.startsWith('__vue') || k.startsWith('__next')) {
-                        const ctx = searchRecursive(element[k]);
-                        if (ctx) {
-                            cachedContext = ctx;
-                            Logger.add('PlayerContext: Fresh context found and cached');
-                            return ctx;
+                // Use Reflect.ownKeys to include Symbol properties, which React often uses.
+                const keys = Reflect.ownKeys(element);
+
+                for (const key of keys) {
+                    // Check if the property key contains any of our hints.
+                    const keyString = String(key).toLowerCase();
+                    if (contextHintKeywords.some(hint => keyString.includes(hint))) {
+                        const potentialContext = element[key];
+                        if (potentialContext && typeof potentialContext === 'object') {
+                            const ctx = searchRecursive(potentialContext);
+                            if (ctx) {
+                                cachedContext = ctx;
+                                Logger.add('PlayerContext: Fresh context found via keyword search', { key: String(key) });
+                                return ctx;
+                            }
                         }
                     }
                 }
+
                 Logger.add('PlayerContext: Scan failed - no context found');
                 return null;
             },
