@@ -630,6 +630,7 @@
         };
 
         const checkStuckState = () => {
+            if (!state.videoRef) return;
             if (state.videoRef.paused || state.videoRef.ended) {
                 if (CONFIG.debug && state.stuckCount > 0) {
                      Logger.add('HealthMonitor[Debug]: Stuck count reset due to paused/ended state.');
@@ -665,7 +666,7 @@
         };
 
         const checkDroppedFrames = () => {
-            if (!state.videoRef.getVideoPlaybackQuality) return;
+            if (!state.videoRef || !state.videoRef.getVideoPlaybackQuality) return;
 
             const quality = state.videoRef.getVideoPlaybackQuality();
             const newDropped = quality.droppedVideoFrames - state.lastDroppedFrames;
@@ -695,6 +696,7 @@
         };
 
         const checkAVSync = () => {
+            if (!state.videoRef) return;
             if (state.videoRef.paused || state.videoRef.ended || state.videoRef.readyState < 2) {
                 if (state.syncIssueCount > 0) {
                     Logger.add('A/V sync recovered', { previousIssues: state.syncIssueCount });
