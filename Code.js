@@ -1,6 +1,6 @@
 // ==UserScript==
-// @name          Mega Ad Dodger 3000 (Stealth Reactor Core) 1.26  
-// @version       1.26
+// @name          Mega Ad Dodger 3000 (Stealth Reactor Core) 1.27
+// @version       1.27
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing. 
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -752,26 +752,43 @@
         let isFixing = false;
 
         /**
-         * Attempts to play the video element.
-         * @param {HTMLVideoElement} video - The video element.
-         * @param {boolean} wasPaused - Whether the video was paused before recovery.
+         * Attempts to play video with retry logic and detailed logging.
+         * @param {HTMLVideoElement} video - Video element to play.
+         * @param {string} context - Context string for logging.
+         * @returns {Promise<boolean>} - True if play succeeded, false otherwise.
          */
-        const forcePlay = async (video, wasPaused) => {
-            if (video.paused) {
+        const playWithRetry = async (video, context = 'unknown') => {
+            const maxRetries = 3;
+            for (let attempt = 1; attempt <= maxRetries; attempt++) {
                 try {
-                    await video.play();
-                    Logger.add('Forced play command sent', {
-                        wasPaused,
-                        afterPlayPaused: video.paused,
+                    Logger.add(`Play attempt ${attempt}/${maxRetries} (${context})`, {
+                        before: { paused: video.paused, readyState: video.readyState, currentTime: video.currentTime },
                     });
-                } catch (e) {
-                    Logger.add('Play command failed', { error: String(e) });
+                    await video.play();
+                    // A short delay to allow the browser to update the paused state.
+                    await Fn.sleep(50);
+                    if (!video.paused) {
+                        Logger.add(`Play attempt ${attempt} SUCCESS`, { context });
+                        return true;
+                    }
+                    Logger.add(`Play attempt ${attempt} FAILED: video still paused`, { context });
+                } catch (error) {
+                    Logger.add(`Play attempt ${attempt} threw error`, { context, error: error.message });
+                    if (error.name === 'NotAllowedError') {
+                        Logger.add('AUTOPLAY BLOCKED by browser policy. Cannot recover.', { context });
+                        return false; // Don't retry on autoplay blocks.
+                    }
+                }
+                if (attempt < maxRetries) {
+                    await Fn.sleep(300 * attempt);
                 }
             }
+            Logger.add('All play attempts exhausted.', { context });
+            return false;
         };
 
         /**
-         * Executes aggressive recovery by clearing the video source.
+         * Executes aggressive recovery by forcing a stream reload.
          * @param {HTMLVideoElement} video - The video element.
          */
         const aggressiveRecovery = async (video) => {
@@ -784,46 +801,36 @@
             const originalSrc = video.src;
             const isBlobUrl = originalSrc && originalSrc.startsWith('blob:');
 
+            // This is the core of the fix: for blobs, we unload and reload the source
+            // to force the player's internal state to reset.
             if (isBlobUrl) {
-                Logger.add('Blob URL detected - using less aggressive recovery (seek backward)');
-                video.currentTime = Math.max(0, video.currentTime - CONFIG.player.BLOB_SEEK_BACK_S);
-                await Fn.sleep(500);
-            } else {
+                Logger.add('Blob URL detected - performing unload/reload cycle.');
                 video.src = '';
                 video.load();
                 await Fn.sleep(100);
-
-                // Wait for Twitch to reload the stream
-                let reloaded = await Fn.tryCatch(
-                    () =>
-                        new Promise((resolve, reject) => {
-                            const checkInterval = 100;
-                            const maxChecks = CONFIG.timing.PLAYBACK_TIMEOUT_MS / checkInterval;
-                            let checkCount = 0;
-                            const interval = setInterval(() => {
-                                if (video.readyState >= 2) {
-                                    clearInterval(interval);
-                                    resolve(true);
-                                } else if (++checkCount >= maxChecks) {
-                                    clearInterval(interval);
-                                    reject(new Error('Stream reload timeout'));
-                                }
-                            }, checkInterval);
-                        }),
-                    async (e) => {
-                        Logger.add(e.message);
-                        // Fallback to restore original source if reload fails
-                        if (originalSrc) {
-                            video.src = originalSrc;
-                            video.load();
-                        }
-                        return false;
-                    }
-                )();
-                if (!reloaded) return; // Stop if fallback failed
+                video.src = originalSrc;
+                video.load();
+            } else {
+                video.src = '';
+                video.load();
             }
+            
+            await new Promise(resolve => {
+                const checkInterval = 100;
+                const maxChecks = CONFIG.timing.PLAYBACK_TIMEOUT_MS / checkInterval;
+                let checkCount = 0;
+                const interval = setInterval(() => {
+                    if (video.readyState >= 2) {
+                        clearInterval(interval);
+                        resolve();
+                    } else if (++checkCount >= maxChecks) {
+                        clearInterval(interval);
+                        Logger.add('Stream reload timeout during aggressive recovery.');
+                        resolve(); // Resolve anyway to not block forever
+                    }
+                }, checkInterval);
+            });
 
-            // Restore player state
             video.playbackRate = playbackRate;
             video.volume = volume;
             video.muted = muted;
@@ -867,9 +874,8 @@
                         return;
                     }
 
-                    const wasPaused = video.paused;
-                    const { currentTime, buffered, readyState, networkState, error } = video;
-                    Logger.add('Captured player state', { currentTime, wasPaused, readyState, networkState, hasError: !!error });
+                    const { currentTime, buffered, error } = video;
+                    Logger.add('Captured player state', { currentTime, hasError: !!error });
 
                     if (error && error.code === CONFIG.codes.MEDIA_ERROR_SRC) {
                         Logger.add('Fatal error (code 4) - cannot recover, waiting for Twitch reload');
@@ -897,7 +903,9 @@
                         standardRecovery(video);
                     }
 
-                    await forcePlay(video, wasPaused);
+                    if (video.paused) {
+                        await playWithRetry(video, 'post-recovery');
+                    }
 
                     Adapters.EventBus.emit(CONFIG.events.REPORT, { status: 'SUCCESS' });
                 } catch (e) {
