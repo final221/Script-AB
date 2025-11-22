@@ -1,0 +1,408 @@
+=================================================================================
+                   FIX 2 - BUFFER REFILL TIME
+                      🔧 RECOMMENDED FIX 🔧
+=================================================================================
+
+WHY THIS FIX IS NEEDED:
+Even with Fix 1's debounce preventing rapid recoveries, individual recovery
+attempts were failing due to premature validation. The recovery seeks backward
+3 seconds to force buffer refresh, but only waited 1 second before checking
+success. This doesn't give the buffer enough time to refill, causing false
+"recovery failed" messages and wasting the recovery attempt.
+
+WHAT THIS FIX DOES:
+1. Increase wait time from 1s to 3s (matches the seek distance)
+2. Require readyState ≥ 3 (HAVE_FUTURE_DATA) instead of ≥ 2 (HAVE_CURRENT_DATA)
+3. Require 1.0s of playback progress instead of 0.5s
+
+Together, these changes ensure recovery validation only passes when the player
+can ACTUALLY continue playing, not just render the current frame.
+
+IMPACT: Significantly improves recovery success rate. Works best when combined
+with Fix 1 to prevent wasted attempts in the first place.
+
+---
+artifact: task
+name: Fix 2 - Increase Buffer Refill Time After Recovery
+description: Detailed implementation guide to give blob URL recovery more time to succeed by increasing wait time and validation thresholds
+issue_id: Fix 2
+priority: MEDIUM
+file: Code.js
+version: 1.20 → 1.21
+estimated_time: 5 minutes
+parent_task: Fix Summary.md
+depends_on: Fix 1
+---
+
+# Task: Fix 2 - Increase Buffer Refill Time After Recovery
+
+**Issue ID:** Fix 2  
+**Priority:** MEDIUM  
+**File:** `Code.js`  
+**Version:** 1.20 → 1.21  
+**Estimated Time:** 5 minutes  
+**Depends On:** Fix 1 must be completed first
+
+---
+
+## 🎯 Objective
+
+Increase the buffer refill time and validation thresholds after aggressive recovery to improve success rate. Currently, 1-second wait is too short for buffer to refill after backward seek, leading to premature "recovery failed" messages.
+
+**Problem:** After seeking backward 3 seconds to force buffer refresh, we only wait 1 second before checking if recovery succeeded. This doesn't give the buffer enough time to refill, causing false failures.
+
+**Solution:** 
+1. Increase wait time from 1s to 3s
+2. Require `readyState >= 3` (HAVE_FUTURE_DATA) instead of `>= 2` (HAVE_CURRENT_DATA)
+3. Require 1.0s of playback progress instead of 0.5s
+
+---
+
+## 📋 Pre-Implementation Checklist
+
+- [ ] Fix 1 has been completed (debounce handler added)
+- [ ] Current `Code.js` is version 1.20
+- [ ] Backup created: `Code_v1.20_backup.js`
+- [ ] Ready to test in browser after changes
+
+---
+
+## 🔧 Implementation Steps
+
+### Step 0: Verify Code Structure (CRITICAL - Do This First!)
+
+**Open Code.js and verify these exact lines exist:**
+
+**Line 2-3 Check:**
+```javascript
+// @name          Mega Ad Dodger 3000 (Stealth Reactor Core) 1.20
+// @version       1.20
+```
+- [ ] Line 2 shows version 1.20
+- [ ] Line 3 shows version 1.20
+
+**Line 1034 Check (where change #1 will be made):**
+```javascript
+                                await Fn.sleep(1000);
+```
+- [ ] Line 1034 contains `await Fn.sleep(1000);`
+
+**Line 1035 Check (where change #2 will be made):**
+```javascript
+                                if (video.readyState >= 2 && !video.paused && video.currentTime - seekBack > 0.5) {
+```
+- [ ] Line 1035 contains `if (video.readyState >= 2`
+- [ ] Line 1035 contains `video.currentTime - seekBack > 0.5`
+
+**⚠️ IF ANY OF THE ABOVE DON'T MATCH:**
+- STOP - Do not proceed
+- Fix 1 may not be completed
+- Report mismatch and ask for guidance
+
+---
+
+### Step 1: Create Backup
+
+**Action:** Copy current Code.js to backup file
+
+```powershell
+# Run in project directory
+Copy-Item "Code.js" "Code_v1.20_backup.js"
+```
+
+**Validation:**
+- [ ] `Code_v1.20_backup.js` exists
+- [ ] Backup file has same size as `Code.js`
+
+---
+
+### Step 2: Update Version Number
+
+**File:** `Code.js`  
+**Lines:** 2-3
+
+**Update line 2:**
+```javascript
+// @name          Mega Ad Dodger 3000 (Stealth Reactor Core) 1.21
+```
+
+**Update line 3:**
+```javascript
+// @version       1.21
+```
+
+**Validation:**
+- [ ] Line 2 shows version 1.21
+- [ ] Line 3 shows version 1.21
+- [ ] Both lines match
+
+---
+
+### Step 3: Increase Buffer Refill Wait Time
+
+**File:** `Code.js`  
+**Line:** 1034  
+**Context:** Inside Resilience module, blob URL recovery section
+
+**🔍 Find this line (1034):**
+```javascript
+                                await Fn.sleep(1000);
+```
+
+**✏️ REPLACE with:**
+```javascript
+                                await Fn.sleep(3000); // Increased from 1000ms - give buffer more time to refill
+```
+
+**📝 What Changed:**
+- Wait time: 1000ms → 3000ms (3 seconds)
+- Added comment explaining the change
+
+**Validation:**
+- [ ] Line 1034 now contains `await Fn.sleep(3000);`
+- [ ] Comment added explaining "give buffer more time to refill"
+- [ ] Indentation matches surrounding code (32 spaces)
+
+---
+
+### Step 4: Increase ReadyState Validation Threshold
+
+**File:** `Code.js`  
+**Line:** 1035  
+**Context:** Recovery success validation in blob URL path
+
+**🔍 Find this line (1035):**
+```javascript
+                                if (video.readyState >= 2 && !video.paused && video.currentTime - seekBack > 0.5) {
+```
+
+**✏️ REPLACE with:**
+```javascript
+                                if (video.readyState >= 3 && !video.paused && video.currentTime - seekBack > 1.0) {
+```
+
+**📝 What Changed:**
+1. `readyState >= 2` → `readyState >= 3`
+   - Was: HAVE_CURRENT_DATA (can render current frame)
+   - Now: HAVE_FUTURE_DATA (can continue playing)
+2. `currentTime - seekBack > 0.5` → `currentTime - seekBack > 1.0`
+   - Was: 0.5 seconds of progress
+   - Now: 1.0 second of progress (more certain playback resumed)
+
+**Validation:**
+- [ ] Line 1035 contains `readyState >= 3` (not >= 2)
+- [ ] Line 1035 contains `currentTime - seekBack > 1.0` (not > 0.5)
+- [ ] Both changes on the same line
+- [ ] No other parts of the line changed
+
+---
+
+### Step 5: Post-Implementation Verification
+
+**Action:** Verify all changes were applied correctly
+
+**Quick Syntax Check:**
+1. Save Code.js
+2. Look for any red/error highlighting in editor
+3. Search for version number using Ctrl+F
+
+**Expected Results:**
+- [ ] Version shows 1.21 (lines 2 and 3)
+- [ ] Line 1034: `await Fn.sleep(3000);`
+- [ ] Line 1035: `readyState >= 3` AND `> 1.0`
+- [ ] No syntax errors or red highlights in editor
+- [ ] File saved successfully
+
+**Visual Verification - Lines 1024-1040 should look like:**
+```javascript
+                                video.currentTime = seekBack;
+                                Logger.add('Seeked backward to force buffer refresh', { from: currentTime, to: seekBack });
+                                await Fn.sleep(500);
+
+                                // Try to play if paused
+                                if (video.paused) {
+                                    await video.play();
+                                }
+
+                                // Check if recovery was successful
+                                await Fn.sleep(3000); // Increased from 1000ms - give buffer more time to refill
+                                if (video.readyState >= 3 && !video.paused && video.currentTime - seekBack > 1.0) {
+                                    Logger.add('Less aggressive recovery successful - playback resumed');
+                                } else {
+                                    Logger.add('Less aggressive recovery failed - player may need page refresh', {
+                                        readyState: video.readyState,
+                                        paused: video.paused,
+                                        currentTime: video.currentTime
+                                    });
+```
+
+**Final Checks:**
+- [ ] Both changes visible in code above
+- [ ] Indentation looks consistent
+- [ ] No missing braces or parentheses
+
+---
+
+## 🧪 Testing Procedure
+
+### Pre-Test Validation
+- [ ] Code.js saved with all changes
+- [ ] No syntax errors (check editor highlighting)
+- [ ] Version shows 1.21
+- [ ] Changes match expected code block above
+
+### Browser Testing
+
+#### Test 1: Script Loads Successfully
+1. Open Tampermonkey dashboard
+2. Update Code.js script
+3. Save and navigate to Twitch.tv stream
+
+**Expected Result:**
+- [ ] No console errors on page load
+- [ ] Script initializes successfully
+- [ ] See "Core initialized" in logs
+
+#### Test 2: Recovery Success Rate
+1. Let stream run until recovery is needed
+2. Watch for "Less aggressive recovery" logs
+3. Check recovery success messages
+
+**Expected Logs (Success Case):**
+```
+[timestamp] Seeked backward to force buffer refresh | {"from":X.XX,"to":Y.YY}
+[timestamp] Less aggressive recovery successful - playback resumed
+```
+
+**Validation:**
+- [ ] Recovery waits ~3 seconds before validation (longer wait visible)
+- [ ] "successful" message appears more frequently than before
+- [ ] Fewer "recovery failed" messages
+- [ ] ReadyState reaches 3+ before success confirmation
+
+#### Test 3: Stream Stability After Recovery
+1. After successful recovery, watch stream for 5+ minutes
+2. Monitor readyState and playback
+
+**Expected Results:**
+- [ ] Stream continues playing smoothly
+- [ ] No immediate re-recovery attempts
+- [ ] ReadyState stays at 3-4
+- [ ] No "player may need page refresh" messages
+
+#### Test 4: Compare with Fix 1 Logs
+1. Export logs: `exportTwitchAdLogs()`
+2. Compare metrics with previous Fix 1 logs
+
+**Expected Improvements:**
+- [ ] Fewer `aggressive_recoveries` executions
+- [ ] Higher recovery success rate
+- [ ] Fewer error spikes after recovery attempts
+
+---
+
+## 📊 Success Criteria
+
+### Must Have (Critical)
+- [x] Wait time increased to 3000ms
+- [x] ReadyState threshold increased to >= 3
+- [x] Playback progress threshold increased to 1.0s
+- [x] Script loads without errors
+- [x] Recovery success rate improves
+
+### Nice to Have
+- [ ] Logs show longer wait time working
+- [ ] Metrics show improved recovery outcomes
+- [ ] User experience: fewer visible recovery failures
+
+---
+
+## 🚨 Rollback Plan
+
+If implementation fails or causes issues:
+
+### Quick Rollback
+```powershell
+# Restore backup
+Copy-Item "Code_v1.20_backup.js" "Code.js" -Force
+```
+
+### Validation After Rollback
+- [ ] Version shows 1.20 again
+- [ ] Original behavior restored
+- [ ] Can proceed with debugging
+
+---
+
+## ⚠️ Common Pitfalls & Troubleshooting
+
+### Pitfall 1: Wrong Line Numbers
+**Symptom:** Can't find `await Fn.sleep(1000);` on line 1034  
+**Cause:** Fix 1 not completed or file edited elsewhere  
+**Fix:** Search for `await Fn.sleep(1000);` in file, update that line
+
+### Pitfall 2: Only Changed One Part of Line 1035
+**Symptom:** ReadyState changed but progress threshold not changed  
+**Cause:** Incomplete replacement  
+**Fix:** Ensure BOTH `>= 3` AND `> 1.0` are updated on line 1035
+
+### Pitfall 3: Recovery Still Failing
+**Symptom:** Still seeing "recovery failed" messages  
+**Cause:** 3 seconds might not be enough for very slow connections  
+**Fix:** Consider increasing to 5000ms if needed, or check if Fix 1 is working
+
+### Pitfall 4: Typo in Numbers
+**Symptom:** Syntax error or wrong behavior  
+**Cause:** Typed "30000" instead of "3000" or "10" instead of "1.0"  
+**Fix:** Double-check exact values: 3000, 3, 1.0
+
+---
+
+## 📝 Implementation Notes
+
+### Why 3 Seconds?
+- Backward seek distance: 3 seconds
+- Typical buffer refill rate: 1-2 seconds per second of video
+- Safety margin: 1-2 seconds
+- **Total:** 3 seconds ensures buffer refills before validation
+
+### Why ReadyState 3 Instead of 2?
+- **ReadyState 2 (HAVE_CURRENT_DATA):** Can render current frame, but may not be able to continue
+- **ReadyState 3 (HAVE_FUTURE_DATA):** Can render current frame AND continue playing
+- **ReadyState 4 (HAVE_ENOUGH_DATA):** Ideal but might be too strict
+- **Choice:** 3 is a good balance - confirms playback can continue
+
+### Why 1.0 Second Progress Instead of 0.5?
+- 0.5 seconds can be achieved even if player is struggling
+- 1.0 second confirms the player is actually playing smoothly
+- Reduces false positives where player appears to recover but quickly fails again
+
+---
+
+## ✅ Final Checklist
+
+Before marking as complete:
+
+- [ ] All code changes implemented correctly
+- [ ] Version updated to 1.21 (lines 2 AND 3)
+- [ ] Backup created and verified
+- [ ] Script loads without errors in Tampermonkey
+- [ ] Line 1034: `await Fn.sleep(3000);`
+- [ ] Line 1035: Both `>= 3` and `> 1.0` changed
+- [ ] Recovery success rate improved
+- [ ] Stream stable after recovery
+- [ ] Ready to proceed to Fix 3 (if needed)
+
+---
+
+## 🔄 Next Steps
+
+After successful implementation of Fix 2:
+
+1. **Monitor Performance:** Watch stream for 30+ minutes, collect logs with `exportTwitchAdLogs()`
+2. **Evaluate Need for Fix 3:** If recoveries still fail due to low buffer, implement Fix 3
+3. **Document Results:** Compare metrics (v1.20 vs v1.21) - focus on recovery success rate
+
+**If Fix 2 solves recovery issues:** No need for Fix 3.  
+**If recovery still fails sometimes:** Proceed with Fix 3 to add buffer health check.  
+**If stream still collapses:** Review logs, may need both Fix 2 AND Fix 3.

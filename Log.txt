@@ -1,84 +1,312 @@
 [METRICS]
-Uptime: 310.5s
-Ads Detected: 0
-Ads Blocked: 0
-Resilience Executions: 1
-Aggressive Recoveries: 0
+Uptime: 310.8s
+Ads Detected: 1
+Ads Blocked: 1
+Resilience Executions: 4
+Aggressive Recoveries: 2
 Health Triggers: 1
-Errors: 6
+Errors: 0
 
 [LOGS]
-[2025-11-22T13:45:39.619Z] Core initialized
-[2025-11-22T13:45:39.827Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql"}
-[2025-11-22T13:45:40.250Z] Console Warn | {"args":["⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition."]}
-[2025-11-22T13:45:40.258Z] Console Warn | {"args":["⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath."]}
-[2025-11-22T13:45:40.421Z] Player mounted
-[2025-11-22T13:45:40.424Z] Player signature found | {"id":"k0","key":"ref"}
-[2025-11-22T13:45:40.424Z] Player signature found | {"id":"k1","key":"ref"}
-[2025-11-22T13:45:40.424Z] Player signature found | {"id":"k2","key":"ref"}
-[2025-11-22T13:45:40.424Z] PlayerContext: Fresh context found and cached
-[2025-11-22T13:45:40.424Z] Event: ACQUIRE - Success (Player Context Found)
-[2025-11-22T13:45:40.567Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/integrity"}
-[2025-11-22T13:45:40.934Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T13:45:40.941Z] PlayerContext: Cache validation | {"isValid":true,"hasK0":true,"hasK1":true,"hasK2":true,"videoElementExists":true}
-[2025-11-22T13:45:40.941Z] Event: ACQUIRE - Success (Player Context Found)
-[2025-11-22T13:45:41.137Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T13:45:41.867Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T13:45:42.201Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T13:45:42.601Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T13:45:42.756Z] Console Error | {"args":["[GraphQL] One or more GraphQL errors were detected on request 01KANX0FYZ3BWRF430HS3DZZAF. PinnedChatSettings: unauthenticated","[object Object]"]}
-[2025-11-22T13:45:42.829Z] Console Warn | {"args":["Moving to buffered region","0.033","0"]}
-[2025-11-22T13:45:43.044Z] Network Request (Allowed) | {"type":"FETCH","url":"https://assets.twitch.tv/config/manifest.json?v=1"}
-[2025-11-22T13:45:43.617Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T13:45:43.678Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T13:45:43.962Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T13:45:44.047Z] Console Error | {"args":["[GraphQL] One or more GraphQL errors were detected on request 01KANX0HCGBNFYC7FGH6KKQYMD. PinnedChatSettings: unauthenticated","[object Object]"]}
-[2025-11-22T13:45:44.459Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T13:45:44.762Z] Console Error | {"args":["[GraphQL] One or more GraphQL errors were detected on request 01KANX0J2T437DFZ24DH6X4TZD. PinnedChatSettings: unauthenticated","[object Object]"]}
-[2025-11-22T13:45:44.913Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T13:45:44.973Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T13:45:45.129Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T13:45:45.600Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T13:45:45.614Z] Console Error | {"args":["[GraphQL] One or more GraphQL errors were detected on request 01KANX0JQRMTD3W6WRHVTXG8QM. PinnedChatSettings: unauthenticated","[object Object]"]}
-[2025-11-22T13:45:45.837Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T13:45:45.884Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T13:45:46.124Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T13:45:47.238Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T13:45:48.870Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T13:45:52.677Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T13:45:58.868Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T13:46:03.050Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T13:46:04.089Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T13:46:18.788Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T13:46:28.844Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T13:46:41.044Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T13:46:42.249Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T13:47:14.331Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T13:47:30.526Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T13:47:42.656Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T13:48:05.014Z] Frame Drop Detected | {"newDropped":19,"totalDropped":19,"totalFrames":8510}
-[2025-11-22T13:48:05.014Z] Severe frame drop detected, triggering recovery
-[2025-11-22T13:48:05.014Z] Event: AD_DETECTED
-[2025-11-22T13:48:05.014Z] Resilience execution started
-[2025-11-22T13:48:05.014Z] Captured player state | {"currentTime":142.122378,"wasPaused":false,"bufferedLength":1,"hasError":false,"errorCode":null,"readyState":4,"networkState":2}
-[2025-11-22T13:48:05.014Z] Seeking to buffer end | {"from":142.122378,"to":149.518593}
-[2025-11-22T13:48:05.014Z] Event: REPORT | {"status":"SUCCESS"}
-[2025-11-22T13:48:09.192Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T13:48:30.422Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T13:48:43.552Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T13:49:29.868Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T13:49:41.297Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T13:49:43.604Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T13:49:43.844Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T13:49:44.075Z] Console Warn | {"args":["An error occurred! For more details, see the full error text at https://go.apollo.dev/c/err#%7B%22version%22%3A%223.8.7%22%2C%22message%22%3A14%2C%22args%22%3A%5B%22goals%22%2C%22Channel%22%2C%22either%20ensure%20all%20objects%20of%20type%20ChannelGoalConnection%20have%20an%20ID%20or%20a%20custom%20merge%20function%2C%20or%20%22%2C%22Channel.goals%22%2C%22%7B%5Cn%20%20%5C%22__typename%5C%22%3A%20%5C%22ChannelGoalConnection%5C%22%2C%5Cn%20%20%5C%22edges%5C%22%3A%20%5B%5Cn%20%20%20%20%7B%5Cn%20%20%20%20%20%20%5C%22__typename%5C%22%3A%20%5C%22ChannelGoalEdge%5C%22%2C%5Cn%20%20%20%20%20%20%5C%22cursor%5C%22%3A%20%5C%22%5C%22%2C%5Cn%20%20%20%20%20%20%5C%22node%5C%22%3A%20%7B%5Cn%20%20%20%20%20%20%20%20%5C%22__ref%5C%22%3A%20%5C%22ChannelGoal%3A35F7x6lwmxDKR7gxXU1UJfnYHTY%5C%22%5Cn%20%20%20%20%20%20%7D%5Cn%20%20%20%20%7D%5Cn%20%20%5D%2C%5Cn%20%20%5C%22pageInfo%5C%22%3A%20%7B%5Cn%20%20%20%20%5C%22__typename%5C%22%3A%20%5C%22PageInfo%5C%22%2C%5Cn%20%20%20%20%5C%22hasNextPage%5C%22%3A%20false%5Cn%20%20%7D%5Cn%7D%22%2C%22%7B%5Cn%20%20%5C%22__typename%5C%22%3A%20%5C%22ChannelGoalConnection%5C%22%2C%5Cn%20%20%5C%22edges%5C%22%3A%20%5B%5Cn%20%20%20%20%7B%5Cn%20%20%20%20%20%20%5C%22__typename%5C%22%3A%20%5C%22ChannelGoalEdge%5C%22%2C%5Cn%20%20%20%20%20%20%5C%22node%5C%22%3A%20%7B%5Cn%20%20%20%20%20%20%20%20%5C%22__ref%5C%22%3A%20%5C%22ChannelGoal%3A35F7x6lwmxDKR7gxXU1UJfnYHTY%5C%22%5Cn%20%20%20%20%20%20%7D%5Cn%20%20%20%20%7D%5Cn%20%20%5D%5Cn%7D%22%5D%7D"]}
-[2025-11-22T13:49:44.239Z] Console Error | {"args":["[GraphQL] One or more GraphQL errors were detected on request 01KANX7VVPBH742PBGX31TVVEY. OneClickEligibility: unauthenticated","[object Object]"]}
-[2025-11-22T13:49:44.242Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T13:49:44.757Z] Console Error | {"args":["[GraphQL] One or more GraphQL errors were detected on request 01KANX7WHQ5V7774V6A2XJB5KC. OneClickEligibility: unauthenticated, SubscriptionRewardPreviews: unauthenticated","[object Object],[object Object]"]}
-[2025-11-22T13:49:45.227Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T13:49:46.458Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T13:49:51.337Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T13:49:54.878Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T13:50:29.669Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T13:50:42.190Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T13:50:43.053Z] Network Request (Allowed) | {"type":"FETCH","url":"https://assets.twitch.tv/config/manifest.json?v=1"}
-[2025-11-22T13:50:43.534Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-22T15:12:37.538Z] Core initialized
+[2025-11-22T15:12:38.203Z] Player mounted
+[2025-11-22T15:12:38.206Z] Player signature found | {"id":"k0","key":"ref"}
+[2025-11-22T15:12:38.206Z] Player signature found | {"id":"k1","key":"ref"}
+[2025-11-22T15:12:38.206Z] Player signature found | {"id":"k2","key":"ref"}
+[2025-11-22T15:12:38.206Z] PlayerContext: Fresh context found and cached
+[2025-11-22T15:12:38.206Z] Event: ACQUIRE - Success (Player Context Found)
+[2025-11-22T15:12:38.758Z] PlayerContext: Cache validation | {"isValid":true,"hasK0":true,"hasK1":true,"hasK2":true,"videoElementExists":true}
+[2025-11-22T15:12:38.758Z] Event: ACQUIRE - Success (Player Context Found)
+[2025-11-22T15:12:39.582Z] Player unmounted
+[2025-11-22T15:12:40.321Z] Console Error | {"args":["[GraphQL] One or more GraphQL errors were detected on request 01KAP1ZQFJQRSKCC6NY27MZ1DN. PinnedChatSettings: unauthenticated","[object Object]"],"benign":true}
+[2025-11-22T15:12:40.912Z] Player mounted
+[2025-11-22T15:12:40.918Z] Player signature found | {"id":"k0","key":"ref"}
+[2025-11-22T15:12:40.918Z] Player signature found | {"id":"k1","key":"ref"}
+[2025-11-22T15:12:40.918Z] Player signature found | {"id":"k2","key":"ref"}
+[2025-11-22T15:12:40.918Z] PlayerContext: Fresh context found and cached
+[2025-11-22T15:12:40.918Z] Event: ACQUIRE - Success (Player Context Found)
+[2025-11-22T15:12:41.378Z] PlayerContext: Cache validation | {"isValid":true,"hasK0":true,"hasK1":true,"hasK2":true,"videoElementExists":true}
+[2025-11-22T15:12:41.378Z] Event: ACQUIRE - Success (Player Context Found)
+[2025-11-22T15:12:41.421Z] Console Error | {"args":["[GraphQL] One or more GraphQL errors were detected on request 01KAP1ZRD03TWF6AFAHCBMZS1H. PinnedChatSettings: unauthenticated","[object Object]"],"benign":true}
+[2025-11-22T15:12:41.893Z] Console Error | {"args":["[GraphQL] One or more GraphQL errors were detected on request 01KAP1ZS1AD65XS8AJG7BPZJA4. PinnedChatSettings: unauthenticated","[object Object]"],"benign":true}
+[2025-11-22T15:12:42.576Z] Trigger pattern detected | {"type":"XHR","url":"https://edge.ads.twitch.tv/2018-01-01/3p/ads?rt=vast3&dur=30&geoc=DE&dt=2&pid=8458072252431763824362576&cb=8378221&ws=1920x927&u=https%3A%2F%2Fwww.twitch.tv%2Fcaedrel&slots=%5B%7B%22id%22%3A%22twitch-player-ui%22%2C%22mt%22%3A%22v%22%2C%22kv%22%3A%7B%7D%2C%22s%22%3A%22640x480%22%7D%5D&pj=%7B%22game%22%3A%22league_of_legends%22%2C%22chan%22%3A%22caedrel%22%2C%22chanid%22%3A%2292038375%22%2C%22twitchcorrelator%22%3A%221NGaelTFp4OI4drV308lBblpF1vSvmAD%22%2C%22ad_session_id%22%3A%221NGaelTFp4OI4drV308lBblpF1vSvmAD%22%2C%22embed%22%3A%22false%22%2C%22platform%22%3A%22web%22%2C%22mature%22%3A%22false%22%2C%22pos%22%3A%221%22%2C%22timebreak%22%3A%2230%22%2C%22tag%22%3A%22%22%2C%22content_labels%22%3A%22%22%2C%22chantype%22%3A%22partner%22%2C%22delivery_type%22%3A%22csai%22%2C%22vb%22%3A%22null%22%2C%22adunit%22%3A%22web_csai%22%2C%22loggedin%22%3A%22false%22%2C%22v%22%3A%22ARCHIVE%22%2C%22vod_type%22%3A%22undefined%22%2C%22embed_url%22%3A%22null%22%2C%22game_id%22%3A%2221779%22%2C%22user_lang%22%3A%22en%22%7D&gdprl=%7B%22status%22%3A%22cmp%22%7D&pbid=twitch&bp=preroll&aid=MyJILP1jfuUz2VBuUB2ZPajiR0aXfrYe&ulang=en"}
+[2025-11-22T15:12:42.576Z] Ad pattern detected | {"type":"XHR","url":"https://edge.ads.twitch.tv/2018-01-01/3p/ads?rt=vast3&dur=30&geoc=DE&dt=2&pid=8458072252431763824362576&cb=8378221&ws=1920x927&u=https%3A%2F%2Fwww.twitch.tv%2Fcaedrel&slots=%5B%7B%22id%22%3A%22twitch-player-ui%22%2C%22mt%22%3A%22v%22%2C%22kv%22%3A%7B%7D%2C%22s%22%3A%22640x480%22%7D%5D&pj=%7B%22game%22%3A%22league_of_legends%22%2C%22chan%22%3A%22caedrel%22%2C%22chanid%22%3A%2292038375%22%2C%22twitchcorrelator%22%3A%221NGaelTFp4OI4drV308lBblpF1vSvmAD%22%2C%22ad_session_id%22%3A%221NGaelTFp4OI4drV308lBblpF1vSvmAD%22%2C%22embed%22%3A%22false%22%2C%22platform%22%3A%22web%22%2C%22mature%22%3A%22false%22%2C%22pos%22%3A%221%22%2C%22timebreak%22%3A%2230%22%2C%22tag%22%3A%22%22%2C%22content_labels%22%3A%22%22%2C%22chantype%22%3A%22partner%22%2C%22delivery_type%22%3A%22csai%22%2C%22vb%22%3A%22null%22%2C%22adunit%22%3A%22web_csai%22%2C%22loggedin%22%3A%22false%22%2C%22v%22%3A%22ARCHIVE%22%2C%22vod_type%22%3A%22undefined%22%2C%22embed_url%22%3A%22null%22%2C%22game_id%22%3A%2221779%22%2C%22user_lang%22%3A%22en%22%7D&gdprl=%7B%22status%22%3A%22cmp%22%7D&pbid=twitch&bp=preroll&aid=MyJILP1jfuUz2VBuUB2ZPajiR0aXfrYe&ulang=en"}
+[2025-11-22T15:12:42.576Z] Ad request blocked (XHR) | {"url":"https://edge.ads.twitch.tv/2018-01-01/3p/ads?rt=vast3&dur=30&geoc=DE&dt=2&pid=8458072252431763824362576&cb=8378221&ws=1920x927&u=https%3A%2F%2Fwww.twitch.tv%2Fcaedrel&slots=%5B%7B%22id%22%3A%22twitch-player-ui%22%2C%22mt%22%3A%22v%22%2C%22kv%22%3A%7B%7D%2C%22s%22%3A%22640x480%22%7D%5D&pj=%7B%22game%22%3A%22league_of_legends%22%2C%22chan%22%3A%22caedrel%22%2C%22chanid%22%3A%2292038375%22%2C%22twitchcorrelator%22%3A%221NGaelTFp4OI4drV308lBblpF1vSvmAD%22%2C%22ad_session_id%22%3A%221NGaelTFp4OI4drV308lBblpF1vSvmAD%22%2C%22embed%22%3A%22false%22%2C%22platform%22%3A%22web%22%2C%22mature%22%3A%22false%22%2C%22pos%22%3A%221%22%2C%22timebreak%22%3A%2230%22%2C%22tag%22%3A%22%22%2C%22content_labels%22%3A%22%22%2C%22chantype%22%3A%22partner%22%2C%22delivery_type%22%3A%22csai%22%2C%22vb%22%3A%22null%22%2C%22adunit%22%3A%22web_csai%22%2C%22loggedin%22%3A%22false%22%2C%22v%22%3A%22ARCHIVE%22%2C%22vod_type%22%3A%22undefined%22%2C%22embed_url%22%3A%22null%22%2C%22game_id%22%3A%2221779%22%2C%22user_lang%22%3A%22en%22%7D&gdprl=%7B%22status%22%3A%22cmp%22%7D&pbid=twitch&bp=preroll&aid=MyJILP1jfuUz2VBuUB2ZPajiR0aXfrYe&ulang=en"}
+[2025-11-22T15:12:42.576Z] Event: AD_DETECTED
+[2025-11-22T15:12:42.576Z] Resilience execution started
+[2025-11-22T15:12:42.576Z] Captured player state | {"currentTime":45,"wasPaused":true,"bufferedLength":1,"hasError":false,"errorCode":null,"readyState":1,"networkState":2}
+[2025-11-22T15:12:42.576Z] Seeking to buffer end | {"from":45,"to":1.401}
+[2025-11-22T15:12:42.934Z] Play command failed | {"error":"AbortError: The fetching process for the media resource was aborted by the user agent at the user's request."}
+[2025-11-22T15:12:42.934Z] Event: REPORT | {"status":"SUCCESS"}
+[2025-11-22T15:12:44.760Z] Console Error | {"args":["[GraphQL] One or more GraphQL errors were detected on request 01KAP1ZVK5Y6AR6GTEW8THE02X. PinnedChatSettings: unauthenticated","[object Object]"],"benign":true}
+[2025-11-22T15:12:49.740Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":34,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":34,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:12:50.764Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":61,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":95,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:12:51.777Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":61,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":156,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:12:52.789Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":61,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":217,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:12:53.803Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":61,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":278,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:12:54.809Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":338,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:12:55.812Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":61,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":399,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:12:56.825Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":459,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:12:57.828Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":519,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:12:58.830Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":61,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":580,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:12:59.837Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":640,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:13:00.841Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":700,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:13:01.845Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":760,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:13:02.849Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":61,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":821,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:13:03.860Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":881,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:13:04.862Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":61,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":942,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:13:05.871Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":59,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":1001,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:13:06.873Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":61,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":1062,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:13:07.880Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":1122,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:13:08.884Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":61,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":1183,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:13:09.895Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":61,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":1244,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:13:10.903Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":1304,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:13:11.913Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":1364,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:13:12.916Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":61,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":1425,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:13:13.923Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":1485,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:13:14.930Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":61,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":1546,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:13:15.937Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":1606,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:13:16.952Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":61,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":1667,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:13:17.960Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":1727,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:13:18.974Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":61,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":1788,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:13:19.978Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":61,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":1849,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:13:20.986Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":1909,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:13:21.995Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":1969,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:13:22.995Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":61,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":2030,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:13:24.008Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":2090,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:13:25.010Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":2150,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:13:26.010Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":2210,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:13:27.025Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":61,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":2271,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:13:28.028Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":61,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":2332,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:13:29.036Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":59,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":2391,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:13:30.044Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":62,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":2453,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:13:31.050Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":2513,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:13:32.058Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":2573,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:13:33.065Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":2633,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:13:34.070Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":61,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":2694,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:13:35.078Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":2754,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:13:36.084Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":61,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":2815,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:13:37.091Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":2875,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:13:38.101Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":61,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":2936,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:13:39.105Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":2996,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:13:40.115Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":3056,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:13:41.117Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":61,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":3117,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:13:42.119Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":3177,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:13:43.123Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":3237,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:13:44.126Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":3297,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:13:45.134Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":61,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":3358,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:13:46.144Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":3418,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:13:47.150Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":61,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":3479,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:13:48.160Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":3539,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:13:49.166Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":61,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":3600,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:13:50.176Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":3660,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:13:51.181Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":3720,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:13:52.193Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":61,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":3781,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:13:53.207Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":61,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":3842,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:13:54.211Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":61,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":3903,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:13:55.223Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":3963,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:13:56.232Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":61,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":4024,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:13:57.237Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":4084,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:13:58.247Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":4144,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:13:59.257Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":61,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":4205,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:14:00.263Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":61,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":4266,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:14:01.274Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":4326,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:14:02.279Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":61,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":4387,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:14:03.286Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":4447,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:14:04.290Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":4507,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:14:05.294Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":61,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":4568,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:14:06.302Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":4628,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:14:07.309Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":4688,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:14:08.313Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":61,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":4749,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:14:09.320Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":4809,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:14:10.325Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":4869,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:14:11.334Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":4929,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:14:12.335Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":61,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":4990,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:14:13.342Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":5050,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:14:14.348Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":61,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":5111,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:14:15.356Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":5171,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:14:16.364Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":61,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":5232,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:14:17.373Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":5292,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:14:18.383Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":61,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":5353,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:14:19.391Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":5413,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:14:20.401Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":61,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":5474,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:14:22.662Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":136,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":5610,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:14:23.682Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":61,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":5671,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:14:24.698Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":61,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":5732,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:14:25.703Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":5792,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:14:26.712Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":61,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":5853,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:14:27.722Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":5913,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:14:28.728Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":5973,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:14:30.758Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":119,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":6092,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:14:31.761Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":6152,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:14:32.765Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":6212,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:14:33.772Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":6272,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:14:34.777Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":6332,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:14:35.789Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":61,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":6393,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:14:36.792Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":52,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":6445,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:14:37.798Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":52,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":6497,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:14:38.802Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":6557,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:14:39.811Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":61,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":6618,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:14:40.815Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":6678,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:14:41.820Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":6738,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:14:42.821Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":6798,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:14:43.832Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":61,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":6859,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:14:44.832Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":6919,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:14:45.836Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":6979,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:14:46.841Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":7039,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:14:47.845Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":61,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":7100,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:14:48.848Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":7160,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:14:49.851Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":7220,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:14:50.860Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":7280,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:14:51.862Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":7340,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:14:52.875Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":61,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":7401,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:14:53.878Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":61,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":7462,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:14:54.881Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":7522,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:14:55.892Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":7582,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:14:56.893Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":7642,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:14:57.901Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":61,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":7703,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:14:58.904Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":7763,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:14:59.911Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":61,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":7824,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:15:00.915Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":7884,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:15:01.923Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":7944,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:15:02.929Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":61,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":8005,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:15:03.937Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":8065,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:15:04.940Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":8125,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:15:05.951Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":61,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":8186,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:15:06.957Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":8246,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:15:07.964Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":61,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":8307,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:15:08.971Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":8367,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:15:09.975Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":8427,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:15:10.983Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":61,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":8488,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:15:11.989Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":8548,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:15:12.993Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":61,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":8609,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:15:14.002Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":8669,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:15:15.002Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":8729,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:15:16.014Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":61,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":8790,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:15:17.024Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":8850,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:15:18.034Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":61,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":8911,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:15:19.035Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":8971,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:15:20.047Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":61,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":9032,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:15:21.052Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":9092,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:15:22.060Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":9152,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:15:23.064Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":61,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":9213,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:15:24.070Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":9273,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:15:25.080Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":9333,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:15:26.094Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":61,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":9394,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:15:27.099Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":61,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":9455,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:15:28.104Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":9515,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:15:29.109Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":9575,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:15:30.118Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":61,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":9636,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:15:31.122Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":9696,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:15:32.132Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":61,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":9757,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:15:33.137Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":9817,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:15:34.146Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":61,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":9878,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:15:35.149Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":9938,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:15:36.156Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":9998,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:15:37.161Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":61,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":10059,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:15:38.169Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":10119,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:15:39.177Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":10179,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:15:40.186Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":61,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":10240,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:15:41.188Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":10300,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:15:42.194Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":61,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":10361,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:15:43.200Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":10421,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:15:44.208Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":10481,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:15:45.212Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":61,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":10542,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:15:46.216Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":10602,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:15:47.224Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":10662,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:15:48.226Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":10722,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:15:49.232Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":61,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":10783,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:15:50.239Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":10843,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:15:51.244Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":61,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":10904,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:15:52.247Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":10964,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:15:53.251Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":11024,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:15:54.262Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":11084,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:15:55.263Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":61,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":11145,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:15:56.270Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":11205,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:15:57.273Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":11265,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:15:58.281Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":61,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":11326,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:15:59.285Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":11386,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:16:00.291Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":11446,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:16:01.297Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":61,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":11507,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:16:02.303Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":11567,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:16:03.306Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":11627,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:16:04.314Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":61,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":11688,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:16:05.317Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":11748,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:16:06.325Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":11808,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:16:07.329Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":61,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":11869,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:16:08.333Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":11929,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:16:09.336Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":11989,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:16:10.344Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":61,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":12050,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:16:11.348Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":12110,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:16:12.361Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":61,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":12171,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:16:13.366Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":12231,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:16:14.373Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":12291,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:16:15.377Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":12351,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:16:16.387Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":61,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":12412,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:16:17.388Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":12472,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:16:18.392Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":12532,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:16:19.440Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":63,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":12595,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:16:20.450Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":61,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":12656,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:16:21.461Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":12716,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:16:22.463Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":61,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":12777,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:16:23.467Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":12837,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:16:24.482Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":12897,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:16:25.482Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":61,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":12958,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:16:26.489Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":13018,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:16:27.499Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":61,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":13079,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:16:28.503Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":13139,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:16:29.509Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":13199,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:16:30.515Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":61,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":13260,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:16:31.518Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":13320,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:16:33.455Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":116,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":13436,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:16:35.485Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":122,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":13558,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:16:36.486Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":13618,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:16:37.493Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":13678,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:16:39.538Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":123,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":13801,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:16:41.570Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":122,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":13923,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:16:42.587Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":58,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":13981,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:16:44.609Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":120,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":14101,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:16:45.610Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":14161,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:16:46.615Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":61,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":14222,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:16:47.625Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":60,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":14282,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:16:48.629Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":61,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":14343,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:16:49.065Z] Console Warn | {"args":["Playhead stalling at 239.937381, buffer end 240.011666"]}
+[2025-11-22T15:16:49.065Z] Critical warning detected: Playhead stalling
+[2025-11-22T15:16:49.066Z] Event: AD_DETECTED
+[2025-11-22T15:16:49.066Z] Resilience execution started
+[2025-11-22T15:16:49.066Z] Captured player state | {"currentTime":239.937381,"wasPaused":false,"bufferedLength":1,"hasError":false,"errorCode":null,"readyState":4,"networkState":2}
+[2025-11-22T15:16:49.066Z] Stuck at buffer end detected - requires aggressive recovery | {"currentTime":239.937381,"bufferEnd":240.011666,"diff":0.07428500000000327}
+[2025-11-22T15:16:49.066Z] Executing aggressive recovery: forcing stream refresh | {"beforeState":{"readyState":4,"paused":false,"currentTime":239.937381,"bufferedLength":1,"bufferEnd":240.011666}}
+[2025-11-22T15:16:49.066Z] Captured original video source | {"src":"blob:https://www.twitch.tv/3dbf88e6-a28f-4d57-989d-5b8be99c1773","hasSrcObject":false,"currentSrc":"blob:https://www.twitch.tv/3dbf88e6-a28f-4d57-989d-5b8be99c1773","isBlobUrl":true}
+[2025-11-22T15:16:49.066Z] Blob URL detected - using less aggressive recovery (seek backward instead of clearing source)
+[2025-11-22T15:16:49.066Z] Seeked backward to force buffer refresh | {"from":239.937381,"to":236.937381}
+[2025-11-22T15:16:49.638Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":26,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":14369,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:16:51.757Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":127,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":14496,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:16:51.757Z] Less aggressive recovery successful - playback resumed
+[2025-11-22T15:16:51.757Z] Player state restored after aggressive recovery | {"playbackRate":1,"volume":0,"muted":true}
+[2025-11-22T15:16:51.757Z] Aggressive recovery completed | {"afterState":{"readyState":4,"paused":false,"currentTime":239.025565,"bufferedLength":1,"bufferEnd":240.011666,"duration":9223372036854.775}}
+[2025-11-22T15:16:51.757Z] Video was already playing, verifying playback after aggressive recovery | {"paused":false,"currentTime":239.025565}
+[2025-11-22T15:16:51.757Z] Event: REPORT | {"status":"SUCCESS"}
+[2025-11-22T15:16:52.702Z] Console Warn | {"args":["Playhead stalling at 240.001493, buffer end 240.011666"]}
+[2025-11-22T15:16:52.702Z] Critical warning detected: Playhead stalling
+[2025-11-22T15:16:52.703Z] Event: AD_DETECTED
+[2025-11-22T15:16:52.704Z] Resilience execution started
+[2025-11-22T15:16:52.704Z] Captured player state | {"currentTime":240.001493,"wasPaused":false,"bufferedLength":1,"hasError":false,"errorCode":null,"readyState":4,"networkState":2}
+[2025-11-22T15:16:52.704Z] Stuck at buffer end detected - requires aggressive recovery | {"currentTime":240.001493,"bufferEnd":240.011666,"diff":0.010172999999980448}
+[2025-11-22T15:16:52.704Z] Executing aggressive recovery: forcing stream refresh | {"beforeState":{"readyState":4,"paused":false,"currentTime":240.001493,"bufferedLength":1,"bufferEnd":240.011666}}
+[2025-11-22T15:16:52.704Z] Captured original video source | {"src":"blob:https://www.twitch.tv/3dbf88e6-a28f-4d57-989d-5b8be99c1773","hasSrcObject":false,"currentSrc":"blob:https://www.twitch.tv/3dbf88e6-a28f-4d57-989d-5b8be99c1773","isBlobUrl":true}
+[2025-11-22T15:16:52.704Z] Blob URL detected - using less aggressive recovery (seek backward instead of clearing source)
+[2025-11-22T15:16:52.704Z] Seeked backward to force buffer refresh | {"from":240.001493,"to":237.001493}
+[2025-11-22T15:16:52.827Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":57,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":14553,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:16:54.839Z] Frame Drop Detected | {"newDropped":0,"newTotalFrames":10,"recentDropRate":"0.00%","totalDropped":0,"totalFrames":14563,"cumulativeDropRate":"0.00%"}
+[2025-11-22T15:16:54.840Z] Less aggressive recovery failed - player may need page refresh | {"readyState":2,"paused":false,"currentTime":237.181602}
+[2025-11-22T15:16:54.840Z] Player state restored after aggressive recovery | {"playbackRate":1,"volume":0,"muted":true}
+[2025-11-22T15:16:54.840Z] Aggressive recovery completed | {"afterState":{"readyState":2,"paused":false,"currentTime":237.181602,"bufferedLength":1,"bufferEnd":240.011666,"duration":9223372036854.775}}
+[2025-11-22T15:16:54.840Z] Video was already playing, verifying playback after aggressive recovery | {"paused":false,"currentTime":237.181602}
+[2025-11-22T15:16:54.840Z] Event: REPORT | {"status":"SUCCESS"}
+[2025-11-22T15:16:56.853Z] Player stuck detected | {"stuckCount":2,"currentTime":237.181602}
+[2025-11-22T15:16:56.853Z] Event: AD_DETECTED
+[2025-11-22T15:16:56.853Z] Resilience execution started
+[2025-11-22T15:16:56.853Z] Captured player state | {"currentTime":237.181602,"wasPaused":false,"bufferedLength":1,"hasError":false,"errorCode":null,"readyState":1,"networkState":2}
+[2025-11-22T15:16:56.853Z] Seeking to buffer end | {"from":237.181602,"to":239.511666}
+[2025-11-22T15:16:56.853Z] Event: REPORT | {"status":"SUCCESS"}

@@ -1,4 +1,69 @@
-Content-Security-Policy: Die Einstellungen der Seite haben die Ausführung eines Inline-Skripts (script-src-elem) blockiert, da es gegen folgende Direktive verstößt: "script-src 'self' https://9gxdmz93ockiljbh4c24cmuvgo4r86.ext-twitch.tv https://extension-files.twitch.tv". Ziehen Sie die Verwendung eines Hashs ('sha256-Bwafc2irgxJ5Yis6jmjPG3FRfWRVdWdjFzkW8I5EWp8=') oder einer Nonce in Erwägung. content.js:71:183
-Content-Security-Policy: Die Einstellungen der Seite haben die Ausführung eines Inline-Skripts (script-src-elem) blockiert, da es gegen folgende Direktive verstößt: "script-src 'self' https://9gxdmz93ockiljbh4c24cmuvgo4r86.ext-twitch.tv https://extension-files.twitch.tv". Ziehen Sie die Verwendung eines Hashs ('sha256-opbAMZbJpUgCwJ8TB9R+Gmonl82apL7ChUlN3+LJOOU=') oder einer Nonce in Erwägung. content.js:71:183
-Content-Security-Policy: Die Einstellungen der Seite haben die Ausführung eines Inline-Skripts (script-src-elem) blockiert, da es gegen folgende Direktive verstößt: "script-src 'self' https://dy9or3jkex4hkrfm6nhsww2821g8eu.ext-twitch.tv https://extension-files.twitch.tv". Ziehen Sie die Verwendung eines Hashs ('sha256-DvE40ssteCiixZBKpDmeNezUfzXcQNqzqbX+rA9CIGE=') oder einer Nonce in Erwägung. content.js:71:183
-Content-Security-Policy: Die Einstellungen der Seite haben die Ausführung eines Inline-Skripts (script-src-elem) blockiert, da es gegen folgende Direktive verstößt: "script-src 'self' https://dy9or3jkex4hkrfm6nhsww2821g8eu.ext-twitch.tv https://extension-files.twitch.tv". Ziehen Sie die Verwendung eines Hashs ('sha256-5Qk+F9Rhh1mRfKExQzMRBTzI/eromeu8p2uKLWCpLQg=') oder einer Nonce in Erwägung. content.js:71:183
+GET
+https://vod-secure.twitch.tv/_404/404_processing_640x360.png
+NS_BINDING_ABORTED
+
+	
+GET
+	https://vod-secure.twitch.tv/_404/404_processing_640x360.png
+Status
+403
+VersionHTTP/2
+Übertragen489 B (0 B Größe)
+Referrer Policystrict-origin-when-cross-origin
+Anfrage-PrioritätHigh
+DNS-AuflösungSystem
+
+	
+content-length
+	17
+content-type
+	text/html
+date
+	Sat, 22 Nov 2025 15:17:14 GMT
+etag
+	"f2ba37ab539401d32d53e77d7527788e"
+last-modified
+	Mon, 28 Mar 2016 20:26:38 GMT
+server
+	AmazonS3
+via
+	1.1 7fbac6ee13ac9fa5ab42252ac40e04a8.cloudfront.net (CloudFront)
+x-amz-cf-id
+	CAJJMiCpCN4x3xsypcqKWIIL_uW4LimcFYCXVxVkIjLxldGFt_qkzg==
+x-amz-cf-pop
+	HAM50-P4
+x-amz-error-code
+	AccessDenied
+x-amz-error-message
+	Access Denied
+x-cache
+	Error from cloudfront
+X-Firefox-Spdy
+	h2
+	
+Accept
+	image/avif,image/webp,image/png,image/svg+xml,image/*;q=0.8,*/*;q=0.5
+Accept-Encoding
+	gzip, deflate, br, zstd
+Accept-Language
+	en-US,en;q=0.7,de;q=0.3
+Connection
+	keep-alive
+Cookie
+	unique_id=MyJILP1jfuUz2VBuUB2ZPajiR0aXfrYe; unique_id_durable=MyJILP1jfuUz2VBuUB2ZPajiR0aXfrYe; twitch.lohp.countryCode=DE; experiment_overrides={%22experiments%22:{}%2C%22disabled%22:[]}; api_token=twilight.2257da65fb6f05bd0fc4bb137648d036; server_session_id=b0159c655cd04ef89ec00cc58d6b71e9
+Host
+	vod-secure.twitch.tv
+Priority
+	u=4, i
+Referer
+	https://www.twitch.tv/
+Sec-Fetch-Dest
+	image
+Sec-Fetch-Mode
+	no-cors
+Sec-Fetch-Site
+	same-site
+Sec-GPC
+	1
+User-Agent
+	Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:145.0) Gecko/20100101 Firefox/145.0
