@@ -1,6 +1,6 @@
 // ==UserScript==
-// @name          Mega Ad Dodger 3000 (Stealth Reactor Core) 1.12
-// @version       1.12
+// @name          Mega Ad Dodger 3000 (Stealth Reactor Core) 1.13
+// @version       1.13
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -532,100 +532,6 @@
     // --- Resilience ---
     /**
      * Executes the ad-blocking / recovery logic.
-     * @responsibility
-     * 1. Capture current player state.
-     * 2. Force-reload the video source to skip the ad segment.
-     * 3. Restore player state (time, volume, etc.).
-     */
-    const Resilience = (() => {
-        let isFixing = false;
-
-        return {
-            execute: async (container) => {
-                if (isFixing) {
-                    Logger.add('Resilience already in progress, skipping');
-                    return;
-                }
-                isFixing = true;
-
-                try {
-                    Logger.add('Resilience execution started');
-                    const video = container.querySelector(CONFIG.selectors.VIDEO);
-                    if (!video) return;
-
-                    // 1. Capture State
-                    const wasPaused = video.paused;
-                    const currentTime = video.currentTime;
-                    const playbackRate = video.playbackRate;
-                    const volume = video.volume;
-                    const muted = video.muted;
-
-                    Logger.add('Captured player state', { currentTime, wasPaused, volume, muted });
-
-                    // 2. Clear Source
-                    video.src = '';
-                    video.load();
-                    // !CRITICAL: Wait for cleanup.
-                    // REASON: Twitch's player needs time to unmount internal handlers.
-                    // < 50ms causes race conditions where the old stream isn't fully detached.
-                    await Fn.sleep(100);
-                    Logger.add('Video source cleared');
-
-                    // 3. Restore Source with Cache Busting
-                    // @strategy Force the browser to treat this as a new stream by appending a timestamp.
-                    //           This bypasses internal player caches that might still hold the ad segment.
-                    const currentSrc = window.location.href;
-                    // Handle existing hash
-                    const [baseUrl, hash] = currentSrc.split('#');
-                    const separator = baseUrl.includes('?') ? '&' : '?';
-                    const newSrc = `${baseUrl}${separator}t=${Date.now()}${hash ? '#' + hash : ''}`;
-                    Logger.add('Video source restored', { newSrc });
-
-                    // Wait for canplay event before playing
-                    await new Promise((resolve) => {
-                        const handler = () => {
-                            video.removeEventListener('canplay', handler);
-                            resolve();
-                        };
-                        video.addEventListener('canplay', handler);
-
-                        // Set source after listener is attached
-                        video.src = newSrc;
-                        video.load();
-
-                        // Timeout fallback
-                        setTimeout(() => {
-                            video.removeEventListener('canplay', handler);
-                            resolve();
-                        }, CONFIG.timing.PLAYBACK_TIMEOUT_MS);
-                    });
-
-                    // 4. Restore State
-                    video.currentTime = currentTime;
-                    video.playbackRate = playbackRate;
-                    video.volume = volume;
-                    video.muted = muted;
-                    Logger.add('Restoring player state', { currentTime, wasPaused });
-
-                    if (!wasPaused) {
-                        try {
-                            await video.play();
-                        } catch (e) {
-                            // Ignore play errors
-                        }
-                    }
-
-                    Adapters.EventBus.emit(CONFIG.events.REPORT, { status: 'SUCCESS' });
-                } finally {
-                    isFixing = false;
-                }
-            }
-        };
-    })();
-
-    // --- Video Listener Manager ---
-    /**
-     * Manages event listeners on the video element to detect stream changes and performance issues.
      */
     const VideoListenerManager = (() => {
         let activeElement = null;
