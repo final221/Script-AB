@@ -1,0 +1,28 @@
+Quellübergreifende (Cross-Origin) Anfrage blockiert: Die Gleiche-Quelle-Regel verbietet das Lesen der externen Ressource auf https://edge.ads.twitch.tv/2018-01-01/3p/ads?rt=vast3&dur=30&geoc=DE&dt=2&pid=6003834479871763810612013&cb=8806762&ws=1920x927&u=https%3A%2F%2Fwww.twitch.tv%2Fcaedrel&slots=%5B%7B%22id%22%3A%22twitch-player-ui%22%2C%22mt%22%3A%22v%22%2C%22kv%22%3A%7B%7D%2C%22s%22%3A%22640x480%22%7D%5D&pj=%7B%22game%22%3A%22league_of_legends%22%2C%22chan%22%3A%22caedrel%22%2C%22chanid%22%3A%2292038375%22%2C%22twitchcorrelator%22%3A%22xqDNYhSBKvmDfcXRfVJdMMcJjLa7mn9i%22%2C%22ad_session_id%22%3A%22xqDNYhSBKvmDfcXRfVJdMMcJjLa7mn9i%22%2C%22embed%22%3A%22false%22%2C%22platform%22%3A%22web%22%2C%22mature%22%3A%22false%22%2C%22pos%22%3A%221%22%2C%22timebreak%22%3A%2230%22%2C%22tag%22%3A%22%22%2C%22content_labels%22%3A%22%22%2C%22chantype%22%3A%22partner%22%2C%22delivery_type%22%3A%22csai%22%2C%22vb%22%3A%22null%22%2C%22adunit%22%3A%22web_csai%22%2C%22loggedin%22%3A%22false%22%2C%22v%22%3A%22ARCHIVE%22%2C%22vod_type%22%3A%22undefined%22%2C%22embed_url%22%3A%22null%22%2C%22game_id%22%3A%2221779%22%2C%22user_lang%22%3A%22en%22%7D&gdprl=%7B%22status%22%3A%22cmp%22%7D&pbid=twitch&bp=preroll&aid=MyJILP1jfuUz2VBuUB2ZPajiR0aXfrYe&ulang=en. (Grund: CORS-Anfrage schlug fehl). Statuscode: (null).
+
+Quellübergreifende (Cross-Origin) Anfrage blockiert: Die Gleiche-Quelle-Regel verbietet das Lesen der externen Ressource auf https://edge.ads.twitch.tv/2018-01-01/3p/ads?rt=vast3&dur=30&geoc=DE&dt=2&pid=1235292439951763810612827&cb=5033164&ws=1920x927&u=https%3A%2F%2Fwww.twitch.tv%2Fcaedrel&slots=%5B%7B%22id%22%3A%22twitch-player-ui%22%2C%22mt%22%3A%22v%22%2C%22kv%22%3A%7B%7D%2C%22s%22%3A%22640x480%22%7D%5D&pj=%7B%22game%22%3A%22league_of_legends%22%2C%22chan%22%3A%22caedrel%22%2C%22chanid%22%3A%2292038375%22%2C%22twitchcorrelator%22%3A%22ksNwBYIYdL2XvdAXHV4Oksq4vybwnLL6%22%2C%22ad_session_id%22%3A%22ksNwBYIYdL2XvdAXHV4Oksq4vybwnLL6%22%2C%22embed%22%3A%22false%22%2C%22platform%22%3A%22web%22%2C%22mature%22%3A%22false%22%2C%22pos%22%3A%221%22%2C%22timebreak%22%3A%2230%22%2C%22tag%22%3A%22%22%2C%22content_labels%22%3A%22%22%2C%22chantype%22%3A%22partner%22%2C%22delivery_type%22%3A%22csai%22%2C%22vb%22%3A%22null%22%2C%22adunit%22%3A%22web_csai%22%2C%22loggedin%22%3A%22false%22%2C%22v%22%3A%22ARCHIVE%22%2C%22vod_type%22%3A%22undefined%22%2C%22embed_url%22%3A%22null%22%2C%22game_id%22%3A%2221779%22%2C%22user_lang%22%3A%22en%22%7D&gdprl=%7B%22status%22%3A%22cmp%22%7D&pbid=twitch&bp=preroll&aid=MyJILP1jfuUz2VBuUB2ZPajiR0aXfrYe&ulang=en. (Grund: CORS-Anfrage schlug fehl). Statuscode: (null).
+
+Player stopping playback - error :2 (ErrorNotSupported code 4 - NS_ERROR_DOM_INVALID_STATE_ERR (0x8053000b) - MediaLoadInvalidURI) amazon-ivs-wasmworker.min-96ae2717290f1bdba0b6.js:1:49765
+    _emscripten_log_js https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-96ae2717290f1bdba0b6.js:1
+    logMessage https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-96ae2717290f1bdba0b6.js:1
+    x https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-96ae2717290f1bdba0b6.js:1
+    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-822d371c32d3620af2e6.wasm:737037
+    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-822d371c32d3620af2e6.wasm:932877
+    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-822d371c32d3620af2e6.wasm:61610
+    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-822d371c32d3620af2e6.wasm:226239
+    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-822d371c32d3620af2e6.wasm:410238
+    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-822d371c32d3620af2e6.wasm:759420
+    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-822d371c32d3620af2e6.wasm:141990
+    Ie https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-96ae2717290f1bdba0b6.js:1
+Player stopping playback - error :2 (ErrorNotSupported code 4 - Failed to init decoder) amazon-ivs-wasmworker.min-96ae2717290f1bdba0b6.js:1:49765
+    _emscripten_log_js https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-96ae2717290f1bdba0b6.js:1
+    logMessage https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-96ae2717290f1bdba0b6.js:1
+    x https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-96ae2717290f1bdba0b6.js:1
+    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-822d371c32d3620af2e6.wasm:737037
+    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-822d371c32d3620af2e6.wasm:932877
+    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-822d371c32d3620af2e6.wasm:61610
+    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-822d371c32d3620af2e6.wasm:226239
+    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-822d371c32d3620af2e6.wasm:410238
+    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-822d371c32d3620af2e6.wasm:759420
+    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-822d371c32d3620af2e6.wasm:141990
+    Ie https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-96ae2717290f1bdba0b6.js:1
