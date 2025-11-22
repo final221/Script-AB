@@ -1,6 +1,6 @@
 // ==UserScript==
-// @name          Mega Ad Dodger 3000 (Stealth Reactor Core) 1.14
-// @version       1.14
+// @name          Mega Ad Dodger 3000 (Stealth Reactor Core) 1.15
+// @version       1.15
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -116,7 +116,17 @@
             let timeout;
             return function (...args) {
                 clearTimeout(timeout);
-                timeout = setTimeout(() => func.apply(this, args), delay);
+                timeout = setTimeout(() => {
+                    try {
+                        func.apply(this, args);
+                    } catch (error) {
+                        Logger.add('Debounce error', {
+                            function: func.name || 'anonymous',
+                            error: error.message,
+                            stack: error.stack
+                        });
+                    }
+                }, delay);
             };
         }
     };
@@ -318,7 +328,15 @@
 
         const hydrate = Fn.pipe(
             Adapters.Storage.read,
-            (json) => json ? JSON.parse(json) : null,
+            (json) => {
+                if (!json) return null;
+                try {
+                    return JSON.parse(json);
+                } catch (e) {
+                    Logger.add('Store hydration failed - corrupt data', { error: e.message });
+                    return null;
+                }
+            },
             (data) => (data && Date.now() - data.timestamp <= CONFIG.timing.LOG_EXPIRY_MIN * 60 * 1000) ? data : null
         );
 
@@ -448,17 +466,42 @@
 
         return {
             get: (element) => {
-                if (cachedContext) return cachedContext;
+                if (cachedContext) {
+                    // Validate cached context structure
+                    const hasK0 = keyMap.k0 && typeof cachedContext[keyMap.k0] === 'function';
+                    const hasK1 = keyMap.k1 && typeof cachedContext[keyMap.k1] === 'function';
+                    const hasK2 = keyMap.k2 && typeof cachedContext[keyMap.k2] === 'function';
+                    const isValid = hasK0 && hasK1 && hasK2;
+
+                    // Get current video element for comparison
+                    const currentVideo = element?.querySelector(CONFIG.selectors.VIDEO);
+
+                    Logger.add('PlayerContext: Cache validation', {
+                        isValid,
+                        hasK0,
+                        hasK1,
+                        hasK2,
+                        videoElementExists: !!currentVideo
+                    });
+
+                    if (!isValid) {
+                        Logger.add('PlayerContext: ⚠️ CACHED CONTEXT INVALID - but still using it');
+                    }
+
+                    return cachedContext;
+                }
                 if (!element) return null;
                 for (const k in element) {
                     if (k.startsWith('__react') || k.startsWith('__vue') || k.startsWith('__next')) {
                         const ctx = searchRecursive(element[k]);
                         if (ctx) {
                             cachedContext = ctx;
+                            Logger.add('PlayerContext: Fresh context found and cached');
                             return ctx;
                         }
                     }
                 }
+                Logger.add('PlayerContext: Scan failed - no context found');
                 return null;
             },
             reset: () => {
@@ -582,7 +625,10 @@
                     Logger.add('Resilience execution started');
                     Logger.addMetric('resilience_executions');
                     const video = container.querySelector(CONFIG.selectors.VIDEO);
-                    if (!video) return;
+                    if (!video) {
+                        Logger.add('Resilience aborted: No video element found');
+                        return;
+                    }
 
                     // 1. Capture State
                     const wasPaused = video.paused;
