@@ -1,6 +1,6 @@
 // ==UserScript==
-// @name          Mega Ad Dodger 3000 (Stealth Reactor Core) 1.25  
-// @version       1.25
+// @name          Mega Ad Dodger 3000 (Stealth Reactor Core) 1.26  
+// @version       1.26
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing. 
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -66,16 +66,16 @@
                 FORCE_PLAY_DEFER_MS: 1,
                 REATTEMPT_DELAY_MS: 60 * 1000,
                 PLAYBACK_TIMEOUT_MS: 2500,
-                FRAME_DROP_SEVERE_THRESHOLD: 15, // Frames dropped in one check period
-                FRAME_DROP_MODERATE_THRESHOLD: 10, // Frames dropped for rate-based check
-                FRAME_DROP_RATE_THRESHOLD: 1.0, // Percentage threshold for drop rate
-                AV_SYNC_THRESHOLD_MS: 250, // Audio/video sync threshold in milliseconds
-                AV_SYNC_CHECK_INTERVAL_MS: 2000, // Check A/V sync every 2 seconds
+                FRAME_DROP_SEVERE_THRESHOLD: 15,
+                FRAME_DROP_MODERATE_THRESHOLD: 10,
+                FRAME_DROP_RATE_THRESHOLD: 1.0,
+                AV_SYNC_THRESHOLD_MS: 250,
+                AV_SYNC_CHECK_INTERVAL_MS: 2000,
             },
             logging: {
-                NETWORK_SAMPLE_RATE: 0.05, // 5% sample rate for normal network requests
-                LOG_CSP_WARNINGS: true, // Log CSP warnings for evaluation
-                LOG_NORMAL_NETWORK: false, // Only log normal network when debug=true
+                NETWORK_SAMPLE_RATE: 0.05,
+                LOG_CSP_WARNINGS: true,
+                LOG_NORMAL_NETWORK: false,
             },
             network: {
                 AD_PATTERNS: ['/ad/v1/', '/usher/v1/ad/', '/api/v5/ads/', 'pubads.g.doubleclick.net', 'supervisor.ext-twitch.tv', 'vod-secure.twitch.tv', 'edge.ads.twitch.tv', '/3p/ads'],
@@ -88,7 +88,15 @@
             },
             player: {
                 MAX_SEARCH_DEPTH: 15,
-            }
+                STUCK_THRESHOLD_S: 0.1,
+                STUCK_COUNT_LIMIT: 2,
+                STANDARD_SEEK_BACK_S: 2,
+                BLOB_SEEK_BACK_S: 3,
+                BUFFER_HEALTH_S: 5,
+            },
+            codes: {
+                MEDIA_ERROR_SRC: 4,
+            },
         };
 
         return Object.freeze({
@@ -269,11 +277,13 @@
 
         const interceptConsoleError = () => {
             const originalError = console.error;
+            const benignErrorSignatures = ['[GraphQL]', 'unauthenticated', 'PinnedChatSettings'];
+
             console.error = (...args) => {
                 originalError.apply(console, args);
                 try {
                     const msg = args.map(String).join(' ');
-                    const isBenign = msg.includes('[GraphQL]') && (msg.includes('unauthenticated') || msg.includes('PinnedChatSettings'));
+                    const isBenign = benignErrorSignatures.some(sig => msg.includes(sig));
                     add('Console Error', { args: args.map(String), benign: isBenign });
 
                     if (!isBenign) {
@@ -618,13 +628,13 @@
                 state.lastTime = state.videoRef.currentTime;
                 return;
             }
-            if (Math.abs(state.videoRef.currentTime - state.lastTime) < 0.1) {
+            if (Math.abs(state.videoRef.currentTime - state.lastTime) < CONFIG.player.STUCK_THRESHOLD_S) {
                 state.stuckCount++;
             } else {
                 state.stuckCount = 0;
                 state.lastTime = state.videoRef.currentTime;
             }
-            if (state.stuckCount >= 2) {
+            if (state.stuckCount >= CONFIG.player.STUCK_COUNT_LIMIT) {
                 triggerRecovery('Player stuck', { stuckCount: state.stuckCount });
             }
         };
@@ -776,7 +786,7 @@
 
             if (isBlobUrl) {
                 Logger.add('Blob URL detected - using less aggressive recovery (seek backward)');
-                video.currentTime = Math.max(0, video.currentTime - 3);
+                video.currentTime = Math.max(0, video.currentTime - CONFIG.player.BLOB_SEEK_BACK_S);
                 await Fn.sleep(500);
             } else {
                 video.src = '';
@@ -787,8 +797,9 @@
                 let reloaded = await Fn.tryCatch(
                     () =>
                         new Promise((resolve, reject) => {
+                            const checkInterval = 100;
+                            const maxChecks = CONFIG.timing.PLAYBACK_TIMEOUT_MS / checkInterval;
                             let checkCount = 0;
-                            const maxChecks = 25; // 2.5s timeout
                             const interval = setInterval(() => {
                                 if (video.readyState >= 2) {
                                     clearInterval(interval);
@@ -797,7 +808,7 @@
                                     clearInterval(interval);
                                     reject(new Error('Stream reload timeout'));
                                 }
-                            }, 100);
+                            }, checkInterval);
                         }),
                     async (e) => {
                         Logger.add(e.message);
@@ -832,7 +843,7 @@
                     video.currentTime = seekTarget;
                 } else {
                     Logger.add('Close to buffer end, small backward seek');
-                    video.currentTime = Math.max(0, video.currentTime - 2);
+                    video.currentTime = Math.max(0, video.currentTime - CONFIG.player.STANDARD_SEEK_BACK_S);
                 }
             } else {
                 Logger.add('No buffer detected, attempting play');
@@ -860,7 +871,7 @@
                     const { currentTime, buffered, readyState, networkState, error } = video;
                     Logger.add('Captured player state', { currentTime, wasPaused, readyState, networkState, hasError: !!error });
 
-                    if (error && error.code === 4) {
+                    if (error && error.code === CONFIG.codes.MEDIA_ERROR_SRC) {
                         Logger.add('Fatal error (code 4) - cannot recover, waiting for Twitch reload');
                         return;
                     }
@@ -872,7 +883,7 @@
                         const bufferLength = bufferEnd - buffered.start(0);
 
                         if (isStuckAtEnd) {
-                            if (bufferLength < 5) {
+                            if (bufferLength < CONFIG.player.BUFFER_HEALTH_S) {
                                 Logger.add('Insufficient buffer for recovery, waiting');
                                 return;
                             }
@@ -933,7 +944,7 @@
 
                 // Error code 4 = MEDIA_ELEMENT_ERROR: Format error / Not supported
                 // This often indicates the player is in an unrecoverable state
-                if (error && (error.code === 4 || error.code === MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED)) {
+                if (error && (error.code === CONFIG.codes.MEDIA_ERROR_SRC || (window.MediaError && error.code === MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED))) {
                     Logger.add('Player error #4000 or similar - player in unrecoverable state', {
                         errorCode: error.code,
                         needsRecovery: true
