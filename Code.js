@@ -1,6 +1,6 @@
 // ==UserScript==
-// @name          Mega Ad Dodger 3000 (Stealth Reactor Core) 1.13
-// @version       1.13
+// @name          Mega Ad Dodger 3000 (Stealth Reactor Core) 1.14
+// @version       1.14
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -203,6 +203,15 @@
         const logs = [];
         const MAX_LOGS = 5000;
 
+        const metrics = {
+            ads_detected: 0,
+            ads_blocked: 0,
+            resilience_executions: 0,
+            health_triggers: 0,
+            errors: 0,
+            session_start: Date.now()
+        };
+
         return {
             add: (message, detail = null) => {
                 if (logs.length >= MAX_LOGS) logs.shift();
@@ -212,6 +221,18 @@
                     detail
                 });
             },
+            addMetric: (category, increment = 1) => {
+                if (metrics[category] !== undefined) {
+                    metrics[category] += increment;
+                }
+            },
+            getMetrics: () => ({
+                ...metrics,
+                uptime_ms: Date.now() - metrics.session_start,
+                block_rate: metrics.ads_detected > 0
+                    ? (metrics.ads_blocked / metrics.ads_detected * 100).toFixed(2) + '%'
+                    : 'N/A'
+            }),
             init: () => {
                 // Capture global errors
                 window.addEventListener('error', (event) => {
@@ -221,6 +242,7 @@
                         lineno: event.lineno,
                         colno: event.colno
                     });
+                    Logger.addMetric('errors');
                 });
 
                 // Capture unhandled promise rejections
@@ -228,14 +250,15 @@
                     Logger.add('Unhandled Rejection', {
                         reason: event.reason ? event.reason.toString() : 'Unknown'
                     });
+                    Logger.addMetric('errors');
                 });
 
                 // Intercept console.error to catch player errors
                 const originalError = console.error;
                 console.error = (...args) => {
-                    // Avoid infinite loops if Logger itself errors
                     try {
                         Logger.add('Console Error', { args: args.map(a => String(a)) });
+                        Logger.addMetric('errors');
                     } catch (e) { }
                     originalError.apply(console, args);
                 };
@@ -260,7 +283,9 @@
                 if (logs.length === 0) {
                     content = "Logging is initiated. No logs recorded yet.";
                 } else {
-                    content = logs.map(l => `[${l.timestamp}] ${l.message}${l.detail ? ' | ' + JSON.stringify(l.detail) : ''}`).join('\n');
+                    const m = Logger.getMetrics();
+                    const header = `[METRICS]\nUptime: ${(m.uptime_ms / 1000).toFixed(1)}s\nAds Detected: ${m.ads_detected}\nAds Blocked: ${m.ads_blocked}\nResilience Executions: ${m.resilience_executions}\nHealth Triggers: ${m.health_triggers}\nErrors: ${m.errors}\n\n[LOGS]\n`;
+                    content = header + logs.map(l => `[${l.timestamp}] ${l.message}${l.detail ? ' | ' + JSON.stringify(l.detail) : ''}`).join('\n');
                 }
 
                 const blob = new Blob([content], { type: 'text/plain' });
@@ -325,7 +350,10 @@
                     Adapters.EventBus.emit(CONFIG.events.AD_DETECTED);
                 }
                 const isAd = Logic.Network.isAd(url);
-                if (isAd) Logger.add('Ad pattern detected', { type, url });
+                if (isAd) {
+                    Logger.add('Ad pattern detected', { type, url });
+                    Logger.addMetric('ads_detected');
+                }
 
                 // @debug: Catch potential missed ad patterns
                 if (!isAd && (url.includes('usher') || url.includes('.m3u8') || url.includes('/ad/') || url.includes('twitch') || url.includes('ttvnw'))) {
@@ -501,6 +529,7 @@
                             // Trigger recovery if significant frames are dropped (indicating a freeze/crash)
                             if (dropped - lastDroppedFrames > 5) {
                                 Logger.add('Severe frame drop detected, triggering recovery');
+                                Logger.addMetric('health_triggers');
                                 HealthMonitor.stop();
                                 Adapters.EventBus.emit(CONFIG.events.AD_DETECTED);
                                 return;
@@ -513,6 +542,7 @@
                     // Trigger if stuck for ~2 seconds (2 checks * 1000ms)
                     if (stuckCount >= 2) {
                         Logger.add('Player stuck detected', { stuckCount, currentTime: videoRef.currentTime });
+                        Logger.addMetric('health_triggers');
                         HealthMonitor.stop();
                         Adapters.EventBus.emit(CONFIG.events.AD_DETECTED);
                     }
@@ -532,6 +562,71 @@
     // --- Resilience ---
     /**
      * Executes the ad-blocking / recovery logic.
+     * @responsibility
+     * 1. Capture current player state.
+     * 2. Attempt to restore playback by seeking to the live edge or unpausing.
+     * 3. Avoid destructive actions like clearing video.src which crashes the WASM worker.
+     */
+    const Resilience = (() => {
+        let isFixing = false;
+
+        return {
+            execute: async (container) => {
+                if (isFixing) {
+                    Logger.add('Resilience already in progress, skipping');
+                    return;
+                }
+                isFixing = true;
+
+                try {
+                    Logger.add('Resilience execution started');
+                    Logger.addMetric('resilience_executions');
+                    const video = container.querySelector(CONFIG.selectors.VIDEO);
+                    if (!video) return;
+
+                    // 1. Capture State
+                    const wasPaused = video.paused;
+                    const currentTime = video.currentTime;
+                    const buffered = video.buffered;
+
+                    Logger.add('Captured player state', { currentTime, wasPaused, bufferedLength: buffered.length });
+
+                    // 2. Recovery Strategy: Seek to Live / Buffer End
+                    if (buffered.length > 0) {
+                        const bufferEnd = buffered.end(buffered.length - 1);
+                        const seekTarget = bufferEnd - 0.5;
+
+                        if (Math.abs(currentTime - seekTarget) > 1) {
+                            Logger.add('Seeking to buffer end', { from: currentTime, to: seekTarget });
+                            video.currentTime = seekTarget;
+                        }
+                    } else {
+                        Logger.add('No buffer detected, attempting play');
+                    }
+
+                    // 3. Force Play
+                    if (video.paused) {
+                        try {
+                            await video.play();
+                            Logger.add('Forced play command sent');
+                        } catch (e) {
+                            Logger.add('Play command failed', { error: String(e) });
+                        }
+                    }
+
+                    Adapters.EventBus.emit(CONFIG.events.REPORT, { status: 'SUCCESS' });
+                } catch (e) {
+                    Logger.add('Resilience failed', { error: String(e) });
+                } finally {
+                    isFixing = false;
+                }
+            }
+        };
+    })();
+
+    // --- Video Listener Manager ---
+    /**
+     * Manages event listeners on the video element to detect stream changes and performance issues.
      */
     const VideoListenerManager = (() => {
         let activeElement = null;
