@@ -1,25 +1,33 @@
 [METRICS]
-Uptime: 62.2s
+Uptime: 138.3s
 Ads Detected: 0
 Ads Blocked: 0
-Resilience Executions: 0
+Resilience Executions: 2
 Aggressive Recoveries: 0
-Health Triggers: 0
+Health Triggers: 1
 Errors: 0
 
 [LOGS]
-[2025-11-22T18:59:43.298Z] Core initialized
-[2025-11-22T18:59:44.113Z] Player mounted
-[2025-11-22T18:59:44.116Z] PlayerContext: Scan failed - no context found
-[2025-11-22T18:59:44.116Z] Event: ACQUIRE - Failed
-[2025-11-22T18:59:44.647Z] PlayerContext: Scan failed - no context found
-[2025-11-22T18:59:44.647Z] Event: ACQUIRE - Failed
-[2025-11-22T18:59:45.395Z] Player unmounted
-[2025-11-22T18:59:46.206Z] Console Error | {"args":["[GraphQL] One or more GraphQL errors were detected on request 01KAPEZJ6W5ADZYDFRFF6GGG4J. PinnedChatSettings: unauthenticated","[object Object]"],"benign":true}
-[2025-11-22T18:59:46.839Z] Player mounted
-[2025-11-22T18:59:46.846Z] PlayerContext: Scan failed - no context found
-[2025-11-22T18:59:46.846Z] Event: ACQUIRE - Failed
-[2025-11-22T18:59:47.475Z] PlayerContext: Scan failed - no context found
-[2025-11-22T18:59:47.475Z] Event: ACQUIRE - Failed
-[2025-11-22T18:59:47.598Z] Console Error | {"args":["[GraphQL] One or more GraphQL errors were detected on request 01KAPEZK4Y5GGSK80EKA708N29. PinnedChatSettings: unauthenticated","[object Object]"],"benign":true}
-[2025-11-22T18:59:49.569Z] Console Error | {"args":["[GraphQL] One or more GraphQL errors were detected on request 01KAPEZN47FA2MJKS6090CBN6C. PinnedChatSettings: unauthenticated","[object Object]"],"benign":true}
+[2025-11-22T19:06:30.046Z] Core initialized
+[2025-11-22T19:06:30.814Z] Player mounted
+[2025-11-22T19:06:30.817Z] Player signature found | {"id":"k0","key":"ref"}
+[2025-11-22T19:06:30.817Z] Player signature found | {"id":"k1","key":"ref"}
+[2025-11-22T19:06:30.817Z] Player signature found | {"id":"k2","key":"ref"}
+[2025-11-22T19:06:30.817Z] PlayerContext: Fresh context found via keyword search | {"key":"__reactFiber$0b8n07c413aq"}
+[2025-11-22T19:06:30.817Z] Event: ACQUIRE - Success
+[2025-11-22T19:06:31.282Z] Event: ACQUIRE - Success
+[2025-11-22T19:06:32.690Z] Console Error | {"args":["[GraphQL] One or more GraphQL errors were detected on request 01KAPFBZ4VFAXQY0EJ2XZPFCEN. PinnedChatSettings: unauthenticated","[object Object]"],"benign":true}
+[2025-11-22T19:06:33.664Z] Console Error | {"args":["[GraphQL] One or more GraphQL errors were detected on request 01KAPFC016EZ7HSR9Y901PP6WJ. PinnedChatSettings: unauthenticated","[object Object]"],"benign":true}
+[2025-11-22T19:06:34.105Z] Console Error | {"args":["[GraphQL] One or more GraphQL errors were detected on request 01KAPFC0JJWVG44Y7JMCXJ22EC. PinnedChatSettings: unauthenticated","[object Object]"],"benign":true}
+[2025-11-22T19:07:53.040Z] Frame drop detected | {"newDropped":14,"newTotal":59,"recentDropRate":"23.73%"}
+[2025-11-22T19:07:53.040Z] HealthMonitor triggering recovery: Severe frame drop | {"newDropped":14,"newTotal":59,"recentDropRate":23.728813559322035}
+[2025-11-22T19:07:53.040Z] Event: AD_DETECTED
+[2025-11-22T19:07:53.040Z] Resilience execution started
+[2025-11-22T19:07:53.040Z] Captured player state | {"currentTime":80.279908,"hasError":false}
+[2025-11-22T19:07:53.041Z] Seeking to buffer end | {"from":80.279908,"to":83.517}
+[2025-11-22T19:08:03.195Z] Playhead stalling warning detected (raw)
+[2025-11-22T19:08:13.195Z] Critical warning: Playhead stalling (debounced)
+[2025-11-22T19:08:13.195Z] Event: AD_DETECTED
+[2025-11-22T19:08:13.195Z] Resilience execution started
+[2025-11-22T19:08:13.195Z] Captured player state | {"currentTime":100.214145,"hasError":false}
+[2025-11-22T19:08:13.196Z] Seeking to buffer end | {"from":100.214145,"to":103.507333}
