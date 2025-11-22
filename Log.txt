@@ -1,92 +1,150 @@
 [METRICS]
-Uptime: 941.2s
+Uptime: 63.1s
 Ads Detected: 0
 Ads Blocked: 0
-Resilience Executions: 7
+Resilience Executions: 0
 Aggressive Recoveries: 0
-Health Triggers: 1
+Health Triggers: 0
 Errors: 0
 
 [LOGS]
-[2025-11-22T19:45:27.331Z] Core initialized
-[2025-11-22T19:45:27.588Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql"}
-[2025-11-22T19:45:28.244Z] Player mounted
-[2025-11-22T19:45:28.245Z] Player signature found | {"id":"k0","key":"ref"}
-[2025-11-22T19:45:28.245Z] Player signature found | {"id":"k1","key":"ref"}
-[2025-11-22T19:45:28.245Z] Player signature found | {"id":"k2","key":"ref"}
-[2025-11-22T19:45:28.245Z] PlayerContext: Fresh context found via keyword search | {"key":"__reactFiber$rdjdo366m59"}
-[2025-11-22T19:45:28.245Z] Event: ACQUIRE - Success
-[2025-11-22T19:45:28.765Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T19:45:28.855Z] Event: ACQUIRE - Success
-[2025-11-22T19:45:29.085Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/integrity"}
-[2025-11-22T19:45:29.742Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T19:45:30.073Z] Console Error | {"args":["[GraphQL] One or more GraphQL errors were detected on request 01KAPHK9SERWH1ESF2ZS6ZDQSX. PinnedChatSettings: unauthenticated","[object Object]"],"benign":true}
-[2025-11-22T19:45:31.988Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T19:45:32.311Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T19:45:32.313Z] Console Error | {"args":["[GraphQL] One or more GraphQL errors were detected on request 01KAPHKBV0SWXW69W468W534HK. PinnedChatSettings: unauthenticated","[object Object]"],"benign":true}
-[2025-11-22T19:45:32.844Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T19:45:33.042Z] Console Error | {"args":["[GraphQL] One or more GraphQL errors were detected on request 01KAPHKCH8SM3N66CCZA7T231M. PinnedChatSettings: unauthenticated","[object Object]"],"benign":true}
-[2025-11-22T19:45:36.996Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T19:45:38.250Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T19:45:38.648Z] Frame drop detected | {"newDropped":32,"newTotal":81,"recentDropRate":"39.51%"}
-[2025-11-22T19:45:38.648Z] HealthMonitor triggering recovery: Severe frame drop | {"newDropped":32,"newTotal":81,"recentDropRate":39.50617283950617}
-[2025-11-22T19:45:38.648Z] Event: AD_DETECTED
-[2025-11-22T19:45:38.648Z] Resilience execution started
-[2025-11-22T19:45:38.648Z] Executing standard recovery: seeking
-[2025-11-22T19:45:38.648Z] Resilience execution finished | {"total_duration_ms":0}
-[2025-11-22T19:46:49.382Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T19:48:09.084Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T19:50:09.061Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T19:50:22.486Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T19:50:29.405Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T19:50:31.103Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://assets.twitch.tv/config/manifest.json?v=1"}
-[2025-11-22T19:52:52.259Z] Playhead stalling warning detected (raw)
-[2025-11-22T19:53:02.259Z] Critical warning: Playhead stalling (debounced)
-[2025-11-22T19:53:02.259Z] Event: AD_DETECTED
-[2025-11-22T19:53:02.259Z] Resilience execution started
-[2025-11-22T19:53:02.259Z] Executing standard recovery: seeking
-[2025-11-22T19:53:02.260Z] Resilience execution finished | {"total_duration_ms":0}
-[2025-11-22T19:53:05.428Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T19:54:44.948Z] Playhead stalling warning detected (raw)
-[2025-11-22T19:54:45.969Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T19:54:54.948Z] Critical warning: Playhead stalling (debounced)
-[2025-11-22T19:54:54.948Z] Event: AD_DETECTED
-[2025-11-22T19:54:54.948Z] Resilience execution started
-[2025-11-22T19:54:54.948Z] Executing standard recovery: seeking
-[2025-11-22T19:54:54.948Z] Resilience execution finished | {"total_duration_ms":0}
-[2025-11-22T19:55:18.106Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T19:56:06.817Z] Playhead stalling warning detected (raw)
-[2025-11-22T19:56:16.819Z] Critical warning: Playhead stalling (debounced)
-[2025-11-22T19:56:16.819Z] Event: AD_DETECTED
-[2025-11-22T19:56:16.819Z] Resilience execution started
-[2025-11-22T19:56:16.819Z] Executing standard recovery: seeking
-[2025-11-22T19:56:16.819Z] Resilience execution finished | {"total_duration_ms":0}
-[2025-11-22T19:57:09.089Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T19:57:29.838Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T19:58:09.091Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T19:58:30.972Z] Playhead stalling warning detected (raw)
-[2025-11-22T19:58:40.972Z] Critical warning: Playhead stalling (debounced)
-[2025-11-22T19:58:40.973Z] Event: AD_DETECTED
-[2025-11-22T19:58:40.973Z] Resilience execution started
-[2025-11-22T19:58:40.973Z] Executing standard recovery: seeking
-[2025-11-22T19:58:40.973Z] Resilience execution finished | {"total_duration_ms":0}
-[2025-11-22T19:58:43.479Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T19:59:09.090Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T19:59:29.855Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T20:00:12.242Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T20:00:13.713Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T20:00:28.967Z] Playhead stalling warning detected (raw)
-[2025-11-22T20:00:31.097Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://assets.twitch.tv/config/manifest.json?v=1"}
-[2025-11-22T20:00:38.967Z] Critical warning: Playhead stalling (debounced)
-[2025-11-22T20:00:38.967Z] Event: AD_DETECTED
-[2025-11-22T20:00:38.967Z] Resilience execution started
-[2025-11-22T20:00:38.967Z] Executing standard recovery: seeking
-[2025-11-22T20:00:38.967Z] Resilience execution finished | {"total_duration_ms":0}
-[2025-11-22T20:00:50.806Z] Playhead stalling warning detected (raw)
-[2025-11-22T20:00:55.266Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T20:01:00.806Z] Critical warning: Playhead stalling (debounced)
-[2025-11-22T20:01:00.806Z] Event: AD_DETECTED
-[2025-11-22T20:01:00.806Z] Resilience execution started
-[2025-11-22T20:01:00.806Z] Executing standard recovery: seeking
-[2025-11-22T20:01:00.806Z] Resilience execution finished | {"total_duration_ms":0}
-[2025-11-22T20:01:03.444Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-22T20:06:09.448Z] Core initialized
+[2025-11-22T20:06:10.335Z] Player mounted
+[2025-11-22T20:06:10.337Z] Player signature found | {"id":"k0","key":"ref"}
+[2025-11-22T20:06:10.337Z] Player signature found | {"id":"k1","key":"ref"}
+[2025-11-22T20:06:10.337Z] Player signature found | {"id":"k2","key":"ref"}
+[2025-11-22T20:06:10.337Z] PlayerContext: Fresh context found via keyword search | {"key":"__reactFiber$nfn301g5vb"}
+[2025-11-22T20:06:10.337Z] Event: ACQUIRE - Success
+[2025-11-22T20:06:10.441Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/integrity"}
+[2025-11-22T20:06:10.773Z] Event: ACQUIRE - Success
+[2025-11-22T20:06:12.005Z] HealthMonitor[Debug]: Frame check | {"dropped":0,"total":0,"lastDropped":0,"lastTotal":0,"newDropped":0,"newTotal":0}
+[2025-11-22T20:06:12.019Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-22T20:06:12.286Z] Console Error | {"args":["[GraphQL] One or more GraphQL errors were detected on request 01KAPJS6WW0A2SMNM2AH5BFEP1. PinnedChatSettings: unauthenticated","[object Object]"],"benign":true}
+[2025-11-22T20:06:13.235Z] HealthMonitor[Debug]: Stuck check | {"currentTime":"0.697","lastTime":"0.000","diff":"0.697","stuckCount":0,"threshold":0.1}
+[2025-11-22T20:06:13.235Z] HealthMonitor[Debug]: Frame check | {"dropped":0,"total":45,"lastDropped":0,"lastTotal":0,"newDropped":0,"newTotal":45}
+[2025-11-22T20:06:13.298Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-22T20:06:13.356Z] Console Error | {"args":["[GraphQL] One or more GraphQL errors were detected on request 01KAPJS7XA10FY6HF64QG2APJF. PinnedChatSettings: unauthenticated","[object Object]"],"benign":true}
+[2025-11-22T20:06:13.917Z] Console Error | {"args":["[GraphQL] One or more GraphQL errors were detected on request 01KAPJS8E0PRQK8MKFNT36K45D. PinnedChatSettings: unauthenticated","[object Object]"],"benign":true}
+[2025-11-22T20:06:14.308Z] HealthMonitor[Debug]: Stuck check | {"currentTime":"1.766","lastTime":"0.697","diff":"1.069","stuckCount":0,"threshold":0.1}
+[2025-11-22T20:06:14.308Z] HealthMonitor[Debug]: Frame check | {"dropped":0,"total":110,"lastDropped":0,"lastTotal":45,"newDropped":0,"newTotal":65}
+[2025-11-22T20:06:14.313Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-22T20:06:14.575Z] Console Error | {"args":["[GraphQL] One or more GraphQL errors were detected on request 01KAPJS8YHQV0XMA6439XJ24ZA. PinnedChatSettings: unauthenticated","[object Object]"],"benign":true}
+[2025-11-22T20:06:14.676Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-22T20:06:14.795Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-22T20:06:15.316Z] HealthMonitor[Debug]: Stuck check | {"currentTime":"2.839","lastTime":"1.766","diff":"1.073","stuckCount":0,"threshold":0.1}
+[2025-11-22T20:06:15.316Z] HealthMonitor[Debug]: Frame check | {"dropped":0,"total":170,"lastDropped":0,"lastTotal":110,"newDropped":0,"newTotal":60}
+[2025-11-22T20:06:16.320Z] HealthMonitor[Debug]: Stuck check | {"currentTime":"3.860","lastTime":"2.839","diff":"1.021","stuckCount":0,"threshold":0.1}
+[2025-11-22T20:06:16.321Z] HealthMonitor[Debug]: Frame check | {"dropped":0,"total":230,"lastDropped":0,"lastTotal":170,"newDropped":0,"newTotal":60}
+[2025-11-22T20:06:17.327Z] HealthMonitor[Debug]: Stuck check | {"currentTime":"4.882","lastTime":"3.860","diff":"1.022","stuckCount":0,"threshold":0.1}
+[2025-11-22T20:06:17.327Z] HealthMonitor[Debug]: Frame check | {"dropped":0,"total":290,"lastDropped":0,"lastTotal":230,"newDropped":0,"newTotal":60}
+[2025-11-22T20:06:18.335Z] HealthMonitor[Debug]: Stuck check | {"currentTime":"5.859","lastTime":"4.882","diff":"0.977","stuckCount":0,"threshold":0.1}
+[2025-11-22T20:06:18.335Z] HealthMonitor[Debug]: Frame check | {"dropped":0,"total":351,"lastDropped":0,"lastTotal":290,"newDropped":0,"newTotal":61}
+[2025-11-22T20:06:19.346Z] HealthMonitor[Debug]: Stuck check | {"currentTime":"6.883","lastTime":"5.859","diff":"1.025","stuckCount":0,"threshold":0.1}
+[2025-11-22T20:06:19.346Z] HealthMonitor[Debug]: Frame check | {"dropped":0,"total":412,"lastDropped":0,"lastTotal":351,"newDropped":0,"newTotal":61}
+[2025-11-22T20:06:20.355Z] HealthMonitor[Debug]: Stuck check | {"currentTime":"7.909","lastTime":"6.883","diff":"1.026","stuckCount":0,"threshold":0.1}
+[2025-11-22T20:06:20.355Z] HealthMonitor[Debug]: Frame check | {"dropped":0,"total":472,"lastDropped":0,"lastTotal":412,"newDropped":0,"newTotal":60}
+[2025-11-22T20:06:21.361Z] HealthMonitor[Debug]: Stuck check | {"currentTime":"8.882","lastTime":"7.909","diff":"0.973","stuckCount":0,"threshold":0.1}
+[2025-11-22T20:06:21.361Z] HealthMonitor[Debug]: Frame check | {"dropped":0,"total":533,"lastDropped":0,"lastTotal":472,"newDropped":0,"newTotal":61}
+[2025-11-22T20:06:22.369Z] HealthMonitor[Debug]: Stuck check | {"currentTime":"9.907","lastTime":"8.882","diff":"1.024","stuckCount":0,"threshold":0.1}
+[2025-11-22T20:06:22.369Z] HealthMonitor[Debug]: Frame check | {"dropped":0,"total":594,"lastDropped":0,"lastTotal":533,"newDropped":0,"newTotal":61}
+[2025-11-22T20:06:23.372Z] HealthMonitor[Debug]: Stuck check | {"currentTime":"10.927","lastTime":"9.907","diff":"1.020","stuckCount":0,"threshold":0.1}
+[2025-11-22T20:06:23.372Z] HealthMonitor[Debug]: Frame check | {"dropped":0,"total":653,"lastDropped":0,"lastTotal":594,"newDropped":0,"newTotal":59}
+[2025-11-22T20:06:24.386Z] HealthMonitor[Debug]: Stuck check | {"currentTime":"11.904","lastTime":"10.927","diff":"0.977","stuckCount":0,"threshold":0.1}
+[2025-11-22T20:06:24.386Z] HealthMonitor[Debug]: Frame check | {"dropped":0,"total":715,"lastDropped":0,"lastTotal":653,"newDropped":0,"newTotal":62}
+[2025-11-22T20:06:25.389Z] HealthMonitor[Debug]: Stuck check | {"currentTime":"12.928","lastTime":"11.904","diff":"1.024","stuckCount":0,"threshold":0.1}
+[2025-11-22T20:06:25.389Z] HealthMonitor[Debug]: Frame check | {"dropped":0,"total":774,"lastDropped":0,"lastTotal":715,"newDropped":0,"newTotal":59}
+[2025-11-22T20:06:26.398Z] HealthMonitor[Debug]: Stuck check | {"currentTime":"13.951","lastTime":"12.928","diff":"1.023","stuckCount":0,"threshold":0.1}
+[2025-11-22T20:06:26.398Z] HealthMonitor[Debug]: Frame check | {"dropped":0,"total":835,"lastDropped":0,"lastTotal":774,"newDropped":0,"newTotal":61}
+[2025-11-22T20:06:27.405Z] HealthMonitor[Debug]: Stuck check | {"currentTime":"14.929","lastTime":"13.951","diff":"0.977","stuckCount":0,"threshold":0.1}
+[2025-11-22T20:06:27.405Z] HealthMonitor[Debug]: Frame check | {"dropped":0,"total":895,"lastDropped":0,"lastTotal":835,"newDropped":0,"newTotal":60}
+[2025-11-22T20:06:28.372Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-22T20:06:28.413Z] HealthMonitor[Debug]: Stuck check | {"currentTime":"15.951","lastTime":"14.929","diff":"1.023","stuckCount":0,"threshold":0.1}
+[2025-11-22T20:06:28.413Z] HealthMonitor[Debug]: Frame check | {"dropped":0,"total":956,"lastDropped":0,"lastTotal":895,"newDropped":0,"newTotal":61}
+[2025-11-22T20:06:29.421Z] HealthMonitor[Debug]: Stuck check | {"currentTime":"16.976","lastTime":"15.951","diff":"1.024","stuckCount":0,"threshold":0.1}
+[2025-11-22T20:06:29.422Z] HealthMonitor[Debug]: Frame check | {"dropped":0,"total":1016,"lastDropped":0,"lastTotal":956,"newDropped":0,"newTotal":60}
+[2025-11-22T20:06:30.426Z] HealthMonitor[Debug]: Stuck check | {"currentTime":"17.951","lastTime":"16.976","diff":"0.975","stuckCount":0,"threshold":0.1}
+[2025-11-22T20:06:30.426Z] HealthMonitor[Debug]: Frame check | {"dropped":0,"total":1076,"lastDropped":0,"lastTotal":1016,"newDropped":0,"newTotal":60}
+[2025-11-22T20:06:31.437Z] HealthMonitor[Debug]: Stuck check | {"currentTime":"18.976","lastTime":"17.951","diff":"1.025","stuckCount":0,"threshold":0.1}
+[2025-11-22T20:06:31.437Z] HealthMonitor[Debug]: Frame check | {"dropped":0,"total":1137,"lastDropped":0,"lastTotal":1076,"newDropped":0,"newTotal":61}
+[2025-11-22T20:06:32.444Z] HealthMonitor[Debug]: Stuck check | {"currentTime":"19.998","lastTime":"18.976","diff":"1.022","stuckCount":0,"threshold":0.1}
+[2025-11-22T20:06:32.444Z] HealthMonitor[Debug]: Frame check | {"dropped":0,"total":1198,"lastDropped":0,"lastTotal":1137,"newDropped":0,"newTotal":61}
+[2025-11-22T20:06:33.454Z] HealthMonitor[Debug]: Stuck check | {"currentTime":"20.977","lastTime":"19.998","diff":"0.979","stuckCount":0,"threshold":0.1}
+[2025-11-22T20:06:33.454Z] HealthMonitor[Debug]: Frame check | {"dropped":0,"total":1259,"lastDropped":0,"lastTotal":1198,"newDropped":0,"newTotal":61}
+[2025-11-22T20:06:34.457Z] HealthMonitor[Debug]: Stuck check | {"currentTime":"21.995","lastTime":"20.977","diff":"1.019","stuckCount":0,"threshold":0.1}
+[2025-11-22T20:06:34.457Z] HealthMonitor[Debug]: Frame check | {"dropped":0,"total":1318,"lastDropped":0,"lastTotal":1259,"newDropped":0,"newTotal":59}
+[2025-11-22T20:06:35.465Z] HealthMonitor[Debug]: Stuck check | {"currentTime":"23.020","lastTime":"21.995","diff":"1.024","stuckCount":0,"threshold":0.1}
+[2025-11-22T20:06:35.465Z] HealthMonitor[Debug]: Frame check | {"dropped":0,"total":1379,"lastDropped":0,"lastTotal":1318,"newDropped":0,"newTotal":61}
+[2025-11-22T20:06:36.473Z] HealthMonitor[Debug]: Stuck check | {"currentTime":"23.995","lastTime":"23.020","diff":"0.976","stuckCount":0,"threshold":0.1}
+[2025-11-22T20:06:36.473Z] HealthMonitor[Debug]: Frame check | {"dropped":0,"total":1439,"lastDropped":0,"lastTotal":1379,"newDropped":0,"newTotal":60}
+[2025-11-22T20:06:37.478Z] HealthMonitor[Debug]: Stuck check | {"currentTime":"25.017","lastTime":"23.995","diff":"1.021","stuckCount":0,"threshold":0.1}
+[2025-11-22T20:06:37.478Z] HealthMonitor[Debug]: Frame check | {"dropped":0,"total":1500,"lastDropped":0,"lastTotal":1439,"newDropped":0,"newTotal":61}
+[2025-11-22T20:06:38.489Z] HealthMonitor[Debug]: Stuck check | {"currentTime":"26.044","lastTime":"25.017","diff":"1.027","stuckCount":0,"threshold":0.1}
+[2025-11-22T20:06:38.489Z] HealthMonitor[Debug]: Frame check | {"dropped":0,"total":1560,"lastDropped":0,"lastTotal":1500,"newDropped":0,"newTotal":60}
+[2025-11-22T20:06:39.493Z] HealthMonitor[Debug]: Stuck check | {"currentTime":"27.017","lastTime":"26.044","diff":"0.973","stuckCount":0,"threshold":0.1}
+[2025-11-22T20:06:39.494Z] HealthMonitor[Debug]: Frame check | {"dropped":0,"total":1620,"lastDropped":0,"lastTotal":1560,"newDropped":0,"newTotal":60}
+[2025-11-22T20:06:40.498Z] HealthMonitor[Debug]: Stuck check | {"currentTime":"28.037","lastTime":"27.017","diff":"1.020","stuckCount":0,"threshold":0.1}
+[2025-11-22T20:06:40.498Z] HealthMonitor[Debug]: Frame check | {"dropped":0,"total":1681,"lastDropped":0,"lastTotal":1620,"newDropped":0,"newTotal":61}
+[2025-11-22T20:06:41.504Z] HealthMonitor[Debug]: Stuck check | {"currentTime":"29.058","lastTime":"28.037","diff":"1.021","stuckCount":0,"threshold":0.1}
+[2025-11-22T20:06:41.504Z] HealthMonitor[Debug]: Frame check | {"dropped":0,"total":1741,"lastDropped":0,"lastTotal":1681,"newDropped":0,"newTotal":60}
+[2025-11-22T20:06:42.508Z] HealthMonitor[Debug]: Stuck check | {"currentTime":"30.031","lastTime":"29.058","diff":"0.973","stuckCount":0,"threshold":0.1}
+[2025-11-22T20:06:42.508Z] HealthMonitor[Debug]: Frame check | {"dropped":0,"total":1801,"lastDropped":0,"lastTotal":1741,"newDropped":0,"newTotal":60}
+[2025-11-22T20:06:43.516Z] HealthMonitor[Debug]: Stuck check | {"currentTime":"31.054","lastTime":"30.031","diff":"1.022","stuckCount":0,"threshold":0.1}
+[2025-11-22T20:06:43.516Z] HealthMonitor[Debug]: Frame check | {"dropped":0,"total":1862,"lastDropped":0,"lastTotal":1801,"newDropped":0,"newTotal":61}
+[2025-11-22T20:06:44.526Z] HealthMonitor[Debug]: Stuck check | {"currentTime":"32.082","lastTime":"31.054","diff":"1.028","stuckCount":0,"threshold":0.1}
+[2025-11-22T20:06:44.526Z] HealthMonitor[Debug]: Frame check | {"dropped":0,"total":1922,"lastDropped":0,"lastTotal":1862,"newDropped":0,"newTotal":60}
+[2025-11-22T20:06:45.535Z] HealthMonitor[Debug]: Stuck check | {"currentTime":"33.058","lastTime":"32.082","diff":"0.976","stuckCount":0,"threshold":0.1}
+[2025-11-22T20:06:45.535Z] HealthMonitor[Debug]: Frame check | {"dropped":0,"total":1983,"lastDropped":0,"lastTotal":1922,"newDropped":0,"newTotal":61}
+[2025-11-22T20:06:46.536Z] HealthMonitor[Debug]: Stuck check | {"currentTime":"34.075","lastTime":"33.058","diff":"1.017","stuckCount":0,"threshold":0.1}
+[2025-11-22T20:06:46.536Z] HealthMonitor[Debug]: Frame check | {"dropped":0,"total":2043,"lastDropped":0,"lastTotal":1983,"newDropped":0,"newTotal":60}
+[2025-11-22T20:06:47.542Z] HealthMonitor[Debug]: Stuck check | {"currentTime":"35.095","lastTime":"34.075","diff":"1.021","stuckCount":0,"threshold":0.1}
+[2025-11-22T20:06:47.542Z] HealthMonitor[Debug]: Frame check | {"dropped":0,"total":2103,"lastDropped":0,"lastTotal":2043,"newDropped":0,"newTotal":60}
+[2025-11-22T20:06:48.551Z] HealthMonitor[Debug]: Stuck check | {"currentTime":"36.074","lastTime":"35.095","diff":"0.978","stuckCount":0,"threshold":0.1}
+[2025-11-22T20:06:48.551Z] HealthMonitor[Debug]: Frame check | {"dropped":0,"total":2164,"lastDropped":0,"lastTotal":2103,"newDropped":0,"newTotal":61}
+[2025-11-22T20:06:49.560Z] HealthMonitor[Debug]: Stuck check | {"currentTime":"37.100","lastTime":"36.074","diff":"1.026","stuckCount":0,"threshold":0.1}
+[2025-11-22T20:06:49.560Z] HealthMonitor[Debug]: Frame check | {"dropped":0,"total":2224,"lastDropped":0,"lastTotal":2164,"newDropped":0,"newTotal":60}
+[2025-11-22T20:06:50.567Z] HealthMonitor[Debug]: Stuck check | {"currentTime":"38.122","lastTime":"37.100","diff":"1.022","stuckCount":0,"threshold":0.1}
+[2025-11-22T20:06:50.567Z] HealthMonitor[Debug]: Frame check | {"dropped":0,"total":2285,"lastDropped":0,"lastTotal":2224,"newDropped":0,"newTotal":61}
+[2025-11-22T20:06:51.576Z] HealthMonitor[Debug]: Stuck check | {"currentTime":"39.099","lastTime":"38.122","diff":"0.978","stuckCount":0,"threshold":0.1}
+[2025-11-22T20:06:51.576Z] HealthMonitor[Debug]: Frame check | {"dropped":0,"total":2345,"lastDropped":0,"lastTotal":2285,"newDropped":0,"newTotal":60}
+[2025-11-22T20:06:52.576Z] HealthMonitor[Debug]: Stuck check | {"currentTime":"40.114","lastTime":"39.099","diff":"1.015","stuckCount":0,"threshold":0.1}
+[2025-11-22T20:06:52.576Z] HealthMonitor[Debug]: Frame check | {"dropped":0,"total":2405,"lastDropped":0,"lastTotal":2345,"newDropped":0,"newTotal":60}
+[2025-11-22T20:06:53.577Z] HealthMonitor[Debug]: Stuck check | {"currentTime":"41.087","lastTime":"40.114","diff":"0.973","stuckCount":0,"threshold":0.1}
+[2025-11-22T20:06:53.577Z] HealthMonitor[Debug]: Frame check | {"dropped":0,"total":2466,"lastDropped":0,"lastTotal":2405,"newDropped":0,"newTotal":61}
+[2025-11-22T20:06:54.589Z] HealthMonitor[Debug]: Stuck check | {"currentTime":"42.103","lastTime":"41.087","diff":"1.015","stuckCount":0,"threshold":0.1}
+[2025-11-22T20:06:54.589Z] HealthMonitor[Debug]: Frame check | {"dropped":0,"total":2527,"lastDropped":0,"lastTotal":2466,"newDropped":0,"newTotal":61}
+[2025-11-22T20:06:55.608Z] HealthMonitor[Debug]: Stuck check | {"currentTime":"43.124","lastTime":"42.103","diff":"1.021","stuckCount":0,"threshold":0.1}
+[2025-11-22T20:06:55.608Z] HealthMonitor[Debug]: Frame check | {"dropped":0,"total":2588,"lastDropped":0,"lastTotal":2527,"newDropped":0,"newTotal":61}
+[2025-11-22T20:06:56.623Z] HealthMonitor[Debug]: Stuck check | {"currentTime":"44.146","lastTime":"43.124","diff":"1.022","stuckCount":0,"threshold":0.1}
+[2025-11-22T20:06:56.623Z] HealthMonitor[Debug]: Frame check | {"dropped":0,"total":2648,"lastDropped":0,"lastTotal":2588,"newDropped":0,"newTotal":60}
+[2025-11-22T20:06:57.634Z] HealthMonitor[Debug]: Stuck check | {"currentTime":"45.170","lastTime":"44.146","diff":"1.024","stuckCount":0,"threshold":0.1}
+[2025-11-22T20:06:57.634Z] HealthMonitor[Debug]: Frame check | {"dropped":0,"total":2710,"lastDropped":0,"lastTotal":2648,"newDropped":0,"newTotal":62}
+[2025-11-22T20:06:58.386Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-22T20:06:58.637Z] HealthMonitor[Debug]: Stuck check | {"currentTime":"46.190","lastTime":"45.170","diff":"1.020","stuckCount":0,"threshold":0.1}
+[2025-11-22T20:06:58.637Z] HealthMonitor[Debug]: Frame check | {"dropped":0,"total":2769,"lastDropped":0,"lastTotal":2710,"newDropped":0,"newTotal":59}
+[2025-11-22T20:06:59.642Z] HealthMonitor[Debug]: Stuck check | {"currentTime":"47.165","lastTime":"46.190","diff":"0.975","stuckCount":0,"threshold":0.1}
+[2025-11-22T20:06:59.642Z] HealthMonitor[Debug]: Frame check | {"dropped":0,"total":2829,"lastDropped":0,"lastTotal":2769,"newDropped":0,"newTotal":60}
+[2025-11-22T20:07:00.645Z] HealthMonitor[Debug]: Stuck check | {"currentTime":"48.183","lastTime":"47.165","diff":"1.018","stuckCount":0,"threshold":0.1}
+[2025-11-22T20:07:00.645Z] HealthMonitor[Debug]: Frame check | {"dropped":0,"total":2890,"lastDropped":0,"lastTotal":2829,"newDropped":0,"newTotal":61}
+[2025-11-22T20:07:01.654Z] HealthMonitor[Debug]: Stuck check | {"currentTime":"49.208","lastTime":"48.183","diff":"1.026","stuckCount":0,"threshold":0.1}
+[2025-11-22T20:07:01.654Z] HealthMonitor[Debug]: Frame check | {"dropped":0,"total":2950,"lastDropped":0,"lastTotal":2890,"newDropped":0,"newTotal":60}
+[2025-11-22T20:07:02.656Z] HealthMonitor[Debug]: Stuck check | {"currentTime":"50.180","lastTime":"49.208","diff":"0.972","stuckCount":0,"threshold":0.1}
+[2025-11-22T20:07:02.656Z] HealthMonitor[Debug]: Frame check | {"dropped":0,"total":3010,"lastDropped":0,"lastTotal":2950,"newDropped":0,"newTotal":60}
+[2025-11-22T20:07:03.662Z] HealthMonitor[Debug]: Stuck check | {"currentTime":"51.200","lastTime":"50.180","diff":"1.020","stuckCount":0,"threshold":0.1}
+[2025-11-22T20:07:03.662Z] HealthMonitor[Debug]: Frame check | {"dropped":0,"total":3070,"lastDropped":0,"lastTotal":3010,"newDropped":0,"newTotal":60}
+[2025-11-22T20:07:04.668Z] HealthMonitor[Debug]: Stuck check | {"currentTime":"52.222","lastTime":"51.200","diff":"1.022","stuckCount":0,"threshold":0.1}
+[2025-11-22T20:07:04.668Z] HealthMonitor[Debug]: Frame check | {"dropped":0,"total":3131,"lastDropped":0,"lastTotal":3070,"newDropped":0,"newTotal":61}
+[2025-11-22T20:07:05.676Z] HealthMonitor[Debug]: Stuck check | {"currentTime":"53.200","lastTime":"52.222","diff":"0.978","stuckCount":0,"threshold":0.1}
+[2025-11-22T20:07:05.676Z] HealthMonitor[Debug]: Frame check | {"dropped":0,"total":3191,"lastDropped":0,"lastTotal":3131,"newDropped":0,"newTotal":60}
+[2025-11-22T20:07:06.678Z] HealthMonitor[Debug]: Stuck check | {"currentTime":"54.218","lastTime":"53.200","diff":"1.018","stuckCount":0,"threshold":0.1}
+[2025-11-22T20:07:06.678Z] HealthMonitor[Debug]: Frame check | {"dropped":0,"total":3252,"lastDropped":0,"lastTotal":3191,"newDropped":0,"newTotal":61}
+[2025-11-22T20:07:07.684Z] HealthMonitor[Debug]: Stuck check | {"currentTime":"55.238","lastTime":"54.218","diff":"1.020","stuckCount":0,"threshold":0.1}
+[2025-11-22T20:07:07.684Z] HealthMonitor[Debug]: Frame check | {"dropped":0,"total":3312,"lastDropped":0,"lastTotal":3252,"newDropped":0,"newTotal":60}
+[2025-11-22T20:07:08.694Z] HealthMonitor[Debug]: Stuck check | {"currentTime":"56.216","lastTime":"55.238","diff":"0.978","stuckCount":0,"threshold":0.1}
+[2025-11-22T20:07:08.694Z] HealthMonitor[Debug]: Frame check | {"dropped":0,"total":3373,"lastDropped":0,"lastTotal":3312,"newDropped":0,"newTotal":61}
+[2025-11-22T20:07:09.700Z] HealthMonitor[Debug]: Stuck check | {"currentTime":"57.240","lastTime":"56.216","diff":"1.024","stuckCount":0,"threshold":0.1}
+[2025-11-22T20:07:09.700Z] HealthMonitor[Debug]: Frame check | {"dropped":0,"total":3433,"lastDropped":0,"lastTotal":3373,"newDropped":0,"newTotal":60}
+[2025-11-22T20:07:10.703Z] HealthMonitor[Debug]: Stuck check | {"currentTime":"58.257","lastTime":"57.240","diff":"1.017","stuckCount":0,"threshold":0.1}
+[2025-11-22T20:07:10.703Z] HealthMonitor[Debug]: Frame check | {"dropped":0,"total":3493,"lastDropped":0,"lastTotal":3433,"newDropped":0,"newTotal":60}
+[2025-11-22T20:07:10.935Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-22T20:07:11.707Z] HealthMonitor[Debug]: Stuck check | {"currentTime":"59.230","lastTime":"58.257","diff":"0.973","stuckCount":0,"threshold":0.1}
+[2025-11-22T20:07:11.707Z] HealthMonitor[Debug]: Frame check | {"dropped":0,"total":3553,"lastDropped":0,"lastTotal":3493,"newDropped":0,"newTotal":60}

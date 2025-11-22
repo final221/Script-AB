@@ -1,6 +1,6 @@
 // ==UserScript==
-// @name          Mega Ad Dodger 3000 (Stealth Reactor Core) 1.31
-// @version       1.31
+// @name          Mega Ad Dodger 3000 (Stealth Reactor Core) 1.32
+// @version       1.32
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing. 
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -78,7 +78,7 @@
                 LOG_NORMAL_NETWORK: false,
             },
             network: {
-                AD_PATTERNS: ['/ad/v1/', '/usher/v1/ad/', '/api/v5/ads/', 'pubads.g.doubleclick.net', 'supervisor.ext-twitch.tv', 'vod-secure.twitch.tv', 'edge.ads.twitch.tv', '/3p/ads'],
+                AD_PATTERNS: ['/ad/v1/', '/usher/v1/ad/', '/api/v5/ads/', 'pubads.g.doubleclick.net', 'supervisor.ext-twitch.tv', 'edge.ads.twitch.tv', '/3p/ads'],
                 TRIGGER_PATTERNS: ['/ad_state/', 'vod_ad_manifest'],
             },
             mock: {
