@@ -1,6 +1,6 @@
 // ==UserScript==
-// @name          Mega Ad Dodger 3000 (Stealth Reactor Core) 1.24
-// @version       1.24
+// @name          Mega Ad Dodger 3000 (Stealth Reactor Core) 1.25  
+// @version       1.25
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing. 
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -424,6 +424,14 @@
             }
         };
 
+        /**
+         * Mocks a response for a blocked XHR ad request.
+         * !CRITICAL: Mocking responses is essential. If we just block the request,
+         * the player will retry indefinitely or crash. We must return a valid,
+         * empty response to satisfy the player's state machine.
+         * @param {XMLHttpRequest} xhr The XHR object to mock.
+         * @param {string} url The URL of the request.
+         */
         const mockXhrResponse = (xhr, url) => {
             const { body } = Logic.Network.getMock(url);
             Logger.add('Ad request blocked (XHR)', { url });
@@ -628,8 +636,10 @@
             const newDropped = quality.droppedVideoFrames - state.lastDroppedFrames;
             const newTotal = quality.totalVideoFrames - state.lastTotalFrames;
 
-            if (newDropped > 0 && newTotal > 0) {
-                const recentDropRate = (newDropped / newTotal) * 100;
+            if (newDropped > 0) {
+                const recentDropRate = newTotal > 0 ? (newDropped / newTotal) * 100 : 0;
+                Logger.add('Frame drop detected', { newDropped, newTotal, recentDropRate: recentDropRate.toFixed(2) + '%' });
+
                 if (newDropped > CONFIG.timing.FRAME_DROP_SEVERE_THRESHOLD || (newDropped > CONFIG.timing.FRAME_DROP_MODERATE_THRESHOLD && recentDropRate > CONFIG.timing.FRAME_DROP_RATE_THRESHOLD)) {
                     triggerRecovery('Severe frame drop', { newDropped, newTotal, recentDropRate });
                 }
@@ -640,7 +650,10 @@
 
         const checkAVSync = () => {
             if (state.videoRef.paused || state.videoRef.ended || state.videoRef.readyState < 2) {
-                state.syncIssueCount = 0;
+                if (state.syncIssueCount > 0) {
+                    Logger.add('A/V sync recovered', { previousIssues: state.syncIssueCount });
+                    state.syncIssueCount = 0;
+                }
                 return;
             }
 
@@ -653,8 +666,15 @@
 
                 if (discrepancy > CONFIG.timing.AV_SYNC_THRESHOLD_MS / 1000 && expectedTimeAdvancement > 0.1) {
                     state.syncIssueCount++;
+                    Logger.add('A/V sync issue detected', {
+                        discrepancy: (discrepancy * 1000).toFixed(2) + 'ms',
+                        count: state.syncIssueCount,
+                    });
                 } else if (discrepancy < CONFIG.timing.AV_SYNC_THRESHOLD_MS / 2000) {
-                    state.syncIssueCount = 0; // Reset if sync is good
+                    if (state.syncIssueCount > 0) {
+                        Logger.add('A/V sync recovered', { previousIssues: state.syncIssueCount });
+                        state.syncIssueCount = 0;
+                    }
                 }
 
                 if (state.syncIssueCount >= 3) {
