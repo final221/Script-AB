@@ -1,6 +1,6 @@
 // ==UserScript==
-// @name          Mega Ad Dodger 3000 (Stealth Reactor Core) 1.16
-// @version       1.16
+// @name          Mega Ad Dodger 3000 (Stealth Reactor Core) 1.17
+// @version       1.17
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -268,8 +268,21 @@
                 const originalError = console.error;
                 console.error = (...args) => {
                     try {
+                        const msg = args.map(a => String(a)).join(' ');
                         Logger.add('Console Error', { args: args.map(a => String(a)) });
                         Logger.addMetric('errors');
+                        
+                        // Detect player crash errors
+                        if (msg.includes('Error #4000') || 
+                            msg.includes('unavailable or not supported') ||
+                            msg.includes('MediaLoadInvalidURI') ||
+                            msg.includes('NS_ERROR_DOM_INVALID_STATE_ERR')) {
+                            Logger.add('Player crash detected in console - triggering recovery', { message: msg });
+                            // Trigger recovery after a short delay
+                            setTimeout(() => {
+                                Adapters.EventBus.emit(CONFIG.events.AD_DETECTED);
+                            }, 300);
+                        }
                     } catch (e) { }
                     originalError.apply(console, args);
                 };
@@ -643,8 +656,29 @@
                     const wasPaused = video.paused;
                     const currentTime = video.currentTime;
                     const buffered = video.buffered;
+                    const hasError = video.error !== null;
+                    const errorCode = video.error ? video.error.code : null;
 
-                    Logger.add('Captured player state', { currentTime, wasPaused, bufferedLength: buffered.length });
+                    Logger.add('Captured player state', { 
+                        currentTime, 
+                        wasPaused, 
+                        bufferedLength: buffered.length,
+                        hasError,
+                        errorCode,
+                        readyState: video.readyState,
+                        networkState: video.networkState
+                    });
+
+                    // If player has a fatal error (code 4 = MEDIA_ERR_SRC_NOT_SUPPORTED), 
+                    // we need to wait for Twitch to recreate the player rather than trying to fix it
+                    if (hasError && errorCode === 4) {
+                        Logger.add('Player has fatal error (code 4) - cannot recover, waiting for Twitch to recreate player', {
+                            errorMessage: video.error.message
+                        });
+                        // Reset the fixing flag so we can try again when player is recreated
+                        isFixing = false;
+                        return;
+                    }
 
                     // 2. Recovery Strategy: Seek to Live / Buffer End
                     let needsAggressiveRecovery = false;
@@ -699,73 +733,110 @@
                         const originalSrc = video.src;
                         const originalSrcObject = video.srcObject;
                         const originalCurrentSrc = video.currentSrc;
+                        const isBlobUrl = originalSrc && originalSrc.startsWith('blob:');
                         Logger.add('Captured original video source', {
                             src: originalSrc || '(empty)',
                             hasSrcObject: !!originalSrcObject,
-                            currentSrc: originalCurrentSrc || '(empty)'
+                            currentSrc: originalCurrentSrc || '(empty)',
+                            isBlobUrl: isBlobUrl
                         });
 
-                        // Clear source to force Twitch to reload stream (bypasses stuck ad segment)
-                        Logger.add('Clearing video source and loading');
-                        video.src = '';
-                        video.load();
-                        await Fn.sleep(100);
-                        Logger.add('Source cleared, waiting for stream reload');
-
-                        // Wait for stream to reload (with timeout)
-                        let reloadSuccess = false;
-                        await new Promise((resolve) => {
-                            let checkCount = 0;
-                            const maxChecks = 25; // 2.5 seconds max
-                            const initialReadyState = video.readyState;
-
-                            const checkReady = setInterval(() => {
-                                checkCount++;
-                                if (video.readyState >= 2) {
-                                    clearInterval(checkReady);
-                                    reloadSuccess = true;
-                                    Logger.add('Stream reloaded successfully', {
-                                        readyState: video.readyState,
-                                        checks: checkCount,
-                                        initialReadyState
-                                    });
-                                    resolve();
-                                } else if (checkCount >= maxChecks) {
-                                    clearInterval(checkReady);
-                                    Logger.add('Stream reload timeout', {
-                                        readyState: video.readyState,
-                                        checks: checkCount,
-                                        initialReadyState
-                                    });
-                                    resolve(); // Don't block forever
-                                }
-                            }, 100);
-                        });
-
-                        // Fallback: If Twitch didn't reload automatically, restore original source
-                        if (!reloadSuccess && video.readyState < 2) {
-                            Logger.add('Twitch did not reload automatically - restoring original source as fallback', {
-                                readyState: video.readyState,
-                                willRestoreSrc: !!originalSrc,
-                                willRestoreSrcObject: !!originalSrcObject
-                            });
+                        // CRITICAL: Don't clear blob URLs - they're managed by Twitch and can't be restored
+                        // Instead, try a less aggressive approach: seek backward to force buffer refresh
+                        if (isBlobUrl) {
+                            Logger.add('Blob URL detected - using less aggressive recovery (seek backward instead of clearing source)');
                             try {
-                                if (originalSrcObject) {
-                                    video.srcObject = originalSrcObject;
-                                    Logger.add('Restored original srcObject');
-                                } else if (originalSrc) {
-                                    video.src = originalSrc;
-                                    video.load();
-                                    Logger.add('Restored original src and called load()');
-                                } else if (originalCurrentSrc) {
-                                    video.src = originalCurrentSrc;
-                                    video.load();
-                                    Logger.add('Restored original currentSrc and called load()');
+                                // Seek backward to force buffer refresh without breaking the blob URL
+                                const seekBack = Math.max(0, currentTime - 3);
+                                video.currentTime = seekBack;
+                                Logger.add('Seeked backward to force buffer refresh', { from: currentTime, to: seekBack });
+                                await Fn.sleep(500);
+                                
+                                // Try to play if paused
+                                if (video.paused) {
+                                    await video.play();
+                                }
+                                
+                                // Check if recovery was successful
+                                await Fn.sleep(1000);
+                                if (video.readyState >= 2 && !video.paused && video.currentTime - seekBack > 0.5) {
+                                    Logger.add('Less aggressive recovery successful - playback resumed');
                                 } else {
-                                    Logger.add('No original source available to restore - Twitch must handle reload');
+                                    Logger.add('Less aggressive recovery failed - player may need page refresh', {
+                                        readyState: video.readyState,
+                                        paused: video.paused,
+                                        currentTime: video.currentTime
+                                    });
+                                    // If less aggressive recovery fails, we can't safely clear blob URLs
+                                    // The player will need to be recreated by Twitch or page refreshed
                                 }
                             } catch (e) {
-                                Logger.add('Error restoring original source', { error: e.message });
+                                Logger.add('Less aggressive recovery error', { error: e.message });
+                            }
+                        } else {
+                            // Non-blob URL: proceed with original aggressive recovery
+                            Logger.add('Clearing video source and loading');
+                            video.src = '';
+                            video.load();
+                            await Fn.sleep(100);
+                            Logger.add('Source cleared, waiting for stream reload');
+
+                            // Wait for stream to reload (with timeout)
+                            let reloadSuccess = false;
+                            await new Promise((resolve) => {
+                                let checkCount = 0;
+                                const maxChecks = 25; // 2.5 seconds max
+                                const initialReadyState = video.readyState;
+
+                                const checkReady = setInterval(() => {
+                                    checkCount++;
+                                    if (video.readyState >= 2) {
+                                        clearInterval(checkReady);
+                                        reloadSuccess = true;
+                                        Logger.add('Stream reloaded successfully', {
+                                            readyState: video.readyState,
+                                            checks: checkCount,
+                                            initialReadyState
+                                        });
+                                        resolve();
+                                    } else if (checkCount >= maxChecks) {
+                                        clearInterval(checkReady);
+                                        Logger.add('Stream reload timeout', {
+                                            readyState: video.readyState,
+                                            checks: checkCount,
+                                            initialReadyState
+                                        });
+                                        resolve(); // Don't block forever
+                                    }
+                                }, 100);
+                            });
+
+                            // Fallback: If Twitch didn't reload automatically, restore original source
+                            if (!reloadSuccess && video.readyState < 2) {
+                                Logger.add('Twitch did not reload automatically - restoring original source as fallback', {
+                                    readyState: video.readyState,
+                                    willRestoreSrc: !!originalSrc,
+                                    willRestoreSrcObject: !!originalSrcObject
+                                });
+                                try {
+                                    if (originalSrcObject) {
+                                        video.srcObject = originalSrcObject;
+                                        Logger.add('Restored original srcObject');
+                                    } else if (originalSrc && !originalSrc.startsWith('blob:')) {
+                                        // Only restore non-blob URLs
+                                        video.src = originalSrc;
+                                        video.load();
+                                        Logger.add('Restored original src and called load()');
+                                    } else if (originalCurrentSrc && !originalCurrentSrc.startsWith('blob:')) {
+                                        video.src = originalCurrentSrc;
+                                        video.load();
+                                        Logger.add('Restored original currentSrc and called load()');
+                                    } else {
+                                        Logger.add('No valid source available to restore - Twitch must handle reload');
+                                    }
+                                } catch (e) {
+                                    Logger.add('Error restoring original source', { error: e.message });
+                                }
                             }
                         }
 
@@ -840,7 +911,42 @@
             stalled: () => Logger.add('Video Event: stalled', { currentTime: activeElement?.currentTime }),
             ratechange: () => Logger.add('Video Event: ratechange', { rate: activeElement?.playbackRate, currentTime: activeElement?.currentTime }),
             seeked: () => Logger.add('Video Event: seeked', { currentTime: activeElement?.currentTime }),
-            resize: () => Logger.add('Video Event: resize', { width: activeElement?.videoWidth, height: activeElement?.videoHeight })
+            resize: () => Logger.add('Video Event: resize', { width: activeElement?.videoWidth, height: activeElement?.videoHeight }),
+            error: () => {
+                const video = activeElement;
+                if (!video) return;
+                
+                const error = video.error;
+                const errorDetails = {
+                    code: error ? error.code : null,
+                    message: error ? error.message : 'Unknown error',
+                    readyState: video.readyState,
+                    networkState: video.networkState,
+                    currentTime: video.currentTime,
+                    src: video.src || '(empty)',
+                    currentSrc: video.currentSrc || '(empty)'
+                };
+                
+                Logger.add('Video Event: ERROR - Player crashed', errorDetails);
+                Logger.addMetric('errors');
+                
+                // Error code 4 = MEDIA_ELEMENT_ERROR: Format error / Not supported
+                // This often indicates the player is in an unrecoverable state
+                if (error && (error.code === 4 || error.code === MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED)) {
+                    Logger.add('Player error #4000 or similar - player in unrecoverable state', {
+                        errorCode: error.code,
+                        needsRecovery: true
+                    });
+                    
+                    // Trigger recovery attempt after a short delay to let error state settle
+                    setTimeout(() => {
+                        if (Core.activeContainer && document.body.contains(video)) {
+                            Logger.add('Attempting recovery from player error');
+                            Adapters.EventBus.emit(CONFIG.events.AD_DETECTED);
+                        }
+                    }, 500);
+                }
+            }
         };
 
         return {

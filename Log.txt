@@ -1,171 +1,63 @@
 [METRICS]
-Uptime: 546.7s
-Ads Detected: 2
+Uptime: 41.3s
+Ads Detected: 0
 Ads Blocked: 0
-Resilience Executions: 5
+Resilience Executions: 1
+Aggressive Recoveries: 1
 Health Triggers: 1
-Errors: 4
+Errors: 2
 
 [LOGS]
-[2025-11-22T12:55:59.445Z] Core initialized
-[2025-11-22T12:55:59.573Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql"}
-[2025-11-22T12:56:00.034Z] Console Warn | {"args":["⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition."]}
-[2025-11-22T12:56:00.035Z] Console Warn | {"args":["⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath."]}
-[2025-11-22T12:56:00.257Z] Player mounted
-[2025-11-22T12:56:00.259Z] Player signature found | {"id":"k0","key":"ref"}
-[2025-11-22T12:56:00.259Z] Player signature found | {"id":"k1","key":"ref"}
-[2025-11-22T12:56:00.259Z] Player signature found | {"id":"k2","key":"ref"}
-[2025-11-22T12:56:00.259Z] PlayerContext: Fresh context found and cached
-[2025-11-22T12:56:00.259Z] Event: ACQUIRE - Success (Player Context Found)
-[2025-11-22T12:56:00.440Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/integrity"}
-[2025-11-22T12:56:00.895Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T12:56:00.903Z] PlayerContext: Cache validation | {"isValid":true,"hasK0":true,"hasK1":true,"hasK2":true,"videoElementExists":true}
-[2025-11-22T12:56:00.903Z] Event: ACQUIRE - Success (Player Context Found)
-[2025-11-22T12:56:01.159Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T12:56:01.201Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T12:56:01.720Z] Player unmounted
-[2025-11-22T12:56:01.807Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T12:56:02.186Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T12:56:02.270Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T12:56:02.489Z] Console Error | {"args":["[GraphQL] One or more GraphQL errors were detected on request 01KANT5HQ8ZN8P5BGXV9FPSE5B. PinnedChatSettings: unauthenticated","[object Object]"]}
-[2025-11-22T12:56:02.982Z] Network Request (Allowed) | {"type":"FETCH","url":"https://assets.twitch.tv/config/manifest.json?v=1"}
-[2025-11-22T12:56:03.292Z] Player mounted
-[2025-11-22T12:56:03.299Z] Player signature found | {"id":"k0","key":"ref"}
-[2025-11-22T12:56:03.299Z] Player signature found | {"id":"k1","key":"ref"}
-[2025-11-22T12:56:03.299Z] Player signature found | {"id":"k2","key":"ref"}
-[2025-11-22T12:56:03.299Z] PlayerContext: Fresh context found and cached
-[2025-11-22T12:56:03.299Z] Event: ACQUIRE - Success (Player Context Found)
-[2025-11-22T12:56:03.340Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T12:56:03.515Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T12:56:03.739Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T12:56:03.740Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T12:56:03.827Z] PlayerContext: Cache validation | {"isValid":true,"hasK0":true,"hasK1":true,"hasK2":true,"videoElementExists":true}
-[2025-11-22T12:56:03.827Z] Event: ACQUIRE - Success (Player Context Found)
-[2025-11-22T12:56:03.878Z] Console Error | {"args":["[GraphQL] One or more GraphQL errors were detected on request 01KANT5JZ44TF6XVXV7R7J4FNM. PinnedChatSettings: unauthenticated","[object Object]"]}
-[2025-11-22T12:56:04.196Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T12:56:04.324Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T12:56:04.636Z] Console Error | {"args":["[GraphQL] One or more GraphQL errors were detected on request 01KANT5KNDNRK7E8MYKYRYVBEQ. PinnedChatSettings: unauthenticated","[object Object]"]}
-[2025-11-22T12:56:04.679Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T12:56:04.971Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T12:56:05.031Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T12:56:05.268Z] Trigger pattern detected | {"type":"XHR","url":"https://edge.ads.twitch.tv/2018-01-01/3p/ads?rt=vast3&dur=30&geoc=DE&dt=2&pid=2063959646731763816165267&cb=6032046&ws=1920x927&u=https%3A%2F%2Fwww.twitch.tv%2Fcaedrel&slots=%5B%7B%22id%22%3A%22twitch-player-ui%22%2C%22mt%22%3A%22v%22%2C%22kv%22%3A%7B%7D%2C%22s%22%3A%22640x480%22%7D%5D&pj=%7B%22game%22%3A%22league_of_legends%22%2C%22chan%22%3A%22caedrel%22%2C%22chanid%22%3A%2292038375%22%2C%22twitchcorrelator%22%3A%22ksf0L234Gq25NDQ0FvFyWNSQtrfVMkJL%22%2C%22ad_session_id%22%3A%22ksf0L234Gq25NDQ0FvFyWNSQtrfVMkJL%22%2C%22embed%22%3A%22false%22%2C%22platform%22%3A%22web%22%2C%22mature%22%3A%22false%22%2C%22pos%22%3A%221%22%2C%22timebreak%22%3A%2230%22%2C%22tag%22%3A%22%22%2C%22content_labels%22%3A%22%22%2C%22chantype%22%3A%22partner%22%2C%22delivery_type%22%3A%22csai%22%2C%22vb%22%3A%22null%22%2C%22adunit%22%3A%22web_csai%22%2C%22loggedin%22%3A%22false%22%2C%22v%22%3A%22ARCHIVE%22%2C%22vod_type%22%3A%22undefined%22%2C%22embed_url%22%3A%22null%22%2C%22game_id%22%3A%2221779%22%2C%22user_lang%22%3A%22en%22%7D&gdprl=%7B%22status%22%3A%22cmp%22%7D&pbid=twitch&bp=preroll&aid=MyJILP1jfuUz2VBuUB2ZPajiR0aXfrYe&ulang=en"}
-[2025-11-22T12:56:05.268Z] Ad pattern detected | {"type":"XHR","url":"https://edge.ads.twitch.tv/2018-01-01/3p/ads?rt=vast3&dur=30&geoc=DE&dt=2&pid=2063959646731763816165267&cb=6032046&ws=1920x927&u=https%3A%2F%2Fwww.twitch.tv%2Fcaedrel&slots=%5B%7B%22id%22%3A%22twitch-player-ui%22%2C%22mt%22%3A%22v%22%2C%22kv%22%3A%7B%7D%2C%22s%22%3A%22640x480%22%7D%5D&pj=%7B%22game%22%3A%22league_of_legends%22%2C%22chan%22%3A%22caedrel%22%2C%22chanid%22%3A%2292038375%22%2C%22twitchcorrelator%22%3A%22ksf0L234Gq25NDQ0FvFyWNSQtrfVMkJL%22%2C%22ad_session_id%22%3A%22ksf0L234Gq25NDQ0FvFyWNSQtrfVMkJL%22%2C%22embed%22%3A%22false%22%2C%22platform%22%3A%22web%22%2C%22mature%22%3A%22false%22%2C%22pos%22%3A%221%22%2C%22timebreak%22%3A%2230%22%2C%22tag%22%3A%22%22%2C%22content_labels%22%3A%22%22%2C%22chantype%22%3A%22partner%22%2C%22delivery_type%22%3A%22csai%22%2C%22vb%22%3A%22null%22%2C%22adunit%22%3A%22web_csai%22%2C%22loggedin%22%3A%22false%22%2C%22v%22%3A%22ARCHIVE%22%2C%22vod_type%22%3A%22undefined%22%2C%22embed_url%22%3A%22null%22%2C%22game_id%22%3A%2221779%22%2C%22user_lang%22%3A%22en%22%7D&gdprl=%7B%22status%22%3A%22cmp%22%7D&pbid=twitch&bp=preroll&aid=MyJILP1jfuUz2VBuUB2ZPajiR0aXfrYe&ulang=en"}
-[2025-11-22T12:56:05.269Z] Event: AD_DETECTED
-[2025-11-22T12:56:05.269Z] Resilience execution started
-[2025-11-22T12:56:05.269Z] Captured player state | {"currentTime":0,"wasPaused":true,"bufferedLength":1}
-[2025-11-22T12:56:05.269Z] Seeking to buffer end | {"from":0,"to":5.499999}
-[2025-11-22T12:56:05.282Z] Forced play command sent
-[2025-11-22T12:56:05.282Z] Event: REPORT | {"status":"SUCCESS"}
-[2025-11-22T12:56:05.309Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T12:56:06.275Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T12:56:06.296Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T12:56:06.442Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T12:56:06.757Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T12:56:06.924Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T12:56:07.567Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T12:56:07.732Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T12:56:07.737Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T12:56:07.744Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T12:56:08.071Z] Trigger pattern detected | {"type":"XHR","url":"https://edge.ads.twitch.tv/2018-01-01/3p/ads?rt=vast3&dur=30&geoc=DE&dt=2&pid=3946272745681763816168070&cb=6069206&ws=1920x927&u=https%3A%2F%2Fwww.twitch.tv%2Fcrownie_lol&slots=%5B%7B%22id%22%3A%22twitch-player-ui%22%2C%22mt%22%3A%22v%22%2C%22kv%22%3A%7B%7D%2C%22s%22%3A%22640x480%22%7D%5D&pj=%7B%22game%22%3A%22league_of_legends%22%2C%22chan%22%3A%22caedrel%22%2C%22chanid%22%3A%2292038375%22%2C%22twitchcorrelator%22%3A%22LiPBq9nr3ZLhryhraj2tCeFcu9uOft8E%22%2C%22ad_session_id%22%3A%22LiPBq9nr3ZLhryhraj2tCeFcu9uOft8E%22%2C%22embed%22%3A%22false%22%2C%22platform%22%3A%22web%22%2C%22mature%22%3A%22false%22%2C%22pos%22%3A%221%22%2C%22timebreak%22%3A%2230%22%2C%22tag%22%3A%22%22%2C%22content_labels%22%3A%22%22%2C%22chantype%22%3A%22partner%22%2C%22delivery_type%22%3A%22csai%22%2C%22vb%22%3A%22null%22%2C%22adunit%22%3A%22web_csai%22%2C%22loggedin%22%3A%22false%22%2C%22v%22%3A%22ARCHIVE%22%2C%22vod_type%22%3A%22undefined%22%2C%22embed_url%22%3A%22null%22%2C%22game_id%22%3A%2221779%22%2C%22user_lang%22%3A%22en%22%7D&gdprl=%7B%22status%22%3A%22cmp%22%7D&pbid=twitch&bp=preroll&aid=MyJILP1jfuUz2VBuUB2ZPajiR0aXfrYe&ulang=en"}
-[2025-11-22T12:56:08.071Z] Ad pattern detected | {"type":"XHR","url":"https://edge.ads.twitch.tv/2018-01-01/3p/ads?rt=vast3&dur=30&geoc=DE&dt=2&pid=3946272745681763816168070&cb=6069206&ws=1920x927&u=https%3A%2F%2Fwww.twitch.tv%2Fcrownie_lol&slots=%5B%7B%22id%22%3A%22twitch-player-ui%22%2C%22mt%22%3A%22v%22%2C%22kv%22%3A%7B%7D%2C%22s%22%3A%22640x480%22%7D%5D&pj=%7B%22game%22%3A%22league_of_legends%22%2C%22chan%22%3A%22caedrel%22%2C%22chanid%22%3A%2292038375%22%2C%22twitchcorrelator%22%3A%22LiPBq9nr3ZLhryhraj2tCeFcu9uOft8E%22%2C%22ad_session_id%22%3A%22LiPBq9nr3ZLhryhraj2tCeFcu9uOft8E%22%2C%22embed%22%3A%22false%22%2C%22platform%22%3A%22web%22%2C%22mature%22%3A%22false%22%2C%22pos%22%3A%221%22%2C%22timebreak%22%3A%2230%22%2C%22tag%22%3A%22%22%2C%22content_labels%22%3A%22%22%2C%22chantype%22%3A%22partner%22%2C%22delivery_type%22%3A%22csai%22%2C%22vb%22%3A%22null%22%2C%22adunit%22%3A%22web_csai%22%2C%22loggedin%22%3A%22false%22%2C%22v%22%3A%22ARCHIVE%22%2C%22vod_type%22%3A%22undefined%22%2C%22embed_url%22%3A%22null%22%2C%22game_id%22%3A%2221779%22%2C%22user_lang%22%3A%22en%22%7D&gdprl=%7B%22status%22%3A%22cmp%22%7D&pbid=twitch&bp=preroll&aid=MyJILP1jfuUz2VBuUB2ZPajiR0aXfrYe&ulang=en"}
-[2025-11-22T12:56:08.074Z] Event: AD_DETECTED
-[2025-11-22T12:56:08.074Z] Resilience execution started
-[2025-11-22T12:56:08.074Z] Captured player state | {"currentTime":5.499999,"wasPaused":true,"bufferedLength":1}
-[2025-11-22T12:56:08.074Z] Seeking to buffer end | {"from":5.499999,"to":0.901}
-[2025-11-22T12:56:08.092Z] Play command failed | {"error":"AbortError: The fetching process for the media resource was aborted by the user agent at the user's request."}
-[2025-11-22T12:56:08.092Z] Event: REPORT | {"status":"SUCCESS"}
-[2025-11-22T12:56:08.166Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T12:56:08.424Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T12:56:08.528Z] Console Error | {"args":["[GraphQL] One or more GraphQL errors were detected on request 01KANT5PYM2WPH4WHCEQK6XC9K. PinnedChatSettings: unauthenticated","[object Object]"]}
-[2025-11-22T12:56:08.700Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T12:56:08.868Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T12:56:08.869Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T12:56:09.579Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T12:56:09.723Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T12:56:09.924Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T12:56:10.245Z] Console Warn | {"args":["Moving to buffered region","0.067","0"]}
-[2025-11-22T12:56:10.351Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T12:56:12.020Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T12:56:15.580Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T12:56:25.445Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T12:56:55.441Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T12:57:06.163Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T12:57:06.709Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T12:57:14.043Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T12:57:19.662Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T12:58:06.741Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T12:58:10.065Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T12:58:11.072Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T12:59:06.724Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T13:00:06.728Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T13:01:02.990Z] Network Request (Allowed) | {"type":"FETCH","url":"https://assets.twitch.tv/config/manifest.json?v=1"}
-[2025-11-22T13:01:05.922Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T13:01:06.613Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T13:01:06.720Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T13:01:07.251Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T13:02:06.004Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T13:02:08.036Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T13:02:48.451Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T13:02:50.491Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T13:02:56.301Z] Console Warn | {"args":["Playhead stalling at 406, buffer end 406"]}
-[2025-11-22T13:02:56.301Z] Event: AD_DETECTED
-[2025-11-22T13:02:56.302Z] Resilience execution started
-[2025-11-22T13:02:56.302Z] Captured player state | {"currentTime":406,"wasPaused":false,"bufferedLength":1}
-[2025-11-22T13:02:56.302Z] Event: REPORT | {"status":"SUCCESS"}
-[2025-11-22T13:02:57.560Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T13:03:00.638Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T13:03:02.670Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T13:03:04.680Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T13:03:06.719Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T13:03:08.736Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T13:03:10.931Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T13:03:12.958Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T13:03:14.979Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T13:03:16.989Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T13:03:19.105Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T13:03:19.483Z] Console Warn | {"args":["Moving to buffered region","406.140666","406"]}
-[2025-11-22T13:03:20.120Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T13:03:22.165Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T13:03:24.210Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T13:03:29.328Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T13:03:36.394Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T13:03:43.460Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T13:03:50.217Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T13:03:52.408Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T13:03:54.394Z] Console Warn | {"args":["Playhead stalling at 441.027464, buffer end 441.027464"]}
-[2025-11-22T13:03:54.394Z] Event: AD_DETECTED
-[2025-11-22T13:03:54.394Z] Resilience execution started
-[2025-11-22T13:03:54.394Z] Captured player state | {"currentTime":441.027464,"wasPaused":false,"bufferedLength":1}
-[2025-11-22T13:03:54.395Z] Event: REPORT | {"status":"SUCCESS"}
-[2025-11-22T13:03:55.474Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T13:03:57.508Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T13:03:58.522Z] Player stuck detected | {"stuckCount":2,"currentTime":441.027464}
-[2025-11-22T13:03:58.522Z] Event: AD_DETECTED
-[2025-11-22T13:03:58.522Z] Resilience execution started
-[2025-11-22T13:03:58.522Z] Captured player state | {"currentTime":441.027464,"wasPaused":false,"bufferedLength":1}
-[2025-11-22T13:03:58.523Z] Event: REPORT | {"status":"SUCCESS"}
-[2025-11-22T13:03:59.607Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T13:04:01.618Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T13:04:03.632Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T13:04:05.654Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T13:04:07.673Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T13:04:09.683Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T13:04:11.790Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T13:04:13.912Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T13:04:15.977Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T13:04:17.988Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T13:04:20.001Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T13:04:22.015Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T13:04:24.039Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T13:04:26.053Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T13:04:28.080Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T13:04:30.106Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T13:04:32.132Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T13:04:34.163Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T13:04:36.210Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T13:04:38.235Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T13:04:40.453Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T13:04:41.473Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T13:04:43.276Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T13:04:46.869Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-22T13:04:52.158Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-22T13:19:11.353Z] Core initialized
+[2025-11-22T13:19:11.603Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql"}
+[2025-11-22T13:19:12.016Z] Console Warn | {"args":["⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition."]}
+[2025-11-22T13:19:12.024Z] Console Warn | {"args":["⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath."]}
+[2025-11-22T13:19:12.177Z] Player mounted
+[2025-11-22T13:19:12.179Z] Player signature found | {"id":"k0","key":"ref"}
+[2025-11-22T13:19:12.179Z] Player signature found | {"id":"k1","key":"ref"}
+[2025-11-22T13:19:12.179Z] Player signature found | {"id":"k2","key":"ref"}
+[2025-11-22T13:19:12.179Z] PlayerContext: Fresh context found and cached
+[2025-11-22T13:19:12.179Z] Event: ACQUIRE - Success (Player Context Found)
+[2025-11-22T13:19:12.335Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/integrity"}
+[2025-11-22T13:19:12.676Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-22T13:19:12.684Z] PlayerContext: Cache validation | {"isValid":true,"hasK0":true,"hasK1":true,"hasK2":true,"videoElementExists":true}
+[2025-11-22T13:19:12.684Z] Event: ACQUIRE - Success (Player Context Found)
+[2025-11-22T13:19:12.916Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-22T13:19:13.502Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-22T13:19:13.613Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-22T13:19:13.888Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-22T13:19:14.103Z] Console Warn | {"args":["Moving to buffered region","0.067","0"]}
+[2025-11-22T13:19:14.208Z] Network Request (Allowed) | {"type":"FETCH","url":"https://assets.twitch.tv/config/manifest.json?v=1"}
+[2025-11-22T13:19:14.731Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-22T13:19:15.061Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-22T13:19:15.156Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-22T13:19:15.180Z] Console Error | {"args":["[GraphQL] One or more GraphQL errors were detected on request 01KANVG0RW6TMSQNBSW1K9GWHS. PinnedChatSettings: unauthenticated","[object Object]"]}
+[2025-11-22T13:19:15.307Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-22T13:19:15.581Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-22T13:19:15.763Z] Console Error | {"args":["[GraphQL] One or more GraphQL errors were detected on request 01KANVG26T82HXG3R8AK2BNS83. PinnedChatSettings: unauthenticated","[object Object]"]}
+[2025-11-22T13:19:15.870Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-22T13:19:16.158Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-22T13:19:16.173Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-22T13:19:16.637Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-22T13:19:16.845Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-22T13:19:16.939Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-22T13:19:17.644Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-22T13:19:20.123Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-22T13:19:26.360Z] Console Warn | {"args":["Playhead stalling at 12.016, buffer end 12.016"]}
+[2025-11-22T13:19:26.361Z] Event: AD_DETECTED
+[2025-11-22T13:19:26.361Z] Resilience execution started
+[2025-11-22T13:19:26.361Z] Captured player state | {"currentTime":12.016,"wasPaused":false,"bufferedLength":1}
+[2025-11-22T13:19:26.361Z] Stuck at buffer end detected - requires aggressive recovery | {"currentTime":12.016,"bufferEnd":12.015999,"diff":9.999999992515995e-7}
+[2025-11-22T13:19:26.361Z] Executing aggressive recovery: forcing stream refresh | {"beforeState":{"readyState":2,"paused":false,"currentTime":12.016,"bufferedLength":1,"bufferEnd":12.015999}}
+[2025-11-22T13:19:26.361Z] Captured original video source | {"src":"blob:https://www.twitch.tv/978a7ea2-0d17-4403-94e3-1c853d4d07fb","hasSrcObject":false,"currentSrc":"blob:https://www.twitch.tv/978a7ea2-0d17-4403-94e3-1c853d4d07fb"}
+[2025-11-22T13:19:26.361Z] Clearing video source and loading
+[2025-11-22T13:19:26.480Z] Source cleared, waiting for stream reload
+[2025-11-22T13:19:27.391Z] Network Request (Allowed) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-22T13:19:29.190Z] Stream reload timeout | {"readyState":0,"checks":25,"initialReadyState":0}
+[2025-11-22T13:19:29.190Z] Twitch did not reload automatically - restoring original source as fallback | {"readyState":0,"willRestoreSrc":true,"willRestoreSrcObject":false}
+[2025-11-22T13:19:29.190Z] Restored original src and called load()
+[2025-11-22T13:19:29.190Z] Player state restored after aggressive recovery | {"playbackRate":1,"volume":0.49000000953674316,"muted":false}
+[2025-11-22T13:19:29.190Z] Aggressive recovery completed | {"afterState":{"readyState":0,"paused":true,"currentTime":0,"bufferedLength":0,"bufferEnd":null,"duration":null}}
+[2025-11-22T13:19:31.120Z] Player stuck detected | {"stuckCount":2,"currentTime":0}
+[2025-11-22T13:19:31.120Z] Event: AD_DETECTED
+[2025-11-22T13:19:31.120Z] Resilience already in progress, skipping
