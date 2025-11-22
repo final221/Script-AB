@@ -1,6 +1,6 @@
 // ==UserScript==
-// @name          Mega Ad Dodger 3000 (Stealth Reactor Core) 1.30
-// @version       1.30
+// @name          Mega Ad Dodger 3000 (Stealth Reactor Core) 1.31
+// @version       1.31
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing. 
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -51,7 +51,7 @@
      */
     const CONFIG = (() => {
         const raw = {
-            debug: false,
+            debug: true,
             selectors: {
                 PLAYER: '.video-player',
                 VIDEO: 'video',
@@ -631,18 +631,36 @@
 
         const checkStuckState = () => {
             if (state.videoRef.paused || state.videoRef.ended) {
+                if (CONFIG.debug && state.stuckCount > 0) {
+                     Logger.add('HealthMonitor[Debug]: Stuck count reset due to paused/ended state.');
+                }
                 state.stuckCount = 0;
                 state.lastTime = state.videoRef.currentTime;
                 return;
             }
-            if (Math.abs(state.videoRef.currentTime - state.lastTime) < CONFIG.player.STUCK_THRESHOLD_S) {
+
+            const currentTime = state.videoRef.currentTime;
+            const lastTime = state.lastTime;
+            const diff = Math.abs(currentTime - lastTime);
+
+            if (CONFIG.debug) {
+                Logger.add('HealthMonitor[Debug]: Stuck check', {
+                    currentTime: currentTime.toFixed(3),
+                    lastTime: lastTime.toFixed(3),
+                    diff: diff.toFixed(3),
+                    stuckCount: state.stuckCount,
+                    threshold: CONFIG.player.STUCK_THRESHOLD_S,
+                });
+            }
+
+            if (diff < CONFIG.player.STUCK_THRESHOLD_S) {
                 state.stuckCount++;
             } else {
                 state.stuckCount = 0;
-                state.lastTime = state.videoRef.currentTime;
+                state.lastTime = currentTime;
             }
             if (state.stuckCount >= CONFIG.player.STUCK_COUNT_LIMIT) {
-                triggerRecovery('Player stuck', { stuckCount: state.stuckCount });
+                triggerRecovery('Player stuck', { stuckCount: state.stuckCount, lastTime, currentTime });
             }
         };
 
@@ -652,6 +670,17 @@
             const quality = state.videoRef.getVideoPlaybackQuality();
             const newDropped = quality.droppedVideoFrames - state.lastDroppedFrames;
             const newTotal = quality.totalVideoFrames - state.lastTotalFrames;
+
+            if (CONFIG.debug) {
+                Logger.add('HealthMonitor[Debug]: Frame check', {
+                    dropped: quality.droppedVideoFrames,
+                    total: quality.totalVideoFrames,
+                    lastDropped: state.lastDroppedFrames,
+                    lastTotal: state.lastTotalFrames,
+                    newDropped,
+                    newTotal,
+                });
+            }
 
             if (newDropped > 0) {
                 const recentDropRate = newTotal > 0 ? (newDropped / newTotal) * 100 : 0;

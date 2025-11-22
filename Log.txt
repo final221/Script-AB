@@ -1,45 +1,92 @@
 [METRICS]
-Uptime: 748.7s
+Uptime: 941.2s
 Ads Detected: 0
 Ads Blocked: 0
-Resilience Executions: 4
+Resilience Executions: 7
 Aggressive Recoveries: 0
 Health Triggers: 1
 Errors: 0
 
 [LOGS]
-[2025-11-22T19:06:30.046Z] Core initialized
-[2025-11-22T19:06:30.814Z] Player mounted
-[2025-11-22T19:06:30.817Z] Player signature found | {"id":"k0","key":"ref"}
-[2025-11-22T19:06:30.817Z] Player signature found | {"id":"k1","key":"ref"}
-[2025-11-22T19:06:30.817Z] Player signature found | {"id":"k2","key":"ref"}
-[2025-11-22T19:06:30.817Z] PlayerContext: Fresh context found via keyword search | {"key":"__reactFiber$0b8n07c413aq"}
-[2025-11-22T19:06:30.817Z] Event: ACQUIRE - Success
-[2025-11-22T19:06:31.282Z] Event: ACQUIRE - Success
-[2025-11-22T19:06:32.690Z] Console Error | {"args":["[GraphQL] One or more GraphQL errors were detected on request 01KAPFBZ4VFAXQY0EJ2XZPFCEN. PinnedChatSettings: unauthenticated","[object Object]"],"benign":true}
-[2025-11-22T19:06:33.664Z] Console Error | {"args":["[GraphQL] One or more GraphQL errors were detected on request 01KAPFC016EZ7HSR9Y901PP6WJ. PinnedChatSettings: unauthenticated","[object Object]"],"benign":true}
-[2025-11-22T19:06:34.105Z] Console Error | {"args":["[GraphQL] One or more GraphQL errors were detected on request 01KAPFC0JJWVG44Y7JMCXJ22EC. PinnedChatSettings: unauthenticated","[object Object]"],"benign":true}
-[2025-11-22T19:07:53.040Z] Frame drop detected | {"newDropped":14,"newTotal":59,"recentDropRate":"23.73%"}
-[2025-11-22T19:07:53.040Z] HealthMonitor triggering recovery: Severe frame drop | {"newDropped":14,"newTotal":59,"recentDropRate":23.728813559322035}
-[2025-11-22T19:07:53.040Z] Event: AD_DETECTED
-[2025-11-22T19:07:53.040Z] Resilience execution started
-[2025-11-22T19:07:53.040Z] Captured player state | {"currentTime":80.279908,"hasError":false}
-[2025-11-22T19:07:53.041Z] Seeking to buffer end | {"from":80.279908,"to":83.517}
-[2025-11-22T19:08:03.195Z] Playhead stalling warning detected (raw)
-[2025-11-22T19:08:13.195Z] Critical warning: Playhead stalling (debounced)
-[2025-11-22T19:08:13.195Z] Event: AD_DETECTED
-[2025-11-22T19:08:13.195Z] Resilience execution started
-[2025-11-22T19:08:13.195Z] Captured player state | {"currentTime":100.214145,"hasError":false}
-[2025-11-22T19:08:13.196Z] Seeking to buffer end | {"from":100.214145,"to":103.507333}
-[2025-11-22T19:17:45.761Z] Playhead stalling warning detected (raw)
-[2025-11-22T19:17:55.764Z] Critical warning: Playhead stalling (debounced)
-[2025-11-22T19:17:55.764Z] Event: AD_DETECTED
-[2025-11-22T19:17:55.764Z] Resilience execution started
-[2025-11-22T19:17:55.764Z] Captured player state | {"currentTime":680.940581,"hasError":false}
-[2025-11-22T19:17:55.764Z] Seeking to buffer end | {"from":680.940581,"to":685.501999}
-[2025-11-22T19:18:37.363Z] Playhead stalling warning detected (raw)
-[2025-11-22T19:18:47.367Z] Critical warning: Playhead stalling (debounced)
-[2025-11-22T19:18:47.367Z] Event: AD_DETECTED
-[2025-11-22T19:18:47.367Z] Resilience execution started
-[2025-11-22T19:18:47.367Z] Captured player state | {"currentTime":734.247998,"hasError":false}
-[2025-11-22T19:18:47.367Z] Seeking to buffer end | {"from":734.247998,"to":737.512666}
+[2025-11-22T19:45:27.331Z] Core initialized
+[2025-11-22T19:45:27.588Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql"}
+[2025-11-22T19:45:28.244Z] Player mounted
+[2025-11-22T19:45:28.245Z] Player signature found | {"id":"k0","key":"ref"}
+[2025-11-22T19:45:28.245Z] Player signature found | {"id":"k1","key":"ref"}
+[2025-11-22T19:45:28.245Z] Player signature found | {"id":"k2","key":"ref"}
+[2025-11-22T19:45:28.245Z] PlayerContext: Fresh context found via keyword search | {"key":"__reactFiber$rdjdo366m59"}
+[2025-11-22T19:45:28.245Z] Event: ACQUIRE - Success
+[2025-11-22T19:45:28.765Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-22T19:45:28.855Z] Event: ACQUIRE - Success
+[2025-11-22T19:45:29.085Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/integrity"}
+[2025-11-22T19:45:29.742Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-22T19:45:30.073Z] Console Error | {"args":["[GraphQL] One or more GraphQL errors were detected on request 01KAPHK9SERWH1ESF2ZS6ZDQSX. PinnedChatSettings: unauthenticated","[object Object]"],"benign":true}
+[2025-11-22T19:45:31.988Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-22T19:45:32.311Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-22T19:45:32.313Z] Console Error | {"args":["[GraphQL] One or more GraphQL errors were detected on request 01KAPHKBV0SWXW69W468W534HK. PinnedChatSettings: unauthenticated","[object Object]"],"benign":true}
+[2025-11-22T19:45:32.844Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-22T19:45:33.042Z] Console Error | {"args":["[GraphQL] One or more GraphQL errors were detected on request 01KAPHKCH8SM3N66CCZA7T231M. PinnedChatSettings: unauthenticated","[object Object]"],"benign":true}
+[2025-11-22T19:45:36.996Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-22T19:45:38.250Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-22T19:45:38.648Z] Frame drop detected | {"newDropped":32,"newTotal":81,"recentDropRate":"39.51%"}
+[2025-11-22T19:45:38.648Z] HealthMonitor triggering recovery: Severe frame drop | {"newDropped":32,"newTotal":81,"recentDropRate":39.50617283950617}
+[2025-11-22T19:45:38.648Z] Event: AD_DETECTED
+[2025-11-22T19:45:38.648Z] Resilience execution started
+[2025-11-22T19:45:38.648Z] Executing standard recovery: seeking
+[2025-11-22T19:45:38.648Z] Resilience execution finished | {"total_duration_ms":0}
+[2025-11-22T19:46:49.382Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-22T19:48:09.084Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-22T19:50:09.061Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-22T19:50:22.486Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-22T19:50:29.405Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-22T19:50:31.103Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://assets.twitch.tv/config/manifest.json?v=1"}
+[2025-11-22T19:52:52.259Z] Playhead stalling warning detected (raw)
+[2025-11-22T19:53:02.259Z] Critical warning: Playhead stalling (debounced)
+[2025-11-22T19:53:02.259Z] Event: AD_DETECTED
+[2025-11-22T19:53:02.259Z] Resilience execution started
+[2025-11-22T19:53:02.259Z] Executing standard recovery: seeking
+[2025-11-22T19:53:02.260Z] Resilience execution finished | {"total_duration_ms":0}
+[2025-11-22T19:53:05.428Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-22T19:54:44.948Z] Playhead stalling warning detected (raw)
+[2025-11-22T19:54:45.969Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-22T19:54:54.948Z] Critical warning: Playhead stalling (debounced)
+[2025-11-22T19:54:54.948Z] Event: AD_DETECTED
+[2025-11-22T19:54:54.948Z] Resilience execution started
+[2025-11-22T19:54:54.948Z] Executing standard recovery: seeking
+[2025-11-22T19:54:54.948Z] Resilience execution finished | {"total_duration_ms":0}
+[2025-11-22T19:55:18.106Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-22T19:56:06.817Z] Playhead stalling warning detected (raw)
+[2025-11-22T19:56:16.819Z] Critical warning: Playhead stalling (debounced)
+[2025-11-22T19:56:16.819Z] Event: AD_DETECTED
+[2025-11-22T19:56:16.819Z] Resilience execution started
+[2025-11-22T19:56:16.819Z] Executing standard recovery: seeking
+[2025-11-22T19:56:16.819Z] Resilience execution finished | {"total_duration_ms":0}
+[2025-11-22T19:57:09.089Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-22T19:57:29.838Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-22T19:58:09.091Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-22T19:58:30.972Z] Playhead stalling warning detected (raw)
+[2025-11-22T19:58:40.972Z] Critical warning: Playhead stalling (debounced)
+[2025-11-22T19:58:40.973Z] Event: AD_DETECTED
+[2025-11-22T19:58:40.973Z] Resilience execution started
+[2025-11-22T19:58:40.973Z] Executing standard recovery: seeking
+[2025-11-22T19:58:40.973Z] Resilience execution finished | {"total_duration_ms":0}
+[2025-11-22T19:58:43.479Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-22T19:59:09.090Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-22T19:59:29.855Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-22T20:00:12.242Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-22T20:00:13.713Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-22T20:00:28.967Z] Playhead stalling warning detected (raw)
+[2025-11-22T20:00:31.097Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://assets.twitch.tv/config/manifest.json?v=1"}
+[2025-11-22T20:00:38.967Z] Critical warning: Playhead stalling (debounced)
+[2025-11-22T20:00:38.967Z] Event: AD_DETECTED
+[2025-11-22T20:00:38.967Z] Resilience execution started
+[2025-11-22T20:00:38.967Z] Executing standard recovery: seeking
+[2025-11-22T20:00:38.967Z] Resilience execution finished | {"total_duration_ms":0}
+[2025-11-22T20:00:50.806Z] Playhead stalling warning detected (raw)
+[2025-11-22T20:00:55.266Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-22T20:01:00.806Z] Critical warning: Playhead stalling (debounced)
+[2025-11-22T20:01:00.806Z] Event: AD_DETECTED
+[2025-11-22T20:01:00.806Z] Resilience execution started
+[2025-11-22T20:01:00.806Z] Executing standard recovery: seeking
+[2025-11-22T20:01:00.806Z] Resilience execution finished | {"total_duration_ms":0}
+[2025-11-22T20:01:03.444Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
