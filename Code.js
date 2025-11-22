@@ -1,6 +1,6 @@
 // ==UserScript==
-// @name          Mega Ad Dodger 3000 (Stealth Reactor Core) 1.15
-// @version       1.15
+// @name          Mega Ad Dodger 3000 (Stealth Reactor Core) 1.16
+// @version       1.16
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -217,6 +217,7 @@
             ads_detected: 0,
             ads_blocked: 0,
             resilience_executions: 0,
+            aggressive_recoveries: 0,
             health_triggers: 0,
             errors: 0,
             session_start: Date.now()
@@ -294,7 +295,7 @@
                     content = "Logging is initiated. No logs recorded yet.";
                 } else {
                     const m = Logger.getMetrics();
-                    const header = `[METRICS]\nUptime: ${(m.uptime_ms / 1000).toFixed(1)}s\nAds Detected: ${m.ads_detected}\nAds Blocked: ${m.ads_blocked}\nResilience Executions: ${m.resilience_executions}\nHealth Triggers: ${m.health_triggers}\nErrors: ${m.errors}\n\n[LOGS]\n`;
+                    const header = `[METRICS]\nUptime: ${(m.uptime_ms / 1000).toFixed(1)}s\nAds Detected: ${m.ads_detected}\nAds Blocked: ${m.ads_blocked}\nResilience Executions: ${m.resilience_executions}\nAggressive Recoveries: ${m.aggressive_recoveries}\nHealth Triggers: ${m.health_triggers}\nErrors: ${m.errors}\n\n[LOGS]\n`;
                     content = header + logs.map(l => `[${l.timestamp}] ${l.message}${l.detail ? ' | ' + JSON.stringify(l.detail) : ''}`).join('\n');
                 }
 
@@ -485,10 +486,15 @@
                     });
 
                     if (!isValid) {
-                        Logger.add('PlayerContext: ⚠️ CACHED CONTEXT INVALID - but still using it');
+                        Logger.add('PlayerContext: ⚠️ CACHED CONTEXT INVALID - resetting cache and searching for fresh context');
+                        // Reset invalid cache
+                        cachedContext = null;
+                        keyMap = { k0: null, k1: null, k2: null };
+                        // Fall through to search for fresh context below
+                    } else {
+                        // Cache is valid, return it
+                        return cachedContext;
                     }
-
-                    return cachedContext;
                 }
                 if (!element) return null;
                 for (const k in element) {
@@ -608,7 +614,10 @@
      * @responsibility
      * 1. Capture current player state.
      * 2. Attempt to restore playback by seeking to the live edge or unpausing.
-     * 3. Avoid destructive actions like clearing video.src which crashes the WASM worker.
+     * 3. When stuck at buffer end (currentTime ≈ bufferEnd), use aggressive recovery
+     *    (video.src clearing) to force stream refresh and bypass blocked ad segments.
+     * 4. Note: Aggressive recovery is only used when stuck at buffer end to avoid
+     *    unnecessary WASM worker disruption.
      */
     const Resilience = (() => {
         let isFixing = false;
@@ -638,26 +647,173 @@
                     Logger.add('Captured player state', { currentTime, wasPaused, bufferedLength: buffered.length });
 
                     // 2. Recovery Strategy: Seek to Live / Buffer End
+                    let needsAggressiveRecovery = false;
                     if (buffered.length > 0) {
                         const bufferEnd = buffered.end(buffered.length - 1);
                         const seekTarget = bufferEnd - 0.5;
+                        const timeDiff = Math.abs(currentTime - seekTarget);
+                        const isStuckAtBufferEnd = Math.abs(currentTime - bufferEnd) < 0.5;
 
-                        if (Math.abs(currentTime - seekTarget) > 1) {
+                        // CRITICAL: If stuck at buffer end, player can't advance because next segment is blocked
+                        // This requires aggressive recovery to force stream refresh
+                        if (isStuckAtBufferEnd) {
+                            Logger.add('Stuck at buffer end detected - requires aggressive recovery', {
+                                currentTime,
+                                bufferEnd,
+                                diff: Math.abs(currentTime - bufferEnd)
+                            });
+                            needsAggressiveRecovery = true;
+                        } else if (timeDiff > 1) {
                             Logger.add('Seeking to buffer end', { from: currentTime, to: seekTarget });
                             video.currentTime = seekTarget;
+                        } else {
+                            // Close to buffer end but not stuck - try small backward seek to force refresh
+                            Logger.add('Close to buffer end, attempting small backward seek', {
+                                currentTime,
+                                bufferEnd,
+                                diff: timeDiff
+                            });
+                            video.currentTime = Math.max(0, currentTime - 2);
                         }
                     } else {
                         Logger.add('No buffer detected, attempting play');
                     }
 
-                    // 3. Force Play
+                    // 3. Aggressive Recovery (only when stuck at buffer end)
+                    if (needsAggressiveRecovery) {
+                        Logger.addMetric('aggressive_recoveries');
+                        Logger.add('Executing aggressive recovery: forcing stream refresh', {
+                            beforeState: {
+                                readyState: video.readyState,
+                                paused: video.paused,
+                                currentTime: video.currentTime,
+                                bufferedLength: video.buffered.length,
+                                bufferEnd: buffered.length > 0 ? buffered.end(buffered.length - 1) : null
+                            }
+                        });
+                        const playbackRate = video.playbackRate;
+                        const volume = video.volume;
+                        const muted = video.muted;
+
+                        // CRITICAL: Capture original source before clearing (for fallback restoration)
+                        const originalSrc = video.src;
+                        const originalSrcObject = video.srcObject;
+                        const originalCurrentSrc = video.currentSrc;
+                        Logger.add('Captured original video source', {
+                            src: originalSrc || '(empty)',
+                            hasSrcObject: !!originalSrcObject,
+                            currentSrc: originalCurrentSrc || '(empty)'
+                        });
+
+                        // Clear source to force Twitch to reload stream (bypasses stuck ad segment)
+                        Logger.add('Clearing video source and loading');
+                        video.src = '';
+                        video.load();
+                        await Fn.sleep(100);
+                        Logger.add('Source cleared, waiting for stream reload');
+
+                        // Wait for stream to reload (with timeout)
+                        let reloadSuccess = false;
+                        await new Promise((resolve) => {
+                            let checkCount = 0;
+                            const maxChecks = 25; // 2.5 seconds max
+                            const initialReadyState = video.readyState;
+
+                            const checkReady = setInterval(() => {
+                                checkCount++;
+                                if (video.readyState >= 2) {
+                                    clearInterval(checkReady);
+                                    reloadSuccess = true;
+                                    Logger.add('Stream reloaded successfully', {
+                                        readyState: video.readyState,
+                                        checks: checkCount,
+                                        initialReadyState
+                                    });
+                                    resolve();
+                                } else if (checkCount >= maxChecks) {
+                                    clearInterval(checkReady);
+                                    Logger.add('Stream reload timeout', {
+                                        readyState: video.readyState,
+                                        checks: checkCount,
+                                        initialReadyState
+                                    });
+                                    resolve(); // Don't block forever
+                                }
+                            }, 100);
+                        });
+
+                        // Fallback: If Twitch didn't reload automatically, restore original source
+                        if (!reloadSuccess && video.readyState < 2) {
+                            Logger.add('Twitch did not reload automatically - restoring original source as fallback', {
+                                readyState: video.readyState,
+                                willRestoreSrc: !!originalSrc,
+                                willRestoreSrcObject: !!originalSrcObject
+                            });
+                            try {
+                                if (originalSrcObject) {
+                                    video.srcObject = originalSrcObject;
+                                    Logger.add('Restored original srcObject');
+                                } else if (originalSrc) {
+                                    video.src = originalSrc;
+                                    video.load();
+                                    Logger.add('Restored original src and called load()');
+                                } else if (originalCurrentSrc) {
+                                    video.src = originalCurrentSrc;
+                                    video.load();
+                                    Logger.add('Restored original currentSrc and called load()');
+                                } else {
+                                    Logger.add('No original source available to restore - Twitch must handle reload');
+                                }
+                            } catch (e) {
+                                Logger.add('Error restoring original source', { error: e.message });
+                            }
+                        }
+
+                        // Restore state
+                        try {
+                            video.playbackRate = playbackRate;
+                            video.volume = volume;
+                            video.muted = muted;
+                            Logger.add('Player state restored after aggressive recovery', {
+                                playbackRate,
+                                volume,
+                                muted
+                            });
+                        } catch (e) {
+                            Logger.add('State restoration error after aggressive recovery', { error: e.message });
+                        }
+
+                        // Log final state after aggressive recovery
+                        const newBuffered = video.buffered;
+                        Logger.add('Aggressive recovery completed', {
+                            afterState: {
+                                readyState: video.readyState,
+                                paused: video.paused,
+                                currentTime: video.currentTime,
+                                bufferedLength: newBuffered.length,
+                                bufferEnd: newBuffered.length > 0 ? newBuffered.end(newBuffered.length - 1) : null,
+                                duration: video.duration
+                            }
+                        });
+                    }
+
+                    // 4. Force Play
                     if (video.paused) {
                         try {
                             await video.play();
-                            Logger.add('Forced play command sent');
+                            Logger.add('Forced play command sent', {
+                                wasPaused: wasPaused,
+                                afterPlayPaused: video.paused
+                            });
                         } catch (e) {
                             Logger.add('Play command failed', { error: String(e) });
                         }
+                    } else if (needsAggressiveRecovery) {
+                        // If aggressive recovery was used and video wasn't paused, verify it's still playing
+                        Logger.add('Video was already playing, verifying playback after aggressive recovery', {
+                            paused: video.paused,
+                            currentTime: video.currentTime
+                        });
                     }
 
                     Adapters.EventBus.emit(CONFIG.events.REPORT, { status: 'SUCCESS' });
