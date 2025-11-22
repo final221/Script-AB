@@ -78,7 +78,7 @@
                 LOG_NORMAL_NETWORK: false,
             },
             network: {
-                AD_PATTERNS: ['/ad/v1/', '/usher/v1/ad/', '/api/v5/ads/', 'pubads.g.doubleclick.net', 'supervisor.ext-twitch.tv', 'edge.ads.twitch.tv', '/3p/ads'],
+                AD_PATTERNS: ['/ad/v1/', '/usher/v1/ad/', '/api/v5/ads/', 'pubads.g.doubleclick.net', 'supervisor.ext-twitch.tv', '/3p/ads'],
                 TRIGGER_PATTERNS: ['/ad_state/', 'vod_ad_manifest'],
             },
             mock: {
