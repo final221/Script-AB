@@ -1,8 +1,8 @@
 [METRICS]
-Uptime: 138.3s
+Uptime: 748.7s
 Ads Detected: 0
 Ads Blocked: 0
-Resilience Executions: 2
+Resilience Executions: 4
 Aggressive Recoveries: 0
 Health Triggers: 1
 Errors: 0
@@ -31,3 +31,15 @@ Errors: 0
 [2025-11-22T19:08:13.195Z] Resilience execution started
 [2025-11-22T19:08:13.195Z] Captured player state | {"currentTime":100.214145,"hasError":false}
 [2025-11-22T19:08:13.196Z] Seeking to buffer end | {"from":100.214145,"to":103.507333}
+[2025-11-22T19:17:45.761Z] Playhead stalling warning detected (raw)
+[2025-11-22T19:17:55.764Z] Critical warning: Playhead stalling (debounced)
+[2025-11-22T19:17:55.764Z] Event: AD_DETECTED
+[2025-11-22T19:17:55.764Z] Resilience execution started
+[2025-11-22T19:17:55.764Z] Captured player state | {"currentTime":680.940581,"hasError":false}
+[2025-11-22T19:17:55.764Z] Seeking to buffer end | {"from":680.940581,"to":685.501999}
+[2025-11-22T19:18:37.363Z] Playhead stalling warning detected (raw)
+[2025-11-22T19:18:47.367Z] Critical warning: Playhead stalling (debounced)
+[2025-11-22T19:18:47.367Z] Event: AD_DETECTED
+[2025-11-22T19:18:47.367Z] Resilience execution started
+[2025-11-22T19:18:47.367Z] Captured player state | {"currentTime":734.247998,"hasError":false}
+[2025-11-22T19:18:47.367Z] Seeking to buffer end | {"from":734.247998,"to":737.512666}

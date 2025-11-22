@@ -1,6 +1,6 @@
 // ==UserScript==
-// @name          Mega Ad Dodger 3000 (Stealth Reactor Core) 1.28
-// @version       1.28
+// @name          Mega Ad Dodger 3000 (Stealth Reactor Core) 1.29
+// @version       1.29
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing. 
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -760,32 +760,25 @@
     const Resilience = (() => {
         let isFixing = false;
 
-        /**
-         * Attempts to play video with retry logic and detailed logging.
-         * @param {HTMLVideoElement} video - Video element to play.
-         * @param {string} context - Context string for logging.
-         * @returns {Promise<boolean>} - True if play succeeded, false otherwise.
-         */
         const playWithRetry = async (video, context = 'unknown') => {
             const maxRetries = 3;
             for (let attempt = 1; attempt <= maxRetries; attempt++) {
+                const playStartTime = performance.now();
                 try {
                     Logger.add(`Play attempt ${attempt}/${maxRetries} (${context})`, {
                         before: { paused: video.paused, readyState: video.readyState, currentTime: video.currentTime },
                     });
                     await video.play();
-                    // A short delay to allow the browser to update the paused state.
                     await Fn.sleep(50);
                     if (!video.paused) {
-                        Logger.add(`Play attempt ${attempt} SUCCESS`, { context });
+                        Logger.add(`Play attempt ${attempt} SUCCESS`, { context, duration_ms: performance.now() - playStartTime });
                         return true;
                     }
-                    Logger.add(`Play attempt ${attempt} FAILED: video still paused`, { context });
+                    Logger.add(`Play attempt ${attempt} FAILED: video still paused`, { context, duration_ms: performance.now() - playStartTime });
                 } catch (error) {
-                    Logger.add(`Play attempt ${attempt} threw error`, { context, error: error.message });
+                    Logger.add(`Play attempt ${attempt} threw error`, { context, error: error.message, duration_ms: performance.now() - playStartTime });
                     if (error.name === 'NotAllowedError') {
-                        Logger.add('AUTOPLAY BLOCKED by browser policy. Cannot recover.', { context });
-                        return false; // Don't retry on autoplay blocks.
+                        return false;
                     }
                 }
                 if (attempt < maxRetries) {
@@ -796,13 +789,10 @@
             return false;
         };
 
-        /**
-         * Executes aggressive recovery by forcing a stream reload.
-         * @param {HTMLVideoElement} video - The video element.
-         */
         const aggressiveRecovery = async (video) => {
             Logger.addMetric('aggressive_recoveries');
             Logger.add('Executing aggressive recovery: forcing stream refresh');
+            const recoveryStartTime = performance.now();
 
             const playbackRate = video.playbackRate;
             const volume = video.volume;
@@ -810,8 +800,6 @@
             const originalSrc = video.src;
             const isBlobUrl = originalSrc && originalSrc.startsWith('blob:');
 
-            // This is the core of the fix: for blobs, we unload and reload the source
-            // to force the player's internal state to reset.
             if (isBlobUrl) {
                 Logger.add('Blob URL detected - performing unload/reload cycle.');
                 video.src = '';
@@ -831,11 +819,12 @@
                 const interval = setInterval(() => {
                     if (video.readyState >= 2) {
                         clearInterval(interval);
+                        Logger.add('Stream reloaded.', { duration_ms: performance.now() - recoveryStartTime });
                         resolve();
                     } else if (++checkCount >= maxChecks) {
                         clearInterval(interval);
                         Logger.add('Stream reload timeout during aggressive recovery.');
-                        resolve(); // Resolve anyway to not block forever
+                        resolve();
                     }
                 }, checkInterval);
             });
@@ -843,26 +832,13 @@
             video.playbackRate = playbackRate;
             video.volume = volume;
             video.muted = muted;
-            Logger.add('Player state restored after aggressive recovery');
         };
 
-        /**
-         * Executes standard recovery by seeking near the buffer end.
-         * @param {HTMLVideoElement} video - The video element.
-         */
         const standardRecovery = (video) => {
+            Logger.add('Executing standard recovery: seeking');
             if (video.buffered.length > 0) {
                 const bufferEnd = video.buffered.end(video.buffered.length - 1);
-                const seekTarget = bufferEnd - 0.5;
-                if (Math.abs(video.currentTime - seekTarget) > 1) {
-                    Logger.add('Seeking to buffer end', { from: video.currentTime, to: seekTarget });
-                    video.currentTime = seekTarget;
-                } else {
-                    Logger.add('Close to buffer end, small backward seek');
-                    video.currentTime = Math.max(0, video.currentTime - CONFIG.player.STANDARD_SEEK_BACK_S);
-                }
-            } else {
-                Logger.add('No buffer detected, attempting play');
+                video.currentTime = bufferEnd - 0.5;
             }
         };
 
@@ -873,6 +849,7 @@
                     return;
                 }
                 isFixing = true;
+                const startTime = performance.now();
 
                 try {
                     Logger.add('Resilience execution started');
@@ -884,8 +861,6 @@
                     }
 
                     const { currentTime, buffered, error } = video;
-                    Logger.add('Captured player state', { currentTime, hasError: !!error });
-
                     if (error && error.code === CONFIG.codes.MEDIA_ERROR_SRC) {
                         Logger.add('Fatal error (code 4) - cannot recover, waiting for Twitch reload');
                         return;
@@ -894,11 +869,8 @@
                     let needsAggressive = false;
                     if (buffered.length > 0) {
                         const bufferEnd = buffered.end(buffered.length - 1);
-                        const isStuckAtEnd = Math.abs(currentTime - bufferEnd) < 0.5;
-                        const bufferLength = bufferEnd - buffered.start(0);
-
-                        if (isStuckAtEnd) {
-                            if (bufferLength < CONFIG.player.BUFFER_HEALTH_S) {
+                        if (Math.abs(currentTime - bufferEnd) < 0.5) {
+                           if ((bufferEnd - buffered.start(0)) < CONFIG.player.BUFFER_HEALTH_S) {
                                 Logger.add('Insufficient buffer for recovery, waiting');
                                 return;
                             }
@@ -921,6 +893,7 @@
                     Logger.add('Resilience failed', { error: String(e) });
                 } finally {
                     isFixing = false;
+                    Logger.add('Resilience execution finished', { total_duration_ms: performance.now() - startTime });
                 }
             },
         };
