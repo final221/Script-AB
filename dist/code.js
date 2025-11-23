@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       2.0.19
+// @version       2.0.20
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -1381,9 +1381,20 @@ const AggressiveRecovery = (() => {
 
             // Execute Strategy
             if (isBlobUrl) {
-                // FIX: Do NOT call load() or clear src for Blob URLs to avoid Error #4000 and AbortErrors.
-                // Seeking to infinity forces the player to jump to the live edge without resetting the source.
-                video.currentTime = 999999;
+                // FIX: Use seekable.end() to find the true live edge.
+                // 999999 was too aggressive and caused freezing.
+                let seekTarget = 999999;
+                if (video.seekable && video.seekable.length > 0) {
+                    seekTarget = video.seekable.end(video.seekable.length - 1);
+                    Logger.add('Live Edge Seek target found', {
+                        seekableStart: video.seekable.start(0),
+                        seekableEnd: seekTarget
+                    });
+                } else {
+                    Logger.add('Live Edge Seek: No seekable range found, using fallback');
+                    seekTarget = video.currentTime + 30;
+                }
+                video.currentTime = seekTarget;
             } else {
                 Logger.add('Standard URL detected - reloading via empty src');
                 video.src = '';

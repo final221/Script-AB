@@ -1,72 +1,10 @@
-GET
-https://vod-secure.twitch.tv/_404/404_processing_640x360.png
-NS_BINDING_ABORTED
-
-	
-GET
-	https://vod-secure.twitch.tv/_404/404_processing_640x360.png
-Status
-403
-VersionHTTP/2
-Übertragen489 B (0 B Größe)
-Referrer Policystrict-origin-when-cross-origin
-Anfrage-PrioritätLow
-DNS-AuflösungSystem
-
-	
-content-length
-	17
-content-type
-	text/html
-date
-	Sun, 23 Nov 2025 15:11:21 GMT
-etag
-	"f2ba37ab539401d32d53e77d7527788e"
-last-modified
-	Mon, 28 Mar 2016 20:26:38 GMT
-server
-	AmazonS3
-via
-	1.1 01c2e8de72140867daecf63b07211c44.cloudfront.net (CloudFront)
-x-amz-cf-id
-	PIFS4MxqBUNLQwCd-rIqxJ91-6zLCAq-DMk2SUU5FWjnF6lWPIwgkA==
-x-amz-cf-pop
-	HAM50-P4
-x-amz-error-code
-	AccessDenied
-x-amz-error-message
-	Access Denied
-x-cache
-	Error from cloudfront
-X-Firefox-Spdy
-	h2
-	
-Accept
-	image/avif,image/webp,image/png,image/svg+xml,image/*;q=0.8,*/*;q=0.5
-Accept-Encoding
-	gzip, deflate, br, zstd
-Accept-Language
-	en-US,en;q=0.7,de;q=0.3
-Connection
-	keep-alive
-Cookie
-	unique_id=MyJILP1jfuUz2VBuUB2ZPajiR0aXfrYe; unique_id_durable=MyJILP1jfuUz2VBuUB2ZPajiR0aXfrYe; twitch.lohp.countryCode=DE; experiment_overrides={%22experiments%22:{}%2C%22disabled%22:[]}; api_token=twilight.2257da65fb6f05bd0fc4bb137648d036; server_session_id=aae059702c2a4665b2f4bdb7f8c9fd87
-Host
-	vod-secure.twitch.tv
-Priority
-	u=4, i
-Referer
-	https://www.twitch.tv/
-Sec-Fetch-Dest
-	image
-Sec-Fetch-Mode
-	no-cors
-Sec-Fetch-Site
-	same-site
-Sec-GPC
-	1
-User-Agent
-	Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:145.0) Gecko/20100101 Firefox/145.0
-
-​
-
+window.forceTwitchAggressiveRecovery()
+undefined
+window.forceTwitchAggressiveRecovery()
+undefined
+window.forceTwitchAdRecovery()
+undefined
+window.forceTwitchAggressiveRecovery()
+undefined
+exportTwitchAdLogs()
+undefined 
