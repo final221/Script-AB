@@ -34,14 +34,29 @@ const FrameDropDetector = (() => {
 
         if (newDropped > 0) {
             const recentDropRate = newTotal > 0 ? (newDropped / newTotal) * 100 : 0;
-            Logger.add('Frame drop detected', { newDropped, newTotal, recentDropRate: recentDropRate.toFixed(2) + '%' });
+            Logger.add('[HEALTH] Frame drop detected', {
+                newDropped,
+                newTotal,
+                recentDropRate: recentDropRate.toFixed(2) + '%'
+            });
 
-            if (newDropped > CONFIG.timing.FRAME_DROP_SEVERE_THRESHOLD || (newDropped > CONFIG.timing.FRAME_DROP_MODERATE_THRESHOLD && recentDropRate > CONFIG.timing.FRAME_DROP_RATE_THRESHOLD)) {
+            const exceedsSevere = newDropped > CONFIG.timing.FRAME_DROP_SEVERE_THRESHOLD;
+            const exceedsModerate = newDropped > CONFIG.timing.FRAME_DROP_MODERATE_THRESHOLD &&
+                recentDropRate > CONFIG.timing.FRAME_DROP_RATE_THRESHOLD;
+
+            if (exceedsSevere || exceedsModerate) {
+                const severity = exceedsSevere ? 'SEVERE' : 'MODERATE';
+                Logger.add(`[HEALTH] Frame drop threshold exceeded | Severity: ${severity}`, {
+                    newDropped,
+                    threshold: exceedsSevere ? CONFIG.timing.FRAME_DROP_SEVERE_THRESHOLD : CONFIG.timing.FRAME_DROP_MODERATE_THRESHOLD,
+                    recentDropRate
+                });
+
                 state.lastDroppedFrames = quality.droppedVideoFrames;
                 state.lastTotalFrames = quality.totalVideoFrames;
                 return {
-                    reason: 'Severe frame drop',
-                    details: { newDropped, newTotal, recentDropRate }
+                    reason: `${severity} frame drop`,
+                    details: { newDropped, newTotal, recentDropRate, severity }
                 };
             }
         }

@@ -36,21 +36,27 @@ const AdBlocker = (() => {
         const isDelivery = isActualAdDelivery(url);
 
         if (isTrigger) {
-            Logger.add('Trigger pattern detected', {
+            const triggerCategory = isDelivery ? 'Ad Delivery' : 'Availability Check';
+            Logger.add(`[NETWORK] Trigger pattern detected | Category: ${triggerCategory}`, {
                 type,
                 url,
-                isAvailabilityCheck: !isDelivery
+                isDelivery
             });
 
             // Only emit AD_DETECTED for actual ad delivery
             if (isDelivery) {
-                Adapters.EventBus.emit(CONFIG.events.AD_DETECTED);
+                Adapters.EventBus.emit(CONFIG.events.AD_DETECTED, {
+                    source: 'NETWORK',
+                    trigger: 'AD_DELIVERY',
+                    reason: 'Ad delivery pattern matched',
+                    details: { url, type }
+                });
             }
         }
 
         const isAd = Logic.Network.isAd(url);
         if (isAd) {
-            Logger.add('Ad pattern detected', { type, url });
+            Logger.add('[NETWORK] Ad pattern detected', { type, url });
             Metrics.increment('ads_detected');
         }
         return isAd;

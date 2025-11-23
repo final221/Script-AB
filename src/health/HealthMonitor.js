@@ -10,11 +10,16 @@ const HealthMonitor = (() => {
     let videoRef = null;
     const timers = { main: null, sync: null };
 
-    const triggerRecovery = (reason, details) => {
-        Logger.add(`HealthMonitor triggering recovery: ${reason}`, details);
+    const triggerRecovery = (reason, details, triggerType) => {
+        Logger.add(`[HEALTH] Recovery trigger | Reason: ${reason}, Type: ${triggerType}`, details);
         Metrics.increment('health_triggers');
         HealthMonitor.stop();
-        Adapters.EventBus.emit(CONFIG.events.AD_DETECTED);
+        Adapters.EventBus.emit(CONFIG.events.AD_DETECTED, {
+            source: 'HEALTH',
+            trigger: triggerType,
+            reason: reason,
+            details: details
+        });
     };
 
     const runMainChecks = () => {
@@ -26,14 +31,14 @@ const HealthMonitor = (() => {
         // Check for stuck playback
         const stuckResult = StuckDetector.check(videoRef);
         if (stuckResult) {
-            triggerRecovery(stuckResult.reason, stuckResult.details);
+            triggerRecovery(stuckResult.reason, stuckResult.details, 'STUCK_PLAYBACK');
             return;
         }
 
         // Check for frame drops
         const frameDropResult = FrameDropDetector.check(videoRef);
         if (frameDropResult) {
-            triggerRecovery(frameDropResult.reason, frameDropResult.details);
+            triggerRecovery(frameDropResult.reason, frameDropResult.details, 'FRAME_DROP');
             return;
         }
     };
@@ -47,7 +52,7 @@ const HealthMonitor = (() => {
         // Check A/V sync
         const syncResult = AVSyncDetector.check(videoRef);
         if (syncResult) {
-            triggerRecovery(syncResult.reason, syncResult.details);
+            triggerRecovery(syncResult.reason, syncResult.details, 'AV_SYNC');
             return;
         }
     };

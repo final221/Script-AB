@@ -47,9 +47,15 @@ const StuckDetector = (() => {
         }
 
         if (state.stuckCount >= CONFIG.player.STUCK_COUNT_LIMIT) {
+            Logger.add('[HEALTH] Stuck threshold exceeded', {
+                stuckCount: state.stuckCount,
+                threshold: CONFIG.player.STUCK_COUNT_LIMIT,
+                lastTime,
+                currentTime
+            });
             return {
                 reason: 'Player stuck',
-                details: { stuckCount: state.stuckCount, lastTime, currentTime }
+                details: { stuckCount: state.stuckCount, lastTime, currentTime, threshold: CONFIG.player.STUCK_COUNT_LIMIT }
             };
         }
 

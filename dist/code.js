@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       2.0.5
+// @version       2.0.7
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -10,32 +10,6 @@
 
 (function () {
     'use strict';
-
-/**
- * MEGA AD DODGER 3000 (Stealth Reactor Core)
- * A monolithic, self-contained userscript for Twitch ad blocking.
- * 
-*/
-/**
- * ARCHITECTURE MAP
- * 
- * [Core] -------------------------> [Network] (Intercepts XHR/Fetch)
- *   |                                 |
- *   +-> [PlayerContext]               +-> [Logic.Network] (Ad detection)
- *   |      |
- *   |      +-> [Logic.Player] (Signature scanning)
- *   |
- *   +-> [HealthMonitor] (Stuck detection)
- *   |
- *   +-> [Resilience] (Ad blocking execution)
- *          |
- *          +-> [VideoListenerManager] (Event cleanup)
- * 
- * EVENT BUS FLOW:
- * [Network] -> AD_DETECTED -> [Core] -> [Resilience]
- * [HealthMonitor] -> AD_DETECTED -> [Core] -> [Resilience]
- * [Core] -> ACQUIRE -> [PlayerContext] -> [HealthMonitor]
- */
 
 // ============================================================================
 // 1. CONFIGURATION & CONSTANTS
@@ -518,21 +492,27 @@ const AdBlocker = (() => {
         const isDelivery = isActualAdDelivery(url);
 
         if (isTrigger) {
-            Logger.add('Trigger pattern detected', {
+            const triggerCategory = isDelivery ? 'Ad Delivery' : 'Availability Check';
+            Logger.add(`[NETWORK] Trigger pattern detected | Category: ${triggerCategory}`, {
                 type,
                 url,
-                isAvailabilityCheck: !isDelivery
+                isDelivery
             });
 
             // Only emit AD_DETECTED for actual ad delivery
             if (isDelivery) {
-                Adapters.EventBus.emit(CONFIG.events.AD_DETECTED);
+                Adapters.EventBus.emit(CONFIG.events.AD_DETECTED, {
+                    source: 'NETWORK',
+                    trigger: 'AD_DELIVERY',
+                    reason: 'Ad delivery pattern matched',
+                    details: { url, type }
+                });
             }
         }
 
         const isAd = Logic.Network.isAd(url);
         if (isAd) {
-            Logger.add('Ad pattern detected', { type, url });
+            Logger.add('[NETWORK] Ad pattern detected', { type, url });
             Metrics.increment('ads_detected');
         }
         return isAd;
@@ -820,9 +800,15 @@ const StuckDetector = (() => {
         }
 
         if (state.stuckCount >= CONFIG.player.STUCK_COUNT_LIMIT) {
+            Logger.add('[HEALTH] Stuck threshold exceeded', {
+                stuckCount: state.stuckCount,
+                threshold: CONFIG.player.STUCK_COUNT_LIMIT,
+                lastTime,
+                currentTime
+            });
             return {
                 reason: 'Player stuck',
-                details: { stuckCount: state.stuckCount, lastTime, currentTime }
+                details: { stuckCount: state.stuckCount, lastTime, currentTime, threshold: CONFIG.player.STUCK_COUNT_LIMIT }
             };
         }
 
@@ -871,14 +857,29 @@ const FrameDropDetector = (() => {
 
         if (newDropped > 0) {
             const recentDropRate = newTotal > 0 ? (newDropped / newTotal) * 100 : 0;
-            Logger.add('Frame drop detected', { newDropped, newTotal, recentDropRate: recentDropRate.toFixed(2) + '%' });
+            Logger.add('[HEALTH] Frame drop detected', {
+                newDropped,
+                newTotal,
+                recentDropRate: recentDropRate.toFixed(2) + '%'
+            });
 
-            if (newDropped > CONFIG.timing.FRAME_DROP_SEVERE_THRESHOLD || (newDropped > CONFIG.timing.FRAME_DROP_MODERATE_THRESHOLD && recentDropRate > CONFIG.timing.FRAME_DROP_RATE_THRESHOLD)) {
+            const exceedsSevere = newDropped > CONFIG.timing.FRAME_DROP_SEVERE_THRESHOLD;
+            const exceedsModerate = newDropped > CONFIG.timing.FRAME_DROP_MODERATE_THRESHOLD &&
+                recentDropRate > CONFIG.timing.FRAME_DROP_RATE_THRESHOLD;
+
+            if (exceedsSevere || exceedsModerate) {
+                const severity = exceedsSevere ? 'SEVERE' : 'MODERATE';
+                Logger.add(`[HEALTH] Frame drop threshold exceeded | Severity: ${severity}`, {
+                    newDropped,
+                    threshold: exceedsSevere ? CONFIG.timing.FRAME_DROP_SEVERE_THRESHOLD : CONFIG.timing.FRAME_DROP_MODERATE_THRESHOLD,
+                    recentDropRate
+                });
+
                 state.lastDroppedFrames = quality.droppedVideoFrames;
                 state.lastTotalFrames = quality.totalVideoFrames;
                 return {
-                    reason: 'Severe frame drop',
-                    details: { newDropped, newTotal, recentDropRate }
+                    reason: `${severity} frame drop`,
+                    details: { newDropped, newTotal, recentDropRate, severity }
                 };
             }
         }
@@ -931,23 +932,28 @@ const AVSyncDetector = (() => {
 
             if (discrepancy > CONFIG.timing.AV_SYNC_THRESHOLD_MS / 1000 && expectedTimeAdvancement > 0.1) {
                 state.syncIssueCount++;
-                Logger.add('A/V sync issue detected', {
+                Logger.add('[HEALTH] A/V sync issue detected', {
                     discrepancy: (discrepancy * 1000).toFixed(2) + 'ms',
                     count: state.syncIssueCount,
                 });
             } else if (discrepancy < CONFIG.timing.AV_SYNC_THRESHOLD_MS / 2000) {
                 if (state.syncIssueCount > 0) {
-                    Logger.add('A/V sync recovered', { previousIssues: state.syncIssueCount });
+                    Logger.add('[HEALTH] A/V sync recovered', { previousIssues: state.syncIssueCount });
                     state.syncIssueCount = 0;
                 }
             }
 
             if (state.syncIssueCount >= 3) {
+                Logger.add('[HEALTH] A/V sync threshold exceeded', {
+                    syncIssueCount: state.syncIssueCount,
+                    threshold: 3,
+                    discrepancy: (discrepancy * 1000).toFixed(2) + 'ms'
+                });
                 state.lastSyncCheckTime = now;
                 state.lastSyncVideoTime = video.currentTime;
                 return {
                     reason: 'Persistent A/V sync issue',
-                    details: { syncIssueCount: state.syncIssueCount, discrepancy }
+                    details: { syncIssueCount: state.syncIssueCount, discrepancy, threshold: 3 }
                 };
             }
         }
@@ -974,11 +980,16 @@ const HealthMonitor = (() => {
     let videoRef = null;
     const timers = { main: null, sync: null };
 
-    const triggerRecovery = (reason, details) => {
-        Logger.add(`HealthMonitor triggering recovery: ${reason}`, details);
+    const triggerRecovery = (reason, details, triggerType) => {
+        Logger.add(`[HEALTH] Recovery trigger | Reason: ${reason}, Type: ${triggerType}`, details);
         Metrics.increment('health_triggers');
         HealthMonitor.stop();
-        Adapters.EventBus.emit(CONFIG.events.AD_DETECTED);
+        Adapters.EventBus.emit(CONFIG.events.AD_DETECTED, {
+            source: 'HEALTH',
+            trigger: triggerType,
+            reason: reason,
+            details: details
+        });
     };
 
     const runMainChecks = () => {
@@ -990,14 +1001,14 @@ const HealthMonitor = (() => {
         // Check for stuck playback
         const stuckResult = StuckDetector.check(videoRef);
         if (stuckResult) {
-            triggerRecovery(stuckResult.reason, stuckResult.details);
+            triggerRecovery(stuckResult.reason, stuckResult.details, 'STUCK_PLAYBACK');
             return;
         }
 
         // Check for frame drops
         const frameDropResult = FrameDropDetector.check(videoRef);
         if (frameDropResult) {
-            triggerRecovery(frameDropResult.reason, frameDropResult.details);
+            triggerRecovery(frameDropResult.reason, frameDropResult.details, 'FRAME_DROP');
             return;
         }
     };
@@ -1011,7 +1022,7 @@ const HealthMonitor = (() => {
         // Check A/V sync
         const syncResult = AVSyncDetector.check(videoRef);
         if (syncResult) {
-            triggerRecovery(syncResult.reason, syncResult.details);
+            triggerRecovery(syncResult.reason, syncResult.details, 'AV_SYNC');
             return;
         }
     };
@@ -1285,33 +1296,33 @@ const ResilienceOrchestrator = (() => {
     return {
         execute: async (container) => {
             if (isFixing) {
-                Logger.add('Resilience already in progress, skipping');
+                Logger.add('[RECOVERY] Resilience already in progress, skipping');
                 return;
             }
             isFixing = true;
             const startTime = performance.now();
 
             try {
-                Logger.add('Resilience execution started');
+                Logger.add('[RECOVERY] Resilience execution started');
                 Metrics.increment('resilience_executions');
 
                 const video = container.querySelector(CONFIG.selectors.VIDEO);
                 if (!video) {
-                    Logger.add('Resilience aborted: No video element found');
+                    Logger.add('[RECOVERY] Resilience aborted: No video element found');
                     return;
                 }
 
                 // Check for fatal errors
                 const { error } = video;
                 if (error && error.code === CONFIG.codes.MEDIA_ERROR_SRC) {
-                    Logger.add('Fatal error (code 4) - cannot recover, waiting for Twitch reload');
+                    Logger.add('[RECOVERY] Fatal error (code 4) - cannot recover, waiting for Twitch reload');
                     return;
                 }
 
                 // Check buffer and select strategy
                 const analysis = BufferAnalyzer.analyze(video);
                 if (analysis.bufferHealth === 'critical') {
-                    Logger.add('Insufficient buffer for recovery, waiting');
+                    Logger.add('[RECOVERY] Insufficient buffer for recovery, waiting');
                     return;
                 }
 
@@ -1326,10 +1337,10 @@ const ResilienceOrchestrator = (() => {
 
                 Adapters.EventBus.emit(CONFIG.events.REPORT, { status: 'SUCCESS' });
             } catch (e) {
-                Logger.add('Resilience failed', { error: String(e) });
+                Logger.add('[RECOVERY] Resilience failed', { error: String(e) });
             } finally {
                 isFixing = false;
-                Logger.add('Resilience execution finished', {
+                Logger.add('[RECOVERY] Resilience execution finished', {
                     total_duration_ms: performance.now() - startTime
                 });
             }
@@ -1460,20 +1471,29 @@ const ScriptBlocker = (() => {
 const EventCoordinator = (() => {
     return {
         init: () => {
-            Adapters.EventBus.on(CONFIG.events.ACQUIRE, () => {
+            Adapters.EventBus.on(CONFIG.events.ACQUIRE, (payload) => {
                 const container = PlayerLifecycle.getActiveContainer();
                 if (container) {
                     if (PlayerContext.get(container)) {
-                        Logger.add('Event: ACQUIRE - Success');
+                        Logger.add('[LIFECYCLE] Event: ACQUIRE - Success', payload);
                         HealthMonitor.start(container);
                     } else {
-                        Logger.add('Event: ACQUIRE - Failed');
+                        Logger.add('[LIFECYCLE] Event: ACQUIRE - Failed', payload);
                     }
                 }
             });
 
-            Adapters.EventBus.on(CONFIG.events.AD_DETECTED, () => {
-                Logger.add('Event: AD_DETECTED');
+            Adapters.EventBus.on(CONFIG.events.AD_DETECTED, (payload) => {
+                // Enhanced logging with source and trigger context
+                if (payload?.source) {
+                    const triggerInfo = payload.trigger ? ` | Trigger: ${payload.trigger}` : '';
+                    const reasonInfo = payload.reason ? ` | Reason: ${payload.reason}` : '';
+                    Logger.add(`[EVENT] AD_DETECTED | Source: ${payload.source}${triggerInfo}${reasonInfo}`, payload.details || {});
+                } else {
+                    // Fallback for events without payload (backward compatibility)
+                    Logger.add('[EVENT] AD_DETECTED | Source: UNKNOWN');
+                }
+
                 const container = PlayerLifecycle.getActiveContainer();
                 if (container) {
                     ResilienceOrchestrator.execute(container);
