@@ -4,7 +4,7 @@
  * @responsibility Seek to live edge without disrupting stream.
  */
 const StandardRecovery = (() => {
-    const SEEK_OFFSET_S = 0.5;
+    // const SEEK_OFFSET_S = 0.5; // Removed in favor of CONFIG.player.STANDARD_SEEK_BACK_S
 
     return {
         execute: (video) => {
@@ -16,10 +16,11 @@ const StandardRecovery = (() => {
             }
 
             const bufferEnd = video.buffered.end(video.buffered.length - 1);
-            video.currentTime = bufferEnd - SEEK_OFFSET_S;
+            const seekTarget = Math.max(0, bufferEnd - CONFIG.player.STANDARD_SEEK_BACK_S);
+            video.currentTime = seekTarget;
 
             Logger.add('Standard recovery complete', {
-                seekTo: video.currentTime,
+                seekTo: seekTarget,
                 bufferEnd
             });
         }

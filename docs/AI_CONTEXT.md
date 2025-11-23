@@ -36,3 +36,8 @@
 | **Stream Recovery** | `ResilienceOrchestrator` | `StandardRecovery`, `AggressiveRecovery` |
 | **Monitoring** | `HealthMonitor` | `StuckDetector`, `FrameDropDetector` |
 | **Logging** | `Logger` | `Diagnostics`, `Instrumentation` |
+
+## Debugging Tools
+The following global functions are exposed for debugging and manual intervention:
+- `window.forceTwitchAdRecovery()`: Triggers the standard `AD_DETECTED` event flow.
+- `window.forceTwitchAggressiveRecovery()`: Forces an **Aggressive Recovery** (stream reload), bypassing buffer health checks. Useful for testing crash resilience.
