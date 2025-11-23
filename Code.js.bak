@@ -1,3 +1,13 @@
+// ==UserScript==
+// @name          Mega Ad Dodger 3000 (Stealth Reactor Core) 1.34
+// @version       1.34
+// @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing. 
+// @author        Senior Expert AI
+// @match         *://*.twitch.tv/*
+// @run-at        document-start
+// @grant         none
+// ==/UserScript==
+
 (function () {
     'use strict';
 
@@ -212,155 +222,155 @@
     // 5. MODULES
     // ============================================================================
 
-    // --- Metrics ---
-    /**
-     * High-level telemetry and metrics tracking.
-     * @responsibility Collects and calculates application metrics.
-     */
-    const Metrics = (() => {
-        const counters = {
-            ads_detected: 0,
-            ads_blocked: 0,
-            resilience_executions: 0,
-            aggressive_recoveries: 0,
-            health_triggers: 0,
-            errors: 0,
-            session_start: Date.now(),
-        };
+// --- Metrics ---
+/**
+ * High-level telemetry and metrics tracking.
+ * @responsibility Collects and calculates application metrics.
+ */
+const Metrics = (() => {
+    const counters = {
+        ads_detected: 0,
+        ads_blocked: 0,
+        resilience_executions: 0,
+        aggressive_recoveries: 0,
+        health_triggers: 0,
+        errors: 0,
+        session_start: Date.now(),
+    };
 
-        const increment = (category, value = 1) => {
-            if (counters[category] !== undefined) {
-                counters[category] += value;
-            }
-        };
+    const increment = (category, value = 1) => {
+        if (counters[category] !== undefined) {
+            counters[category] += value;
+        }
+    };
 
-        const getSummary = () => ({
-            ...counters,
-            uptime_ms: Date.now() - counters.session_start,
-            block_rate: counters.ads_detected > 0 ? (counters.ads_blocked / counters.ads_detected * 100).toFixed(2) + '%' : 'N/A',
+    const getSummary = () => ({
+        ...counters,
+        uptime_ms: Date.now() - counters.session_start,
+        block_rate: counters.ads_detected > 0 ? (counters.ads_blocked / counters.ads_detected * 100).toFixed(2) + '%' : 'N/A',
+    });
+
+    return {
+        increment,
+        getSummary,
+    };
+})();
+
+// --- Instrumentation ---
+/**
+ * Hooks into global events and console methods to monitor application behavior,
+ * log relevant data, and update metrics.
+ * @responsibility Observes, interprets, and reacts to system-wide events and console output.
+ */
+const Instrumentation = (() => {
+    const setupGlobalErrorHandlers = () => {
+        window.addEventListener('error', (event) => {
+            Logger.add('Global Error', {
+                message: event.message,
+                filename: event.filename,
+                lineno: event.lineno,
+                colno: event.colno,
+            });
+            Metrics.increment('errors');
         });
 
-        return {
-            increment,
-            getSummary,
-        };
-    })();
-
-    // --- Instrumentation ---
-    /**
-     * Hooks into global events and console methods to monitor application behavior,
-     * log relevant data, and update metrics.
-     * @responsibility Observes, interprets, and reacts to system-wide events and console output.
-     */
-    const Instrumentation = (() => {
-        const setupGlobalErrorHandlers = () => {
-            window.addEventListener('error', (event) => {
-                Logger.add('Global Error', {
-                    message: event.message,
-                    filename: event.filename,
-                    lineno: event.lineno,
-                    colno: event.colno,
-                });
-                Metrics.increment('errors');
+        window.addEventListener('unhandledrejection', (event) => {
+            Logger.add('Unhandled Rejection', {
+                reason: event.reason ? event.reason.toString() : 'Unknown',
             });
+            Metrics.increment('errors');
+        });
+    };
 
-            window.addEventListener('unhandledrejection', (event) => {
-                Logger.add('Unhandled Rejection', {
-                    reason: event.reason ? event.reason.toString() : 'Unknown',
-                });
-                Metrics.increment('errors');
-            });
-        };
+    const interceptConsoleError = () => {
+        const originalError = console.error;
+        const benignErrorSignatures = ['[GraphQL]', 'unauthenticated', 'PinnedChatSettings'];
 
-        const interceptConsoleError = () => {
-            const originalError = console.error;
-            const benignErrorSignatures = ['[GraphQL]', 'unauthenticated', 'PinnedChatSettings'];
+        console.error = (...args) => {
+            originalError.apply(console, args);
+            try {
+                const msg = args.map(String).join(' ');
+                const isBenign = benignErrorSignatures.some(sig => msg.includes(sig));
+                Logger.add('Console Error', { args: args.map(String), benign: isBenign });
 
-            console.error = (...args) => {
-                originalError.apply(console, args);
-                try {
-                    const msg = args.map(String).join(' ');
-                    const isBenign = benignErrorSignatures.some(sig => msg.includes(sig));
-                    Logger.add('Console Error', { args: args.map(String), benign: isBenign });
-
-                    if (!isBenign) {
-                        Metrics.increment('errors');
-                        if (msg.includes('Error #4000') || msg.includes('MediaLoadInvalidURI')) {
-                            Logger.add('Player crash detected, triggering recovery');
-                            setTimeout(() => Adapters.EventBus.emit(CONFIG.events.AD_DETECTED), 300);
-                        }
+                if (!isBenign) {
+                    Metrics.increment('errors');
+                    if (msg.includes('Error #4000') || msg.includes('MediaLoadInvalidURI')) {
+                        Logger.add('Player crash detected, triggering recovery');
+                        setTimeout(() => Adapters.EventBus.emit(CONFIG.events.AD_DETECTED), 300);
                     }
-                } catch (e) {
-                    // Avoid recursion if logging fails
                 }
-            };
+            } catch (e) {
+                // Avoid recursion if logging fails
+            }
         };
+    };
 
-        const interceptConsoleWarn = () => {
-            const originalWarn = console.warn;
-            const stallingDebounced = Fn.debounce(() => {
-                Logger.add('Critical warning: Playhead stalling (debounced)');
-                Adapters.EventBus.emit(CONFIG.events.AD_DETECTED);
-            }, 10000);
+    const interceptConsoleWarn = () => {
+        const originalWarn = console.warn;
+        const stallingDebounced = Fn.debounce(() => {
+            Logger.add('Critical warning: Playhead stalling (debounced)');
+            Adapters.EventBus.emit(CONFIG.events.AD_DETECTED);
+        }, 10000);
 
-            console.warn = (...args) => {
-                originalWarn.apply(console, args);
-                try {
-                    const msg = args.map(String).join(' ');
-                    if (msg.includes('Playhead stalling')) {
-                        Logger.add('Playhead stalling warning detected (raw)');
-                        stallingDebounced();
-                    } else if (CONFIG.logging.LOG_CSP_WARNINGS && msg.includes('Content-Security-Policy')) {
-                        Logger.add('CSP Warning', { args: args.map(String) });
-                    }
-                } catch (e) {
-                    // Avoid recursion if logging fails
+        console.warn = (...args) => {
+            originalWarn.apply(console, args);
+            try {
+                const msg = args.map(String).join(' ');
+                if (msg.includes('Playhead stalling')) {
+                    Logger.add('Playhead stalling warning detected (raw)');
+                    stallingDebounced();
+                } else if (CONFIG.logging.LOG_CSP_WARNINGS && msg.includes('Content-Security-Policy')) {
+                    Logger.add('CSP Warning', { args: args.map(String) });
                 }
-            };
+            } catch (e) {
+                 // Avoid recursion if logging fails
+            }
         };
+    };
 
-        return {
-            init: () => {
-                setupGlobalErrorHandlers();
-                interceptConsoleError();
-                interceptConsoleWarn();
-            },
-        };
-    })();
+    return {
+        init: () => {
+            setupGlobalErrorHandlers();
+            interceptConsoleError();
+            interceptConsoleWarn();
+        },
+    };
+})();
 
-    // --- ReportGenerator ---
-    /**
-     * Generates and facilitates the download of a comprehensive report
-     * based on collected logs and metrics.
-     * @responsibility Formats log and metric data into a report and handles file download.
-     */
-    const ReportGenerator = (() => {
-        const generateContent = (metricsSummary, logs) => {
-            const header = `[METRICS]\nUptime: ${(metricsSummary.uptime_ms / 1000).toFixed(1)}s\nAds Detected: ${metricsSummary.ads_detected}\nAds Blocked: ${metricsSummary.ads_blocked}\nResilience Executions: ${metricsSummary.resilience_executions}\nAggressive Recoveries: ${metricsSummary.aggressive_recoveries}\nHealth Triggers: ${metricsSummary.health_triggers}\nErrors: ${metricsSummary.errors}\n\n[LOGS]\n`;
-            const logContent = logs.map(l => `[${l.timestamp}] ${l.message}${l.detail ? ' | ' + JSON.stringify(l.detail) : ''}`).join('\n');
-            return header + logContent;
-        };
+// --- ReportGenerator ---
+/**
+ * Generates and facilitates the download of a comprehensive report
+ * based on collected logs and metrics.
+ * @responsibility Formats log and metric data into a report and handles file download.
+ */
+const ReportGenerator = (() => {
+    const generateContent = (metricsSummary, logs) => {
+        const header = `[METRICS]\nUptime: ${(metricsSummary.uptime_ms / 1000).toFixed(1)}s\nAds Detected: ${metricsSummary.ads_detected}\nAds Blocked: ${metricsSummary.ads_blocked}\nResilience Executions: ${metricsSummary.resilience_executions}\nAggressive Recoveries: ${metricsSummary.aggressive_recoveries}\nHealth Triggers: ${metricsSummary.health_triggers}\nErrors: ${metricsSummary.errors}\n\n[LOGS]\n`;
+        const logContent = logs.map(l => `[${l.timestamp}] ${l.message}${l.detail ? ' | ' + JSON.stringify(l.detail) : ''}`).join('\n');
+        return header + logContent;
+    };
 
-        const downloadFile = (content) => {
-            const blob = new Blob([content], { type: 'text/plain' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `twitch_ad_logs_${new Date().toISOString().replace(/[:.]/g, '-')}.txt`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-        };
+    const downloadFile = (content) => {
+        const blob = new Blob([content], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `twitch_ad_logs_${new Date().toISOString().replace(/[:.]/g, '-')}.txt`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    };
 
-        return {
-            exportReport: (metricsSummary, logs) => {
-                console.log("Generating and exporting report...");
-                const content = generateContent(metricsSummary, logs);
-                downloadFile(content);
-            },
-        };
-    })();
+    return {
+        exportReport: (metricsSummary, logs) => {
+            console.log("Generating and exporting report...");
+            const content = generateContent(metricsSummary, logs);
+            downloadFile(content);
+        },
+    };
+})();
 
     // --- Logger ---
     /**
@@ -572,7 +582,7 @@
             }
             return Object.values(keyMap).every(k => k !== null);
         };
-
+        
         const searchRecursive = (obj, depth = 0, visited = new WeakSet()) => {
             if (depth > CONFIG.player.MAX_SEARCH_DEPTH || !obj || typeof obj !== 'object' || visited.has(obj)) {
                 return null;
@@ -589,7 +599,7 @@
             }
             return null;
         };
-
+        
         const validateCache = () => {
             if (!cachedContext) return false;
             const isValid = Object.keys(keyMap).every(
@@ -673,7 +683,7 @@
             if (!state.videoRef) return;
             if (state.videoRef.paused || state.videoRef.ended) {
                 if (CONFIG.debug && state.stuckCount > 0) {
-                    Logger.add('HealthMonitor[Debug]: Stuck count reset due to paused/ended state.');
+                     Logger.add('HealthMonitor[Debug]: Stuck count reset due to paused/ended state.');
                 }
                 state.stuckCount = 0;
                 state.lastTime = state.videoRef.currentTime;
@@ -880,7 +890,7 @@
                 video.src = '';
                 video.load();
             }
-
+            
             await new Promise(resolve => {
                 const checkInterval = 100;
                 const maxChecks = CONFIG.timing.PLAYBACK_TIMEOUT_MS / checkInterval;
@@ -934,12 +944,12 @@
                         Logger.add('Fatal error (code 4) - cannot recover, waiting for Twitch reload');
                         return;
                     }
-
+                    
                     let needsAggressive = false;
                     if (buffered.length > 0) {
                         const bufferEnd = buffered.end(buffered.length - 1);
                         if (Math.abs(currentTime - bufferEnd) < 0.5) {
-                            if ((bufferEnd - buffered.start(0)) < CONFIG.player.BUFFER_HEALTH_S) {
+                           if ((bufferEnd - buffered.start(0)) < CONFIG.player.BUFFER_HEALTH_S) {
                                 Logger.add('Insufficient buffer for recovery, waiting');
                                 return;
                             }
@@ -1096,7 +1106,7 @@
             });
             scriptObserver.observe(document.documentElement, { childList: true, subtree: true });
         },
-
+        
         inject: () => {
             Store.update({ lastAttempt: Date.now() });
             Adapters.EventBus.emit(CONFIG.events.ACQUIRE);
