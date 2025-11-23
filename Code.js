@@ -441,15 +441,15 @@ const Store = (() => {
     };
 })();
 
-// --- Network ---
+// --- AdBlocker ---
 /**
- * Intercepts XHR and Fetch requests to detect and block ads.
+ * Handles the decision logic for detecting ads and triggers.
  * @responsibility
- * 1. Monitor network traffic for ad patterns.
- * 2. Mock responses for blocked ads to prevent player errors.
- * 3. Emit AD_DETECTED events.
+ * 1. Check URLs against ad patterns.
+ * 2. Emit AD_DETECTED events.
+ * 3. Update Metrics.
  */
-const Network = (() => {
+const AdBlocker = (() => {
     const process = (url, type) => {
         if (Logic.Network.isTrigger(url)) {
             Logger.add('Trigger pattern detected', { type, url });
@@ -460,11 +460,21 @@ const Network = (() => {
             Logger.add('Ad pattern detected', { type, url });
             Metrics.increment('ads_detected');
         }
-        // Detailed logging is handled inside process to avoid duplication
-        logNetworkRequest(url, type, isAd);
         return isAd;
     };
 
+    return {
+        process
+    };
+})();
+
+// --- Diagnostics ---
+/**
+ * Handles network traffic logging and diagnostics.
+ * @responsibility
+ * 1. Log network requests based on sampling/relevance.
+ */
+const Diagnostics = (() => {
     const logNetworkRequest = (url, type, isAd) => {
         if (isAd) return;
 
@@ -478,6 +488,19 @@ const Network = (() => {
         // --- END OF DIAGNOSTIC CHANGE ---
     };
 
+    return {
+        logNetworkRequest
+    };
+})();
+
+// --- Mocking ---
+/**
+ * Handles the creation and application of mock responses for blocked requests.
+ * @responsibility
+ * 1. Generate mock responses for XHR and Fetch.
+ * 2. Apply mocks to XHR objects.
+ */
+const Mocking = (() => {
     /**
      * Mocks a response for a blocked XHR ad request.
      * !CRITICAL: Mocking responses is essential. If we just block the request,
@@ -505,20 +528,51 @@ const Network = (() => {
         });
     };
 
+    const getFetchMock = (url) => {
+        const { body, type } = Logic.Network.getMock(url);
+        Logger.add('Ad request blocked (FETCH)', { url });
+        Metrics.increment('ads_blocked');
+        return new Response(body, {
+            status: 200,
+            statusText: 'OK',
+            headers: { 'Content-Type': type },
+        });
+    };
+
+    return {
+        mockXhrResponse,
+        getFetchMock
+    };
+})();
+
+// --- Network Manager ---
+/**
+ * Orchestrates the hooking of XMLHttpRequest and fetch, delegating tasks to sub-modules.
+ * @responsibility
+ * 1. Hook XHR and Fetch.
+ * 2. Delegate ad detection to AdBlocker.
+ * 3. Delegate logging to Diagnostics.
+ * 4. Delegate mocking to Mocking.
+ */
+const NetworkManager = (() => {
     const hookXHR = () => {
         const originalOpen = XMLHttpRequest.prototype.open;
         const originalSend = XMLHttpRequest.prototype.send;
 
         XMLHttpRequest.prototype.open = function (method, url) {
-            if (method === 'GET' && typeof url === 'string' && process(url, 'XHR')) {
-                this._isAdRequest = true;
+            if (method === 'GET' && typeof url === 'string') {
+                const isAd = AdBlocker.process(url, 'XHR');
+                Diagnostics.logNetworkRequest(url, 'XHR', isAd);
+                if (isAd) {
+                    this._isAdRequest = true;
+                }
             }
             originalOpen.apply(this, arguments);
         };
 
         XMLHttpRequest.prototype.send = function () {
             if (this._isAdRequest) {
-                mockXhrResponse(this, this._responseURL);
+                Mocking.mockXhrResponse(this, this._responseURL);
                 return;
             }
             originalSend.apply(this, arguments);
@@ -529,15 +583,12 @@ const Network = (() => {
         const originalFetch = window.fetch;
         window.fetch = async (input, init) => {
             const url = (typeof input === 'string') ? input : input.url;
-            if (url && process(url, 'FETCH')) {
-                const { body, type } = Logic.Network.getMock(url);
-                Logger.add('Ad request blocked (FETCH)', { url });
-                Metrics.increment('ads_blocked');
-                return Promise.resolve(new Response(body, {
-                    status: 200,
-                    statusText: 'OK',
-                    headers: { 'Content-Type': type },
-                }));
+            if (url) {
+                const isAd = AdBlocker.process(url, 'FETCH');
+                Diagnostics.logNetworkRequest(url, 'FETCH', isAd);
+                if (isAd) {
+                    return Promise.resolve(Mocking.getFetchMock(url));
+                }
             }
             return originalFetch(input, init);
         };
@@ -1077,7 +1128,7 @@ const Core = {
             return;
         }
 
-        Network.init();
+        NetworkManager.init();
         Instrumentation.init();
         Core.setupEvents();
         Core.setupScriptBlocker();

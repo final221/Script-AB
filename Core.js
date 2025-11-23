@@ -23,7 +23,7 @@ const Core = {
             return;
         }
 
-        Network.init();
+        NetworkManager.init();
         Instrumentation.init();
         Core.setupEvents();
         Core.setupScriptBlocker();
