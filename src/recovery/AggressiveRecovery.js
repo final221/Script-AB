@@ -15,6 +15,7 @@ const AggressiveRecovery = (() => {
             // Save video state
             const playbackRate = video.playbackRate;
             const volume = video.volume;
+            const muted = video.muted;
 
             // Wait for stream to be ready
             await new Promise(resolve => {

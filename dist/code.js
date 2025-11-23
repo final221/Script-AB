@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       2.0.14
+// @version       2.0.15
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -1361,6 +1361,7 @@ const AggressiveRecovery = (() => {
             // Save video state
             const playbackRate = video.playbackRate;
             const volume = video.volume;
+            const muted = video.muted;
 
             // Wait for stream to be ready
             await new Promise(resolve => {

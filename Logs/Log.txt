@@ -1,44 +1,48 @@
 [METRICS]
-Uptime: 22.2s
+Uptime: 25.7s
 Ads Detected: 0
 Ads Blocked: 0
-Resilience Executions: 1
-Aggressive Recoveries: 1
-Health Triggers: 1
+Resilience Executions: 3
+Aggressive Recoveries: 2
+Health Triggers: 0
 Errors: 0
 
 [LOGS]
-[2025-11-23T14:46:39.518Z] Core initialized
-[2025-11-23T14:46:39.857Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql"}
-[2025-11-23T14:46:40.385Z] Player mounted
-[2025-11-23T14:46:40.387Z] Player signature found | {"id":"k0","key":"ref"}
-[2025-11-23T14:46:40.387Z] Player signature found | {"id":"k1","key":"ref"}
-[2025-11-23T14:46:40.387Z] Player signature found | {"id":"k2","key":"ref"}
-[2025-11-23T14:46:40.387Z] PlayerContext: Fresh context found via keyword search | {"key":"__reactFiber$9h004ncz1hc"}
-[2025-11-23T14:46:40.387Z] [LIFECYCLE] Event: ACQUIRE - Success
-[2025-11-23T14:46:40.980Z] [LIFECYCLE] Event: ACQUIRE - Success
-[2025-11-23T14:46:41.712Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-23T14:46:41.793Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-23T14:46:42.325Z] Console Error | {"args":["[GraphQL] One or more GraphQL errors were detected on request 01KARJWWE9F000H672BZ7TMNN2. PinnedChatSettings: unauthenticated","[object Object]"],"severity":"LOW","action":"LOG_ONLY"}
-[2025-11-23T14:46:43.336Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-23T14:46:43.544Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-23T14:46:43.635Z] Console Error | {"args":["[GraphQL] One or more GraphQL errors were detected on request 01KARJWXNP9P4CNEJR4P5QZNRW. PinnedChatSettings: unauthenticated","[object Object]"],"severity":"LOW","action":"LOG_ONLY"}
-[2025-11-23T14:46:43.868Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-23T14:46:44.148Z] Console Error | {"args":["[GraphQL] One or more GraphQL errors were detected on request 01KARJWY6ACGMKA21KHPZNW5PM. PinnedChatSettings: unauthenticated","[object Object]"],"severity":"LOW","action":"LOG_ONLY"}
-[2025-11-23T14:46:44.571Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-23T14:46:44.599Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-23T14:46:50.196Z] Manual AGGRESSIVE recovery triggered via console
-[2025-11-23T14:46:50.196Z] [EVENT] AD_DETECTED | Source: MANUAL_TRIGGER | {}
-[2025-11-23T14:46:50.196Z] [RECOVERY] Resilience execution started
-[2025-11-23T14:46:50.196Z] Recovery strategy selection | {"needsAggressive":true,"bufferHealth":"low","bufferSize":9.983,"forced":true}
-[2025-11-23T14:46:50.196Z] Executing aggressive recovery: forcing stream refresh
-[2025-11-23T14:46:50.196Z] Blob URL detected - attempting reload cycle | {"url":"blob:https://www.twitch.tv/bfebc9ff-b883-4df2-ad96-aaa57c9eddc2"}
-[2025-11-23T14:46:50.196Z] Step 1: Clearing video.src
-[2025-11-23T14:46:50.334Z] Step 2: Restoring original Blob URL
-[2025-11-23T14:46:51.244Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-23T14:46:53.154Z] Stream reload timeout during aggressive recovery.
-[2025-11-23T14:46:53.154Z] Play attempt 1/3 (post-recovery) | {"before":{"paused":true,"readyState":0,"currentTime":0}}
-[2025-11-23T14:46:54.459Z] [HEALTH] Stuck threshold exceeded | {"stuckCount":2,"threshold":2,"lastTime":0,"currentTime":0}
-[2025-11-23T14:46:54.459Z] [HEALTH] Recovery trigger | Reason: Player stuck, Type: STUCK_PLAYBACK | {"stuckCount":2,"lastTime":0,"currentTime":0,"threshold":2}
-[2025-11-23T14:46:54.459Z] [EVENT] AD_DETECTED | Source: HEALTH | Trigger: STUCK_PLAYBACK | Reason: Player stuck | {"stuckCount":2,"lastTime":0,"currentTime":0,"threshold":2}
-[2025-11-23T14:46:54.459Z] [RECOVERY] Resilience already in progress, skipping
+[2025-11-23T14:51:59.021Z] Core initialized
+[2025-11-23T14:51:59.826Z] Player mounted
+[2025-11-23T14:51:59.828Z] Player signature found | {"id":"k0","key":"ref"}
+[2025-11-23T14:51:59.828Z] Player signature found | {"id":"k1","key":"ref"}
+[2025-11-23T14:51:59.828Z] Player signature found | {"id":"k2","key":"ref"}
+[2025-11-23T14:51:59.829Z] PlayerContext: Fresh context found via keyword search | {"key":"__reactFiber$m9nc7be8c07"}
+[2025-11-23T14:51:59.829Z] [LIFECYCLE] Event: ACQUIRE - Success
+[2025-11-23T14:52:00.353Z] [LIFECYCLE] Event: ACQUIRE - Success
+[2025-11-23T14:52:01.132Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-23T14:52:01.833Z] Console Error | {"args":["[GraphQL] One or more GraphQL errors were detected on request 01KARK6ME8NAP68SB6TF67YZ0K. PinnedChatSettings: unauthenticated","[object Object]"],"severity":"LOW","action":"LOG_ONLY"}
+[2025-11-23T14:52:03.362Z] Console Error | {"args":["[GraphQL] One or more GraphQL errors were detected on request 01KARK6NWJ33VNXTJGW3JDQZXS. PinnedChatSettings: unauthenticated","[object Object]"],"severity":"LOW","action":"LOG_ONLY"}
+[2025-11-23T14:52:03.981Z] Console Error | {"args":["[GraphQL] One or more GraphQL errors were detected on request 01KARK6PGN9FJPTKJG0RSYVP7K. PinnedChatSettings: unauthenticated","[object Object]"],"severity":"LOW","action":"LOG_ONLY"}
+[2025-11-23T14:52:04.668Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-23T14:52:04.828Z] Manual AGGRESSIVE recovery triggered via console
+[2025-11-23T14:52:04.829Z] [EVENT] AD_DETECTED | Source: MANUAL_TRIGGER | {}
+[2025-11-23T14:52:04.829Z] [RECOVERY] Resilience execution started
+[2025-11-23T14:52:04.829Z] Recovery strategy selection | {"needsAggressive":true,"bufferHealth":"critical","bufferSize":4.75,"forced":true}
+[2025-11-23T14:52:04.829Z] Executing aggressive recovery: forcing stream refresh
+[2025-11-23T14:52:04.942Z] Stream reloaded. | {"duration_ms":114}
+[2025-11-23T14:52:04.942Z] [RECOVERY] Resilience failed | {"error":"ReferenceError: muted is not defined"}
+[2025-11-23T14:52:04.942Z] [RECOVERY] Resilience execution finished | {"total_duration_ms":114}
+[2025-11-23T14:52:08.400Z] Manual AGGRESSIVE recovery triggered via console
+[2025-11-23T14:52:08.400Z] [EVENT] AD_DETECTED | Source: MANUAL_TRIGGER | {}
+[2025-11-23T14:52:08.400Z] [RECOVERY] Resilience execution started
+[2025-11-23T14:52:08.400Z] Recovery strategy selection | {"needsAggressive":true,"bufferHealth":"low","bufferSize":9.986666000000001,"forced":true}
+[2025-11-23T14:52:08.400Z] Executing aggressive recovery: forcing stream refresh
+[2025-11-23T14:52:08.504Z] Stream reloaded. | {"duration_ms":104}
+[2025-11-23T14:52:08.504Z] [RECOVERY] Resilience failed | {"error":"ReferenceError: muted is not defined"}
+[2025-11-23T14:52:08.504Z] [RECOVERY] Resilience execution finished | {"total_duration_ms":104}
+[2025-11-23T14:52:17.509Z] Manual recovery triggered via console
+[2025-11-23T14:52:17.509Z] [EVENT] AD_DETECTED | Source: MANUAL_TRIGGER | {}
+[2025-11-23T14:52:17.510Z] [RECOVERY] Resilience execution started
+[2025-11-23T14:52:17.510Z] Recovery strategy selection | {"needsAggressive":false,"bufferHealth":"healthy","bufferSize":17.986666,"forced":false}
+[2025-11-23T14:52:17.510Z] Executing standard recovery: seeking
+[2025-11-23T14:52:17.510Z] Standard recovery complete | {"seekTo":17.519666,"bufferEnd":18.019666}
+[2025-11-23T14:52:17.510Z] [RECOVERY] Resilience execution finished | {"total_duration_ms":1}
+[2025-11-23T14:52:18.514Z] [HEALTH] A/V sync issue detected | {"discrepancy":"2319.17ms","count":1}
+[2025-11-23T14:52:20.520Z] [HEALTH] A/V sync recovered | {"previousIssues":1}
