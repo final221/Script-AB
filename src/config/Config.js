@@ -38,7 +38,7 @@
  */
 const CONFIG = (() => {
     const raw = {
-        debug: true,
+        debug: false,
         selectors: {
             PLAYER: '.video-player',
             VIDEO: 'video',
