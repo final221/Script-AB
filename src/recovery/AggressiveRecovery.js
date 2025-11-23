@@ -9,15 +9,17 @@ const AggressiveRecovery = (() => {
     return {
         execute: async (video) => {
             Metrics.increment('aggressive_recoveries');
+            Logger.add('Executing aggressive recovery: waiting for player to stabilize');
             const recoveryStartTime = performance.now();
             const originalSrc = video.src;
             const isBlobUrl = originalSrc && originalSrc.startsWith('blob:');
 
             // Enhanced Telemetry
             const bufferEnd = video.buffered.length ? video.buffered.end(video.buffered.length - 1) : 0;
-            Logger.add('Executing aggressive recovery', {
-                strategy: isBlobUrl ? 'LIVE_EDGE_SEEK' : 'SRC_RESET',
+            Logger.add('Aggressive recovery telemetry', {
+                strategy: 'PASSIVE_WAIT',
                 url: originalSrc,
+                isBlobUrl: isBlobUrl,
                 telemetry: {
                     readyState: video.readyState,
                     networkState: video.networkState,
@@ -33,28 +35,11 @@ const AggressiveRecovery = (() => {
             const volume = video.volume;
             const muted = video.muted;
 
-            // Execute Strategy
-            if (isBlobUrl) {
-                // CRITICAL: DO NOT use video.seekable.end() for Blob URLs!
-                // It returns infinity-like values (9223372036854.775), causing massive A/V desync (100+ seconds).
-                // Instead, seek to a safe position slightly ahead of the current buffer.
-                // This allows the player to smoothly transition without breaking synchronization.
-                const safeSeekOffset = 5; // seconds ahead of buffer
-                const seekTarget = bufferEnd + safeSeekOffset;
-
-                Logger.add('Blob URL: Using safe buffer-based seek', {
-                    currentTime: video.currentTime,
-                    bufferEnd: bufferEnd,
-                    seekTarget: seekTarget,
-                    offset: safeSeekOffset
-                });
-
-                video.currentTime = seekTarget;
-            } else {
-                Logger.add('Standard URL detected - reloading via empty src');
-                video.src = '';
-                video.load();
-            }
+            // CRITICAL: DO NOT seek, DO NOT reload, DO NOT touch the src!
+            // Analysis of logs showed that ANY manipulation (seeking to infinity, bufferEnd+5s, etc.)
+            // causes massive A/V desync (100+ seconds) or AbortErrors.
+            // The player is smart enough to recover on its own. Our job is to just wait.
+            // This is the approach from the early version that worked reliably.
 
             // Wait for stream to be ready
             await new Promise(resolve => {
@@ -63,14 +48,14 @@ const AggressiveRecovery = (() => {
                 const interval = setInterval(() => {
                     if (video.readyState >= 2) {
                         clearInterval(interval);
-                        Logger.add('Stream reloaded/seeked successfully', {
+                        Logger.add('Player stabilized successfully', {
                             duration_ms: performance.now() - recoveryStartTime,
                             newReadyState: video.readyState
                         });
                         resolve();
                     } else if (++checkCount >= maxChecks) {
                         clearInterval(interval);
-                        Logger.add('Stream recovery timeout', {
+                        Logger.add('Player stabilization timeout', {
                             duration_ms: performance.now() - recoveryStartTime,
                             readyState: video.readyState,
                             networkState: video.networkState
