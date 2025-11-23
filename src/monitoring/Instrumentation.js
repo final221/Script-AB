@@ -5,26 +5,7 @@
  * @responsibility Observes system-wide events, classifies errors by type and severity.
  */
 const Instrumentation = (() => {
-    const classifyError = (error, message) => {
-        // Critical media errors (always trigger recovery)
-        if (error instanceof MediaError || (error && error.code >= 1 && error.code <= 4)) {
-            return { severity: 'CRITICAL', action: 'TRIGGER_RECOVERY' };
-        }
-
-        // Network errors (usually recoverable)
-        if (error instanceof TypeError && message.includes('fetch')) {
-            return { severity: 'MEDIUM', action: 'LOG_AND_METRIC' };
-        }
-
-        // Known benign errors (log only)
-        const benignPatterns = ['graphql', 'unauthenticated', 'pinnedchatsettings'];
-        if (benignPatterns.some(pattern => message.toLowerCase().includes(pattern))) {
-            return { severity: 'LOW', action: 'LOG_ONLY' };
-        }
-
-        // Unknown errors (log and track)
-        return { severity: 'MEDIUM', action: 'LOG_AND_METRIC' };
-    };
+    const classifyError = ErrorClassifier.classify;
 
     const setupGlobalErrorHandlers = () => {
         window.addEventListener('error', (event) => {
