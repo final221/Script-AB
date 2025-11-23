@@ -37,6 +37,12 @@ const CoreOrchestrator = (() => {
                     DOMObserver.init();
                 }, { once: true });
             }
+
+            // Expose debug trigger
+            window.forceTwitchAdRecovery = () => {
+                Logger.add('Manual recovery triggered via console');
+                Adapters.EventBus.emit(CONFIG.events.AD_DETECTED, { source: 'MANUAL_TRIGGER' });
+            };
         }
     };
 })();

@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       2.0.11
+// @version       2.0.12
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -1680,6 +1680,12 @@ const CoreOrchestrator = (() => {
                     DOMObserver.init();
                 }, { once: true });
             }
+
+            // Expose debug trigger
+            window.forceTwitchAdRecovery = () => {
+                Logger.add('Manual recovery triggered via console');
+                Adapters.EventBus.emit(CONFIG.events.AD_DETECTED, { source: 'MANUAL_TRIGGER' });
+            };
         }
     };
 })();
