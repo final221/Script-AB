@@ -35,7 +35,11 @@ const CONFIG = {
         'HealthMonitor.js',
         'Resilience.js',
         'VideoListenerManager.js',
-        'Core.js'
+        'ScriptBlocker.js',
+        'EventCoordinator.js',
+        'PlayerLifecycle.js',
+        'DOMObserver.js',
+        'CoreOrchestrator.js'
     ]
 };
 

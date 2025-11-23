@@ -1206,146 +1206,233 @@ const VideoListenerManager = (() => {
     };
 })();
 
+// --- Script Blocker ---
+/**
+ * Blocks ad-related scripts from loading.
+ * @responsibility Monitor DOM for ad script injections and remove them.
+ */
+const ScriptBlocker = (() => {
+    const AD_SCRIPT_PATTERNS = [
+        'supervisor.ext-twitch.tv',
+        'pubads.g.doubleclick.net'
+    ];
+
+    const shouldBlock = (scriptNode) => {
+        return scriptNode.tagName === 'SCRIPT' &&
+            scriptNode.src &&
+            AD_SCRIPT_PATTERNS.some(pattern => scriptNode.src.includes(pattern));
+    };
+
+    return {
+        init: () => {
+            const observer = new MutationObserver((mutations) => {
+                for (const m of mutations) {
+                    m.addedNodes.forEach(n => {
+                        if (shouldBlock(n)) {
+                            n.remove();
+                            Logger.add('Blocked Script', { src: n.src });
+                        }
+                    });
+                }
+            });
+            observer.observe(document.documentElement, {
+                childList: true,
+                subtree: true
+            });
+        }
+    };
+})();
+
+// --- Event Coordinator ---
+/**
+ * Sets up EventBus listeners and coordinates event responses.
+ * @responsibility Wire up global event listeners for ACQUIRE and AD_DETECTED.
+ */
+const EventCoordinator = (() => {
+    return {
+        init: () => {
+            Adapters.EventBus.on(CONFIG.events.ACQUIRE, () => {
+                const container = PlayerLifecycle.getActiveContainer();
+                if (container) {
+                    if (PlayerContext.get(container)) {
+                        Logger.add('Event: ACQUIRE - Success');
+                        HealthMonitor.start(container);
+                    } else {
+                        Logger.add('Event: ACQUIRE - Failed');
+                    }
+                }
+            });
+
+            Adapters.EventBus.on(CONFIG.events.AD_DETECTED, () => {
+                Logger.add('Event: AD_DETECTED');
+                const container = PlayerLifecycle.getActiveContainer();
+                if (container) {
+                    Resilience.execute(container);
+                }
+            });
+        }
+    };
+})();
+
+// --- Player Lifecycle ---
+/**
+ * Manages player container lifecycle (mount/unmount).
+ * @responsibility
+ * 1. Track active player container.
+ * 2. Setup player-specific observers.
+ * 3. Coordinate with VideoListenerManager and HealthMonitor.
+ */
+const PlayerLifecycle = (() => {
+    let activeContainer = null;
+    let playerObserver = null;
+
+    return {
+        getActiveContainer: () => activeContainer,
+
+        inject: () => {
+            Store.update({ lastAttempt: Date.now() });
+            Adapters.EventBus.emit(CONFIG.events.ACQUIRE);
+        },
+
+        handleMount: (container) => {
+            if (activeContainer === container) return;
+            if (activeContainer) PlayerLifecycle.handleUnmount();
+
+            Logger.add('Player mounted');
+            activeContainer = container;
+
+            const debouncedInject = Fn.debounce(() => PlayerLifecycle.inject(), 100);
+            playerObserver = Adapters.DOM.observe(container, (mutations) => {
+                const shouldReacquire = mutations.some(m => {
+                    if (m.type === 'attributes' && m.attributeName === 'class' && m.target === container) {
+                        return true;
+                    }
+                    if (m.type === 'childList') {
+                        const hasVideo = (nodes) => Array.from(nodes).some(n =>
+                            n.matches && n.matches(CONFIG.selectors.VIDEO)
+                        );
+                        return hasVideo(m.addedNodes) || hasVideo(m.removedNodes);
+                    }
+                    return false;
+                });
+                if (shouldReacquire) debouncedInject();
+            }, {
+                childList: true,
+                subtree: true,
+                attributes: true,
+                attributeFilter: ['class']
+            });
+
+            VideoListenerManager.attach(container);
+            PlayerLifecycle.inject();
+        },
+
+        handleUnmount: () => {
+            if (!activeContainer) return;
+            Logger.add('Player unmounted');
+
+            if (playerObserver) {
+                playerObserver.disconnect();
+                playerObserver = null;
+            }
+
+            VideoListenerManager.detach();
+            HealthMonitor.stop();
+            PlayerContext.reset();
+            activeContainer = null;
+        }
+    };
+})();
+
+// --- DOM Observer ---
+/**
+ * Observes DOM for player mounting and unmounting.
+ * @responsibility
+ * 1. Watch document.body for player container changes.
+ * 2. Delegate to PlayerLifecycle for mount/unmount handling.
+ */
+const DOMObserver = (() => {
+    let rootObserver = null;
+
+    const findAndMountPlayer = (node) => {
+        if (node.nodeType !== 1) return;
+        const player = node.matches(CONFIG.selectors.PLAYER) ?
+            node : node.querySelector(CONFIG.selectors.PLAYER);
+        if (player) {
+            PlayerLifecycle.handleMount(player);
+        }
+    };
+
+    const findAndUnmountPlayer = (node) => {
+        const activeContainer = PlayerLifecycle.getActiveContainer();
+        if (activeContainer && (node === activeContainer ||
+            (node.contains && node.contains(activeContainer)))) {
+            PlayerLifecycle.handleUnmount();
+        }
+    };
+
+    return {
+        init: () => {
+            const existing = Adapters.DOM.find(CONFIG.selectors.PLAYER);
+            if (existing) {
+                PlayerLifecycle.handleMount(existing);
+            }
+
+            rootObserver = Adapters.DOM.observe(document.body, (mutations) => {
+                for (const m of mutations) {
+                    if (m.type === 'childList') {
+                        m.addedNodes.forEach(findAndMountPlayer);
+                        m.removedNodes.forEach(findAndUnmountPlayer);
+                    }
+                }
+            }, { childList: true, subtree: true });
+        }
+    };
+})();
+
 // ============================================================================
 // 6. CORE ORCHESTRATOR
 // ============================================================================
 /**
- * Main entry point and event orchestrator.
- * @responsibility
- * 1. Initialize all modules.
- * 2. Observe DOM for player mounting/unmounting.
- * 3. Wire up EventBus listeners.
+ * Main entry point - orchestrates module initialization.
+ * @responsibility Initialize all modules in the correct order.
  */
-const Core = {
-    rootObserver: null,
-    playerObserver: null,
-    activeContainer: null,
+const CoreOrchestrator = (() => {
+    return {
+        init: () => {
+            Logger.add('Core initialized');
 
-    init: () => {
-        Logger.add('Core initialized');
-        if (window.self !== window.top) return;
+            // Don't run in iframes
+            if (window.self !== window.top) return;
 
-        const { lastAttempt, errorCount } = Store.get();
-        if (errorCount >= CONFIG.timing.LOG_THROTTLE && Date.now() - lastAttempt < CONFIG.timing.REATTEMPT_DELAY_MS) {
-            if (CONFIG.debug) console.warn('[MAD-3000] Core throttled.');
-            return;
-        }
-
-        NetworkManager.init();
-        Instrumentation.init();
-        Core.setupEvents();
-        Core.setupScriptBlocker();
-
-        if (document.body) {
-            Core.startRootObservation();
-        } else {
-            document.addEventListener('DOMContentLoaded', () => Core.startRootObservation(), { once: true });
-        }
-    },
-
-    setupScriptBlocker: () => {
-        const scriptObserver = new MutationObserver((mutations) => {
-            for (const m of mutations) {
-                m.addedNodes.forEach(n => {
-                    if (n.tagName === 'SCRIPT' && n.src && (n.src.includes('supervisor.ext-twitch.tv') || n.src.includes('pubads.g.doubleclick.net'))) {
-                        n.remove();
-                        Logger.add('Blocked Script', { src: n.src });
-                    }
-                });
-            }
-        });
-        scriptObserver.observe(document.documentElement, { childList: true, subtree: true });
-    },
-
-    inject: () => {
-        Store.update({ lastAttempt: Date.now() });
-        Adapters.EventBus.emit(CONFIG.events.ACQUIRE);
-    },
-
-    setupEvents: () => {
-        Adapters.EventBus.on(CONFIG.events.ACQUIRE, () => {
-            if (Core.activeContainer) {
-                if (PlayerContext.get(Core.activeContainer)) {
-                    Logger.add('Event: ACQUIRE - Success');
-                    HealthMonitor.start(Core.activeContainer);
-                } else {
-                    Logger.add('Event: ACQUIRE - Failed');
+            // Check throttling
+            const { lastAttempt, errorCount } = Store.get();
+            if (errorCount >= CONFIG.timing.LOG_THROTTLE &&
+                Date.now() - lastAttempt < CONFIG.timing.REATTEMPT_DELAY_MS) {
+                if (CONFIG.debug) {
+                    console.warn('[MAD-3000] Core throttled.');
                 }
+                return;
             }
-        });
 
-        Adapters.EventBus.on(CONFIG.events.AD_DETECTED, () => {
-            Logger.add('Event: AD_DETECTED');
-            if (Core.activeContainer) Resilience.execute(Core.activeContainer);
-        });
-    },
+            // Initialize modules in order
+            NetworkManager.init();
+            Instrumentation.init();
+            EventCoordinator.init();
+            ScriptBlocker.init();
 
-    findAndMountPlayer: (node) => {
-        if (node.nodeType !== 1) return;
-        const player = node.matches(CONFIG.selectors.PLAYER) ? node : node.querySelector(CONFIG.selectors.PLAYER);
-        if (player) Core.handlePlayerMount(player);
-    },
-
-    findAndUnmountPlayer: (node) => {
-        if (Core.activeContainer && (node === Core.activeContainer || (node.contains && node.contains(Core.activeContainer)))) {
-            Core.handlePlayerUnmount();
-        }
-    },
-
-    startRootObservation: () => {
-        const existing = Adapters.DOM.find(CONFIG.selectors.PLAYER);
-        if (existing) Core.handlePlayerMount(existing);
-
-        Core.rootObserver = Adapters.DOM.observe(document.body, (mutations) => {
-            for (const m of mutations) {
-                if (m.type === 'childList') {
-                    m.addedNodes.forEach(Core.findAndMountPlayer);
-                    m.removedNodes.forEach(Core.findAndUnmountPlayer);
-                }
+            // Wait for DOM if needed
+            if (document.body) {
+                DOMObserver.init();
+            } else {
+                document.addEventListener('DOMContentLoaded', () => {
+                    DOMObserver.init();
+                }, { once: true });
             }
-        }, { childList: true, subtree: true });
-    },
-
-    handlePlayerMount: (container) => {
-        if (Core.activeContainer === container) return;
-        if (Core.activeContainer) Core.handlePlayerUnmount();
-
-        Logger.add('Player mounted');
-        Core.activeContainer = container;
-
-        const debouncedInject = Fn.debounce(() => Core.inject(), 100);
-        Core.playerObserver = Adapters.DOM.observe(container, (mutations) => {
-            const shouldReacquire = mutations.some(m => {
-                if (m.type === 'attributes' && m.attributeName === 'class' && m.target === container) return true;
-                if (m.type === 'childList') {
-                    const hasVideo = (nodes) => Array.from(nodes).some(n => n.matches && n.matches(CONFIG.selectors.VIDEO));
-                    return hasVideo(m.addedNodes) || hasVideo(m.removedNodes);
-                }
-                return false;
-            });
-            if (shouldReacquire) debouncedInject();
-        }, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] });
-
-        VideoListenerManager.attach(container);
-        Core.inject();
-    },
-
-    handlePlayerUnmount: () => {
-        if (!Core.activeContainer) return;
-        Logger.add('Player unmounted');
-
-        if (Core.playerObserver) {
-            Core.playerObserver.disconnect();
-            Core.playerObserver = null;
         }
+    };
+})();
 
-        VideoListenerManager.detach();
-        HealthMonitor.stop();
-        PlayerContext.reset();
-        Core.activeContainer = null;
-    }
-};
-
-Core.init();
+CoreOrchestrator.init();
 
 })();
