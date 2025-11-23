@@ -1,39 +1,127 @@
 [METRICS]
-Uptime: 207.1s
+Uptime: 4800.7s
 Ads Detected: 0
 Ads Blocked: 0
 Resilience Executions: 1
-Aggressive Recoveries: 0
+Aggressive Recoveries: 1
 Health Triggers: 1
-Errors: 0
+Errors: 22
 
 [LOGS]
-[2025-11-23T10:17:09.767Z] Core initialized
-[2025-11-23T10:17:10.692Z] Player mounted
-[2025-11-23T10:17:10.695Z] Player signature found | {"id":"k0","key":"ref"}
-[2025-11-23T10:17:10.695Z] Player signature found | {"id":"k1","key":"ref"}
-[2025-11-23T10:17:10.695Z] Player signature found | {"id":"k2","key":"ref"}
-[2025-11-23T10:17:10.695Z] PlayerContext: Fresh context found via keyword search | {"key":"__reactFiber$j39ucsr5r4i"}
-[2025-11-23T10:17:10.695Z] Event: ACQUIRE - Success
-[2025-11-23T10:17:11.391Z] Event: ACQUIRE - Success
-[2025-11-23T10:17:12.597Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-23T10:17:12.937Z] Console Error | {"args":["[GraphQL] One or more GraphQL errors were detected on request 01KAR3FDV7JNQC52R0DPKE2QGJ. PinnedChatSettings: unauthenticated","[object Object]"],"severity":"LOW","action":"LOG_ONLY"}
-[2025-11-23T10:17:13.262Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://assets.twitch.tv/config/manifest.json?v=1"}
-[2025-11-23T10:17:14.446Z] Console Error | {"args":["[GraphQL] One or more GraphQL errors were detected on request 01KAR3FESPNZPTKHNSB7RRXW8D. PinnedChatSettings: unauthenticated","[object Object]"],"severity":"LOW","action":"LOG_ONLY"}
-[2025-11-23T10:17:14.448Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-23T10:17:14.867Z] Console Error | {"args":["[GraphQL] One or more GraphQL errors were detected on request 01KAR3FFJ61DCHQCC5EG8WG25R. PinnedChatSettings: unauthenticated","[object Object]"],"severity":"LOW","action":"LOG_ONLY"}
-[2025-11-23T10:17:15.552Z] A/V sync issue detected | {"discrepancy":"335.61ms","count":1}
-[2025-11-23T10:17:17.554Z] A/V sync recovered | {"previousIssues":1}
-[2025-11-23T10:17:18.328Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-23T10:17:18.873Z] Frame drop detected | {"newDropped":26,"newTotal":82,"recentDropRate":"31.71%"}
-[2025-11-23T10:17:18.873Z] HealthMonitor triggering recovery: Severe frame drop | {"newDropped":26,"newTotal":82,"recentDropRate":31.70731707317073}
-[2025-11-23T10:17:18.873Z] Event: AD_DETECTED
-[2025-11-23T10:17:18.873Z] Resilience execution started
-[2025-11-23T10:17:18.873Z] Recovery strategy selection | {"needsAggressive":false,"bufferHealth":"low","bufferSize":7.9713330000000004}
-[2025-11-23T10:17:18.873Z] Executing standard recovery: seeking
-[2025-11-23T10:17:18.874Z] Standard recovery complete | {"seekTo":7.505333,"bufferEnd":8.005333}
-[2025-11-23T10:17:18.874Z] Resilience execution finished | {"total_duration_ms":0}
-[2025-11-23T10:17:29.213Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-23T10:17:51.025Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-23T10:19:12.523Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-23T10:20:23.386Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-23T12:56:45.490Z] Core initialized
+[2025-11-23T12:56:45.614Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql"}
+[2025-11-23T12:56:46.188Z] Player mounted
+[2025-11-23T12:56:46.189Z] Player signature found | {"id":"k0","key":"ref"}
+[2025-11-23T12:56:46.189Z] Player signature found | {"id":"k1","key":"ref"}
+[2025-11-23T12:56:46.189Z] Player signature found | {"id":"k2","key":"ref"}
+[2025-11-23T12:56:46.189Z] PlayerContext: Fresh context found via keyword search | {"key":"__reactFiber$o9mcbko7c9r"}
+[2025-11-23T12:56:46.189Z] [LIFECYCLE] Event: ACQUIRE - Success
+[2025-11-23T12:56:46.314Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/integrity"}
+[2025-11-23T12:56:46.741Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-23T12:56:46.758Z] [LIFECYCLE] Event: ACQUIRE - Success
+[2025-11-23T12:56:48.174Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-23T12:56:50.656Z] Console Error | {"args":["[GraphQL] One or more GraphQL errors were detected on request 01KARCKQ5KYXQCNAP5BB7E2DRQ. PinnedChatSettings: unauthenticated","[object Object]"],"severity":"LOW","action":"LOG_ONLY"}
+[2025-11-23T12:56:51.537Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://assets.twitch.tv/config/manifest.json?v=1"}
+[2025-11-23T12:56:52.558Z] Console Error | {"args":["[GraphQL] One or more GraphQL errors were detected on request 01KARCKRQHTB8WA3X9TYHRW7H8. PinnedChatSettings: unauthenticated","[object Object]"],"severity":"LOW","action":"LOG_ONLY"}
+[2025-11-23T12:56:53.573Z] Console Error | {"args":["[GraphQL] One or more GraphQL errors were detected on request 01KARCKST11ZQ0MYYY4M09K544. PinnedChatSettings: unauthenticated","[object Object]"],"severity":"LOW","action":"LOG_ONLY"}
+[2025-11-23T12:56:54.855Z] [HEALTH] A/V sync issue detected | {"discrepancy":"303.35ms","count":1}
+[2025-11-23T12:56:56.869Z] [HEALTH] A/V sync recovered | {"previousIssues":1}
+[2025-11-23T12:58:15.277Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-23T12:58:47.918Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-23T12:59:15.272Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-23T12:59:47.931Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-23T13:01:47.942Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-23T13:01:58.999Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-23T13:02:47.967Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-23T13:03:47.969Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-23T13:06:47.985Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-23T13:06:48.419Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-23T13:08:15.290Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-23T13:09:15.264Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-23T13:10:15.279Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-23T13:10:48.019Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-23T13:12:21.440Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-23T13:12:21.872Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-23T13:14:48.077Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-23T13:16:49.174Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-23T13:16:53.586Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-23T13:17:04.155Z] [HEALTH] Frame drop detected | {"newDropped":1,"newTotal":61,"recentDropRate":"1.64%"}
+[2025-11-23T13:17:33.412Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-23T13:18:15.274Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-23T13:19:48.111Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-23T13:19:54.016Z] [HEALTH] Frame drop detected | {"newDropped":1,"newTotal":61,"recentDropRate":"1.64%"}
+[2025-11-23T13:20:56.460Z] [HEALTH] Frame drop detected | {"newDropped":1,"newTotal":60,"recentDropRate":"1.67%"}
+[2025-11-23T13:21:03.496Z] [HEALTH] Frame drop detected | {"newDropped":1,"newTotal":60,"recentDropRate":"1.67%"}
+[2025-11-23T13:21:15.267Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-23T13:22:15.289Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-23T13:22:46.748Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-23T13:22:48.121Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-23T13:23:48.135Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-23T13:25:15.279Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-23T13:26:53.822Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-23T13:31:48.182Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-23T13:33:09.224Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-23T13:33:15.265Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-23T13:34:15.263Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-23T13:36:07.225Z] [HEALTH] Frame drop detected | {"newDropped":1,"newTotal":60,"recentDropRate":"1.67%"}
+[2025-11-23T13:38:22.516Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-23T13:40:12.582Z] [HEALTH] Frame drop detected | {"newDropped":1,"newTotal":59,"recentDropRate":"1.69%"}
+[2025-11-23T13:40:15.283Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-23T13:41:15.253Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-23T13:42:42.529Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-23T13:43:33.064Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-23T13:44:31.176Z] [HEALTH] Frame drop detected | {"newDropped":1,"newTotal":60,"recentDropRate":"1.67%"}
+[2025-11-23T13:46:51.618Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://assets.twitch.tv/config/manifest.json?v=1"}
+[2025-11-23T13:48:44.990Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-23T13:48:48.297Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-23T13:49:15.267Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-23T13:50:15.271Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-23T13:50:48.333Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-23T13:52:48.333Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-23T13:53:15.265Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-23T13:53:57.254Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-23T13:55:48.350Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-23T13:58:58.450Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-23T13:59:09.464Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-23T14:02:08.333Z] [HEALTH] Frame drop detected | {"newDropped":1,"newTotal":61,"recentDropRate":"1.64%"}
+[2025-11-23T14:02:48.434Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-23T14:06:48.457Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-23T14:07:15.272Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-23T14:07:42.889Z] Console Error | {"args":["An error occurred! For more details, see the full error text at https://go.apollo.dev/c/err#%7B%22version%22%3A%223.8.7%22%2C%22message%22%3A12%2C%22args%22%3A%5B%22id%22%2C%22%7B%7D%22%5D%7D"],"severity":"MEDIUM","action":"LOG_AND_METRIC"}
+[2025-11-23T14:07:42.891Z] Console Error | {"args":["An error occurred! For more details, see the full error text at https://go.apollo.dev/c/err#%7B%22version%22%3A%223.8.7%22%2C%22message%22%3A12%2C%22args%22%3A%5B%22game%22%2C%22%7B%7D%22%5D%7D"],"severity":"MEDIUM","action":"LOG_AND_METRIC"}
+[2025-11-23T14:07:44.216Z] Console Error | {"args":["An error occurred! For more details, see the full error text at https://go.apollo.dev/c/err#%7B%22version%22%3A%223.8.7%22%2C%22message%22%3A12%2C%22args%22%3A%5B%22slug%22%2C%22%7B%5Cn%20%20%5C%22__typename%5C%22%3A%20%5C%22Game%5C%22%2C%5Cn%20%20%5C%22name%5C%22%3A%20%5C%22ARC%20Raiders%5C%22%2C%5Cn%20%20%5C%22displayName%5C%22%3A%20%5C%22ARC%20Raiders%5C%22%2C%5Cn%20%20%5C%22id%5C%22%3A%20%5C%22464339927%5C%22%5Cn%7D%22%5D%7D"],"severity":"MEDIUM","action":"LOG_AND_METRIC"}
+[2025-11-23T14:07:52.511Z] Console Error | {"args":["An error occurred! For more details, see the full error text at https://go.apollo.dev/c/err#%7B%22version%22%3A%223.8.7%22%2C%22message%22%3A12%2C%22args%22%3A%5B%22slug%22%2C%22%7B%5Cn%20%20%5C%22__typename%5C%22%3A%20%5C%22Game%5C%22%2C%5Cn%20%20%5C%22name%5C%22%3A%20%5C%22ARC%20Raiders%5C%22%2C%5Cn%20%20%5C%22displayName%5C%22%3A%20%5C%22ARC%20Raiders%5C%22%2C%5Cn%20%20%5C%22id%5C%22%3A%20%5C%22464339927%5C%22%5Cn%7D%22%5D%7D"],"severity":"MEDIUM","action":"LOG_AND_METRIC"}
+[2025-11-23T14:08:22.052Z] Console Error | {"args":["An error occurred! For more details, see the full error text at https://go.apollo.dev/c/err#%7B%22version%22%3A%223.8.7%22%2C%22message%22%3A12%2C%22args%22%3A%5B%22slug%22%2C%22%7B%5Cn%20%20%5C%22__typename%5C%22%3A%20%5C%22Game%5C%22%2C%5Cn%20%20%5C%22name%5C%22%3A%20%5C%22ARC%20Raiders%5C%22%2C%5Cn%20%20%5C%22displayName%5C%22%3A%20%5C%22ARC%20Raiders%5C%22%2C%5Cn%20%20%5C%22id%5C%22%3A%20%5C%22464339927%5C%22%5Cn%7D%22%5D%7D"],"severity":"MEDIUM","action":"LOG_AND_METRIC"}
+[2025-11-23T14:08:50.028Z] Playhead stalling warning detected (raw) | {"severity":"CRITICAL"}
+[2025-11-23T14:08:51.788Z] Console Error | {"args":["An error occurred! For more details, see the full error text at https://go.apollo.dev/c/err#%7B%22version%22%3A%223.8.7%22%2C%22message%22%3A12%2C%22args%22%3A%5B%22slug%22%2C%22%7B%5Cn%20%20%5C%22__typename%5C%22%3A%20%5C%22Game%5C%22%2C%5Cn%20%20%5C%22name%5C%22%3A%20%5C%22ARC%20Raiders%5C%22%2C%5Cn%20%20%5C%22displayName%5C%22%3A%20%5C%22ARC%20Raiders%5C%22%2C%5Cn%20%20%5C%22id%5C%22%3A%20%5C%22464339927%5C%22%5Cn%7D%22%5D%7D"],"severity":"MEDIUM","action":"LOG_AND_METRIC"}
+[2025-11-23T14:08:58.462Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-23T14:09:00.035Z] Critical warning: Playhead stalling (debounced)
+[2025-11-23T14:09:00.035Z] [EVENT] AD_DETECTED | Source: UNKNOWN
+[2025-11-23T14:09:00.035Z] [RECOVERY] Resilience execution started
+[2025-11-23T14:09:00.035Z] Recovery strategy selection | {"needsAggressive":true,"bufferHealth":"healthy","bufferSize":29.965000000000146}
+[2025-11-23T14:09:00.035Z] Executing aggressive recovery: forcing stream refresh
+[2025-11-23T14:09:00.035Z] Blob URL detected - performing unload/reload cycle.
+[2025-11-23T14:09:02.845Z] Stream reload timeout during aggressive recovery.
+[2025-11-23T14:09:02.845Z] Play attempt 1/3 (post-recovery) | {"before":{"paused":true,"readyState":0,"currentTime":0}}
+[2025-11-23T14:09:04.624Z] [HEALTH] Stuck threshold exceeded | {"stuckCount":2,"threshold":2,"lastTime":0,"currentTime":0}
+[2025-11-23T14:09:04.624Z] [HEALTH] Recovery trigger | Reason: Player stuck, Type: STUCK_PLAYBACK | {"stuckCount":2,"lastTime":0,"currentTime":0,"threshold":2}
+[2025-11-23T14:09:04.624Z] [EVENT] AD_DETECTED | Source: HEALTH | Trigger: STUCK_PLAYBACK | Reason: Player stuck | {"stuckCount":2,"lastTime":0,"currentTime":0,"threshold":2}
+[2025-11-23T14:09:04.624Z] [RECOVERY] Resilience already in progress, skipping
+[2025-11-23T14:09:21.993Z] Console Error | {"args":["An error occurred! For more details, see the full error text at https://go.apollo.dev/c/err#%7B%22version%22%3A%223.8.7%22%2C%22message%22%3A12%2C%22args%22%3A%5B%22slug%22%2C%22%7B%5Cn%20%20%5C%22__typename%5C%22%3A%20%5C%22Game%5C%22%2C%5Cn%20%20%5C%22name%5C%22%3A%20%5C%22ARC%20Raiders%5C%22%2C%5Cn%20%20%5C%22displayName%5C%22%3A%20%5C%22ARC%20Raiders%5C%22%2C%5Cn%20%20%5C%22id%5C%22%3A%20%5C%22464339927%5C%22%5Cn%7D%22%5D%7D"],"severity":"MEDIUM","action":"LOG_AND_METRIC"}
+[2025-11-23T14:09:33.344Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-23T14:09:52.541Z] Console Error | {"args":["An error occurred! For more details, see the full error text at https://go.apollo.dev/c/err#%7B%22version%22%3A%223.8.7%22%2C%22message%22%3A12%2C%22args%22%3A%5B%22slug%22%2C%22%7B%5Cn%20%20%5C%22__typename%5C%22%3A%20%5C%22Game%5C%22%2C%5Cn%20%20%5C%22name%5C%22%3A%20%5C%22ARC%20Raiders%5C%22%2C%5Cn%20%20%5C%22displayName%5C%22%3A%20%5C%22ARC%20Raiders%5C%22%2C%5Cn%20%20%5C%22id%5C%22%3A%20%5C%22464339927%5C%22%5Cn%7D%22%5D%7D"],"severity":"MEDIUM","action":"LOG_AND_METRIC"}
+[2025-11-23T14:10:22.684Z] Console Error | {"args":["An error occurred! For more details, see the full error text at https://go.apollo.dev/c/err#%7B%22version%22%3A%223.8.7%22%2C%22message%22%3A12%2C%22args%22%3A%5B%22slug%22%2C%22%7B%5Cn%20%20%5C%22__typename%5C%22%3A%20%5C%22Game%5C%22%2C%5Cn%20%20%5C%22name%5C%22%3A%20%5C%22ARC%20Raiders%5C%22%2C%5Cn%20%20%5C%22displayName%5C%22%3A%20%5C%22ARC%20Raiders%5C%22%2C%5Cn%20%20%5C%22id%5C%22%3A%20%5C%22464339927%5C%22%5Cn%7D%22%5D%7D"],"severity":"MEDIUM","action":"LOG_AND_METRIC"}
+[2025-11-23T14:10:52.239Z] Console Error | {"args":["An error occurred! For more details, see the full error text at https://go.apollo.dev/c/err#%7B%22version%22%3A%223.8.7%22%2C%22message%22%3A12%2C%22args%22%3A%5B%22slug%22%2C%22%7B%5Cn%20%20%5C%22__typename%5C%22%3A%20%5C%22Game%5C%22%2C%5Cn%20%20%5C%22name%5C%22%3A%20%5C%22ARC%20Raiders%5C%22%2C%5Cn%20%20%5C%22displayName%5C%22%3A%20%5C%22ARC%20Raiders%5C%22%2C%5Cn%20%20%5C%22id%5C%22%3A%20%5C%22464339927%5C%22%5Cn%7D%22%5D%7D"],"severity":"MEDIUM","action":"LOG_AND_METRIC"}
+[2025-11-23T14:11:22.473Z] Console Error | {"args":["An error occurred! For more details, see the full error text at https://go.apollo.dev/c/err#%7B%22version%22%3A%223.8.7%22%2C%22message%22%3A12%2C%22args%22%3A%5B%22slug%22%2C%22%7B%5Cn%20%20%5C%22__typename%5C%22%3A%20%5C%22Game%5C%22%2C%5Cn%20%20%5C%22name%5C%22%3A%20%5C%22ARC%20Raiders%5C%22%2C%5Cn%20%20%5C%22displayName%5C%22%3A%20%5C%22ARC%20Raiders%5C%22%2C%5Cn%20%20%5C%22id%5C%22%3A%20%5C%22464339927%5C%22%5Cn%7D%22%5D%7D"],"severity":"MEDIUM","action":"LOG_AND_METRIC"}
+[2025-11-23T14:11:52.012Z] Console Error | {"args":["An error occurred! For more details, see the full error text at https://go.apollo.dev/c/err#%7B%22version%22%3A%223.8.7%22%2C%22message%22%3A12%2C%22args%22%3A%5B%22slug%22%2C%22%7B%5Cn%20%20%5C%22__typename%5C%22%3A%20%5C%22Game%5C%22%2C%5Cn%20%20%5C%22name%5C%22%3A%20%5C%22ARC%20Raiders%5C%22%2C%5Cn%20%20%5C%22displayName%5C%22%3A%20%5C%22ARC%20Raiders%5C%22%2C%5Cn%20%20%5C%22id%5C%22%3A%20%5C%22464339927%5C%22%5Cn%7D%22%5D%7D"],"severity":"MEDIUM","action":"LOG_AND_METRIC"}
+[2025-11-23T14:12:21.872Z] Console Error | {"args":["An error occurred! For more details, see the full error text at https://go.apollo.dev/c/err#%7B%22version%22%3A%223.8.7%22%2C%22message%22%3A12%2C%22args%22%3A%5B%22slug%22%2C%22%7B%5Cn%20%20%5C%22__typename%5C%22%3A%20%5C%22Game%5C%22%2C%5Cn%20%20%5C%22name%5C%22%3A%20%5C%22ARC%20Raiders%5C%22%2C%5Cn%20%20%5C%22displayName%5C%22%3A%20%5C%22ARC%20Raiders%5C%22%2C%5Cn%20%20%5C%22id%5C%22%3A%20%5C%22464339927%5C%22%5Cn%7D%22%5D%7D"],"severity":"MEDIUM","action":"LOG_AND_METRIC"}
+[2025-11-23T14:12:52.501Z] Console Error | {"args":["An error occurred! For more details, see the full error text at https://go.apollo.dev/c/err#%7B%22version%22%3A%223.8.7%22%2C%22message%22%3A12%2C%22args%22%3A%5B%22slug%22%2C%22%7B%5Cn%20%20%5C%22__typename%5C%22%3A%20%5C%22Game%5C%22%2C%5Cn%20%20%5C%22name%5C%22%3A%20%5C%22ARC%20Raiders%5C%22%2C%5Cn%20%20%5C%22displayName%5C%22%3A%20%5C%22ARC%20Raiders%5C%22%2C%5Cn%20%20%5C%22id%5C%22%3A%20%5C%22464339927%5C%22%5Cn%7D%22%5D%7D"],"severity":"MEDIUM","action":"LOG_AND_METRIC"}
+[2025-11-23T14:13:22.384Z] Console Error | {"args":["An error occurred! For more details, see the full error text at https://go.apollo.dev/c/err#%7B%22version%22%3A%223.8.7%22%2C%22message%22%3A12%2C%22args%22%3A%5B%22slug%22%2C%22%7B%5Cn%20%20%5C%22__typename%5C%22%3A%20%5C%22Game%5C%22%2C%5Cn%20%20%5C%22name%5C%22%3A%20%5C%22ARC%20Raiders%5C%22%2C%5Cn%20%20%5C%22displayName%5C%22%3A%20%5C%22ARC%20Raiders%5C%22%2C%5Cn%20%20%5C%22id%5C%22%3A%20%5C%22464339927%5C%22%5Cn%7D%22%5D%7D"],"severity":"MEDIUM","action":"LOG_AND_METRIC"}
+[2025-11-23T14:13:48.514Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-23T14:13:52.041Z] Console Error | {"args":["An error occurred! For more details, see the full error text at https://go.apollo.dev/c/err#%7B%22version%22%3A%223.8.7%22%2C%22message%22%3A12%2C%22args%22%3A%5B%22slug%22%2C%22%7B%5Cn%20%20%5C%22__typename%5C%22%3A%20%5C%22Game%5C%22%2C%5Cn%20%20%5C%22name%5C%22%3A%20%5C%22ARC%20Raiders%5C%22%2C%5Cn%20%20%5C%22displayName%5C%22%3A%20%5C%22ARC%20Raiders%5C%22%2C%5Cn%20%20%5C%22id%5C%22%3A%20%5C%22464339927%5C%22%5Cn%7D%22%5D%7D"],"severity":"MEDIUM","action":"LOG_AND_METRIC"}
+[2025-11-23T14:14:11.410Z] Console Error | {"args":["An error occurred! For more details, see the full error text at https://go.apollo.dev/c/err#%7B%22version%22%3A%223.8.7%22%2C%22message%22%3A12%2C%22args%22%3A%5B%22isAutoCurated%22%2C%22%7B%5Cn%20%20%5C%22__typename%5C%22%3A%20%5C%22Clip%5C%22%2C%5Cn%20%20%5C%22slug%5C%22%3A%20%5C%22CarefulLachrymoseWormFunRun-DoSvlJWd6JpNCt0c%5C%22%2C%5Cn%20%20%5C%22id%5C%22%3A%20%5C%221260255943%5C%22%2C%5Cn%20%20%5C%22url%5C%22%3A%20%5C%22https%3A%2F%2Fwww.twitch.tv%2Fshroud%2Fclip%2FCarefulLachrymoseWormFunRun-DoSvlJWd6JpNCt0c%5C%22%2C%5Cn%20%20%5C%22title%5C%22%3A%20%5C%22Shroud%20gets%20danced%20off%5C%22%2C%5Cn%20%20%5C%22thumbnailURL%5C%22%3A%20%5C%22https%3A%2F%2Fstatic-cdn.jtvnw.net%2Ftwitch-clips-thumbnails-prod%2FCarefulLachrymoseWormFunRun-DoSvlJWd6JpNCt0c%2F06c54ad8-296d-40f1-96e2-fcdc0771dc9b%2Fpreview-86x45.jpg%5C%22%2C%5Cn%20%20%5C%22isAutoCurated%5C%22%3A%20%3Cundefined%3E%2C%5Cn%20%20%5C%22curator%5C%22%3A%20%7B%5Cn%20%20%20%20%5C%22displayName%5C%22%3A%20%5C%22GuyGoneGaming%5C%22%2C%5Cn%20%20%20%20%5C%22id%5C%22%3A%20%5C%2251207735%5C%22%2C%5Cn%20%20%20%20%5C%22__typename%5C%22%3A%20%5C%22User%5C%22%5Cn%20%20%7D%2C%5Cn%20%20%5C%22broadcaster%5C%22%3A%20%7B%5Cn%20%20%20%20%5C%22displayName%5C%22%3A%20%5C%22shroud%5C%22%2C%5Cn%20%20%20%20%5C%22id%5C%22%3A%20%5C%2237402112%5C%22%2C%5Cn%20%20%20%20%5C%22__typename%5C%22%3A%20%5C%22User%5C%22%5Cn%20%20%7D%5Cn%7D%22%5D%7D"],"severity":"MEDIUM","action":"LOG_AND_METRIC"}
+[2025-11-23T14:14:22.203Z] Console Error | {"args":["An error occurred! For more details, see the full error text at https://go.apollo.dev/c/err#%7B%22version%22%3A%223.8.7%22%2C%22message%22%3A12%2C%22args%22%3A%5B%22slug%22%2C%22%7B%5Cn%20%20%5C%22__typename%5C%22%3A%20%5C%22Game%5C%22%2C%5Cn%20%20%5C%22name%5C%22%3A%20%5C%22ARC%20Raiders%5C%22%2C%5Cn%20%20%5C%22displayName%5C%22%3A%20%5C%22ARC%20Raiders%5C%22%2C%5Cn%20%20%5C%22id%5C%22%3A%20%5C%22464339927%5C%22%5Cn%7D%22%5D%7D"],"severity":"MEDIUM","action":"LOG_AND_METRIC"}
+[2025-11-23T14:14:52.076Z] Console Error | {"args":["An error occurred! For more details, see the full error text at https://go.apollo.dev/c/err#%7B%22version%22%3A%223.8.7%22%2C%22message%22%3A12%2C%22args%22%3A%5B%22slug%22%2C%22%7B%5Cn%20%20%5C%22__typename%5C%22%3A%20%5C%22Game%5C%22%2C%5Cn%20%20%5C%22name%5C%22%3A%20%5C%22ARC%20Raiders%5C%22%2C%5Cn%20%20%5C%22displayName%5C%22%3A%20%5C%22ARC%20Raiders%5C%22%2C%5Cn%20%20%5C%22id%5C%22%3A%20%5C%22464339927%5C%22%5Cn%7D%22%5D%7D"],"severity":"MEDIUM","action":"LOG_AND_METRIC"}
+[2025-11-23T14:15:21.824Z] Console Error | {"args":["An error occurred! For more details, see the full error text at https://go.apollo.dev/c/err#%7B%22version%22%3A%223.8.7%22%2C%22message%22%3A12%2C%22args%22%3A%5B%22slug%22%2C%22%7B%5Cn%20%20%5C%22__typename%5C%22%3A%20%5C%22Game%5C%22%2C%5Cn%20%20%5C%22name%5C%22%3A%20%5C%22ARC%20Raiders%5C%22%2C%5Cn%20%20%5C%22displayName%5C%22%3A%20%5C%22ARC%20Raiders%5C%22%2C%5Cn%20%20%5C%22id%5C%22%3A%20%5C%22464339927%5C%22%5Cn%7D%22%5D%7D"],"severity":"MEDIUM","action":"LOG_AND_METRIC"}
+[2025-11-23T14:15:52.334Z] Console Error | {"args":["An error occurred! For more details, see the full error text at https://go.apollo.dev/c/err#%7B%22version%22%3A%223.8.7%22%2C%22message%22%3A12%2C%22args%22%3A%5B%22slug%22%2C%22%7B%5Cn%20%20%5C%22__typename%5C%22%3A%20%5C%22Game%5C%22%2C%5Cn%20%20%5C%22name%5C%22%3A%20%5C%22ARC%20Raiders%5C%22%2C%5Cn%20%20%5C%22displayName%5C%22%3A%20%5C%22ARC%20Raiders%5C%22%2C%5Cn%20%20%5C%22id%5C%22%3A%20%5C%22464339927%5C%22%5Cn%7D%22%5D%7D"],"severity":"MEDIUM","action":"LOG_AND_METRIC"}
+[2025-11-23T14:16:22.273Z] Console Error | {"args":["An error occurred! For more details, see the full error text at https://go.apollo.dev/c/err#%7B%22version%22%3A%223.8.7%22%2C%22message%22%3A12%2C%22args%22%3A%5B%22slug%22%2C%22%7B%5Cn%20%20%5C%22__typename%5C%22%3A%20%5C%22Game%5C%22%2C%5Cn%20%20%5C%22name%5C%22%3A%20%5C%22ARC%20Raiders%5C%22%2C%5Cn%20%20%5C%22displayName%5C%22%3A%20%5C%22ARC%20Raiders%5C%22%2C%5Cn%20%20%5C%22id%5C%22%3A%20%5C%22464339927%5C%22%5Cn%7D%22%5D%7D"],"severity":"MEDIUM","action":"LOG_AND_METRIC"}
