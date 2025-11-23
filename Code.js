@@ -975,101 +975,237 @@ const HealthMonitor = (() => {
     };
 })();
 
-// --- Resilience ---
+// --- Buffer Analyzer ---
 /**
- * Executes the ad-blocking / recovery logic.
- * @responsibility
- * 1. Capture current player state.
- * 2. Attempt to restore playback by seeking to the live edge or unpausing.
- * 3. When stuck at buffer end (currentTime ≈ bufferEnd), use aggressive recovery
- *    (video.src clearing) to force stream refresh and bypass blocked ad segments.
- * 4. Note: Aggressive recovery is only used when stuck at buffer end to avoid
- *    unnecessary WASM worker disruption.
+ * Analyzes video buffer state to determine recovery strategy.
+ * @responsibility Calculate buffer health and determine if aggressive recovery is needed.
  */
-const Resilience = (() => {
-    let isFixing = false;
-
-    const playWithRetry = async (video, context = 'unknown') => {
-        const maxRetries = 3;
-        for (let attempt = 1; attempt <= maxRetries; attempt++) {
-            const playStartTime = performance.now();
-            try {
-                Logger.add(`Play attempt ${attempt}/${maxRetries} (${context})`, {
-                    before: { paused: video.paused, readyState: video.readyState, currentTime: video.currentTime },
-                });
-                await video.play();
-                await Fn.sleep(50);
-                if (!video.paused) {
-                    Logger.add(`Play attempt ${attempt} SUCCESS`, { context, duration_ms: performance.now() - playStartTime });
-                    return true;
-                }
-                Logger.add(`Play attempt ${attempt} FAILED: video still paused`, { context, duration_ms: performance.now() - playStartTime });
-            } catch (error) {
-                Logger.add(`Play attempt ${attempt} threw error`, { context, error: error.message, duration_ms: performance.now() - playStartTime });
-                if (error.name === 'NotAllowedError') {
-                    return false;
-                }
+const BufferAnalyzer = (() => {
+    return {
+        analyze: (video) => {
+            if (!video || !video.buffered || video.buffered.length === 0) {
+                return {
+                    needsAggressive: false,
+                    bufferEnd: 0,
+                    bufferStart: 0,
+                    currentTime: video ? video.currentTime : 0,
+                    bufferSize: 0,
+                    bufferHealth: 'unknown'
+                };
             }
-            if (attempt < maxRetries) {
-                await Fn.sleep(300 * attempt);
-            }
-        }
-        Logger.add('All play attempts exhausted.', { context });
-        return false;
-    };
 
-    const aggressiveRecovery = async (video) => {
-        Metrics.increment('aggressive_recoveries');
-        Logger.add('Executing aggressive recovery: forcing stream refresh');
-        const recoveryStartTime = performance.now();
-
-        const playbackRate = video.playbackRate;
-        const volume = video.volume;
-        const muted = video.muted;
-        const originalSrc = video.src;
-        const isBlobUrl = originalSrc && originalSrc.startsWith('blob:');
-
-        if (isBlobUrl) {
-            Logger.add('Blob URL detected - performing unload/reload cycle.');
-            video.src = '';
-            video.load();
-            await Fn.sleep(100);
-            video.src = originalSrc;
-            video.load();
-        } else {
-            video.src = '';
-            video.load();
-        }
-
-        await new Promise(resolve => {
-            const checkInterval = 100;
-            const maxChecks = CONFIG.timing.PLAYBACK_TIMEOUT_MS / checkInterval;
-            let checkCount = 0;
-            const interval = setInterval(() => {
-                if (video.readyState >= 2) {
-                    clearInterval(interval);
-                    Logger.add('Stream reloaded.', { duration_ms: performance.now() - recoveryStartTime });
-                    resolve();
-                } else if (++checkCount >= maxChecks) {
-                    clearInterval(interval);
-                    Logger.add('Stream reload timeout during aggressive recovery.');
-                    resolve();
-                }
-            }, checkInterval);
-        });
-
-        video.playbackRate = playbackRate;
-        video.volume = volume;
-        video.muted = muted;
-    };
-
-    const standardRecovery = (video) => {
-        Logger.add('Executing standard recovery: seeking');
-        if (video.buffered.length > 0) {
+            const currentTime = video.currentTime;
             const bufferEnd = video.buffered.end(video.buffered.length - 1);
-            video.currentTime = bufferEnd - 0.5;
+            const bufferStart = video.buffered.start(0);
+            const bufferSize = bufferEnd - bufferStart;
+
+            // Check if stuck at buffer end
+            const atBufferEnd = Math.abs(currentTime - bufferEnd) < 0.5;
+            const hasHealthyBuffer = bufferSize >= CONFIG.player.BUFFER_HEALTH_S;
+
+            let bufferHealth = 'healthy';
+            if (bufferSize < CONFIG.player.BUFFER_HEALTH_S) {
+                bufferHealth = 'critical';
+            } else if (bufferSize < CONFIG.player.BUFFER_HEALTH_S * 2) {
+                bufferHealth = 'low';
+            }
+
+            return {
+                needsAggressive: atBufferEnd && hasHealthyBuffer,
+                bufferEnd,
+                bufferStart,
+                currentTime,
+                bufferSize,
+                bufferHealth
+            };
         }
     };
+})();
+
+// --- Play Retry Handler ---
+/**
+ * Handles video.play() with retry logic and exponential backoff.
+ * @responsibility Ensure reliable playback resumption after recovery.
+ */
+const PlayRetryHandler = (() => {
+    const MAX_RETRIES = 3;
+    const BASE_DELAY_MS = 300;
+
+    return {
+        retry: async (video, context = 'unknown') => {
+            for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+                const playStartTime = performance.now();
+                try {
+                    Logger.add(`Play attempt ${attempt}/${MAX_RETRIES} (${context})`, {
+                        before: {
+                            paused: video.paused,
+                            readyState: video.readyState,
+                            currentTime: video.currentTime
+                        },
+                    });
+
+                    await video.play();
+                    await Fn.sleep(50);
+
+                    if (!video.paused) {
+                        Logger.add(`Play attempt ${attempt} SUCCESS`, {
+                            context,
+                            duration_ms: performance.now() - playStartTime
+                        });
+                        return true;
+                    }
+
+                    Logger.add(`Play attempt ${attempt} FAILED: video still paused`, {
+                        context,
+                        duration_ms: performance.now() - playStartTime
+                    });
+                } catch (error) {
+                    Logger.add(`Play attempt ${attempt} threw error`, {
+                        context,
+                        error: error.message,
+                        duration_ms: performance.now() - playStartTime
+                    });
+
+                    if (error.name === 'NotAllowedError') {
+                        return false;
+                    }
+                }
+
+                if (attempt < MAX_RETRIES) {
+                    await Fn.sleep(BASE_DELAY_MS * attempt);
+                }
+            }
+
+            Logger.add('All play attempts exhausted.', { context });
+            return false;
+        }
+    };
+})();
+
+// --- Standard Recovery ---
+/**
+ * Simple seek-based recovery strategy.
+ * @responsibility Seek to live edge without disrupting stream.
+ */
+const StandardRecovery = (() => {
+    const SEEK_OFFSET_S = 0.5;
+
+    return {
+        execute: (video) => {
+            Logger.add('Executing standard recovery: seeking');
+
+            if (!video || !video.buffered || video.buffered.length === 0) {
+                Logger.add('Standard recovery aborted: no buffer');
+                return;
+            }
+
+            const bufferEnd = video.buffered.end(video.buffered.length - 1);
+            video.currentTime = bufferEnd - SEEK_OFFSET_S;
+
+            Logger.add('Standard recovery complete', {
+                seekTo: video.currentTime,
+                bufferEnd
+            });
+        }
+    };
+})();
+
+// --- Aggressive Recovery ---
+/**
+ * Stream refresh recovery strategy via src clearing.
+ * @responsibility Force stream refresh when stuck at buffer end.
+ */
+const AggressiveRecovery = (() => {
+    const READY_CHECK_INTERVAL_MS = 100;
+
+    return {
+        execute: async (video) => {
+            Metrics.increment('aggressive_recoveries');
+            Logger.add('Executing aggressive recovery: forcing stream refresh');
+            const recoveryStartTime = performance.now();
+
+            // Save video state
+            const playbackRate = video.playbackRate;
+            const volume = video.volume;
+            const muted = video.muted;
+            const originalSrc = video.src;
+            const isBlobUrl = originalSrc && originalSrc.startsWith('blob:');
+
+            // Clear and reload stream
+            if (isBlobUrl) {
+                Logger.add('Blob URL detected - performing unload/reload cycle.');
+                video.src = '';
+                video.load();
+                await Fn.sleep(100);
+                video.src = originalSrc;
+                video.load();
+            } else {
+                video.src = '';
+                video.load();
+            }
+
+            // Wait for stream to be ready
+            await new Promise(resolve => {
+                const maxChecks = CONFIG.timing.PLAYBACK_TIMEOUT_MS / READY_CHECK_INTERVAL_MS;
+                let checkCount = 0;
+                const interval = setInterval(() => {
+                    if (video.readyState >= 2) {
+                        clearInterval(interval);
+                        Logger.add('Stream reloaded.', {
+                            duration_ms: performance.now() - recoveryStartTime
+                        });
+                        resolve();
+                    } else if (++checkCount >= maxChecks) {
+                        clearInterval(interval);
+                        Logger.add('Stream reload timeout during aggressive recovery.');
+                        resolve();
+                    }
+                }, READY_CHECK_INTERVAL_MS);
+            });
+
+            // Restore video state
+            video.playbackRate = playbackRate;
+            video.volume = volume;
+            video.muted = muted;
+        }
+    };
+})();
+
+// --- Recovery Strategy ---
+/**
+ * Selects appropriate recovery strategy based on buffer analysis.
+ * @responsibility Implement strategy pattern for recovery selection.
+ */
+const RecoveryStrategy = (() => {
+    return {
+        select: (video) => {
+            const analysis = BufferAnalyzer.analyze(video);
+
+            Logger.add('Recovery strategy selection', {
+                needsAggressive: analysis.needsAggressive,
+                bufferHealth: analysis.bufferHealth,
+                bufferSize: analysis.bufferSize
+            });
+
+            if (analysis.needsAggressive) {
+                return AggressiveRecovery;
+            }
+
+            return StandardRecovery;
+        }
+    };
+})();
+
+// --- Resilience Orchestrator ---
+/**
+ * Orchestrates recovery execution.
+ * @responsibility
+ * 1. Guard against concurrent recovery attempts.
+ * 2. Coordinate buffer analysis, strategy selection, and execution.
+ * 3. Handle play retry after recovery.
+ */
+const ResilienceOrchestrator = (() => {
+    let isFixing = false;
 
     return {
         execute: async (container) => {
@@ -1083,38 +1219,34 @@ const Resilience = (() => {
             try {
                 Logger.add('Resilience execution started');
                 Metrics.increment('resilience_executions');
+
                 const video = container.querySelector(CONFIG.selectors.VIDEO);
                 if (!video) {
                     Logger.add('Resilience aborted: No video element found');
                     return;
                 }
 
-                const { currentTime, buffered, error } = video;
+                // Check for fatal errors
+                const { error } = video;
                 if (error && error.code === CONFIG.codes.MEDIA_ERROR_SRC) {
                     Logger.add('Fatal error (code 4) - cannot recover, waiting for Twitch reload');
                     return;
                 }
 
-                let needsAggressive = false;
-                if (buffered.length > 0) {
-                    const bufferEnd = buffered.end(buffered.length - 1);
-                    if (Math.abs(currentTime - bufferEnd) < 0.5) {
-                        if ((bufferEnd - buffered.start(0)) < CONFIG.player.BUFFER_HEALTH_S) {
-                            Logger.add('Insufficient buffer for recovery, waiting');
-                            return;
-                        }
-                        needsAggressive = true;
-                    }
+                // Check buffer and select strategy
+                const analysis = BufferAnalyzer.analyze(video);
+                if (analysis.bufferHealth === 'critical') {
+                    Logger.add('Insufficient buffer for recovery, waiting');
+                    return;
                 }
 
-                if (needsAggressive) {
-                    await aggressiveRecovery(video);
-                } else {
-                    standardRecovery(video);
-                }
+                // Execute recovery strategy
+                const strategy = RecoveryStrategy.select(video);
+                await strategy.execute(video);
 
+                // Resume playback if needed
                 if (video.paused) {
-                    await playWithRetry(video, 'post-recovery');
+                    await PlayRetryHandler.retry(video, 'post-recovery');
                 }
 
                 Adapters.EventBus.emit(CONFIG.events.REPORT, { status: 'SUCCESS' });
@@ -1122,9 +1254,11 @@ const Resilience = (() => {
                 Logger.add('Resilience failed', { error: String(e) });
             } finally {
                 isFixing = false;
-                Logger.add('Resilience execution finished', { total_duration_ms: performance.now() - startTime });
+                Logger.add('Resilience execution finished', {
+                    total_duration_ms: performance.now() - startTime
+                });
             }
-        },
+        }
     };
 })();
 
@@ -1267,7 +1401,7 @@ const EventCoordinator = (() => {
                 Logger.add('Event: AD_DETECTED');
                 const container = PlayerLifecycle.getActiveContainer();
                 if (container) {
-                    Resilience.execute(container);
+                    ResilienceOrchestrator.execute(container);
                 }
             });
         }

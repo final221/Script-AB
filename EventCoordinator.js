@@ -22,7 +22,7 @@ const EventCoordinator = (() => {
                 Logger.add('Event: AD_DETECTED');
                 const container = PlayerLifecycle.getActiveContainer();
                 if (container) {
-                    Resilience.execute(container);
+                    ResilienceOrchestrator.execute(container);
                 }
             });
         }
