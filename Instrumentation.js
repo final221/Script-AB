@@ -1,24 +1,58 @@
 // --- Instrumentation ---
 /**
- * Hooks into global events and console methods to monitor application behavior,
- * log relevant data, and update metrics.
- * @responsibility Observes, interprets, and reacts to system-wide events and console output.
+ * Hooks into global events and console methods to monitor application behavior.
+ * Uses structured error classification instead of string pattern matching.
+ * @responsibility Observes system-wide events, classifies errors by type and severity.
  */
 const Instrumentation = (() => {
+    const classifyError = (error, message) => {
+        // Critical media errors (always trigger recovery)
+        if (error instanceof MediaError || (error && error.code >= 1 && error.code <= 4)) {
+            return { severity: 'CRITICAL', action: 'TRIGGER_RECOVERY' };
+        }
+
+        // Network errors (usually recoverable)
+        if (error instanceof TypeError && message.includes('fetch')) {
+            return { severity: 'MEDIUM', action: 'LOG_AND_METRIC' };
+        }
+
+        // Known benign errors (log only)
+        const benignPatterns = ['graphql', 'unauthenticated', 'pinnedchatsettings'];
+        if (benignPatterns.some(pattern => message.toLowerCase().includes(pattern))) {
+            return { severity: 'LOW', action: 'LOG_ONLY' };
+        }
+
+        // Unknown errors (log and track)
+        return { severity: 'MEDIUM', action: 'LOG_AND_METRIC' };
+    };
+
     const setupGlobalErrorHandlers = () => {
         window.addEventListener('error', (event) => {
+            const classification = classifyError(event.error, event.message || '');
+
             Logger.add('Global Error', {
                 message: event.message,
                 filename: event.filename,
                 lineno: event.lineno,
                 colno: event.colno,
+                severity: classification.severity,
+                action: classification.action
             });
-            Metrics.increment('errors');
+
+            if (classification.action !== 'LOG_ONLY') {
+                Metrics.increment('errors');
+            }
+
+            if (classification.action === 'TRIGGER_RECOVERY') {
+                Logger.add('Critical error detected, triggering recovery');
+                setTimeout(() => Adapters.EventBus.emit(CONFIG.events.AD_DETECTED), 300);
+            }
         });
 
         window.addEventListener('unhandledrejection', (event) => {
             Logger.add('Unhandled Rejection', {
                 reason: event.reason ? event.reason.toString() : 'Unknown',
+                severity: 'MEDIUM'
             });
             Metrics.increment('errors');
         });
@@ -26,21 +60,21 @@ const Instrumentation = (() => {
 
     const interceptConsoleError = () => {
         const originalError = console.error;
-        const benignErrorSignatures = ['[GraphQL]', 'unauthenticated', 'PinnedChatSettings'];
 
         console.error = (...args) => {
             originalError.apply(console, args);
             try {
                 const msg = args.map(String).join(' ');
-                const isBenign = benignErrorSignatures.some(sig => msg.includes(sig));
-                Logger.add('Console Error', { args: args.map(String), benign: isBenign });
+                const classification = classifyError(null, msg);
 
-                if (!isBenign) {
+                Logger.add('Console Error', {
+                    args: args.map(String),
+                    severity: classification.severity,
+                    action: classification.action
+                });
+
+                if (classification.action !== 'LOG_ONLY') {
                     Metrics.increment('errors');
-                    if (msg.includes('Error #4000') || msg.includes('MediaLoadInvalidURI')) {
-                        Logger.add('Player crash detected, triggering recovery');
-                        setTimeout(() => Adapters.EventBus.emit(CONFIG.events.AD_DETECTED), 300);
-                    }
                 }
             } catch (e) {
                 // Avoid recursion if logging fails
@@ -59,11 +93,15 @@ const Instrumentation = (() => {
             originalWarn.apply(console, args);
             try {
                 const msg = args.map(String).join(' ');
-                if (msg.includes('Playhead stalling')) {
-                    Logger.add('Playhead stalling warning detected (raw)');
+
+                // Critical playback warning
+                if (msg.toLowerCase().includes('playhead stalling')) {
+                    Logger.add('Playhead stalling warning detected (raw)', { severity: 'CRITICAL' });
                     stallingDebounced();
-                } else if (CONFIG.logging.LOG_CSP_WARNINGS && msg.includes('Content-Security-Policy')) {
-                    Logger.add('CSP Warning', { args: args.map(String) });
+                }
+                // CSP warnings (informational)
+                else if (CONFIG.logging.LOG_CSP_WARNINGS && msg.includes('Content-Security-Policy')) {
+                    Logger.add('CSP Warning', { args: args.map(String), severity: 'LOW' });
                 }
             } catch (e) {
                 // Avoid recursion if logging fails
@@ -79,3 +117,4 @@ const Instrumentation = (() => {
         },
     };
 })();
+
