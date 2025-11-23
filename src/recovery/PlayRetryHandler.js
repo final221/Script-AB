@@ -16,7 +16,8 @@ const PlayRetryHandler = (() => {
                         before: {
                             paused: video.paused,
                             readyState: video.readyState,
-                            currentTime: video.currentTime
+                            currentTime: video.currentTime,
+                            error: video.error ? video.error.code : null
                         },
                     });
 

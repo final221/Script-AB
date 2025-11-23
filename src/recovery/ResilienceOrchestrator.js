@@ -44,9 +44,40 @@ const ResilienceOrchestrator = (() => {
                     return;
                 }
 
+                // Capture pre-recovery snapshot
+                const preSnapshot = {
+                    readyState: video.readyState,
+                    networkState: video.networkState,
+                    currentTime: video.currentTime,
+                    paused: video.paused,
+                    error: video.error ? video.error.code : null,
+                    bufferEnd: video.buffered.length ? video.buffered.end(video.buffered.length - 1) : 0
+                };
+                Logger.add('[RECOVERY] Pre-recovery snapshot', preSnapshot);
+
                 // Execute recovery strategy
                 const strategy = RecoveryStrategy.select(video, payload.forceAggressive);
                 await strategy.execute(video);
+
+                // Capture post-recovery snapshot
+                const postSnapshot = {
+                    readyState: video.readyState,
+                    networkState: video.networkState,
+                    currentTime: video.currentTime,
+                    paused: video.paused,
+                    error: video.error ? video.error.code : null,
+                    bufferEnd: video.buffered.length ? video.buffered.end(video.buffered.length - 1) : 0
+                };
+
+                // Calculate and log delta
+                const delta = {
+                    readyStateChanged: preSnapshot.readyState !== postSnapshot.readyState,
+                    networkStateChanged: preSnapshot.networkState !== postSnapshot.networkState,
+                    errorAppeared: !preSnapshot.error && postSnapshot.error,
+                    errorCleared: preSnapshot.error && !postSnapshot.error,
+                    pausedStateChanged: preSnapshot.paused !== postSnapshot.paused
+                };
+                Logger.add('[RECOVERY] Post-recovery delta', { pre: preSnapshot, post: postSnapshot, changes: delta });
 
                 // Resume playback if needed
                 if (video.paused) {
