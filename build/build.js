@@ -47,12 +47,62 @@ const CONFIG = {
     ]
 };
 
+// --- Version Management ---
+
+function readVersion() {
+    const versionPath = path.join(__dirname, 'version.txt');
+    try {
+        return fs.readFileSync(versionPath, 'utf8').trim();
+    } catch (err) {
+        console.warn('⚠️  version.txt not found, using 1.0.0');
+        return '1.0.0';
+    }
+}
+
+function writeVersion(version) {
+    const versionPath = path.join(__dirname, 'version.txt');
+    fs.writeFileSync(versionPath, version);
+}
+
+function incrementVersion(version, type = 'patch') {
+    const parts = version.split('.').map(Number);
+
+    if (type === 'major') {
+        parts[0]++;
+        parts[1] = 0;
+        parts[2] = 0;
+    } else if (type === 'minor') {
+        parts[1]++;
+        parts[2] = 0;
+    } else {
+        parts[2]++;
+    }
+
+    return parts.join('.');
+}
+
 // --- Build Logic ---
 
 function build() {
     console.log('🏗️  Starting build...');
 
-    // 1. Validation
+    // 1. Version Management
+    const args = process.argv.slice(2);
+    let versionType = 'patch';
+
+    if (args.includes('--major')) {
+        versionType = 'major';
+    } else if (args.includes('--minor')) {
+        versionType = 'minor';
+    }
+
+    const currentVersion = readVersion();
+    const newVersion = incrementVersion(currentVersion, versionType);
+    writeVersion(newVersion);
+
+    console.log(`📦 Version: ${currentVersion} → ${newVersion} (${versionType})`);
+
+    // 2. Validation
     if (CONFIG.FILE_ORDER.includes(path.basename(CONFIG.OUT_FILE))) {
         console.error(`❌ Error: Output file "${path.basename(CONFIG.OUT_FILE)}" cannot be in the source list.`);
         return;
@@ -64,18 +114,21 @@ function build() {
 
     let outputContent = '';
 
-    // 2. Add Header (if it exists)
+    // 3. Add Header (if it exists)
     if (fs.existsSync(CONFIG.HEADER_FILE)) {
         console.log(`   + Adding header: header.js`);
-        outputContent += fs.readFileSync(CONFIG.HEADER_FILE, 'utf8') + '\n';
+        let headerContent = fs.readFileSync(CONFIG.HEADER_FILE, 'utf8');
+        // Replace version placeholder
+        headerContent = headerContent.replace('{{VERSION}}', newVersion);
+        outputContent += headerContent + '\n';
     } else {
         console.warn(`⚠️  Header file not found: header.js`);
     }
 
-    // 3. Start IIFE
+    // 4. Start IIFE
     outputContent += '(function () {\n    \'use strict\';\n\n';
 
-    // 4. Add Files in Order
+    // 5. Add Files in Order
     if (CONFIG.FILE_ORDER.length === 0) {
         console.warn('⚠️  No files specified in CONFIG.FILE_ORDER. Only header (if present) will be written.');
     }
@@ -97,10 +150,10 @@ function build() {
         }
     });
 
-    // 5. End IIFE
+    // 6. End IIFE
     outputContent += '})();\n';
 
-    // 6. Write Output
+    // 7. Write Output
     try {
         fs.writeFileSync(CONFIG.OUT_FILE, outputContent);
         console.log(`✅ Build successful! Output written to: ${CONFIG.OUT_FILE}`);
@@ -112,3 +165,4 @@ function build() {
 
 // Run build
 build();
+
