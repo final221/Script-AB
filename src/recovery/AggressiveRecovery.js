@@ -35,19 +35,20 @@ const AggressiveRecovery = (() => {
 
             // Execute Strategy
             if (isBlobUrl) {
-                // FIX: Use seekable.end() to find the true live edge.
-                // 999999 was too aggressive and caused freezing.
-                let seekTarget = 999999;
-                if (video.seekable && video.seekable.length > 0) {
-                    seekTarget = video.seekable.end(video.seekable.length - 1);
-                    Logger.add('Live Edge Seek target found', {
-                        seekableStart: video.seekable.start(0),
-                        seekableEnd: seekTarget
-                    });
-                } else {
-                    Logger.add('Live Edge Seek: No seekable range found, using fallback');
-                    seekTarget = video.currentTime + 30;
-                }
+                // CRITICAL: DO NOT use video.seekable.end() for Blob URLs!
+                // It returns infinity-like values (9223372036854.775), causing massive A/V desync (100+ seconds).
+                // Instead, seek to a safe position slightly ahead of the current buffer.
+                // This allows the player to smoothly transition without breaking synchronization.
+                const safeSeekOffset = 5; // seconds ahead of buffer
+                const seekTarget = bufferEnd + safeSeekOffset;
+
+                Logger.add('Blob URL: Using safe buffer-based seek', {
+                    currentTime: video.currentTime,
+                    bufferEnd: bufferEnd,
+                    seekTarget: seekTarget,
+                    offset: safeSeekOffset
+                });
+
                 video.currentTime = seekTarget;
             } else {
                 Logger.add('Standard URL detected - reloading via empty src');
