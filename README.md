@@ -55,6 +55,8 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for detailed architecture and m
 
 ## Development
 
+> **Note for AI Agents:** Please refer to [docs/AI_CONTEXT.md](docs/AI_CONTEXT.md) for project constraints, navigation guides, and architectural context.
+
 ### Module Organization
 - **31 modules**, average 50 lines each
 - **Low complexity**: 87% of modules
