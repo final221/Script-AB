@@ -10,7 +10,7 @@ const ResilienceOrchestrator = (() => {
     let isFixing = false;
 
     return {
-        execute: async (container) => {
+        execute: async (container, payload = {}) => {
             if (isFixing) {
                 Logger.add('[RECOVERY] Resilience already in progress, skipping');
                 return;
@@ -37,13 +37,15 @@ const ResilienceOrchestrator = (() => {
 
                 // Check buffer and select strategy
                 const analysis = BufferAnalyzer.analyze(video);
-                if (analysis.bufferHealth === 'critical') {
+
+                // Skip buffer check if forced
+                if (!payload.forceAggressive && analysis.bufferHealth === 'critical') {
                     Logger.add('[RECOVERY] Insufficient buffer for recovery, waiting');
                     return;
                 }
 
                 // Execute recovery strategy
-                const strategy = RecoveryStrategy.select(video);
+                const strategy = RecoveryStrategy.select(video, payload.forceAggressive);
                 await strategy.execute(video);
 
                 // Resume playback if needed

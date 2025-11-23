@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       2.0.12
+// @version       2.0.13
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -271,7 +271,7 @@ const EventCoordinator = (() => {
 
                 const container = PlayerLifecycle.getActiveContainer();
                 if (container) {
-                    ResilienceOrchestrator.execute(container);
+                    ResilienceOrchestrator.execute(container, payload);
                 }
             });
         }
@@ -1529,16 +1529,17 @@ const PlayRetryHandler = (() => {
  */
 const RecoveryStrategy = (() => {
     return {
-        select: (video) => {
+        select: (video, forceAggressive = false) => {
             const analysis = BufferAnalyzer.analyze(video);
 
             Logger.add('Recovery strategy selection', {
-                needsAggressive: analysis.needsAggressive,
+                needsAggressive: analysis.needsAggressive || forceAggressive,
                 bufferHealth: analysis.bufferHealth,
-                bufferSize: analysis.bufferSize
+                bufferSize: analysis.bufferSize,
+                forced: forceAggressive
             });
 
-            if (analysis.needsAggressive) {
+            if (forceAggressive || analysis.needsAggressive) {
                 return AggressiveRecovery;
             }
 
@@ -1559,7 +1560,7 @@ const ResilienceOrchestrator = (() => {
     let isFixing = false;
 
     return {
-        execute: async (container) => {
+        execute: async (container, payload = {}) => {
             if (isFixing) {
                 Logger.add('[RECOVERY] Resilience already in progress, skipping');
                 return;
@@ -1586,13 +1587,15 @@ const ResilienceOrchestrator = (() => {
 
                 // Check buffer and select strategy
                 const analysis = BufferAnalyzer.analyze(video);
-                if (analysis.bufferHealth === 'critical') {
+
+                // Skip buffer check if forced
+                if (!payload.forceAggressive && analysis.bufferHealth === 'critical') {
                     Logger.add('[RECOVERY] Insufficient buffer for recovery, waiting');
                     return;
                 }
 
                 // Execute recovery strategy
-                const strategy = RecoveryStrategy.select(video);
+                const strategy = RecoveryStrategy.select(video, payload.forceAggressive);
                 await strategy.execute(video);
 
                 // Resume playback if needed
@@ -1685,6 +1688,11 @@ const CoreOrchestrator = (() => {
             window.forceTwitchAdRecovery = () => {
                 Logger.add('Manual recovery triggered via console');
                 Adapters.EventBus.emit(CONFIG.events.AD_DETECTED, { source: 'MANUAL_TRIGGER' });
+            };
+
+            window.forceTwitchAggressiveRecovery = () => {
+                Logger.add('Manual AGGRESSIVE recovery triggered via console');
+                Adapters.EventBus.emit(CONFIG.events.AD_DETECTED, { source: 'MANUAL_TRIGGER', forceAggressive: true });
             };
         }
     };

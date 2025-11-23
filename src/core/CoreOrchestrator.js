@@ -43,6 +43,11 @@ const CoreOrchestrator = (() => {
                 Logger.add('Manual recovery triggered via console');
                 Adapters.EventBus.emit(CONFIG.events.AD_DETECTED, { source: 'MANUAL_TRIGGER' });
             };
+
+            window.forceTwitchAggressiveRecovery = () => {
+                Logger.add('Manual AGGRESSIVE recovery triggered via console');
+                Adapters.EventBus.emit(CONFIG.events.AD_DETECTED, { source: 'MANUAL_TRIGGER', forceAggressive: true });
+            };
         }
     };
 })();

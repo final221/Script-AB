@@ -5,16 +5,17 @@
  */
 const RecoveryStrategy = (() => {
     return {
-        select: (video) => {
+        select: (video, forceAggressive = false) => {
             const analysis = BufferAnalyzer.analyze(video);
 
             Logger.add('Recovery strategy selection', {
-                needsAggressive: analysis.needsAggressive,
+                needsAggressive: analysis.needsAggressive || forceAggressive,
                 bufferHealth: analysis.bufferHealth,
-                bufferSize: analysis.bufferSize
+                bufferSize: analysis.bufferSize,
+                forced: forceAggressive
             });
 
-            if (analysis.needsAggressive) {
+            if (forceAggressive || analysis.needsAggressive) {
                 return AggressiveRecovery;
             }
 

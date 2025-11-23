@@ -31,7 +31,7 @@ const EventCoordinator = (() => {
 
                 const container = PlayerLifecycle.getActiveContainer();
                 if (container) {
-                    ResilienceOrchestrator.execute(container);
+                    ResilienceOrchestrator.execute(container, payload);
                 }
             });
         }
