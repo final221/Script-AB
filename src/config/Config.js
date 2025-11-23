@@ -51,7 +51,7 @@ const CONFIG = (() => {
             MAX_SEARCH_DEPTH: 15,
             STUCK_THRESHOLD_S: 0.1,
             STUCK_COUNT_LIMIT: 2,
-            STANDARD_SEEK_BACK_S: 2,
+            STANDARD_SEEK_BACK_S: 3.5,
             BLOB_SEEK_BACK_S: 3,
             BUFFER_HEALTH_S: 5,
         },

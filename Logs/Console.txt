@@ -1,4 +1,6 @@
-window.forceTwitchAggressiveRecovery()
+window.forceTwitchAdRecovery()
+undefined
+window.forceTwitchAdRecovery()
 undefined
 window.forceTwitchAdRecovery()
 undefined
