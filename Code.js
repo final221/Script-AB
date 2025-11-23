@@ -696,53 +696,39 @@ const PlayerContext = (() => {
     };
 })();
 
-// --- Health Monitor ---
+// --- Stuck Detector ---
 /**
- * Monitors video playback health to detect "stuck" states caused by ad injection.
- * @responsibility Detects when the player is technically "playing" but time is not advancing.
- * Also monitors audio/video synchronization issues.
+ * Detects when video time is not advancing (stuck/frozen playback).
+ * @responsibility Monitor video currentTime to detect stuck states.
  */
-const HealthMonitor = (() => {
-    let state = {};
-    const timers = { main: null, sync: null };
-
-    const resetState = (video = null) => {
-        state = {
-            videoRef: video,
-            lastTime: video ? video.currentTime : 0,
-            stuckCount: 0,
-            lastDroppedFrames: 0,
-            lastTotalFrames: 0,
-            lastSyncCheckTime: 0,
-            lastSyncVideoTime: video ? video.currentTime : 0,
-            syncIssueCount: 0,
-        };
+const StuckDetector = (() => {
+    let state = {
+        lastTime: 0,
+        stuckCount: 0
     };
 
-    const triggerRecovery = (reason, details) => {
-        Logger.add(`HealthMonitor triggering recovery: ${reason}`, details);
-        Metrics.increment('health_triggers');
-        HealthMonitor.stop();
-        Adapters.EventBus.emit(CONFIG.events.AD_DETECTED);
+    const reset = (video = null) => {
+        state.lastTime = video ? video.currentTime : 0;
+        state.stuckCount = 0;
     };
 
-    const checkStuckState = () => {
-        if (!state.videoRef) return;
-        if (state.videoRef.paused || state.videoRef.ended) {
+    const check = (video) => {
+        if (!video) return null;
+        if (video.paused || video.ended) {
             if (CONFIG.debug && state.stuckCount > 0) {
-                Logger.add('HealthMonitor[Debug]: Stuck count reset due to paused/ended state.');
+                Logger.add('StuckDetector[Debug]: Stuck count reset due to paused/ended state.');
             }
             state.stuckCount = 0;
-            state.lastTime = state.videoRef.currentTime;
-            return;
+            state.lastTime = video.currentTime;
+            return null;
         }
 
-        const currentTime = state.videoRef.currentTime;
+        const currentTime = video.currentTime;
         const lastTime = state.lastTime;
         const diff = Math.abs(currentTime - lastTime);
 
         if (CONFIG.debug) {
-            Logger.add('HealthMonitor[Debug]: Stuck check', {
+            Logger.add('StuckDetector[Debug]: Stuck check', {
                 currentTime: currentTime.toFixed(3),
                 lastTime: lastTime.toFixed(3),
                 diff: diff.toFixed(3),
@@ -757,20 +743,48 @@ const HealthMonitor = (() => {
             state.stuckCount = 0;
             state.lastTime = currentTime;
         }
+
         if (state.stuckCount >= CONFIG.player.STUCK_COUNT_LIMIT) {
-            triggerRecovery('Player stuck', { stuckCount: state.stuckCount, lastTime, currentTime });
+            return {
+                reason: 'Player stuck',
+                details: { stuckCount: state.stuckCount, lastTime, currentTime }
+            };
         }
+
+        return null;
     };
 
-    const checkDroppedFrames = () => {
-        if (!state.videoRef || !state.videoRef.getVideoPlaybackQuality) return;
+    return {
+        reset,
+        check
+    };
+})();
 
-        const quality = state.videoRef.getVideoPlaybackQuality();
+// --- Frame Drop Detector ---
+/**
+ * Monitors video frame drops to detect playback quality issues.
+ * @responsibility Track dropped frames and trigger recovery on severe drops.
+ */
+const FrameDropDetector = (() => {
+    let state = {
+        lastDroppedFrames: 0,
+        lastTotalFrames: 0
+    };
+
+    const reset = () => {
+        state.lastDroppedFrames = 0;
+        state.lastTotalFrames = 0;
+    };
+
+    const check = (video) => {
+        if (!video || !video.getVideoPlaybackQuality) return null;
+
+        const quality = video.getVideoPlaybackQuality();
         const newDropped = quality.droppedVideoFrames - state.lastDroppedFrames;
         const newTotal = quality.totalVideoFrames - state.lastTotalFrames;
 
         if (CONFIG.debug) {
-            Logger.add('HealthMonitor[Debug]: Frame check', {
+            Logger.add('FrameDropDetector[Debug]: Frame check', {
                 dropped: quality.droppedVideoFrames,
                 total: quality.totalVideoFrames,
                 lastDropped: state.lastDroppedFrames,
@@ -785,28 +799,59 @@ const HealthMonitor = (() => {
             Logger.add('Frame drop detected', { newDropped, newTotal, recentDropRate: recentDropRate.toFixed(2) + '%' });
 
             if (newDropped > CONFIG.timing.FRAME_DROP_SEVERE_THRESHOLD || (newDropped > CONFIG.timing.FRAME_DROP_MODERATE_THRESHOLD && recentDropRate > CONFIG.timing.FRAME_DROP_RATE_THRESHOLD)) {
-                triggerRecovery('Severe frame drop', { newDropped, newTotal, recentDropRate });
+                state.lastDroppedFrames = quality.droppedVideoFrames;
+                state.lastTotalFrames = quality.totalVideoFrames;
+                return {
+                    reason: 'Severe frame drop',
+                    details: { newDropped, newTotal, recentDropRate }
+                };
             }
         }
+
         state.lastDroppedFrames = quality.droppedVideoFrames;
         state.lastTotalFrames = quality.totalVideoFrames;
+        return null;
     };
 
-    const checkAVSync = () => {
-        if (!state.videoRef) return;
-        if (state.videoRef.paused || state.videoRef.ended || state.videoRef.readyState < 2) {
+    return {
+        reset,
+        check
+    };
+})();
+
+// --- A/V Sync Detector ---
+/**
+ * Monitors audio/video synchronization to detect drift issues.
+ * @responsibility Track time advancement vs real-world time to detect A/V sync problems.
+ */
+const AVSyncDetector = (() => {
+    let state = {
+        lastSyncCheckTime: 0,
+        lastSyncVideoTime: 0,
+        syncIssueCount: 0
+    };
+
+    const reset = (video = null) => {
+        state.lastSyncCheckTime = 0;
+        state.lastSyncVideoTime = video ? video.currentTime : 0;
+        state.syncIssueCount = 0;
+    };
+
+    const check = (video) => {
+        if (!video) return null;
+        if (video.paused || video.ended || video.readyState < 2) {
             if (state.syncIssueCount > 0) {
                 Logger.add('A/V sync recovered', { previousIssues: state.syncIssueCount });
                 state.syncIssueCount = 0;
             }
-            return;
+            return null;
         }
 
         const now = Date.now();
         if (state.lastSyncCheckTime > 0) {
             const elapsedRealTime = (now - state.lastSyncCheckTime) / 1000;
-            const expectedTimeAdvancement = elapsedRealTime * state.videoRef.playbackRate;
-            const actualTimeAdvancement = state.videoRef.currentTime - state.lastSyncVideoTime;
+            const expectedTimeAdvancement = elapsedRealTime * video.playbackRate;
+            const actualTimeAdvancement = video.currentTime - state.lastSyncVideoTime;
             const discrepancy = Math.abs(expectedTimeAdvancement - actualTimeAdvancement);
 
             if (discrepancy > CONFIG.timing.AV_SYNC_THRESHOLD_MS / 1000 && expectedTimeAdvancement > 0.1) {
@@ -823,12 +868,77 @@ const HealthMonitor = (() => {
             }
 
             if (state.syncIssueCount >= 3) {
-                triggerRecovery('Persistent A/V sync issue', { syncIssueCount: state.syncIssueCount, discrepancy });
-                return;
+                state.lastSyncCheckTime = now;
+                state.lastSyncVideoTime = video.currentTime;
+                return {
+                    reason: 'Persistent A/V sync issue',
+                    details: { syncIssueCount: state.syncIssueCount, discrepancy }
+                };
             }
         }
         state.lastSyncCheckTime = now;
-        state.lastSyncVideoTime = state.videoRef.currentTime;
+        state.lastSyncVideoTime = video.currentTime;
+        return null;
+    };
+
+    return {
+        reset,
+        check
+    };
+})();
+
+// --- Health Monitor ---
+/**
+ * Orchestrates health monitoring by coordinating detector modules.
+ * @responsibility
+ * 1. Manage timers for health checks.
+ * 2. Coordinate detectors (Stuck, FrameDrop, AVSync).
+ * 3. Trigger recovery when issues are detected.
+ */
+const HealthMonitor = (() => {
+    let videoRef = null;
+    const timers = { main: null, sync: null };
+
+    const triggerRecovery = (reason, details) => {
+        Logger.add(`HealthMonitor triggering recovery: ${reason}`, details);
+        Metrics.increment('health_triggers');
+        HealthMonitor.stop();
+        Adapters.EventBus.emit(CONFIG.events.AD_DETECTED);
+    };
+
+    const runMainChecks = () => {
+        if (!videoRef || !document.body.contains(videoRef)) {
+            HealthMonitor.stop();
+            return;
+        }
+
+        // Check for stuck playback
+        const stuckResult = StuckDetector.check(videoRef);
+        if (stuckResult) {
+            triggerRecovery(stuckResult.reason, stuckResult.details);
+            return;
+        }
+
+        // Check for frame drops
+        const frameDropResult = FrameDropDetector.check(videoRef);
+        if (frameDropResult) {
+            triggerRecovery(frameDropResult.reason, frameDropResult.details);
+            return;
+        }
+    };
+
+    const runSyncCheck = () => {
+        if (!videoRef || !document.body.contains(videoRef)) {
+            HealthMonitor.stop();
+            return;
+        }
+
+        // Check A/V sync
+        const syncResult = AVSyncDetector.check(videoRef);
+        if (syncResult) {
+            triggerRecovery(syncResult.reason, syncResult.details);
+            return;
+        }
     };
 
     return {
@@ -836,30 +946,20 @@ const HealthMonitor = (() => {
             const video = container.querySelector(CONFIG.selectors.VIDEO);
             if (!video) return;
 
-            if (state.videoRef !== video) {
+            if (videoRef !== video) {
                 HealthMonitor.stop();
-                resetState(video);
+                videoRef = video;
+                StuckDetector.reset(video);
+                FrameDropDetector.reset();
+                AVSyncDetector.reset(video);
             }
 
             if (!timers.main) {
-                timers.main = setInterval(() => {
-                    if (!state.videoRef || !document.body.contains(state.videoRef)) {
-                        HealthMonitor.stop();
-                        return;
-                    }
-                    checkStuckState();
-                    checkDroppedFrames();
-                }, CONFIG.timing.HEALTH_CHECK_MS);
+                timers.main = setInterval(runMainChecks, CONFIG.timing.HEALTH_CHECK_MS);
             }
 
             if (!timers.sync) {
-                timers.sync = setInterval(() => {
-                    if (!state.videoRef || !document.body.contains(state.videoRef)) {
-                        HealthMonitor.stop();
-                        return;
-                    }
-                    checkAVSync();
-                }, CONFIG.timing.AV_SYNC_CHECK_INTERVAL_MS);
+                timers.sync = setInterval(runSyncCheck, CONFIG.timing.AV_SYNC_CHECK_INTERVAL_MS);
             }
         },
         stop: () => {
@@ -867,7 +967,10 @@ const HealthMonitor = (() => {
             clearInterval(timers.sync);
             timers.main = null;
             timers.sync = null;
-            resetState();
+            videoRef = null;
+            StuckDetector.reset();
+            FrameDropDetector.reset();
+            AVSyncDetector.reset();
         },
     };
 })();
