@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       2.0.17
+// @version       2.0.19
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -1355,13 +1355,40 @@ const AggressiveRecovery = (() => {
     return {
         execute: async (video) => {
             Metrics.increment('aggressive_recoveries');
-            Logger.add('Executing aggressive recovery: forcing stream refresh');
             const recoveryStartTime = performance.now();
+            const originalSrc = video.src;
+            const isBlobUrl = originalSrc && originalSrc.startsWith('blob:');
+
+            // Enhanced Telemetry
+            const bufferEnd = video.buffered.length ? video.buffered.end(video.buffered.length - 1) : 0;
+            Logger.add('Executing aggressive recovery', {
+                strategy: isBlobUrl ? 'LIVE_EDGE_SEEK' : 'SRC_RESET',
+                url: originalSrc,
+                telemetry: {
+                    readyState: video.readyState,
+                    networkState: video.networkState,
+                    currentTime: video.currentTime,
+                    bufferEnd: bufferEnd,
+                    paused: video.paused,
+                    error: video.error ? video.error.code : null
+                }
+            });
 
             // Save video state
             const playbackRate = video.playbackRate;
             const volume = video.volume;
             const muted = video.muted;
+
+            // Execute Strategy
+            if (isBlobUrl) {
+                // FIX: Do NOT call load() or clear src for Blob URLs to avoid Error #4000 and AbortErrors.
+                // Seeking to infinity forces the player to jump to the live edge without resetting the source.
+                video.currentTime = 999999;
+            } else {
+                Logger.add('Standard URL detected - reloading via empty src');
+                video.src = '';
+                video.load();
+            }
 
             // Wait for stream to be ready
             await new Promise(resolve => {
@@ -1370,22 +1397,31 @@ const AggressiveRecovery = (() => {
                 const interval = setInterval(() => {
                     if (video.readyState >= 2) {
                         clearInterval(interval);
-                        Logger.add('Stream reloaded.', {
-                            duration_ms: performance.now() - recoveryStartTime
+                        Logger.add('Stream reloaded/seeked successfully', {
+                            duration_ms: performance.now() - recoveryStartTime,
+                            newReadyState: video.readyState
                         });
                         resolve();
                     } else if (++checkCount >= maxChecks) {
                         clearInterval(interval);
-                        Logger.add('Stream reload timeout during aggressive recovery.');
+                        Logger.add('Stream recovery timeout', {
+                            duration_ms: performance.now() - recoveryStartTime,
+                            readyState: video.readyState,
+                            networkState: video.networkState
+                        });
                         resolve();
                     }
                 }, READY_CHECK_INTERVAL_MS);
             });
 
             // Restore video state
-            video.playbackRate = playbackRate;
-            video.volume = volume;
-            video.muted = muted;
+            try {
+                video.playbackRate = playbackRate;
+                video.volume = volume;
+                video.muted = muted;
+            } catch (e) {
+                Logger.add('Failed to restore video state', { error: e.message });
+            }
         }
     };
 })();

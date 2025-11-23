@@ -1,69 +1,74 @@
 [METRICS]
-Uptime: 51.7s
+Uptime: 114.9s
 Ads Detected: 0
 Ads Blocked: 0
-Resilience Executions: 5
-Aggressive Recoveries: 1
+Resilience Executions: 4
+Aggressive Recoveries: 2
 Health Triggers: 0
 Errors: 0
 
 [LOGS]
-[2025-11-23T15:04:00.367Z] Core initialized
-[2025-11-23T15:04:01.294Z] Player mounted
-[2025-11-23T15:04:01.296Z] Player signature found | {"id":"k0","key":"ref"}
-[2025-11-23T15:04:01.296Z] Player signature found | {"id":"k1","key":"ref"}
-[2025-11-23T15:04:01.296Z] Player signature found | {"id":"k2","key":"ref"}
-[2025-11-23T15:04:01.296Z] PlayerContext: Fresh context found via keyword search | {"key":"__reactFiber$apenik2dezl"}
-[2025-11-23T15:04:01.296Z] [LIFECYCLE] Event: ACQUIRE - Success
-[2025-11-23T15:04:01.856Z] [LIFECYCLE] Event: ACQUIRE - Success
-[2025-11-23T15:04:02.010Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-23T15:04:02.042Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-23T15:04:03.245Z] Console Error | {"args":["[GraphQL] One or more GraphQL errors were detected on request 01KARKWMYV1CSWZT9GDBWH595B. PinnedChatSettings: unauthenticated","[object Object]"],"severity":"LOW","action":"LOG_ONLY"}
-[2025-11-23T15:04:04.984Z] Console Error | {"args":["[GraphQL] One or more GraphQL errors were detected on request 01KARKWP9JWWVSBG6A2R29NV3Y. PinnedChatSettings: unauthenticated","[object Object]"],"severity":"LOW","action":"LOG_ONLY"}
-[2025-11-23T15:04:05.244Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-23T15:04:05.958Z] Console Error | {"args":["[GraphQL] One or more GraphQL errors were detected on request 01KARKWQFZRXJJP8NQDDJVMZYV. PinnedChatSettings: unauthenticated","[object Object]"],"severity":"LOW","action":"LOG_ONLY"}
-[2025-11-23T15:04:06.257Z] [HEALTH] A/V sync issue detected | {"discrepancy":"341.42ms","count":1}
-[2025-11-23T15:04:06.918Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-11-23T15:04:08.258Z] [HEALTH] A/V sync recovered | {"previousIssues":1}
-[2025-11-23T15:04:10.956Z] Manual AGGRESSIVE recovery triggered via console
-[2025-11-23T15:04:10.956Z] [EVENT] AD_DETECTED | Source: MANUAL_TRIGGER | {}
-[2025-11-23T15:04:10.956Z] [RECOVERY] Resilience execution started
-[2025-11-23T15:04:10.956Z] Recovery strategy selection | {"needsAggressive":true,"bufferHealth":"low","bufferSize":9.970666000000001,"forced":true}
-[2025-11-23T15:04:10.956Z] Executing aggressive recovery: forcing stream refresh
-[2025-11-23T15:04:11.071Z] Stream reloaded. | {"duration_ms":115}
-[2025-11-23T15:04:11.071Z] [RECOVERY] Resilience execution finished | {"total_duration_ms":115}
-[2025-11-23T15:04:14.635Z] Manual recovery triggered via console
-[2025-11-23T15:04:14.635Z] [EVENT] AD_DETECTED | Source: MANUAL_TRIGGER | {}
-[2025-11-23T15:04:14.635Z] [RECOVERY] Resilience execution started
-[2025-11-23T15:04:14.635Z] Recovery strategy selection | {"needsAggressive":false,"bufferHealth":"healthy","bufferSize":13.981333000000001,"forced":false}
-[2025-11-23T15:04:14.635Z] Executing standard recovery: seeking
-[2025-11-23T15:04:14.635Z] Standard recovery complete | {"seekTo":12.014333,"bufferEnd":14.014333}
-[2025-11-23T15:04:14.635Z] [RECOVERY] Resilience execution finished | {"total_duration_ms":0}
-[2025-11-23T15:04:16.280Z] [HEALTH] A/V sync issue detected | {"discrepancy":"847.87ms","count":1}
-[2025-11-23T15:04:18.287Z] [HEALTH] A/V sync recovered | {"previousIssues":1}
-[2025-11-23T15:04:35.590Z] Manual recovery triggered via console
-[2025-11-23T15:04:35.590Z] [EVENT] AD_DETECTED | Source: MANUAL_TRIGGER | {}
-[2025-11-23T15:04:35.590Z] [RECOVERY] Resilience execution started
-[2025-11-23T15:04:35.590Z] Recovery strategy selection | {"needsAggressive":false,"bufferHealth":"healthy","bufferSize":33.975999,"forced":false}
-[2025-11-23T15:04:35.590Z] Executing standard recovery: seeking
-[2025-11-23T15:04:35.590Z] Standard recovery complete | {"seekTo":34.008999,"bufferEnd":36.008999}
-[2025-11-23T15:04:35.590Z] [RECOVERY] Resilience execution finished | {"total_duration_ms":0}
-[2025-11-23T15:04:36.350Z] [HEALTH] A/V sync issue detected | {"discrepancy":"1211.54ms","count":1}
-[2025-11-23T15:04:38.357Z] [HEALTH] A/V sync recovered | {"previousIssues":1}
-[2025-11-23T15:04:42.774Z] Manual recovery triggered via console
-[2025-11-23T15:04:42.774Z] [EVENT] AD_DETECTED | Source: MANUAL_TRIGGER | {}
-[2025-11-23T15:04:42.774Z] [RECOVERY] Resilience execution started
-[2025-11-23T15:04:42.774Z] Recovery strategy selection | {"needsAggressive":false,"bufferHealth":"healthy","bufferSize":31.970666,"forced":false}
-[2025-11-23T15:04:42.774Z] Executing standard recovery: seeking
-[2025-11-23T15:04:42.774Z] Standard recovery complete | {"seekTo":40.003666,"bufferEnd":42.003666}
-[2025-11-23T15:04:42.774Z] [RECOVERY] Resilience execution finished | {"total_duration_ms":1}
-[2025-11-23T15:04:44.378Z] [HEALTH] A/V sync issue detected | {"discrepancy":"1200.27ms","count":1}
-[2025-11-23T15:04:45.485Z] Manual recovery triggered via console
-[2025-11-23T15:04:45.485Z] [EVENT] AD_DETECTED | Source: MANUAL_TRIGGER | {}
-[2025-11-23T15:04:45.485Z] [RECOVERY] Resilience execution started
-[2025-11-23T15:04:45.485Z] Recovery strategy selection | {"needsAggressive":false,"bufferHealth":"healthy","bufferSize":33.981333,"forced":false}
-[2025-11-23T15:04:45.485Z] Executing standard recovery: seeking
-[2025-11-23T15:04:45.485Z] Standard recovery complete | {"seekTo":44.014333,"bufferEnd":46.014333}
-[2025-11-23T15:04:45.485Z] [RECOVERY] Resilience execution finished | {"total_duration_ms":0}
-[2025-11-23T15:04:46.388Z] [HEALTH] A/V sync issue detected | {"discrepancy":"1257.27ms","count":2}
-[2025-11-23T15:04:48.390Z] [HEALTH] A/V sync recovered | {"previousIssues":2}
+[2025-11-23T15:09:25.920Z] Core initialized
+[2025-11-23T15:09:26.166Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql"}
+[2025-11-23T15:09:26.713Z] Player mounted
+[2025-11-23T15:09:26.714Z] Player signature found | {"id":"k0","key":"ref"}
+[2025-11-23T15:09:26.714Z] Player signature found | {"id":"k1","key":"ref"}
+[2025-11-23T15:09:26.714Z] Player signature found | {"id":"k2","key":"ref"}
+[2025-11-23T15:09:26.714Z] PlayerContext: Fresh context found via keyword search | {"key":"__reactFiber$2tydhtiss9t"}
+[2025-11-23T15:09:26.714Z] [LIFECYCLE] Event: ACQUIRE - Success
+[2025-11-23T15:09:27.271Z] [LIFECYCLE] Event: ACQUIRE - Success
+[2025-11-23T15:09:28.392Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-23T15:09:28.788Z] Console Error | {"args":["[GraphQL] One or more GraphQL errors were detected on request 01KARM6JRBFYVMTMWMZWZ78FV4. PinnedChatSettings: unauthenticated","[object Object]"],"severity":"LOW","action":"LOG_ONLY"}
+[2025-11-23T15:09:29.397Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://assets.twitch.tv/config/manifest.json?v=1"}
+[2025-11-23T15:09:30.269Z] Console Error | {"args":["[GraphQL] One or more GraphQL errors were detected on request 01KARM6M7V1VD4FD2YX19C53XX. PinnedChatSettings: unauthenticated","[object Object]"],"severity":"LOW","action":"LOG_ONLY"}
+[2025-11-23T15:09:30.869Z] Console Error | {"args":["[GraphQL] One or more GraphQL errors were detected on request 01KARM6MTCAVSYDNQ433W3FP7Z. PinnedChatSettings: unauthenticated","[object Object]"],"severity":"LOW","action":"LOG_ONLY"}
+[2025-11-23T15:09:31.358Z] [HEALTH] A/V sync issue detected | {"discrepancy":"385.11ms","count":1}
+[2025-11-23T15:09:31.951Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-23T15:09:32.436Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-23T15:09:33.372Z] [HEALTH] A/V sync recovered | {"previousIssues":1}
+[2025-11-23T15:09:35.309Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-23T15:09:59.001Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-23T15:10:14.210Z] Manual AGGRESSIVE recovery triggered via console
+[2025-11-23T15:10:14.210Z] [EVENT] AD_DETECTED | Source: MANUAL_TRIGGER | {}
+[2025-11-23T15:10:14.210Z] [RECOVERY] Resilience execution started
+[2025-11-23T15:10:14.210Z] Recovery strategy selection | {"needsAggressive":true,"bufferHealth":"healthy","bufferSize":33.981333,"forced":true}
+[2025-11-23T15:10:14.210Z] Executing aggressive recovery: forcing stream refresh
+[2025-11-23T15:10:14.324Z] Stream reloaded. | {"duration_ms":113}
+[2025-11-23T15:10:14.324Z] [RECOVERY] Resilience execution finished | {"total_duration_ms":113}
+[2025-11-23T15:10:17.051Z] Manual recovery triggered via console
+[2025-11-23T15:10:17.051Z] [EVENT] AD_DETECTED | Source: MANUAL_TRIGGER | {}
+[2025-11-23T15:10:17.051Z] [RECOVERY] Resilience execution started
+[2025-11-23T15:10:17.051Z] Recovery strategy selection | {"needsAggressive":false,"bufferHealth":"healthy","bufferSize":31.986666,"forced":false}
+[2025-11-23T15:10:17.051Z] Executing standard recovery: seeking
+[2025-11-23T15:10:17.051Z] Standard recovery complete | {"seekTo":46.519666,"bufferEnd":50.019666}
+[2025-11-23T15:10:17.051Z] [RECOVERY] Resilience execution finished | {"total_duration_ms":0}
+[2025-11-23T15:10:17.502Z] [HEALTH] A/V sync issue detected | {"discrepancy":"1271.75ms","count":1}
+[2025-11-23T15:10:19.511Z] [HEALTH] A/V sync recovered | {"previousIssues":1}
+[2025-11-23T15:10:21.148Z] Manual recovery triggered via console
+[2025-11-23T15:10:21.149Z] [EVENT] AD_DETECTED | Source: MANUAL_TRIGGER | {}
+[2025-11-23T15:10:21.149Z] [RECOVERY] Resilience execution started
+[2025-11-23T15:10:21.149Z] Recovery strategy selection | {"needsAggressive":false,"bufferHealth":"healthy","bufferSize":35.981333,"forced":false}
+[2025-11-23T15:10:21.149Z] Executing standard recovery: seeking
+[2025-11-23T15:10:21.149Z] Standard recovery complete | {"seekTo":52.514333,"bufferEnd":56.014333}
+[2025-11-23T15:10:21.149Z] [RECOVERY] Resilience execution finished | {"total_duration_ms":0}
+[2025-11-23T15:10:21.513Z] [HEALTH] A/V sync issue detected | {"discrepancy":"1943.29ms","count":1}
+[2025-11-23T15:10:23.522Z] [HEALTH] A/V sync recovered | {"previousIssues":1}
+[2025-11-23T15:10:31.730Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-23T15:10:39.186Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-23T15:10:50.842Z] Playhead stalling warning detected (raw) | {"severity":"CRITICAL"}
+[2025-11-23T15:10:57.187Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-11-23T15:11:00.846Z] Critical warning: Playhead stalling (debounced)
+[2025-11-23T15:11:00.846Z] [EVENT] AD_DETECTED | Source: UNKNOWN
+[2025-11-23T15:11:00.846Z] [RECOVERY] Resilience execution started
+[2025-11-23T15:11:00.846Z] Recovery strategy selection | {"needsAggressive":true,"bufferHealth":"healthy","bufferSize":29.986666,"forced":false}
+[2025-11-23T15:11:00.846Z] Executing aggressive recovery: forcing stream refresh
+[2025-11-23T15:11:00.954Z] Stream reloaded. | {"duration_ms":107}
+[2025-11-23T15:11:00.954Z] Play attempt 1/3 (post-recovery) | {"before":{"paused":true,"readyState":2,"currentTime":82.019687}}
+[2025-11-23T15:11:00.966Z] Play attempt 1 threw error | {"context":"post-recovery","error":"The fetching process for the media resource was aborted by the user agent at the user's request.","duration_ms":11}
+[2025-11-23T15:11:01.277Z] Play attempt 2/3 (post-recovery) | {"before":{"paused":true,"readyState":2,"currentTime":82.019687}}
+[2025-11-23T15:11:01.281Z] Play attempt 2 threw error | {"context":"post-recovery","error":"The fetching process for the media resource was aborted by the user agent at the user's request.","duration_ms":3}
+[2025-11-23T15:11:01.894Z] Play attempt 3/3 (post-recovery) | {"before":{"paused":true,"readyState":2,"currentTime":82.019687}}
+[2025-11-23T15:11:01.896Z] Play attempt 3 threw error | {"context":"post-recovery","error":"The fetching process for the media resource was aborted by the user agent at the user's request.","duration_ms":2}
+[2025-11-23T15:11:01.896Z] All play attempts exhausted. | {"context":"post-recovery"}
+[2025-11-23T15:11:01.897Z] [RECOVERY] Resilience execution finished | {"total_duration_ms":1051}
+[2025-11-23T15:11:11.278Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
