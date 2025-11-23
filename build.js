@@ -7,7 +7,7 @@ const CONFIG = {
     SRC_DIR: __dirname,
 
     // Output file path
-    OUT_FILE: path.join(__dirname, 'Master.js'),
+    OUT_FILE: path.join(__dirname, 'code.js'),
 
     // Header file (contains UserScript metadata)
     HEADER_FILE: 'header.js',
