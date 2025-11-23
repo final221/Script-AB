@@ -38,7 +38,7 @@ const CoreOrchestrator = (() => {
                 }, { once: true });
             }
 
-            // Expose debug trigger
+            // Expose debug triggers
             window.forceTwitchAdRecovery = () => {
                 Logger.add('Manual recovery triggered via console');
                 Adapters.EventBus.emit(CONFIG.events.AD_DETECTED, { source: 'MANUAL_TRIGGER' });
@@ -46,7 +46,32 @@ const CoreOrchestrator = (() => {
 
             window.forceTwitchAggressiveRecovery = () => {
                 Logger.add('Manual AGGRESSIVE recovery triggered via console');
-                Adapters.EventBus.emit(CONFIG.events.AD_DETECTED, { source: 'MANUAL_TRIGGER', forceAggressive: true });
+                Adapters.EventBus.emit(CONFIG.events.AD_DETECTED, {
+                    source: 'MANUAL_TRIGGER',
+                    forceAggressive: true
+                });
+            };
+
+            // Experimental recovery controls
+            window.toggleExperimentalRecovery = (enable) => {
+                ExperimentalRecovery.setEnabled(enable);
+            };
+
+            window.testExperimentalStrategy = (strategyName) => {
+                const video = document.querySelector('video');
+                if (video) {
+                    ExperimentalRecovery.testStrategy(video, strategyName);
+                } else {
+                    console.log('No video element found');
+                }
+            };
+
+            window.forceTwitchExperimentalRecovery = () => {
+                Logger.add('Manual EXPERIMENTAL recovery triggered via console');
+                Adapters.EventBus.emit(CONFIG.events.AD_DETECTED, {
+                    source: 'MANUAL_TRIGGER',
+                    forceExperimental: true
+                });
             };
         }
     };

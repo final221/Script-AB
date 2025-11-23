@@ -1,4 +1,8 @@
+exportTwitchAdLogs()
+undefined
 window.forceTwitchAdRecovery()
+undefined
+exportTwitchAdLogs()
 undefined
 window.forceTwitchAggressiveRecovery()
 undefined

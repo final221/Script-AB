@@ -56,8 +56,33 @@ const ResilienceOrchestrator = (() => {
                 Logger.add('[RECOVERY] Pre-recovery snapshot', preSnapshot);
 
                 // Execute recovery strategy
-                const strategy = RecoveryStrategy.select(video, payload.forceAggressive);
+                const strategy = RecoveryStrategy.select(video, payload);
                 await strategy.execute(video);
+
+                // Experimental cascade: if standard was used, check if more recovery needed
+                if (strategy === StandardRecovery) {
+                    const postStandardAnalysis = BufferAnalyzer.analyze(video);
+
+                    if (postStandardAnalysis.needsAggressive) {
+                        // Try experimental if enabled
+                        if (ExperimentalRecovery.isEnabled() && ExperimentalRecovery.hasStrategies()) {
+                            Logger.add('[RECOVERY] Standard insufficient, trying experimental');
+                            await ExperimentalRecovery.execute(video);
+
+                            // Check if experimental helped
+                            const postExperimentalAnalysis = BufferAnalyzer.analyze(video);
+                            if (postExperimentalAnalysis.needsAggressive) {
+                                Logger.add('[RECOVERY] Experimental insufficient, falling back to aggressive');
+                                await AggressiveRecovery.execute(video);
+                            } else {
+                                Logger.add('[RECOVERY] Experimental recovery successful');
+                            }
+                        } else {
+                            Logger.add('[RECOVERY] Standard insufficient, using aggressive');
+                            await AggressiveRecovery.execute(video);
+                        }
+                    }
+                }
 
                 // Capture post-recovery snapshot
                 const postSnapshot = {
