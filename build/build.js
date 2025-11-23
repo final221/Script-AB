@@ -3,48 +3,47 @@ const path = require('path');
 
 // --- Configuration ---
 const CONFIG = {
-    // Directory containing your source files
-    SRC_DIR: __dirname,
+    // Base directory (parent of build/)
+    BASE_DIR: path.join(__dirname, '..'),
 
     // Output file path
-    OUT_FILE: path.join(__dirname, 'code.js'),
+    OUT_FILE: path.join(__dirname, '..', 'dist', 'code.js'),
 
     // Header file (contains UserScript metadata)
-    HEADER_FILE: 'header.js',
+    HEADER_FILE: path.join(__dirname, 'header.js'),
 
-    // Order of files to concatenate (excluding header)
-    // Add your file names here in the order they should appear
+    // Order of files to concatenate (relative to BASE_DIR/src/)
     FILE_ORDER: [
-        'Config.js',
-        'Utils.js',
-        'Adapters.js',
-        'Logic.js',
-        'Metrics.js',
-        'Instrumentation.js',
-        'ReportGenerator.js',
-        'Logger.js',
-        'Store.js',
-        'AdBlocker.js',
-        'Diagnostics.js',
-        'Mocking.js',
-        'NetworkManager.js',
-        'PlayerContext.js',
-        'StuckDetector.js',
-        'FrameDropDetector.js',
-        'AVSyncDetector.js',
-        'HealthMonitor.js',
-        'BufferAnalyzer.js',
-        'PlayRetryHandler.js',
-        'StandardRecovery.js',
-        'AggressiveRecovery.js',
-        'RecoveryStrategy.js',
-        'ResilienceOrchestrator.js',
-        'VideoListenerManager.js',
-        'ScriptBlocker.js',
-        'EventCoordinator.js',
-        'PlayerLifecycle.js',
-        'DOMObserver.js',
-        'CoreOrchestrator.js'
+        'config/Config.js',
+        'utils/Utils.js',
+        'utils/Adapters.js',
+        'utils/Logic.js',
+        'monitoring/Metrics.js',
+        'monitoring/Instrumentation.js',
+        'monitoring/ReportGenerator.js',
+        'monitoring/Logger.js',
+        'monitoring/Store.js',
+        'network/AdBlocker.js',
+        'network/Diagnostics.js',
+        'network/Mocking.js',
+        'network/NetworkManager.js',
+        'player/PlayerContext.js',
+        'health/StuckDetector.js',
+        'health/FrameDropDetector.js',
+        'health/AVSyncDetector.js',
+        'health/HealthMonitor.js',
+        'recovery/BufferAnalyzer.js',
+        'recovery/PlayRetryHandler.js',
+        'recovery/StandardRecovery.js',
+        'recovery/AggressiveRecovery.js',
+        'recovery/RecoveryStrategy.js',
+        'recovery/ResilienceOrchestrator.js',
+        'player/VideoListenerManager.js',
+        'core/ScriptBlocker.js',
+        'core/EventCoordinator.js',
+        'core/PlayerLifecycle.js',
+        'core/DOMObserver.js',
+        'core/CoreOrchestrator.js'
     ]
 };
 
@@ -66,12 +65,11 @@ function build() {
     let outputContent = '';
 
     // 2. Add Header (if it exists)
-    const headerPath = path.join(CONFIG.SRC_DIR, CONFIG.HEADER_FILE);
-    if (fs.existsSync(headerPath)) {
-        console.log(`   + Adding header: ${CONFIG.HEADER_FILE}`);
-        outputContent += fs.readFileSync(headerPath, 'utf8') + '\n';
+    if (fs.existsSync(CONFIG.HEADER_FILE)) {
+        console.log(`   + Adding header: header.js`);
+        outputContent += fs.readFileSync(CONFIG.HEADER_FILE, 'utf8') + '\n';
     } else {
-        console.warn(`⚠️  Header file not found: ${CONFIG.HEADER_FILE}`);
+        console.warn(`⚠️  Header file not found: header.js`);
     }
 
     // 3. Start IIFE
@@ -82,13 +80,14 @@ function build() {
         console.warn('⚠️  No files specified in CONFIG.FILE_ORDER. Only header (if present) will be written.');
     }
 
+    const srcDir = path.join(CONFIG.BASE_DIR, 'src');
     CONFIG.FILE_ORDER.forEach(fileName => {
         if (fileName.endsWith('.txt')) {
             console.log(`   - Skipping text file: ${fileName}`);
             return;
         }
 
-        const filePath = path.join(CONFIG.SRC_DIR, fileName);
+        const filePath = path.join(srcDir, fileName);
         if (fs.existsSync(filePath)) {
             console.log(`   + Adding file: ${fileName}`);
             const content = fs.readFileSync(filePath, 'utf8');
