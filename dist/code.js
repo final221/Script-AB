@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       2.0.7
+// @version       2.0.8
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -192,37 +192,506 @@ const Logic = {
     }
 };
 
-// --- Metrics ---
+// --- DOM Observer ---
 /**
- * High-level telemetry and metrics tracking.
- * @responsibility Collects and calculates application metrics.
+ * Observes DOM for player mounting and unmounting.
+ * @responsibility
+ * 1. Watch document.body for player container changes.
+ * 2. Delegate to PlayerLifecycle for mount/unmount handling.
  */
-const Metrics = (() => {
-    const counters = {
-        ads_detected: 0,
-        ads_blocked: 0,
-        resilience_executions: 0,
-        aggressive_recoveries: 0,
-        health_triggers: 0,
-        errors: 0,
-        session_start: Date.now(),
-    };
+const DOMObserver = (() => {
+    let rootObserver = null;
 
-    const increment = (category, value = 1) => {
-        if (counters[category] !== undefined) {
-            counters[category] += value;
+    const findAndMountPlayer = (node) => {
+        if (node.nodeType !== 1) return;
+        const player = node.matches(CONFIG.selectors.PLAYER) ?
+            node : node.querySelector(CONFIG.selectors.PLAYER);
+        if (player) {
+            PlayerLifecycle.handleMount(player);
         }
     };
 
-    const getSummary = () => ({
-        ...counters,
-        uptime_ms: Date.now() - counters.session_start,
-        block_rate: counters.ads_detected > 0 ? (counters.ads_blocked / counters.ads_detected * 100).toFixed(2) + '%' : 'N/A',
-    });
+    const findAndUnmountPlayer = (node) => {
+        const activeContainer = PlayerLifecycle.getActiveContainer();
+        if (activeContainer && (node === activeContainer ||
+            (node.contains && node.contains(activeContainer)))) {
+            PlayerLifecycle.handleUnmount();
+        }
+    };
 
     return {
-        increment,
-        getSummary,
+        init: () => {
+            const existing = Adapters.DOM.find(CONFIG.selectors.PLAYER);
+            if (existing) {
+                PlayerLifecycle.handleMount(existing);
+            }
+
+            rootObserver = Adapters.DOM.observe(document.body, (mutations) => {
+                for (const m of mutations) {
+                    if (m.type === 'childList') {
+                        m.addedNodes.forEach(findAndMountPlayer);
+                        m.removedNodes.forEach(findAndUnmountPlayer);
+                    }
+                }
+            }, { childList: true, subtree: true });
+        }
+    };
+})();
+
+// --- Event Coordinator ---
+/**
+ * Sets up EventBus listeners and coordinates event responses.
+ * @responsibility Wire up global event listeners for ACQUIRE and AD_DETECTED.
+ */
+const EventCoordinator = (() => {
+    return {
+        init: () => {
+            Adapters.EventBus.on(CONFIG.events.ACQUIRE, (payload) => {
+                const container = PlayerLifecycle.getActiveContainer();
+                if (container) {
+                    if (PlayerContext.get(container)) {
+                        Logger.add('[LIFECYCLE] Event: ACQUIRE - Success', payload);
+                        HealthMonitor.start(container);
+                    } else {
+                        Logger.add('[LIFECYCLE] Event: ACQUIRE - Failed', payload);
+                    }
+                }
+            });
+
+            Adapters.EventBus.on(CONFIG.events.AD_DETECTED, (payload) => {
+                // Enhanced logging with source and trigger context
+                if (payload?.source) {
+                    const triggerInfo = payload.trigger ? ` | Trigger: ${payload.trigger}` : '';
+                    const reasonInfo = payload.reason ? ` | Reason: ${payload.reason}` : '';
+                    Logger.add(`[EVENT] AD_DETECTED | Source: ${payload.source}${triggerInfo}${reasonInfo}`, payload.details || {});
+                } else {
+                    // Fallback for events without payload (backward compatibility)
+                    Logger.add('[EVENT] AD_DETECTED | Source: UNKNOWN');
+                }
+
+                const container = PlayerLifecycle.getActiveContainer();
+                if (container) {
+                    ResilienceOrchestrator.execute(container);
+                }
+            });
+        }
+    };
+})();
+
+// --- Player Lifecycle ---
+/**
+ * Manages player container lifecycle (mount/unmount).
+ * @responsibility
+ * 1. Track active player container.
+ * 2. Setup player-specific observers.
+ * 3. Coordinate with VideoListenerManager and HealthMonitor.
+ */
+const PlayerLifecycle = (() => {
+    let activeContainer = null;
+    let playerObserver = null;
+
+    return {
+        getActiveContainer: () => activeContainer,
+
+        inject: () => {
+            Store.update({ lastAttempt: Date.now() });
+            Adapters.EventBus.emit(CONFIG.events.ACQUIRE);
+        },
+
+        handleMount: (container) => {
+            if (activeContainer === container) return;
+            if (activeContainer) PlayerLifecycle.handleUnmount();
+
+            Logger.add('Player mounted');
+            activeContainer = container;
+
+            const debouncedInject = Fn.debounce(() => PlayerLifecycle.inject(), 100);
+            playerObserver = Adapters.DOM.observe(container, (mutations) => {
+                const shouldReacquire = mutations.some(m => {
+                    if (m.type === 'attributes' && m.attributeName === 'class' && m.target === container) {
+                        return true;
+                    }
+                    if (m.type === 'childList') {
+                        const hasVideo = (nodes) => Array.from(nodes).some(n =>
+                            n.matches && n.matches(CONFIG.selectors.VIDEO)
+                        );
+                        return hasVideo(m.addedNodes) || hasVideo(m.removedNodes);
+                    }
+                    return false;
+                });
+                if (shouldReacquire) debouncedInject();
+            }, {
+                childList: true,
+                subtree: true,
+                attributes: true,
+                attributeFilter: ['class']
+            });
+
+            VideoListenerManager.attach(container);
+            PlayerLifecycle.inject();
+        },
+
+        handleUnmount: () => {
+            if (!activeContainer) return;
+            Logger.add('Player unmounted');
+
+            if (playerObserver) {
+                playerObserver.disconnect();
+                playerObserver = null;
+            }
+
+            VideoListenerManager.detach();
+            HealthMonitor.stop();
+            PlayerContext.reset();
+            activeContainer = null;
+        }
+    };
+})();
+
+// --- Script Blocker ---
+/**
+ * Blocks ad-related scripts from loading.
+ * @responsibility Monitor DOM for ad script injections and remove them.
+ */
+const ScriptBlocker = (() => {
+    const AD_SCRIPT_PATTERNS = [
+        'supervisor.ext-twitch.tv',
+        'pubads.g.doubleclick.net'
+    ];
+
+    const shouldBlock = (scriptNode) => {
+        return scriptNode.tagName === 'SCRIPT' &&
+            scriptNode.src &&
+            AD_SCRIPT_PATTERNS.some(pattern => scriptNode.src.includes(pattern));
+    };
+
+    return {
+        init: () => {
+            const observer = new MutationObserver((mutations) => {
+                for (const m of mutations) {
+                    m.addedNodes.forEach(n => {
+                        if (shouldBlock(n)) {
+                            n.remove();
+                            Logger.add('Blocked Script', { src: n.src });
+                        }
+                    });
+                }
+            });
+            observer.observe(document.documentElement, {
+                childList: true,
+                subtree: true
+            });
+        }
+    };
+})();
+
+// --- A/V Sync Detector ---
+/**
+ * Monitors audio/video synchronization to detect drift issues.
+ * @responsibility Track time advancement vs real-world time to detect A/V sync problems.
+ */
+const AVSyncDetector = (() => {
+    let state = {
+        lastSyncCheckTime: 0,
+        lastSyncVideoTime: 0,
+        syncIssueCount: 0
+    };
+
+    const reset = (video = null) => {
+        state.lastSyncCheckTime = 0;
+        state.lastSyncVideoTime = video ? video.currentTime : 0;
+        state.syncIssueCount = 0;
+    };
+
+    const check = (video) => {
+        if (!video) return null;
+        if (video.paused || video.ended || video.readyState < 2) {
+            if (state.syncIssueCount > 0) {
+                Logger.add('A/V sync recovered', { previousIssues: state.syncIssueCount });
+                state.syncIssueCount = 0;
+            }
+            return null;
+        }
+
+        const now = Date.now();
+        if (state.lastSyncCheckTime > 0) {
+            const elapsedRealTime = (now - state.lastSyncCheckTime) / 1000;
+            const expectedTimeAdvancement = elapsedRealTime * video.playbackRate;
+            const actualTimeAdvancement = video.currentTime - state.lastSyncVideoTime;
+            const discrepancy = Math.abs(expectedTimeAdvancement - actualTimeAdvancement);
+
+            if (discrepancy > CONFIG.timing.AV_SYNC_THRESHOLD_MS / 1000 && expectedTimeAdvancement > 0.1) {
+                state.syncIssueCount++;
+                Logger.add('[HEALTH] A/V sync issue detected', {
+                    discrepancy: (discrepancy * 1000).toFixed(2) + 'ms',
+                    count: state.syncIssueCount,
+                });
+            } else if (discrepancy < CONFIG.timing.AV_SYNC_THRESHOLD_MS / 2000) {
+                if (state.syncIssueCount > 0) {
+                    Logger.add('[HEALTH] A/V sync recovered', { previousIssues: state.syncIssueCount });
+                    state.syncIssueCount = 0;
+                }
+            }
+
+            if (state.syncIssueCount >= 3) {
+                Logger.add('[HEALTH] A/V sync threshold exceeded', {
+                    syncIssueCount: state.syncIssueCount,
+                    threshold: 3,
+                    discrepancy: (discrepancy * 1000).toFixed(2) + 'ms'
+                });
+                state.lastSyncCheckTime = now;
+                state.lastSyncVideoTime = video.currentTime;
+                return {
+                    reason: 'Persistent A/V sync issue',
+                    details: { syncIssueCount: state.syncIssueCount, discrepancy, threshold: 3 }
+                };
+            }
+        }
+        state.lastSyncCheckTime = now;
+        state.lastSyncVideoTime = video.currentTime;
+        return null;
+    };
+
+    return {
+        reset,
+        check
+    };
+})();
+
+// --- Frame Drop Detector ---
+/**
+ * Monitors video frame drops to detect playback quality issues.
+ * @responsibility Track dropped frames and trigger recovery on severe drops.
+ */
+const FrameDropDetector = (() => {
+    let state = {
+        lastDroppedFrames: 0,
+        lastTotalFrames: 0
+    };
+
+    const reset = () => {
+        state.lastDroppedFrames = 0;
+        state.lastTotalFrames = 0;
+    };
+
+    const check = (video) => {
+        if (!video || !video.getVideoPlaybackQuality) return null;
+
+        const quality = video.getVideoPlaybackQuality();
+        const newDropped = quality.droppedVideoFrames - state.lastDroppedFrames;
+        const newTotal = quality.totalVideoFrames - state.lastTotalFrames;
+
+        if (CONFIG.debug) {
+            Logger.add('FrameDropDetector[Debug]: Frame check', {
+                dropped: quality.droppedVideoFrames,
+                total: quality.totalVideoFrames,
+                lastDropped: state.lastDroppedFrames,
+                lastTotal: state.lastTotalFrames,
+                newDropped,
+                newTotal,
+            });
+        }
+
+        if (newDropped > 0) {
+            const recentDropRate = newTotal > 0 ? (newDropped / newTotal) * 100 : 0;
+            Logger.add('[HEALTH] Frame drop detected', {
+                newDropped,
+                newTotal,
+                recentDropRate: recentDropRate.toFixed(2) + '%'
+            });
+
+            const exceedsSevere = newDropped > CONFIG.timing.FRAME_DROP_SEVERE_THRESHOLD;
+            const exceedsModerate = newDropped > CONFIG.timing.FRAME_DROP_MODERATE_THRESHOLD &&
+                recentDropRate > CONFIG.timing.FRAME_DROP_RATE_THRESHOLD;
+
+            if (exceedsSevere || exceedsModerate) {
+                const severity = exceedsSevere ? 'SEVERE' : 'MODERATE';
+                Logger.add(`[HEALTH] Frame drop threshold exceeded | Severity: ${severity}`, {
+                    newDropped,
+                    threshold: exceedsSevere ? CONFIG.timing.FRAME_DROP_SEVERE_THRESHOLD : CONFIG.timing.FRAME_DROP_MODERATE_THRESHOLD,
+                    recentDropRate
+                });
+
+                state.lastDroppedFrames = quality.droppedVideoFrames;
+                state.lastTotalFrames = quality.totalVideoFrames;
+                return {
+                    reason: `${severity} frame drop`,
+                    details: { newDropped, newTotal, recentDropRate, severity }
+                };
+            }
+        }
+
+        state.lastDroppedFrames = quality.droppedVideoFrames;
+        state.lastTotalFrames = quality.totalVideoFrames;
+        return null;
+    };
+
+    return {
+        reset,
+        check
+    };
+})();
+
+// --- Health Monitor ---
+/**
+ * Orchestrates health monitoring by coordinating detector modules.
+ * @responsibility
+ * 1. Manage timers for health checks.
+ * 2. Coordinate detectors (Stuck, FrameDrop, AVSync).
+ * 3. Trigger recovery when issues are detected.
+ */
+const HealthMonitor = (() => {
+    let videoRef = null;
+    const timers = { main: null, sync: null };
+
+    const triggerRecovery = (reason, details, triggerType) => {
+        Logger.add(`[HEALTH] Recovery trigger | Reason: ${reason}, Type: ${triggerType}`, details);
+        Metrics.increment('health_triggers');
+        HealthMonitor.stop();
+        Adapters.EventBus.emit(CONFIG.events.AD_DETECTED, {
+            source: 'HEALTH',
+            trigger: triggerType,
+            reason: reason,
+            details: details
+        });
+    };
+
+    const runMainChecks = () => {
+        if (!videoRef || !document.body.contains(videoRef)) {
+            HealthMonitor.stop();
+            return;
+        }
+
+        // Check for stuck playback
+        const stuckResult = StuckDetector.check(videoRef);
+        if (stuckResult) {
+            triggerRecovery(stuckResult.reason, stuckResult.details, 'STUCK_PLAYBACK');
+            return;
+        }
+
+        // Check for frame drops
+        const frameDropResult = FrameDropDetector.check(videoRef);
+        if (frameDropResult) {
+            triggerRecovery(frameDropResult.reason, frameDropResult.details, 'FRAME_DROP');
+            return;
+        }
+    };
+
+    const runSyncCheck = () => {
+        if (!videoRef || !document.body.contains(videoRef)) {
+            HealthMonitor.stop();
+            return;
+        }
+
+        // Check A/V sync
+        const syncResult = AVSyncDetector.check(videoRef);
+        if (syncResult) {
+            triggerRecovery(syncResult.reason, syncResult.details, 'AV_SYNC');
+            return;
+        }
+    };
+
+    return {
+        start: (container) => {
+            const video = container.querySelector(CONFIG.selectors.VIDEO);
+            if (!video) return;
+
+            if (videoRef !== video) {
+                HealthMonitor.stop();
+                videoRef = video;
+                StuckDetector.reset(video);
+                FrameDropDetector.reset();
+                AVSyncDetector.reset(video);
+            }
+
+            if (!timers.main) {
+                timers.main = setInterval(runMainChecks, CONFIG.timing.HEALTH_CHECK_MS);
+            }
+
+            if (!timers.sync) {
+                timers.sync = setInterval(runSyncCheck, CONFIG.timing.AV_SYNC_CHECK_INTERVAL_MS);
+            }
+        },
+        stop: () => {
+            clearInterval(timers.main);
+            clearInterval(timers.sync);
+            timers.main = null;
+            timers.sync = null;
+            videoRef = null;
+            StuckDetector.reset();
+            FrameDropDetector.reset();
+            AVSyncDetector.reset();
+        },
+    };
+})();
+
+// --- Stuck Detector ---
+/**
+ * Detects when video time is not advancing (stuck/frozen playback).
+ * @responsibility Monitor video currentTime to detect stuck states.
+ */
+const StuckDetector = (() => {
+    let state = {
+        lastTime: 0,
+        stuckCount: 0
+    };
+
+    const reset = (video = null) => {
+        state.lastTime = video ? video.currentTime : 0;
+        state.stuckCount = 0;
+    };
+
+    const check = (video) => {
+        if (!video) return null;
+        if (video.paused || video.ended) {
+            if (CONFIG.debug && state.stuckCount > 0) {
+                Logger.add('StuckDetector[Debug]: Stuck count reset due to paused/ended state.');
+            }
+            state.stuckCount = 0;
+            state.lastTime = video.currentTime;
+            return null;
+        }
+
+        const currentTime = video.currentTime;
+        const lastTime = state.lastTime;
+        const diff = Math.abs(currentTime - lastTime);
+
+        if (CONFIG.debug) {
+            Logger.add('StuckDetector[Debug]: Stuck check', {
+                currentTime: currentTime.toFixed(3),
+                lastTime: lastTime.toFixed(3),
+                diff: diff.toFixed(3),
+                stuckCount: state.stuckCount,
+                threshold: CONFIG.player.STUCK_THRESHOLD_S,
+            });
+        }
+
+        if (diff < CONFIG.player.STUCK_THRESHOLD_S) {
+            state.stuckCount++;
+        } else {
+            state.stuckCount = 0;
+            state.lastTime = currentTime;
+        }
+
+        if (state.stuckCount >= CONFIG.player.STUCK_COUNT_LIMIT) {
+            Logger.add('[HEALTH] Stuck threshold exceeded', {
+                stuckCount: state.stuckCount,
+                threshold: CONFIG.player.STUCK_COUNT_LIMIT,
+                lastTime,
+                currentTime
+            });
+            return {
+                reason: 'Player stuck',
+                details: { stuckCount: state.stuckCount, lastTime, currentTime, threshold: CONFIG.player.STUCK_COUNT_LIMIT }
+            };
+        }
+
+        return null;
+    };
+
+    return {
+        reset,
+        check
     };
 })();
 
@@ -347,40 +816,6 @@ const Instrumentation = (() => {
 })();
 
 
-// --- ReportGenerator ---
-/**
- * Generates and facilitates the download of a comprehensive report
- * based on collected logs and metrics.
- * @responsibility Formats log and metric data into a report and handles file download.
- */
-const ReportGenerator = (() => {
-    const generateContent = (metricsSummary, logs) => {
-        const header = `[METRICS]\nUptime: ${(metricsSummary.uptime_ms / 1000).toFixed(1)}s\nAds Detected: ${metricsSummary.ads_detected}\nAds Blocked: ${metricsSummary.ads_blocked}\nResilience Executions: ${metricsSummary.resilience_executions}\nAggressive Recoveries: ${metricsSummary.aggressive_recoveries}\nHealth Triggers: ${metricsSummary.health_triggers}\nErrors: ${metricsSummary.errors}\n\n[LOGS]\n`;
-        const logContent = logs.map(l => `[${l.timestamp}] ${l.message}${l.detail ? ' | ' + JSON.stringify(l.detail) : ''}`).join('\n');
-        return header + logContent;
-    };
-
-    const downloadFile = (content) => {
-        const blob = new Blob([content], { type: 'text/plain' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `twitch_ad_logs_${new Date().toISOString().replace(/[:.]/g, '-')}.txt`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-    };
-
-    return {
-        exportReport: (metricsSummary, logs) => {
-            console.log("Generating and exporting report...");
-            const content = generateContent(metricsSummary, logs);
-            downloadFile(content);
-        },
-    };
-})();
-
 // --- Logger ---
 /**
  * High-level logging and telemetry export.
@@ -415,6 +850,74 @@ const Logger = (() => {
 
 // Expose to global scope for user interaction
 window.exportTwitchAdLogs = Logger.export;
+
+// --- Metrics ---
+/**
+ * High-level telemetry and metrics tracking.
+ * @responsibility Collects and calculates application metrics.
+ */
+const Metrics = (() => {
+    const counters = {
+        ads_detected: 0,
+        ads_blocked: 0,
+        resilience_executions: 0,
+        aggressive_recoveries: 0,
+        health_triggers: 0,
+        errors: 0,
+        session_start: Date.now(),
+    };
+
+    const increment = (category, value = 1) => {
+        if (counters[category] !== undefined) {
+            counters[category] += value;
+        }
+    };
+
+    const getSummary = () => ({
+        ...counters,
+        uptime_ms: Date.now() - counters.session_start,
+        block_rate: counters.ads_detected > 0 ? (counters.ads_blocked / counters.ads_detected * 100).toFixed(2) + '%' : 'N/A',
+    });
+
+    return {
+        increment,
+        getSummary,
+    };
+})();
+
+// --- ReportGenerator ---
+/**
+ * Generates and facilitates the download of a comprehensive report
+ * based on collected logs and metrics.
+ * @responsibility Formats log and metric data into a report and handles file download.
+ */
+const ReportGenerator = (() => {
+    const generateContent = (metricsSummary, logs) => {
+        const header = `[METRICS]\nUptime: ${(metricsSummary.uptime_ms / 1000).toFixed(1)}s\nAds Detected: ${metricsSummary.ads_detected}\nAds Blocked: ${metricsSummary.ads_blocked}\nResilience Executions: ${metricsSummary.resilience_executions}\nAggressive Recoveries: ${metricsSummary.aggressive_recoveries}\nHealth Triggers: ${metricsSummary.health_triggers}\nErrors: ${metricsSummary.errors}\n\n[LOGS]\n`;
+        const logContent = logs.map(l => `[${l.timestamp}] ${l.message}${l.detail ? ' | ' + JSON.stringify(l.detail) : ''}`).join('\n');
+        return header + logContent;
+    };
+
+    const downloadFile = (content) => {
+        const blob = new Blob([content], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `twitch_ad_logs_${new Date().toISOString().replace(/[:.]/g, '-')}.txt`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    };
+
+    return {
+        exportReport: (metricsSummary, logs) => {
+            console.log("Generating and exporting report...");
+            const content = generateContent(metricsSummary, logs);
+            downloadFile(content);
+        },
+    };
+})();
 
 // --- Store ---
 /**
@@ -751,313 +1254,142 @@ const PlayerContext = (() => {
     };
 })();
 
-// --- Stuck Detector ---
+// --- Video Listener Manager ---
 /**
- * Detects when video time is not advancing (stuck/frozen playback).
- * @responsibility Monitor video currentTime to detect stuck states.
+ * Manages event listeners on the video element to detect stream changes and performance issues.
  */
-const StuckDetector = (() => {
-    let state = {
-        lastTime: 0,
-        stuckCount: 0
-    };
+const VideoListenerManager = (() => {
+    let activeElement = null;
 
-    const reset = (video = null) => {
-        state.lastTime = video ? video.currentTime : 0;
-        state.stuckCount = 0;
-    };
+    // Diagnostic handlers to detect sync/performance issues
+    const handlers = {
+        loadstart: () => Adapters.EventBus.emit(CONFIG.events.ACQUIRE),
+        waiting: () => Logger.add('Video Event: waiting', { currentTime: activeElement?.currentTime }),
+        stalled: () => Logger.add('Video Event: stalled', { currentTime: activeElement?.currentTime }),
+        ratechange: () => Logger.add('Video Event: ratechange', { rate: activeElement?.playbackRate, currentTime: activeElement?.currentTime }),
+        seeked: () => Logger.add('Video Event: seeked', { currentTime: activeElement?.currentTime }),
+        resize: () => Logger.add('Video Event: resize', { width: activeElement?.videoWidth, height: activeElement?.videoHeight }),
+        error: () => {
+            const video = activeElement;
+            if (!video) return;
 
-    const check = (video) => {
-        if (!video) return null;
-        if (video.paused || video.ended) {
-            if (CONFIG.debug && state.stuckCount > 0) {
-                Logger.add('StuckDetector[Debug]: Stuck count reset due to paused/ended state.');
-            }
-            state.stuckCount = 0;
-            state.lastTime = video.currentTime;
-            return null;
-        }
-
-        const currentTime = video.currentTime;
-        const lastTime = state.lastTime;
-        const diff = Math.abs(currentTime - lastTime);
-
-        if (CONFIG.debug) {
-            Logger.add('StuckDetector[Debug]: Stuck check', {
-                currentTime: currentTime.toFixed(3),
-                lastTime: lastTime.toFixed(3),
-                diff: diff.toFixed(3),
-                stuckCount: state.stuckCount,
-                threshold: CONFIG.player.STUCK_THRESHOLD_S,
-            });
-        }
-
-        if (diff < CONFIG.player.STUCK_THRESHOLD_S) {
-            state.stuckCount++;
-        } else {
-            state.stuckCount = 0;
-            state.lastTime = currentTime;
-        }
-
-        if (state.stuckCount >= CONFIG.player.STUCK_COUNT_LIMIT) {
-            Logger.add('[HEALTH] Stuck threshold exceeded', {
-                stuckCount: state.stuckCount,
-                threshold: CONFIG.player.STUCK_COUNT_LIMIT,
-                lastTime,
-                currentTime
-            });
-            return {
-                reason: 'Player stuck',
-                details: { stuckCount: state.stuckCount, lastTime, currentTime, threshold: CONFIG.player.STUCK_COUNT_LIMIT }
+            const error = video.error;
+            const errorDetails = {
+                code: error ? error.code : null,
+                message: error ? error.message : 'Unknown error',
+                readyState: video.readyState,
+                networkState: video.networkState,
+                currentTime: video.currentTime,
+                src: video.src || '(empty)',
+                currentSrc: video.currentSrc || '(empty)'
             };
-        }
 
-        return null;
-    };
+            Logger.add('Video Event: ERROR - Player crashed', errorDetails);
+            Metrics.increment('errors');
 
-    return {
-        reset,
-        check
-    };
-})();
-
-// --- Frame Drop Detector ---
-/**
- * Monitors video frame drops to detect playback quality issues.
- * @responsibility Track dropped frames and trigger recovery on severe drops.
- */
-const FrameDropDetector = (() => {
-    let state = {
-        lastDroppedFrames: 0,
-        lastTotalFrames: 0
-    };
-
-    const reset = () => {
-        state.lastDroppedFrames = 0;
-        state.lastTotalFrames = 0;
-    };
-
-    const check = (video) => {
-        if (!video || !video.getVideoPlaybackQuality) return null;
-
-        const quality = video.getVideoPlaybackQuality();
-        const newDropped = quality.droppedVideoFrames - state.lastDroppedFrames;
-        const newTotal = quality.totalVideoFrames - state.lastTotalFrames;
-
-        if (CONFIG.debug) {
-            Logger.add('FrameDropDetector[Debug]: Frame check', {
-                dropped: quality.droppedVideoFrames,
-                total: quality.totalVideoFrames,
-                lastDropped: state.lastDroppedFrames,
-                lastTotal: state.lastTotalFrames,
-                newDropped,
-                newTotal,
-            });
-        }
-
-        if (newDropped > 0) {
-            const recentDropRate = newTotal > 0 ? (newDropped / newTotal) * 100 : 0;
-            Logger.add('[HEALTH] Frame drop detected', {
-                newDropped,
-                newTotal,
-                recentDropRate: recentDropRate.toFixed(2) + '%'
-            });
-
-            const exceedsSevere = newDropped > CONFIG.timing.FRAME_DROP_SEVERE_THRESHOLD;
-            const exceedsModerate = newDropped > CONFIG.timing.FRAME_DROP_MODERATE_THRESHOLD &&
-                recentDropRate > CONFIG.timing.FRAME_DROP_RATE_THRESHOLD;
-
-            if (exceedsSevere || exceedsModerate) {
-                const severity = exceedsSevere ? 'SEVERE' : 'MODERATE';
-                Logger.add(`[HEALTH] Frame drop threshold exceeded | Severity: ${severity}`, {
-                    newDropped,
-                    threshold: exceedsSevere ? CONFIG.timing.FRAME_DROP_SEVERE_THRESHOLD : CONFIG.timing.FRAME_DROP_MODERATE_THRESHOLD,
-                    recentDropRate
+            // Error code 4 = MEDIA_ELEMENT_ERROR: Format error / Not supported
+            // This often indicates the player is in an unrecoverable state
+            if (error && (error.code === CONFIG.codes.MEDIA_ERROR_SRC || (window.MediaError && error.code === MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED))) {
+                Logger.add('Player error #4000 or similar - player in unrecoverable state', {
+                    errorCode: error.code,
+                    needsRecovery: true
                 });
 
-                state.lastDroppedFrames = quality.droppedVideoFrames;
-                state.lastTotalFrames = quality.totalVideoFrames;
-                return {
-                    reason: `${severity} frame drop`,
-                    details: { newDropped, newTotal, recentDropRate, severity }
-                };
+                // Trigger recovery attempt after a short delay to let error state settle
+                setTimeout(() => {
+                    if (Core.activeContainer && document.body.contains(video)) {
+                        Logger.add('Attempting recovery from player error');
+                        Adapters.EventBus.emit(CONFIG.events.AD_DETECTED);
+                    }
+                }, 500);
             }
-        }
-
-        state.lastDroppedFrames = quality.droppedVideoFrames;
-        state.lastTotalFrames = quality.totalVideoFrames;
-        return null;
-    };
-
-    return {
-        reset,
-        check
-    };
-})();
-
-// --- A/V Sync Detector ---
-/**
- * Monitors audio/video synchronization to detect drift issues.
- * @responsibility Track time advancement vs real-world time to detect A/V sync problems.
- */
-const AVSyncDetector = (() => {
-    let state = {
-        lastSyncCheckTime: 0,
-        lastSyncVideoTime: 0,
-        syncIssueCount: 0
-    };
-
-    const reset = (video = null) => {
-        state.lastSyncCheckTime = 0;
-        state.lastSyncVideoTime = video ? video.currentTime : 0;
-        state.syncIssueCount = 0;
-    };
-
-    const check = (video) => {
-        if (!video) return null;
-        if (video.paused || video.ended || video.readyState < 2) {
-            if (state.syncIssueCount > 0) {
-                Logger.add('A/V sync recovered', { previousIssues: state.syncIssueCount });
-                state.syncIssueCount = 0;
-            }
-            return null;
-        }
-
-        const now = Date.now();
-        if (state.lastSyncCheckTime > 0) {
-            const elapsedRealTime = (now - state.lastSyncCheckTime) / 1000;
-            const expectedTimeAdvancement = elapsedRealTime * video.playbackRate;
-            const actualTimeAdvancement = video.currentTime - state.lastSyncVideoTime;
-            const discrepancy = Math.abs(expectedTimeAdvancement - actualTimeAdvancement);
-
-            if (discrepancy > CONFIG.timing.AV_SYNC_THRESHOLD_MS / 1000 && expectedTimeAdvancement > 0.1) {
-                state.syncIssueCount++;
-                Logger.add('[HEALTH] A/V sync issue detected', {
-                    discrepancy: (discrepancy * 1000).toFixed(2) + 'ms',
-                    count: state.syncIssueCount,
-                });
-            } else if (discrepancy < CONFIG.timing.AV_SYNC_THRESHOLD_MS / 2000) {
-                if (state.syncIssueCount > 0) {
-                    Logger.add('[HEALTH] A/V sync recovered', { previousIssues: state.syncIssueCount });
-                    state.syncIssueCount = 0;
-                }
-            }
-
-            if (state.syncIssueCount >= 3) {
-                Logger.add('[HEALTH] A/V sync threshold exceeded', {
-                    syncIssueCount: state.syncIssueCount,
-                    threshold: 3,
-                    discrepancy: (discrepancy * 1000).toFixed(2) + 'ms'
-                });
-                state.lastSyncCheckTime = now;
-                state.lastSyncVideoTime = video.currentTime;
-                return {
-                    reason: 'Persistent A/V sync issue',
-                    details: { syncIssueCount: state.syncIssueCount, discrepancy, threshold: 3 }
-                };
-            }
-        }
-        state.lastSyncCheckTime = now;
-        state.lastSyncVideoTime = video.currentTime;
-        return null;
-    };
-
-    return {
-        reset,
-        check
-    };
-})();
-
-// --- Health Monitor ---
-/**
- * Orchestrates health monitoring by coordinating detector modules.
- * @responsibility
- * 1. Manage timers for health checks.
- * 2. Coordinate detectors (Stuck, FrameDrop, AVSync).
- * 3. Trigger recovery when issues are detected.
- */
-const HealthMonitor = (() => {
-    let videoRef = null;
-    const timers = { main: null, sync: null };
-
-    const triggerRecovery = (reason, details, triggerType) => {
-        Logger.add(`[HEALTH] Recovery trigger | Reason: ${reason}, Type: ${triggerType}`, details);
-        Metrics.increment('health_triggers');
-        HealthMonitor.stop();
-        Adapters.EventBus.emit(CONFIG.events.AD_DETECTED, {
-            source: 'HEALTH',
-            trigger: triggerType,
-            reason: reason,
-            details: details
-        });
-    };
-
-    const runMainChecks = () => {
-        if (!videoRef || !document.body.contains(videoRef)) {
-            HealthMonitor.stop();
-            return;
-        }
-
-        // Check for stuck playback
-        const stuckResult = StuckDetector.check(videoRef);
-        if (stuckResult) {
-            triggerRecovery(stuckResult.reason, stuckResult.details, 'STUCK_PLAYBACK');
-            return;
-        }
-
-        // Check for frame drops
-        const frameDropResult = FrameDropDetector.check(videoRef);
-        if (frameDropResult) {
-            triggerRecovery(frameDropResult.reason, frameDropResult.details, 'FRAME_DROP');
-            return;
-        }
-    };
-
-    const runSyncCheck = () => {
-        if (!videoRef || !document.body.contains(videoRef)) {
-            HealthMonitor.stop();
-            return;
-        }
-
-        // Check A/V sync
-        const syncResult = AVSyncDetector.check(videoRef);
-        if (syncResult) {
-            triggerRecovery(syncResult.reason, syncResult.details, 'AV_SYNC');
-            return;
         }
     };
 
     return {
-        start: (container) => {
+        attach: (container) => {
             const video = container.querySelector(CONFIG.selectors.VIDEO);
             if (!video) return;
 
-            if (videoRef !== video) {
-                HealthMonitor.stop();
-                videoRef = video;
-                StuckDetector.reset(video);
-                FrameDropDetector.reset();
-                AVSyncDetector.reset(video);
+            if (activeElement === video) return;
+
+            if (activeElement) VideoListenerManager.detach();
+
+            activeElement = video;
+
+            Object.entries(handlers).forEach(([event, handler]) => {
+                activeElement.addEventListener(event, handler);
+            });
+        },
+        detach: () => {
+            if (activeElement) {
+                Object.entries(handlers).forEach(([event, handler]) => {
+                    activeElement.removeEventListener(event, handler);
+                });
+            }
+            activeElement = null;
+        }
+    };
+})();
+
+// --- Aggressive Recovery ---
+/**
+ * Stream refresh recovery strategy via src clearing.
+ * @responsibility Force stream refresh when stuck at buffer end.
+ */
+const AggressiveRecovery = (() => {
+    const READY_CHECK_INTERVAL_MS = 100;
+
+    return {
+        execute: async (video) => {
+            Metrics.increment('aggressive_recoveries');
+            Logger.add('Executing aggressive recovery: forcing stream refresh');
+            const recoveryStartTime = performance.now();
+
+            // Save video state
+            const playbackRate = video.playbackRate;
+            const volume = video.volume;
+            const muted = video.muted;
+            const originalSrc = video.src;
+            const isBlobUrl = originalSrc && originalSrc.startsWith('blob:');
+
+            // Clear and reload stream
+            if (isBlobUrl) {
+                Logger.add('Blob URL detected - performing unload/reload cycle.');
+                video.src = '';
+                video.load();
+                await Fn.sleep(100);
+                video.src = originalSrc;
+                video.load();
+            } else {
+                video.src = '';
+                video.load();
             }
 
-            if (!timers.main) {
-                timers.main = setInterval(runMainChecks, CONFIG.timing.HEALTH_CHECK_MS);
-            }
+            // Wait for stream to be ready
+            await new Promise(resolve => {
+                const maxChecks = CONFIG.timing.PLAYBACK_TIMEOUT_MS / READY_CHECK_INTERVAL_MS;
+                let checkCount = 0;
+                const interval = setInterval(() => {
+                    if (video.readyState >= 2) {
+                        clearInterval(interval);
+                        Logger.add('Stream reloaded.', {
+                            duration_ms: performance.now() - recoveryStartTime
+                        });
+                        resolve();
+                    } else if (++checkCount >= maxChecks) {
+                        clearInterval(interval);
+                        Logger.add('Stream reload timeout during aggressive recovery.');
+                        resolve();
+                    }
+                }, READY_CHECK_INTERVAL_MS);
+            });
 
-            if (!timers.sync) {
-                timers.sync = setInterval(runSyncCheck, CONFIG.timing.AV_SYNC_CHECK_INTERVAL_MS);
-            }
-        },
-        stop: () => {
-            clearInterval(timers.main);
-            clearInterval(timers.sync);
-            timers.main = null;
-            timers.sync = null;
-            videoRef = null;
-            StuckDetector.reset();
-            FrameDropDetector.reset();
-            AVSyncDetector.reset();
-        },
+            // Restore video state
+            video.playbackRate = playbackRate;
+            video.volume = volume;
+            video.muted = muted;
+        }
     };
 })();
 
@@ -1168,95 +1500,6 @@ const PlayRetryHandler = (() => {
     };
 })();
 
-// --- Standard Recovery ---
-/**
- * Simple seek-based recovery strategy.
- * @responsibility Seek to live edge without disrupting stream.
- */
-const StandardRecovery = (() => {
-    const SEEK_OFFSET_S = 0.5;
-
-    return {
-        execute: (video) => {
-            Logger.add('Executing standard recovery: seeking');
-
-            if (!video || !video.buffered || video.buffered.length === 0) {
-                Logger.add('Standard recovery aborted: no buffer');
-                return;
-            }
-
-            const bufferEnd = video.buffered.end(video.buffered.length - 1);
-            video.currentTime = bufferEnd - SEEK_OFFSET_S;
-
-            Logger.add('Standard recovery complete', {
-                seekTo: video.currentTime,
-                bufferEnd
-            });
-        }
-    };
-})();
-
-// --- Aggressive Recovery ---
-/**
- * Stream refresh recovery strategy via src clearing.
- * @responsibility Force stream refresh when stuck at buffer end.
- */
-const AggressiveRecovery = (() => {
-    const READY_CHECK_INTERVAL_MS = 100;
-
-    return {
-        execute: async (video) => {
-            Metrics.increment('aggressive_recoveries');
-            Logger.add('Executing aggressive recovery: forcing stream refresh');
-            const recoveryStartTime = performance.now();
-
-            // Save video state
-            const playbackRate = video.playbackRate;
-            const volume = video.volume;
-            const muted = video.muted;
-            const originalSrc = video.src;
-            const isBlobUrl = originalSrc && originalSrc.startsWith('blob:');
-
-            // Clear and reload stream
-            if (isBlobUrl) {
-                Logger.add('Blob URL detected - performing unload/reload cycle.');
-                video.src = '';
-                video.load();
-                await Fn.sleep(100);
-                video.src = originalSrc;
-                video.load();
-            } else {
-                video.src = '';
-                video.load();
-            }
-
-            // Wait for stream to be ready
-            await new Promise(resolve => {
-                const maxChecks = CONFIG.timing.PLAYBACK_TIMEOUT_MS / READY_CHECK_INTERVAL_MS;
-                let checkCount = 0;
-                const interval = setInterval(() => {
-                    if (video.readyState >= 2) {
-                        clearInterval(interval);
-                        Logger.add('Stream reloaded.', {
-                            duration_ms: performance.now() - recoveryStartTime
-                        });
-                        resolve();
-                    } else if (++checkCount >= maxChecks) {
-                        clearInterval(interval);
-                        Logger.add('Stream reload timeout during aggressive recovery.');
-                        resolve();
-                    }
-                }, READY_CHECK_INTERVAL_MS);
-            });
-
-            // Restore video state
-            video.playbackRate = playbackRate;
-            video.volume = volume;
-            video.muted = muted;
-        }
-    };
-})();
-
 // --- Recovery Strategy ---
 /**
  * Selects appropriate recovery strategy based on buffer analysis.
@@ -1348,273 +1591,30 @@ const ResilienceOrchestrator = (() => {
     };
 })();
 
-// --- Video Listener Manager ---
+// --- Standard Recovery ---
 /**
- * Manages event listeners on the video element to detect stream changes and performance issues.
+ * Simple seek-based recovery strategy.
+ * @responsibility Seek to live edge without disrupting stream.
  */
-const VideoListenerManager = (() => {
-    let activeElement = null;
-
-    // Diagnostic handlers to detect sync/performance issues
-    const handlers = {
-        loadstart: () => Adapters.EventBus.emit(CONFIG.events.ACQUIRE),
-        waiting: () => Logger.add('Video Event: waiting', { currentTime: activeElement?.currentTime }),
-        stalled: () => Logger.add('Video Event: stalled', { currentTime: activeElement?.currentTime }),
-        ratechange: () => Logger.add('Video Event: ratechange', { rate: activeElement?.playbackRate, currentTime: activeElement?.currentTime }),
-        seeked: () => Logger.add('Video Event: seeked', { currentTime: activeElement?.currentTime }),
-        resize: () => Logger.add('Video Event: resize', { width: activeElement?.videoWidth, height: activeElement?.videoHeight }),
-        error: () => {
-            const video = activeElement;
-            if (!video) return;
-
-            const error = video.error;
-            const errorDetails = {
-                code: error ? error.code : null,
-                message: error ? error.message : 'Unknown error',
-                readyState: video.readyState,
-                networkState: video.networkState,
-                currentTime: video.currentTime,
-                src: video.src || '(empty)',
-                currentSrc: video.currentSrc || '(empty)'
-            };
-
-            Logger.add('Video Event: ERROR - Player crashed', errorDetails);
-            Metrics.increment('errors');
-
-            // Error code 4 = MEDIA_ELEMENT_ERROR: Format error / Not supported
-            // This often indicates the player is in an unrecoverable state
-            if (error && (error.code === CONFIG.codes.MEDIA_ERROR_SRC || (window.MediaError && error.code === MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED))) {
-                Logger.add('Player error #4000 or similar - player in unrecoverable state', {
-                    errorCode: error.code,
-                    needsRecovery: true
-                });
-
-                // Trigger recovery attempt after a short delay to let error state settle
-                setTimeout(() => {
-                    if (Core.activeContainer && document.body.contains(video)) {
-                        Logger.add('Attempting recovery from player error');
-                        Adapters.EventBus.emit(CONFIG.events.AD_DETECTED);
-                    }
-                }, 500);
-            }
-        }
-    };
+const StandardRecovery = (() => {
+    const SEEK_OFFSET_S = 0.5;
 
     return {
-        attach: (container) => {
-            const video = container.querySelector(CONFIG.selectors.VIDEO);
-            if (!video) return;
+        execute: (video) => {
+            Logger.add('Executing standard recovery: seeking');
 
-            if (activeElement === video) return;
-
-            if (activeElement) VideoListenerManager.detach();
-
-            activeElement = video;
-
-            Object.entries(handlers).forEach(([event, handler]) => {
-                activeElement.addEventListener(event, handler);
-            });
-        },
-        detach: () => {
-            if (activeElement) {
-                Object.entries(handlers).forEach(([event, handler]) => {
-                    activeElement.removeEventListener(event, handler);
-                });
-            }
-            activeElement = null;
-        }
-    };
-})();
-
-// --- Script Blocker ---
-/**
- * Blocks ad-related scripts from loading.
- * @responsibility Monitor DOM for ad script injections and remove them.
- */
-const ScriptBlocker = (() => {
-    const AD_SCRIPT_PATTERNS = [
-        'supervisor.ext-twitch.tv',
-        'pubads.g.doubleclick.net'
-    ];
-
-    const shouldBlock = (scriptNode) => {
-        return scriptNode.tagName === 'SCRIPT' &&
-            scriptNode.src &&
-            AD_SCRIPT_PATTERNS.some(pattern => scriptNode.src.includes(pattern));
-    };
-
-    return {
-        init: () => {
-            const observer = new MutationObserver((mutations) => {
-                for (const m of mutations) {
-                    m.addedNodes.forEach(n => {
-                        if (shouldBlock(n)) {
-                            n.remove();
-                            Logger.add('Blocked Script', { src: n.src });
-                        }
-                    });
-                }
-            });
-            observer.observe(document.documentElement, {
-                childList: true,
-                subtree: true
-            });
-        }
-    };
-})();
-
-// --- Event Coordinator ---
-/**
- * Sets up EventBus listeners and coordinates event responses.
- * @responsibility Wire up global event listeners for ACQUIRE and AD_DETECTED.
- */
-const EventCoordinator = (() => {
-    return {
-        init: () => {
-            Adapters.EventBus.on(CONFIG.events.ACQUIRE, (payload) => {
-                const container = PlayerLifecycle.getActiveContainer();
-                if (container) {
-                    if (PlayerContext.get(container)) {
-                        Logger.add('[LIFECYCLE] Event: ACQUIRE - Success', payload);
-                        HealthMonitor.start(container);
-                    } else {
-                        Logger.add('[LIFECYCLE] Event: ACQUIRE - Failed', payload);
-                    }
-                }
-            });
-
-            Adapters.EventBus.on(CONFIG.events.AD_DETECTED, (payload) => {
-                // Enhanced logging with source and trigger context
-                if (payload?.source) {
-                    const triggerInfo = payload.trigger ? ` | Trigger: ${payload.trigger}` : '';
-                    const reasonInfo = payload.reason ? ` | Reason: ${payload.reason}` : '';
-                    Logger.add(`[EVENT] AD_DETECTED | Source: ${payload.source}${triggerInfo}${reasonInfo}`, payload.details || {});
-                } else {
-                    // Fallback for events without payload (backward compatibility)
-                    Logger.add('[EVENT] AD_DETECTED | Source: UNKNOWN');
-                }
-
-                const container = PlayerLifecycle.getActiveContainer();
-                if (container) {
-                    ResilienceOrchestrator.execute(container);
-                }
-            });
-        }
-    };
-})();
-
-// --- Player Lifecycle ---
-/**
- * Manages player container lifecycle (mount/unmount).
- * @responsibility
- * 1. Track active player container.
- * 2. Setup player-specific observers.
- * 3. Coordinate with VideoListenerManager and HealthMonitor.
- */
-const PlayerLifecycle = (() => {
-    let activeContainer = null;
-    let playerObserver = null;
-
-    return {
-        getActiveContainer: () => activeContainer,
-
-        inject: () => {
-            Store.update({ lastAttempt: Date.now() });
-            Adapters.EventBus.emit(CONFIG.events.ACQUIRE);
-        },
-
-        handleMount: (container) => {
-            if (activeContainer === container) return;
-            if (activeContainer) PlayerLifecycle.handleUnmount();
-
-            Logger.add('Player mounted');
-            activeContainer = container;
-
-            const debouncedInject = Fn.debounce(() => PlayerLifecycle.inject(), 100);
-            playerObserver = Adapters.DOM.observe(container, (mutations) => {
-                const shouldReacquire = mutations.some(m => {
-                    if (m.type === 'attributes' && m.attributeName === 'class' && m.target === container) {
-                        return true;
-                    }
-                    if (m.type === 'childList') {
-                        const hasVideo = (nodes) => Array.from(nodes).some(n =>
-                            n.matches && n.matches(CONFIG.selectors.VIDEO)
-                        );
-                        return hasVideo(m.addedNodes) || hasVideo(m.removedNodes);
-                    }
-                    return false;
-                });
-                if (shouldReacquire) debouncedInject();
-            }, {
-                childList: true,
-                subtree: true,
-                attributes: true,
-                attributeFilter: ['class']
-            });
-
-            VideoListenerManager.attach(container);
-            PlayerLifecycle.inject();
-        },
-
-        handleUnmount: () => {
-            if (!activeContainer) return;
-            Logger.add('Player unmounted');
-
-            if (playerObserver) {
-                playerObserver.disconnect();
-                playerObserver = null;
+            if (!video || !video.buffered || video.buffered.length === 0) {
+                Logger.add('Standard recovery aborted: no buffer');
+                return;
             }
 
-            VideoListenerManager.detach();
-            HealthMonitor.stop();
-            PlayerContext.reset();
-            activeContainer = null;
-        }
-    };
-})();
+            const bufferEnd = video.buffered.end(video.buffered.length - 1);
+            video.currentTime = bufferEnd - SEEK_OFFSET_S;
 
-// --- DOM Observer ---
-/**
- * Observes DOM for player mounting and unmounting.
- * @responsibility
- * 1. Watch document.body for player container changes.
- * 2. Delegate to PlayerLifecycle for mount/unmount handling.
- */
-const DOMObserver = (() => {
-    let rootObserver = null;
-
-    const findAndMountPlayer = (node) => {
-        if (node.nodeType !== 1) return;
-        const player = node.matches(CONFIG.selectors.PLAYER) ?
-            node : node.querySelector(CONFIG.selectors.PLAYER);
-        if (player) {
-            PlayerLifecycle.handleMount(player);
-        }
-    };
-
-    const findAndUnmountPlayer = (node) => {
-        const activeContainer = PlayerLifecycle.getActiveContainer();
-        if (activeContainer && (node === activeContainer ||
-            (node.contains && node.contains(activeContainer)))) {
-            PlayerLifecycle.handleUnmount();
-        }
-    };
-
-    return {
-        init: () => {
-            const existing = Adapters.DOM.find(CONFIG.selectors.PLAYER);
-            if (existing) {
-                PlayerLifecycle.handleMount(existing);
-            }
-
-            rootObserver = Adapters.DOM.observe(document.body, (mutations) => {
-                for (const m of mutations) {
-                    if (m.type === 'childList') {
-                        m.addedNodes.forEach(findAndMountPlayer);
-                        m.removedNodes.forEach(findAndUnmountPlayer);
-                    }
-                }
-            }, { childList: true, subtree: true });
+            Logger.add('Standard recovery complete', {
+                seekTo: video.currentTime,
+                bufferEnd
+            });
         }
     };
 })();

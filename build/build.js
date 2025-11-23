@@ -12,40 +12,33 @@ const CONFIG = {
     // Header file (contains UserScript metadata)
     HEADER_FILE: path.join(__dirname, 'header.js'),
 
-    // Order of files to concatenate (relative to BASE_DIR/src/)
-    FILE_ORDER: [
+    // Files that must be loaded first (Dependencies)
+    PRIORITY_FILES: [
         'config/Config.js',
         'utils/Utils.js',
         'utils/Adapters.js',
-        'utils/Logic.js',
-        'monitoring/Metrics.js',
-        'monitoring/Instrumentation.js',
-        'monitoring/ReportGenerator.js',
-        'monitoring/Logger.js',
-        'monitoring/Store.js',
-        'network/AdBlocker.js',
-        'network/Diagnostics.js',
-        'network/Mocking.js',
-        'network/NetworkManager.js',
-        'player/PlayerContext.js',
-        'health/StuckDetector.js',
-        'health/FrameDropDetector.js',
-        'health/AVSyncDetector.js',
-        'health/HealthMonitor.js',
-        'recovery/BufferAnalyzer.js',
-        'recovery/PlayRetryHandler.js',
-        'recovery/StandardRecovery.js',
-        'recovery/AggressiveRecovery.js',
-        'recovery/RecoveryStrategy.js',
-        'recovery/ResilienceOrchestrator.js',
-        'player/VideoListenerManager.js',
-        'core/ScriptBlocker.js',
-        'core/EventCoordinator.js',
-        'core/PlayerLifecycle.js',
-        'core/DOMObserver.js',
-        'core/CoreOrchestrator.js'
-    ]
+        'utils/Logic.js'
+    ],
+
+    // The entry point (Must be last)
+    ENTRY_FILE: 'core/CoreOrchestrator.js'
 };
+
+// --- Helpers ---
+
+function getFilesRecursively(dir, fileList = []) {
+    const files = fs.readdirSync(dir);
+    files.forEach(file => {
+        const filePath = path.join(dir, file);
+        const stat = fs.statSync(filePath);
+        if (stat.isDirectory()) {
+            getFilesRecursively(filePath, fileList);
+        } else {
+            fileList.push(filePath);
+        }
+    });
+    return fileList;
+}
 
 // --- Version Management ---
 
@@ -103,12 +96,8 @@ function build() {
     console.log(`📦 Version: ${currentVersion} → ${newVersion} (${versionType})`);
 
     // 2. Validation
-    if (CONFIG.FILE_ORDER.includes(path.basename(CONFIG.OUT_FILE))) {
-        console.error(`❌ Error: Output file "${path.basename(CONFIG.OUT_FILE)}" cannot be in the source list.`);
-        return;
-    }
-    if (CONFIG.FILE_ORDER.includes(path.basename(__filename))) {
-        console.error(`❌ Error: Build script "${path.basename(__filename)}" cannot be in the source list.`);
+    if (path.basename(CONFIG.OUT_FILE) === path.basename(__filename)) {
+        console.error(`❌ Error: Output file cannot be the build script.`);
         return;
     }
 
@@ -128,32 +117,48 @@ function build() {
     // 4. Start IIFE
     outputContent += '(function () {\n    \'use strict\';\n\n';
 
-    // 5. Add Files in Order
-    if (CONFIG.FILE_ORDER.length === 0) {
-        console.warn('⚠️  No files specified in CONFIG.FILE_ORDER. Only header (if present) will be written.');
-    }
-
+    // 5. Collect Files
     const srcDir = path.join(CONFIG.BASE_DIR, 'src');
-    CONFIG.FILE_ORDER.forEach(fileName => {
-        if (fileName.endsWith('.txt')) {
-            console.log(`   - Skipping text file: ${fileName}`);
-            return;
-        }
+    const allFiles = getFilesRecursively(srcDir);
 
-        const filePath = path.join(srcDir, fileName);
+    // Normalize paths for comparison (Windows/Unix)
+    const normalize = p => p.split(path.sep).join('/');
+
+    const priorityFiles = CONFIG.PRIORITY_FILES.map(f => path.join(srcDir, f));
+    const entryFile = path.join(srcDir, CONFIG.ENTRY_FILE);
+
+    // Filter out priority and entry files from the general list
+    const otherFiles = allFiles.filter(f => {
+        // Check if it's a JS file
+        if (!f.endsWith('.js')) return false;
+
+        // Check if it's in priority list (compare normalized paths)
+        const isPriority = priorityFiles.some(pf => path.normalize(pf) === path.normalize(f));
+        const isEntry = path.normalize(f) === path.normalize(entryFile);
+
+        return !isPriority && !isEntry;
+    });
+
+    // Construct final list: Priority -> Others -> Entry
+    const finalOrder = [...priorityFiles, ...otherFiles, entryFile];
+
+    // 6. Concatenate
+    finalOrder.forEach(filePath => {
+        const relativeName = path.relative(srcDir, filePath);
+
         if (fs.existsSync(filePath)) {
-            console.log(`   + Adding file: ${fileName}`);
+            console.log(`   + Adding file: ${relativeName}`);
             const content = fs.readFileSync(filePath, 'utf8');
             outputContent += content + '\n';
         } else {
-            console.error(`❌ File not found: ${fileName} (Skipping)`);
+            console.error(`❌ File not found: ${relativeName} (Skipping)`);
         }
     });
 
-    // 6. End IIFE
+    // 7. End IIFE
     outputContent += '})();\n';
 
-    // 7. Write Output
+    // 8. Write Output
     try {
         fs.writeFileSync(CONFIG.OUT_FILE, outputContent);
         console.log(`✅ Build successful! Output written to: ${CONFIG.OUT_FILE}`);
