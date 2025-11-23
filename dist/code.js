@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       2.0.13
+// @version       2.0.14
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -1361,32 +1361,6 @@ const AggressiveRecovery = (() => {
             // Save video state
             const playbackRate = video.playbackRate;
             const volume = video.volume;
-            const muted = video.muted;
-            const originalSrc = video.src;
-            const isBlobUrl = originalSrc && originalSrc.startsWith('blob:');
-
-            // Clear and reload stream
-            if (isBlobUrl) {
-                Logger.add('Blob URL detected - attempting reload cycle', { url: originalSrc });
-
-                // NOTE: This strategy is risky. If the Blob URL has been revoked by the browser 
-                // or Twitch's player code, reusing it here will fail (Error #4000).
-                // We log each step to diagnose if this is the cause of the crash.
-
-                Logger.add('Step 1: Clearing video.src');
-                video.src = '';
-                video.load();
-
-                await Fn.sleep(100);
-
-                Logger.add('Step 2: Restoring original Blob URL');
-                video.src = originalSrc;
-                video.load();
-            } else {
-                Logger.add('Standard URL detected - reloading via empty src');
-                video.src = '';
-                video.load();
-            }
 
             // Wait for stream to be ready
             await new Promise(resolve => {

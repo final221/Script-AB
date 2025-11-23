@@ -1,0 +1,32 @@
+Player stopping playback - error :2 (ErrorNotSupported code 4 - NS_ERROR_DOM_INVALID_STATE_ERR (0x8053000b) - MediaLoadInvalidURI) amazon-ivs-wasmworker.min-96ae2717290f1bdba0b6.js:1:49765
+    _emscripten_log_js https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-96ae2717290f1bdba0b6.js:1
+    logMessage https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-96ae2717290f1bdba0b6.js:1
+    x https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-96ae2717290f1bdba0b6.js:1
+    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-822d371c32d3620af2e6.wasm:737037
+    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-822d371c32d3620af2e6.wasm:932877
+    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-822d371c32d3620af2e6.wasm:61610
+    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-822d371c32d3620af2e6.wasm:226239
+    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-822d371c32d3620af2e6.wasm:410238
+    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-822d371c32d3620af2e6.wasm:759420
+    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-822d371c32d3620af2e6.wasm:141990
+    Ie https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-96ae2717290f1bdba0b6.js:1
+    (Async: setTimeout handler)
+    a https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-96ae2717290f1bdba0b6.js:1
+    t https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-96ae2717290f1bdba0b6.js:1
+    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-822d371c32d3620af2e6.wasm:759923
+    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-822d371c32d3620af2e6.wasm:931793
+    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-822d371c32d3620af2e6.wasm:425894
+    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-822d371c32d3620af2e6.wasm:731075
+    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-822d371c32d3620af2e6.wasm:788587
+    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-822d371c32d3620af2e6.wasm:938393
+    Ie https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-96ae2717290f1bdba0b6.js:1
+    onClientMessage https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-96ae2717290f1bdba0b6.js:1
+    dispatch https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-96ae2717290f1bdba0b6.js:1
+    onmessage https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-96ae2717290f1bdba0b6.js:1
+    (Async: EventHandlerNonNull)
+    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-96ae2717290f1bdba0b6.js:1
+    (Async: EventHandlerNonNull)
+    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-96ae2717290f1bdba0b6.js:1
+    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-96ae2717290f1bdba0b6.js:1
+    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-96ae2717290f1bdba0b6.js:1
+    <anonym> blob:https://www.twitch.tv/2fb2a627-061f-411b-b0a0-4d89e34bcc1f:1
