@@ -1,29 +1,3 @@
-/**
- * MEGA AD DODGER 3000 (Stealth Reactor Core)
- * A monolithic, self-contained userscript for Twitch ad blocking.
- * 
-*/
-/**
- * ARCHITECTURE MAP
- * 
- * [Core] -------------------------> [Network] (Intercepts XHR/Fetch)
- *   |                                 |
- *   +-> [PlayerContext]               +-> [Logic.Network] (Ad detection)
- *   |      |
- *   |      +-> [Logic.Player] (Signature scanning)
- *   |
- *   +-> [HealthMonitor] (Stuck detection)
- *   |
- *   +-> [Resilience] (Ad blocking execution)
- *          |
- *          +-> [VideoListenerManager] (Event cleanup)
- * 
- * EVENT BUS FLOW:
- * [Network] -> AD_DETECTED -> [Core] -> [Resilience]
- * [HealthMonitor] -> AD_DETECTED -> [Core] -> [Resilience]
- * [Core] -> ACQUIRE -> [PlayerContext] -> [HealthMonitor]
- */
-
 // ============================================================================
 // 1. CONFIGURATION & CONSTANTS
 // ============================================================================
