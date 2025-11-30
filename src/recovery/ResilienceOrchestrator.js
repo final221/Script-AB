@@ -9,6 +9,72 @@
 const ResilienceOrchestrator = (() => {
     let isFixing = false;
 
+    /**
+     * Captures a snapshot of current video element state.
+     * @param {HTMLVideoElement} video - The video element to snapshot
+     * @returns {Object} Snapshot containing readyState, networkState, currentTime, etc.
+     */
+    const captureVideoSnapshot = (video) => {
+        return {
+            readyState: video.readyState,
+            networkState: video.networkState,
+            currentTime: video.currentTime,
+            paused: video.paused,
+            error: video.error ? video.error.code : null,
+            bufferEnd: video.buffered.length ? video.buffered.end(video.buffered.length - 1) : 0
+        };
+    };
+
+    /**
+     * Calculates the delta between pre and post recovery snapshots.
+     * @param {Object} preSnapshot - Snapshot before recovery
+     * @param {Object} postSnapshot - Snapshot after recovery
+     * @returns {Object} Delta object showing what changed
+     */
+    const calculateRecoveryDelta = (preSnapshot, postSnapshot) => {
+        return {
+            readyStateChanged: preSnapshot.readyState !== postSnapshot.readyState,
+            networkStateChanged: preSnapshot.networkState !== postSnapshot.networkState,
+            errorAppeared: !preSnapshot.error && postSnapshot.error,
+            errorCleared: preSnapshot.error && !postSnapshot.error,
+            pausedStateChanged: preSnapshot.paused !== postSnapshot.paused
+        };
+    };
+
+    /**
+     * Attempts cascading recovery: Standard → Experimental → Aggressive.
+     * Only cascades if StandardRecovery was used and buffer still needs aggressive recovery.
+     * @param {HTMLVideoElement} video - The video element
+     * @param {Object} strategy - The initially selected recovery strategy
+     */
+    const attemptCascadingRecovery = async (video, strategy) => {
+        if (strategy !== StandardRecovery) {
+            return; // No cascade needed for non-standard strategies
+        }
+
+        const postStandardAnalysis = BufferAnalyzer.analyze(video);
+        if (!postStandardAnalysis.needsAggressive) {
+            return; // Standard recovery was sufficient
+        }
+
+        // Try experimental recovery if enabled
+        if (ExperimentalRecovery.isEnabled() && ExperimentalRecovery.hasStrategies()) {
+            Logger.add('[RECOVERY] Standard insufficient, trying experimental');
+            await ExperimentalRecovery.execute(video);
+
+            const postExperimentalAnalysis = BufferAnalyzer.analyze(video);
+            if (postExperimentalAnalysis.needsAggressive) {
+                Logger.add('[RECOVERY] Experimental insufficient, falling back to aggressive');
+                await AggressiveRecovery.execute(video);
+            } else {
+                Logger.add('[RECOVERY] Experimental recovery successful');
+            }
+        } else {
+            Logger.add('[RECOVERY] Standard insufficient, using aggressive');
+            await AggressiveRecovery.execute(video);
+        }
+    };
+
     return {
         execute: async (container, payload = {}) => {
             if (isFixing) {
@@ -35,73 +101,27 @@ const ResilienceOrchestrator = (() => {
                     return;
                 }
 
-                // Check buffer and select strategy
+                // Check buffer health
                 const analysis = BufferAnalyzer.analyze(video);
-
-                // Skip buffer check if forced
                 if (!payload.forceAggressive && analysis.bufferHealth === 'critical') {
                     Logger.add('[RECOVERY] Insufficient buffer for recovery, waiting');
                     return;
                 }
 
-                // Capture pre-recovery snapshot
-                const preSnapshot = {
-                    readyState: video.readyState,
-                    networkState: video.networkState,
-                    currentTime: video.currentTime,
-                    paused: video.paused,
-                    error: video.error ? video.error.code : null,
-                    bufferEnd: video.buffered.length ? video.buffered.end(video.buffered.length - 1) : 0
-                };
+                // Capture pre-recovery state
+                const preSnapshot = captureVideoSnapshot(video);
                 Logger.add('[RECOVERY] Pre-recovery snapshot', preSnapshot);
 
-                // Execute recovery strategy
+                // Execute primary recovery strategy
                 const strategy = RecoveryStrategy.select(video, payload);
                 await strategy.execute(video);
 
-                // Experimental cascade: if standard was used, check if more recovery needed
-                if (strategy === StandardRecovery) {
-                    const postStandardAnalysis = BufferAnalyzer.analyze(video);
+                // Attempt cascading recovery if needed
+                await attemptCascadingRecovery(video, strategy);
 
-                    if (postStandardAnalysis.needsAggressive) {
-                        // Try experimental if enabled
-                        if (ExperimentalRecovery.isEnabled() && ExperimentalRecovery.hasStrategies()) {
-                            Logger.add('[RECOVERY] Standard insufficient, trying experimental');
-                            await ExperimentalRecovery.execute(video);
-
-                            // Check if experimental helped
-                            const postExperimentalAnalysis = BufferAnalyzer.analyze(video);
-                            if (postExperimentalAnalysis.needsAggressive) {
-                                Logger.add('[RECOVERY] Experimental insufficient, falling back to aggressive');
-                                await AggressiveRecovery.execute(video);
-                            } else {
-                                Logger.add('[RECOVERY] Experimental recovery successful');
-                            }
-                        } else {
-                            Logger.add('[RECOVERY] Standard insufficient, using aggressive');
-                            await AggressiveRecovery.execute(video);
-                        }
-                    }
-                }
-
-                // Capture post-recovery snapshot
-                const postSnapshot = {
-                    readyState: video.readyState,
-                    networkState: video.networkState,
-                    currentTime: video.currentTime,
-                    paused: video.paused,
-                    error: video.error ? video.error.code : null,
-                    bufferEnd: video.buffered.length ? video.buffered.end(video.buffered.length - 1) : 0
-                };
-
-                // Calculate and log delta
-                const delta = {
-                    readyStateChanged: preSnapshot.readyState !== postSnapshot.readyState,
-                    networkStateChanged: preSnapshot.networkState !== postSnapshot.networkState,
-                    errorAppeared: !preSnapshot.error && postSnapshot.error,
-                    errorCleared: preSnapshot.error && !postSnapshot.error,
-                    pausedStateChanged: preSnapshot.paused !== postSnapshot.paused
-                };
+                // Capture post-recovery state and calculate delta
+                const postSnapshot = captureVideoSnapshot(video);
+                const delta = calculateRecoveryDelta(preSnapshot, postSnapshot);
                 Logger.add('[RECOVERY] Post-recovery delta', { pre: preSnapshot, post: postSnapshot, changes: delta });
 
                 // Resume playback if needed
@@ -121,3 +141,4 @@ const ResilienceOrchestrator = (() => {
         }
     };
 })();
+

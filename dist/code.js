@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       2.1.3
+// @version       2.1.4
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -1185,7 +1185,13 @@ const PlayerContext = (() => {
     let keyMap = { k0: null, k1: null, k2: null };
     const contextHintKeywords = ['react', 'vue', 'next', 'props', 'fiber', 'internal'];
 
-    const findKeysInObject = (obj) => {
+    /**
+     * Detects player function signatures in an object.
+     * Attempts to match object properties against known player method signatures.
+     * @param {Object} obj - Object to scan for player signatures
+     * @returns {boolean} True if all required signatures were found
+     */
+    const detectPlayerSignatures = (obj) => {
         for (const sig of Logic.Player.signatures) {
             // If a key is already mapped and still valid, skip searching for it again.
             if (keyMap[sig.id] && Logic.Player.validate(obj, keyMap[sig.id], sig)) {
@@ -1200,18 +1206,26 @@ const PlayerContext = (() => {
         return Object.values(keyMap).every(k => k !== null);
     };
 
-    const searchRecursive = (obj, depth = 0, visited = new WeakSet()) => {
+    /**
+     * Recursively traverses object tree to find the player context.
+     * Searches for React/Vue internal player component instance.
+     * @param {Object} obj - Object to traverse
+     * @param {number} depth - Current recursion depth
+     * @param {WeakSet} visited - Set of already-visited objects to prevent cycles
+     * @returns {Object|null} Player context object if found, null otherwise
+     */
+    const traverseForPlayerContext = (obj, depth = 0, visited = new WeakSet()) => {
         if (depth > CONFIG.player.MAX_SEARCH_DEPTH || !obj || typeof obj !== 'object' || visited.has(obj)) {
             return null;
         }
         visited.add(obj);
 
-        if (findKeysInObject(obj)) {
+        if (detectPlayerSignatures(obj)) {
             return obj;
         }
 
         for (const key of Object.keys(obj)) {
-            const found = searchRecursive(obj[key], depth + 1, visited);
+            const found = traverseForPlayerContext(obj[key], depth + 1, visited);
             if (found) return found;
         }
         return null;
@@ -1246,7 +1260,7 @@ const PlayerContext = (() => {
                 if (contextHintKeywords.some(hint => keyString.includes(hint))) {
                     const potentialContext = element[key];
                     if (potentialContext && typeof potentialContext === 'object') {
-                        const ctx = searchRecursive(potentialContext);
+                        const ctx = traverseForPlayerContext(potentialContext);
                         if (ctx) {
                             cachedContext = ctx;
                             Logger.add('PlayerContext: Fresh context found via keyword search', { key: String(key) });
@@ -1753,6 +1767,72 @@ const RecoveryUtils = (() => {
 const ResilienceOrchestrator = (() => {
     let isFixing = false;
 
+    /**
+     * Captures a snapshot of current video element state.
+     * @param {HTMLVideoElement} video - The video element to snapshot
+     * @returns {Object} Snapshot containing readyState, networkState, currentTime, etc.
+     */
+    const captureVideoSnapshot = (video) => {
+        return {
+            readyState: video.readyState,
+            networkState: video.networkState,
+            currentTime: video.currentTime,
+            paused: video.paused,
+            error: video.error ? video.error.code : null,
+            bufferEnd: video.buffered.length ? video.buffered.end(video.buffered.length - 1) : 0
+        };
+    };
+
+    /**
+     * Calculates the delta between pre and post recovery snapshots.
+     * @param {Object} preSnapshot - Snapshot before recovery
+     * @param {Object} postSnapshot - Snapshot after recovery
+     * @returns {Object} Delta object showing what changed
+     */
+    const calculateRecoveryDelta = (preSnapshot, postSnapshot) => {
+        return {
+            readyStateChanged: preSnapshot.readyState !== postSnapshot.readyState,
+            networkStateChanged: preSnapshot.networkState !== postSnapshot.networkState,
+            errorAppeared: !preSnapshot.error && postSnapshot.error,
+            errorCleared: preSnapshot.error && !postSnapshot.error,
+            pausedStateChanged: preSnapshot.paused !== postSnapshot.paused
+        };
+    };
+
+    /**
+     * Attempts cascading recovery: Standard → Experimental → Aggressive.
+     * Only cascades if StandardRecovery was used and buffer still needs aggressive recovery.
+     * @param {HTMLVideoElement} video - The video element
+     * @param {Object} strategy - The initially selected recovery strategy
+     */
+    const attemptCascadingRecovery = async (video, strategy) => {
+        if (strategy !== StandardRecovery) {
+            return; // No cascade needed for non-standard strategies
+        }
+
+        const postStandardAnalysis = BufferAnalyzer.analyze(video);
+        if (!postStandardAnalysis.needsAggressive) {
+            return; // Standard recovery was sufficient
+        }
+
+        // Try experimental recovery if enabled
+        if (ExperimentalRecovery.isEnabled() && ExperimentalRecovery.hasStrategies()) {
+            Logger.add('[RECOVERY] Standard insufficient, trying experimental');
+            await ExperimentalRecovery.execute(video);
+
+            const postExperimentalAnalysis = BufferAnalyzer.analyze(video);
+            if (postExperimentalAnalysis.needsAggressive) {
+                Logger.add('[RECOVERY] Experimental insufficient, falling back to aggressive');
+                await AggressiveRecovery.execute(video);
+            } else {
+                Logger.add('[RECOVERY] Experimental recovery successful');
+            }
+        } else {
+            Logger.add('[RECOVERY] Standard insufficient, using aggressive');
+            await AggressiveRecovery.execute(video);
+        }
+    };
+
     return {
         execute: async (container, payload = {}) => {
             if (isFixing) {
@@ -1779,73 +1859,27 @@ const ResilienceOrchestrator = (() => {
                     return;
                 }
 
-                // Check buffer and select strategy
+                // Check buffer health
                 const analysis = BufferAnalyzer.analyze(video);
-
-                // Skip buffer check if forced
                 if (!payload.forceAggressive && analysis.bufferHealth === 'critical') {
                     Logger.add('[RECOVERY] Insufficient buffer for recovery, waiting');
                     return;
                 }
 
-                // Capture pre-recovery snapshot
-                const preSnapshot = {
-                    readyState: video.readyState,
-                    networkState: video.networkState,
-                    currentTime: video.currentTime,
-                    paused: video.paused,
-                    error: video.error ? video.error.code : null,
-                    bufferEnd: video.buffered.length ? video.buffered.end(video.buffered.length - 1) : 0
-                };
+                // Capture pre-recovery state
+                const preSnapshot = captureVideoSnapshot(video);
                 Logger.add('[RECOVERY] Pre-recovery snapshot', preSnapshot);
 
-                // Execute recovery strategy
+                // Execute primary recovery strategy
                 const strategy = RecoveryStrategy.select(video, payload);
                 await strategy.execute(video);
 
-                // Experimental cascade: if standard was used, check if more recovery needed
-                if (strategy === StandardRecovery) {
-                    const postStandardAnalysis = BufferAnalyzer.analyze(video);
+                // Attempt cascading recovery if needed
+                await attemptCascadingRecovery(video, strategy);
 
-                    if (postStandardAnalysis.needsAggressive) {
-                        // Try experimental if enabled
-                        if (ExperimentalRecovery.isEnabled() && ExperimentalRecovery.hasStrategies()) {
-                            Logger.add('[RECOVERY] Standard insufficient, trying experimental');
-                            await ExperimentalRecovery.execute(video);
-
-                            // Check if experimental helped
-                            const postExperimentalAnalysis = BufferAnalyzer.analyze(video);
-                            if (postExperimentalAnalysis.needsAggressive) {
-                                Logger.add('[RECOVERY] Experimental insufficient, falling back to aggressive');
-                                await AggressiveRecovery.execute(video);
-                            } else {
-                                Logger.add('[RECOVERY] Experimental recovery successful');
-                            }
-                        } else {
-                            Logger.add('[RECOVERY] Standard insufficient, using aggressive');
-                            await AggressiveRecovery.execute(video);
-                        }
-                    }
-                }
-
-                // Capture post-recovery snapshot
-                const postSnapshot = {
-                    readyState: video.readyState,
-                    networkState: video.networkState,
-                    currentTime: video.currentTime,
-                    paused: video.paused,
-                    error: video.error ? video.error.code : null,
-                    bufferEnd: video.buffered.length ? video.buffered.end(video.buffered.length - 1) : 0
-                };
-
-                // Calculate and log delta
-                const delta = {
-                    readyStateChanged: preSnapshot.readyState !== postSnapshot.readyState,
-                    networkStateChanged: preSnapshot.networkState !== postSnapshot.networkState,
-                    errorAppeared: !preSnapshot.error && postSnapshot.error,
-                    errorCleared: preSnapshot.error && !postSnapshot.error,
-                    pausedStateChanged: preSnapshot.paused !== postSnapshot.paused
-                };
+                // Capture post-recovery state and calculate delta
+                const postSnapshot = captureVideoSnapshot(video);
+                const delta = calculateRecoveryDelta(preSnapshot, postSnapshot);
                 Logger.add('[RECOVERY] Post-recovery delta', { pre: preSnapshot, post: postSnapshot, changes: delta });
 
                 // Resume playback if needed
@@ -1865,6 +1899,7 @@ const ResilienceOrchestrator = (() => {
         }
     };
 })();
+
 
 // --- Standard Recovery ---
 /**

@@ -11,7 +11,13 @@ const PlayerContext = (() => {
     let keyMap = { k0: null, k1: null, k2: null };
     const contextHintKeywords = ['react', 'vue', 'next', 'props', 'fiber', 'internal'];
 
-    const findKeysInObject = (obj) => {
+    /**
+     * Detects player function signatures in an object.
+     * Attempts to match object properties against known player method signatures.
+     * @param {Object} obj - Object to scan for player signatures
+     * @returns {boolean} True if all required signatures were found
+     */
+    const detectPlayerSignatures = (obj) => {
         for (const sig of Logic.Player.signatures) {
             // If a key is already mapped and still valid, skip searching for it again.
             if (keyMap[sig.id] && Logic.Player.validate(obj, keyMap[sig.id], sig)) {
@@ -26,18 +32,26 @@ const PlayerContext = (() => {
         return Object.values(keyMap).every(k => k !== null);
     };
 
-    const searchRecursive = (obj, depth = 0, visited = new WeakSet()) => {
+    /**
+     * Recursively traverses object tree to find the player context.
+     * Searches for React/Vue internal player component instance.
+     * @param {Object} obj - Object to traverse
+     * @param {number} depth - Current recursion depth
+     * @param {WeakSet} visited - Set of already-visited objects to prevent cycles
+     * @returns {Object|null} Player context object if found, null otherwise
+     */
+    const traverseForPlayerContext = (obj, depth = 0, visited = new WeakSet()) => {
         if (depth > CONFIG.player.MAX_SEARCH_DEPTH || !obj || typeof obj !== 'object' || visited.has(obj)) {
             return null;
         }
         visited.add(obj);
 
-        if (findKeysInObject(obj)) {
+        if (detectPlayerSignatures(obj)) {
             return obj;
         }
 
         for (const key of Object.keys(obj)) {
-            const found = searchRecursive(obj[key], depth + 1, visited);
+            const found = traverseForPlayerContext(obj[key], depth + 1, visited);
             if (found) return found;
         }
         return null;
@@ -72,7 +86,7 @@ const PlayerContext = (() => {
                 if (contextHintKeywords.some(hint => keyString.includes(hint))) {
                     const potentialContext = element[key];
                     if (potentialContext && typeof potentialContext === 'object') {
-                        const ctx = searchRecursive(potentialContext);
+                        const ctx = traverseForPlayerContext(potentialContext);
                         if (ctx) {
                             cachedContext = ctx;
                             Logger.add('PlayerContext: Fresh context found via keyword search', { key: String(key) });
