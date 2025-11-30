@@ -15,10 +15,23 @@ const CONFIG = {
  * @param {string} dir - The directory to search.
  * @returns {string[]} List of absolute file paths.
  */
-const getFiles = (dir) => fs.readdirSync(dir).reduce((acc, file) => {
-    const filePath = path.join(dir, file);
-    return acc.concat(fs.statSync(filePath).isDirectory() ? getFiles(filePath) : filePath);
-}, []);
+const getFiles = (dir) => {
+    let results = [];
+    const list = fs.readdirSync(dir);
+
+    for (const file of list) {
+        const filePath = path.join(dir, file);
+        const stat = fs.statSync(filePath);
+
+        if (stat.isDirectory()) {
+            results = results.concat(getFiles(filePath));
+        } else {
+            results.push(filePath);
+        }
+    }
+
+    return results;
+};
 
 /**
  * Updates the semantic version in the version file.
@@ -55,7 +68,13 @@ const updateVersion = (type = 'patch') => {
     console.log('🏗️  Building...');
 
     const args = process.argv.slice(2);
-    const versionType = args.includes('--major') ? 'major' : args.includes('--minor') ? 'minor' : 'patch';
+    let versionType = 'patch';
+
+    if (args.includes('--major')) {
+        versionType = 'major';
+    } else if (args.includes('--minor')) {
+        versionType = 'minor';
+    }
 
     const { old, new: version } = updateVersion(versionType);
     console.log(`📦 Version: ${old} → ${version} (${versionType})`);
@@ -72,11 +91,17 @@ const updateVersion = (type = 'patch') => {
     const entryFile = path.join(srcDir, CONFIG.ENTRY);
 
     // Filter out non-js files, priority files, and the entry file
-    const otherFiles = allFiles.filter(file =>
-        file.endsWith('.js') &&
-        !priorityFiles.some(p => normalize(p) === normalize(file)) &&
-        normalize(file) !== normalize(entryFile)
-    );
+    const otherFiles = allFiles.filter(file => {
+        if (!file.endsWith('.js')) return false;
+
+        const isPriority = priorityFiles.some(p => normalize(p) === normalize(file));
+        if (isPriority) return false;
+
+        const isEntry = normalize(file) === normalize(entryFile);
+        if (isEntry) return false;
+
+        return true;
+    });
 
     const headerContent = fs.existsSync(CONFIG.HEADER)
         ? fs.readFileSync(CONFIG.HEADER, 'utf8').replace('{{VERSION}}', version) + '\n'
