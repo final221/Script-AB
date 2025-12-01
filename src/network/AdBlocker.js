@@ -8,11 +8,23 @@
  */
 const AdBlocker = (() => {
     const process = (url, type) => {
-        const isTrigger = Logic.Network.isTrigger(url);
-        const isDelivery = Logic.Network.isDelivery(url);
+        // 1. Input Validation
+        if (!url || typeof url !== 'string') {
+            Logger.debug('[NETWORK] Invalid URL passed to AdBlocker', { url, type });
+            return false;
+        }
 
-        if (isTrigger) {
+        let isAd = false;
+        let isTrigger = false;
+
+        // 2. Check Trigger First (Subset of Ads)
+        if (Logic.Network.isTrigger(url)) {
+            isTrigger = true;
+            isAd = true; // Triggers are always ads
+
+            const isDelivery = Logic.Network.isDelivery(url);
             const triggerCategory = isDelivery ? 'Ad Delivery' : 'Availability Check';
+
             Logger.add(`[NETWORK] Trigger pattern detected | Category: ${triggerCategory}`, {
                 type,
                 url,
@@ -29,12 +41,17 @@ const AdBlocker = (() => {
                 });
             }
         }
-
-        const isAd = Logic.Network.isAd(url);
-        if (isAd) {
+        // 3. Check Generic Ad (if not already identified as trigger)
+        else if (Logic.Network.isAd(url)) {
+            isAd = true;
             Logger.add('[NETWORK] Ad pattern detected', { type, url });
+        }
+
+        // 4. Unified Metrics
+        if (isAd) {
             Metrics.increment('ads_detected');
         }
+
         return isAd;
     };
 
