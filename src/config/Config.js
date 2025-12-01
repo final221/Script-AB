@@ -41,8 +41,27 @@ const CONFIG = (() => {
         network: {
             AD_PATTERNS: ['/ad/v1/', '/usher/v1/ad/', '/api/v5/ads/', 'pubads.g.doubleclick.net', 'supervisor.ext-twitch.tv', '/3p/ads'],
             TRIGGER_PATTERNS: ['/ad_state/', 'vod_ad_manifest'],
-            DELIVERY_PATTERNS: ['/ad_state/', 'vod_ad_manifest', '/usher/v1/ad/'],
-            AVAILABILITY_PATTERNS: ['/3p/ads?', 'bp=preroll', 'bp=midroll'],
+
+            // Structured patterns with type info
+            DELIVERY_PATTERNS_TYPED: [
+                { pattern: '/ad_state/', type: 'path' },
+                { pattern: 'vod_ad_manifest', type: 'path' },
+                { pattern: '/usher/v1/ad/', type: 'path' }
+            ],
+
+            AVAILABILITY_PATTERNS_TYPED: [
+                { pattern: '/3p/ads', type: 'path' },
+                { pattern: 'bp=preroll', type: 'query' },
+                { pattern: 'bp=midroll', type: 'query' }
+            ],
+
+            // Backwards compatibility
+            get DELIVERY_PATTERNS() {
+                return this.DELIVERY_PATTERNS_TYPED.map(p => p.pattern);
+            },
+            get AVAILABILITY_PATTERNS() {
+                return this.AVAILABILITY_PATTERNS_TYPED.map(p => p.pattern);
+            }
         },
         mock: {
             M3U8: '#EXTM3U\n#EXT-X-VERSION:3\n#EXT-X-ENDLIST\n',

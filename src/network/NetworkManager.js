@@ -15,6 +15,10 @@ const NetworkManager = (() => {
         XMLHttpRequest.prototype.open = function (method, url) {
             if (method === 'GET' && typeof url === 'string') {
                 const isAd = AdBlocker.process(url, 'XHR');
+
+                // Auto-detect potential new patterns
+                Logic.Network.detectNewPatterns(url);
+
                 Diagnostics.logNetworkRequest(url, 'XHR', isAd);
                 if (isAd) {
                     this._isAdRequest = true;
@@ -38,6 +42,10 @@ const NetworkManager = (() => {
             const url = (typeof input === 'string') ? input : input.url;
             if (url) {
                 const isAd = AdBlocker.process(url, 'FETCH');
+
+                // Auto-detect potential new patterns
+                Logic.Network.detectNewPatterns(url);
+
                 Diagnostics.logNetworkRequest(url, 'FETCH', isAd);
                 if (isAd) {
                     return Promise.resolve(Mocking.getFetchMock(url));

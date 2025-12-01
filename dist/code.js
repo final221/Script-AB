@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       2.1.6
+// @version       2.1.7
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -54,8 +54,27 @@ const CONFIG = (() => {
         network: {
             AD_PATTERNS: ['/ad/v1/', '/usher/v1/ad/', '/api/v5/ads/', 'pubads.g.doubleclick.net', 'supervisor.ext-twitch.tv', '/3p/ads'],
             TRIGGER_PATTERNS: ['/ad_state/', 'vod_ad_manifest'],
-            DELIVERY_PATTERNS: ['/ad_state/', 'vod_ad_manifest', '/usher/v1/ad/'],
-            AVAILABILITY_PATTERNS: ['/3p/ads?', 'bp=preroll', 'bp=midroll'],
+
+            // Structured patterns with type info
+            DELIVERY_PATTERNS_TYPED: [
+                { pattern: '/ad_state/', type: 'path' },
+                { pattern: 'vod_ad_manifest', type: 'path' },
+                { pattern: '/usher/v1/ad/', type: 'path' }
+            ],
+
+            AVAILABILITY_PATTERNS_TYPED: [
+                { pattern: '/3p/ads', type: 'path' },
+                { pattern: 'bp=preroll', type: 'query' },
+                { pattern: 'bp=midroll', type: 'query' }
+            ],
+
+            // Backwards compatibility
+            get DELIVERY_PATTERNS() {
+                return this.DELIVERY_PATTERNS_TYPED.map(p => p.pattern);
+            },
+            get AVAILABILITY_PATTERNS() {
+                return this.AVAILABILITY_PATTERNS_TYPED.map(p => p.pattern);
+            }
         },
         mock: {
             M3U8: '#EXTM3U\n#EXT-X-VERSION:3\n#EXT-X-ENDLIST\n',
@@ -173,42 +192,217 @@ const Adapters = {
 const Logic = (() => {
     return {
         Network: {
-            isAd: (url) => CONFIG.regex.AD_BLOCK.test(url),
-            isTrigger: (url) => CONFIG.regex.AD_TRIGGER.test(url),
-            isDelivery: (url) => CONFIG.network.DELIVERY_PATTERNS.some(p => url.includes(p)) && !CONFIG.network.AVAILABILITY_PATTERNS.some(p => url.includes(p)),
-            isAvailabilityCheck: (url) => CONFIG.network.AVAILABILITY_PATTERNS.some(p => url.includes(p)),
+            // Helper: Safe URL parsing with fallback
+            _parseUrl: (url) => {
+                try {
+                    return new URL(url);
+                } catch (e) {
+                    // Fallback for relative URLs (e.g. "/ad/v1/")
+                    try {
+                        return new URL(url, 'http://twitch.tv');
+                    } catch (e2) {
+                        // Fallback for truly malformed input
+                        Logger.add('[Logic] URL parse failed, using string matching', { url, error: String(e2) });
+                        return null;
+                    }
+                }
+            },
+
+            // Helper: Check if pattern matches URL pathname (not query/hash)
+            _pathMatches: (url, pattern) => {
+                const parsed = Logic.Network._parseUrl(url);
+                if (parsed) {
+                    // Match against pathname only (ignore query and hash)
+                    return parsed.pathname.includes(pattern);
+                }
+                // Fallback: use string matching on full URL
+                return url.includes(pattern);
+            },
+
+            isAd: (url) => {
+                if (!url || typeof url !== 'string') return false;
+                return CONFIG.regex.AD_BLOCK.test(url);
+            },
+
+            isTrigger: (url) => {
+                if (!url || typeof url !== 'string') return false;
+                return CONFIG.regex.AD_TRIGGER.test(url);
+            },
+
+            isDelivery: (url) => {
+                if (!url || typeof url !== 'string') return false;
+
+                // Check delivery patterns against pathname only
+                const hasDelivery = CONFIG.network.DELIVERY_PATTERNS.some(p =>
+                    Logic.Network._pathMatches(url, p)
+                );
+
+                // Ensure it's NOT just an availability check
+                const isAvailability = CONFIG.network.AVAILABILITY_PATTERNS.some(p => {
+                    const parsed = Logic.Network._parseUrl(url);
+                    if (parsed) {
+                        // For query param patterns (bp=preroll), check search params
+                        if (p.includes('=')) {
+                            return parsed.search.includes(p);
+                        }
+                        // For path patterns, check pathname
+                        return parsed.pathname.includes(p);
+                    }
+                    return url.includes(p);
+                });
+
+                return hasDelivery && !isAvailability;
+            },
+
+            isAvailabilityCheck: (url) => {
+                if (!url || typeof url !== 'string') return false;
+
+                return CONFIG.network.AVAILABILITY_PATTERNS.some(p => {
+                    const parsed = Logic.Network._parseUrl(url);
+                    if (parsed) {
+                        // Query param patterns
+                        if (p.includes('=')) {
+                            return parsed.search.includes(p);
+                        }
+                        // Path patterns
+                        return parsed.pathname.includes(p);
+                    }
+                    return url.includes(p);
+                });
+            },
+
             getMock: (url) => {
-                if (url.includes('.m3u8')) {
+                if (!url || typeof url !== 'string') {
+                    return { body: CONFIG.mock.JSON, type: 'application/json' };
+                }
+
+                const parsed = Logic.Network._parseUrl(url);
+                const pathname = parsed ? parsed.pathname : url;
+
+                // Check file extension in pathname only (not query params)
+                if (pathname.endsWith('.m3u8')) {
                     return { body: CONFIG.mock.M3U8, type: 'application/vnd.apple.mpegurl' };
                 }
-                if (url.includes('vast') || url.includes('xml')) {
+                if (pathname.includes('vast') || pathname.endsWith('.xml')) {
                     return { body: CONFIG.mock.VAST, type: 'application/xml' };
                 }
                 return { body: CONFIG.mock.JSON, type: 'application/json' };
-            }
+            },
+
+            // Track unknown suspicious URLs
+            _suspiciousUrls: new Set(),
+            _suspiciousKeywords: [
+                'ad', 'ads', 'advertisement', 'preroll', 'midroll',
+                'doubleclick', 'pubads', 'vast', 'tracking', 'analytics'
+            ],
+
+            /**
+             * Detect potentially new ad patterns
+             * Logs URLs that look like ads but don't match existing patterns
+             */
+            detectNewPatterns: (url) => {
+                if (!url || typeof url !== 'string') return;
+
+                // Skip if already matches known patterns
+                if (Logic.Network.isAd(url)) return;
+                if (Logic.Network.isTrigger(url)) return;
+
+                const urlLower = url.toLowerCase();
+                const parsed = Logic.Network._parseUrl(url);
+
+                // Check if URL contains suspicious keywords
+                const hasSuspiciousKeyword = Logic.Network._suspiciousKeywords.some(keyword =>
+                    urlLower.includes(keyword)
+                );
+
+                if (hasSuspiciousKeyword && !Logic.Network._suspiciousUrls.has(url)) {
+                    Logic.Network._suspiciousUrls.add(url);
+
+                    // ✅ This gets exported with exportTwitchAdLogs()
+                    Logger.add('[PATTERN DISCOVERY] Suspicious URL detected', {
+                        url,
+                        pathname: parsed ? parsed.pathname : 'parse failed',
+                        hostname: parsed ? parsed.hostname : 'parse failed',
+                        keywords: Logic.Network._suspiciousKeywords.filter(k => urlLower.includes(k)),
+                        suggestion: 'Review this URL - might be a new ad pattern'
+                    });
+                }
+            },
+
+            // Export discovered patterns for review
+            getDiscoveredPatterns: () => Array.from(Logic.Network._suspiciousUrls)
         },
         Player: {
+            // Statistics tracking (internal)
+            _signatureStats: {
+                k0: { matches: 0, keys: [] },
+                k1: { matches: 0, keys: [] },
+                k2: { matches: 0, keys: [] }
+            },
+
             signatures: [
                 {
                     id: 'k0',
                     check: (o, k) => {
-                        try { return typeof o[k] === 'function' && o[k](true) === null; } catch (e) { return false; }
+                        try {
+                            const result = typeof o[k] === 'function' && o[k](true) === null;
+                            if (result) {
+                                Logic.Player._signatureStats.k0.matches++;
+                                if (!Logic.Player._signatureStats.k0.keys.includes(k)) {
+                                    Logic.Player._signatureStats.k0.keys.push(k);
+                                    // ✅ This gets exported with exportTwitchAdLogs()
+                                    Logger.add('[Logic] Signature k0 matched NEW key', { key: k, totalMatches: Logic.Player._signatureStats.k0.matches });
+                                }
+                            }
+                            return result;
+                        } catch (e) {
+                            return false;
+                        }
                     }
                 }, // Toggle/Mute
                 {
                     id: 'k1',
                     check: (o, k) => {
-                        try { return typeof o[k] === 'function' && o[k]() === null; } catch (e) { return false; }
+                        try {
+                            const result = typeof o[k] === 'function' && o[k]() === null;
+                            if (result) {
+                                Logic.Player._signatureStats.k1.matches++;
+                                if (!Logic.Player._signatureStats.k1.keys.includes(k)) {
+                                    Logic.Player._signatureStats.k1.keys.push(k);
+                                    // ✅ This gets exported with exportTwitchAdLogs()
+                                    Logger.add('[Logic] Signature k1 matched NEW key', { key: k, totalMatches: Logic.Player._signatureStats.k1.matches });
+                                }
+                            }
+                            return result;
+                        } catch (e) {
+                            return false;
+                        }
                     }
                 }, // Pause
                 {
                     id: 'k2',
                     check: (o, k) => {
-                        try { return typeof o[k] === 'function' && o[k]() === null; } catch (e) { return false; }
+                        try {
+                            const result = typeof o[k] === 'function' && o[k]() === null;
+                            if (result) {
+                                Logic.Player._signatureStats.k2.matches++;
+                                if (!Logic.Player._signatureStats.k2.keys.includes(k)) {
+                                    Logic.Player._signatureStats.k2.keys.push(k);
+                                    // ✅ This gets exported with exportTwitchAdLogs()
+                                    Logger.add('[Logic] Signature k2 matched NEW key', { key: k, totalMatches: Logic.Player._signatureStats.k2.matches });
+                                }
+                            }
+                            return result;
+                        } catch (e) {
+                            return false;
+                        }
                     }
                 }  // Other
             ],
             validate: (obj, key, sig) => Fn.tryCatch(() => typeof obj[key] === 'function' && sig.check(obj, key), () => false)(),
+
+            // Export stats summary (for debugging)
+            getSignatureStats: () => Logic.Player._signatureStats
         }
     };
 })();
@@ -1129,6 +1323,10 @@ const NetworkManager = (() => {
         XMLHttpRequest.prototype.open = function (method, url) {
             if (method === 'GET' && typeof url === 'string') {
                 const isAd = AdBlocker.process(url, 'XHR');
+
+                // Auto-detect potential new patterns
+                Logic.Network.detectNewPatterns(url);
+
                 Diagnostics.logNetworkRequest(url, 'XHR', isAd);
                 if (isAd) {
                     this._isAdRequest = true;
@@ -1152,6 +1350,10 @@ const NetworkManager = (() => {
             const url = (typeof input === 'string') ? input : input.url;
             if (url) {
                 const isAd = AdBlocker.process(url, 'FETCH');
+
+                // Auto-detect potential new patterns
+                Logic.Network.detectNewPatterns(url);
+
                 Diagnostics.logNetworkRequest(url, 'FETCH', isAd);
                 if (isAd) {
                     return Promise.resolve(Mocking.getFetchMock(url));
@@ -2052,6 +2254,57 @@ const CoreOrchestrator = (() => {
                     source: 'MANUAL_TRIGGER',
                     forceExperimental: true
                 });
+            };
+
+            window.testTwitchAdPatterns = () => {
+                const tests = [
+                    // Query parameter injection
+                    { url: 'https://twitch.tv/ad_state/?x=1', expected: { isDelivery: true }, name: 'Delivery with query param' },
+                    { url: 'https://twitch.tv/api?url=/ad_state/', expected: { isDelivery: false }, name: 'Query param injection (should NOT match)' },
+                    { url: 'https://twitch.tv/video#/ad_state/', expected: { isDelivery: false }, name: 'Hash fragment (should NOT match)' },
+
+                    // File extension matching  
+                    { url: 'https://cdn.com/stream.m3u8?v=2', expected: { mockType: 'application/vnd.apple.mpegurl' }, name: 'M3U8 in pathname' },
+                    { url: 'https://cdn.com/api?file=test.m3u8', expected: { mockType: 'application/json' }, name: 'M3U8 in query param (should NOT match)' },
+
+                    // Availability check patterns
+                    { url: 'https://twitch.tv/api?bp=preroll&channel=test', expected: { isAvailability: true }, name: 'Availability query param' },
+                    { url: 'https://twitch.tv/bp=preroll', expected: { isAvailability: false }, name: 'Availability in pathname (should NOT match)' }
+                ];
+
+                Logger.add('========== URL PATTERN VALIDATION STARTED ==========');
+                let passed = 0, failed = 0;
+
+                tests.forEach((test, index) => {
+                    const results = {
+                        isDelivery: Logic.Network.isDelivery(test.url),
+                        isAvailability: Logic.Network.isAvailabilityCheck(test.url),
+                        mockType: Logic.Network.getMock(test.url).type
+                    };
+
+                    let testPassed = true;
+                    const failures = [];
+
+                    for (const [key, expected] of Object.entries(test.expected)) {
+                        if (results[key] !== expected) {
+                            testPassed = false;
+                            failures.push(`${key}: expected ${expected}, got ${results[key]}`);
+                        }
+                    }
+
+                    if (testPassed) {
+                        passed++;
+                        Logger.add(`[TEST ${index + 1}] ✓ PASSED: ${test.name}`, { url: test.url, results });
+                    } else {
+                        failed++;
+                        Logger.add(`[TEST ${index + 1}] ✗ FAILED: ${test.name}`, { url: test.url, expected: test.expected, actual: results, failures });
+                    }
+                });
+
+                const summary = `Tests Complete: ${passed} passed, ${failed} failed`;
+                Logger.add(`========== ${summary} ==========`);
+                console.log(summary);
+                return { passed, failed, total: tests.length };
             };
         }
     };
