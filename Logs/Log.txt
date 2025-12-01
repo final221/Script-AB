@@ -1,5 +1,5 @@
 [METRICS]
-Uptime: 34.4s
+Uptime: 94.8s
 Ads Detected: 0
 Ads Blocked: 0
 Resilience Executions: 0
@@ -8,39 +8,47 @@ Health Triggers: 0
 Errors: 15
 
 [LOGS]
-[2025-12-01T11:29:18.143Z] Core initialized
-[2025-12-01T11:29:18.178Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql"}
-[2025-12-01T11:29:18.724Z] Player mounted
-[2025-12-01T11:29:18.738Z] Player signature found | {"id":"k0","key":"elementType"}
-[2025-12-01T11:29:18.738Z] Player signature found | {"id":"k0","key":"addRestriction"}
-[2025-12-01T11:29:18.738Z] Player signature found | {"id":"k1","key":"addRestriction"}
-[2025-12-01T11:29:18.738Z] Player signature found | {"id":"k2","key":"addRestriction"}
-[2025-12-01T11:29:18.738Z] PlayerContext: Success | {"method":"keyword","key":"__reactFiber$rn3ijh8jnka"}
-[2025-12-01T11:29:18.739Z] [LIFECYCLE] Event: ACQUIRE - Success
-[2025-12-01T11:29:18.851Z] Console Error | {"args":["TypeError: can't convert undefined to object"],"severity":"MEDIUM","action":"LOG_AND_METRIC"}
-[2025-12-01T11:29:18.854Z] Player unmounted
-[2025-12-01T11:29:18.992Z] Unhandled Rejection | {"reason":"TypeError: can't access property \"error\", e is undefined","severity":"MEDIUM"}
-[2025-12-01T11:29:18.995Z] Console Error | {"args":["12:29:18 [ERROR] Unhandled promise rejection.","TypeError: can't access property \"error\", e is undefined"],"severity":"MEDIUM","action":"LOG_AND_METRIC"}
-[2025-12-01T11:29:19.010Z] Unhandled Rejection | {"reason":"TypeError: can't access property \"error\", e is undefined","severity":"MEDIUM"}
-[2025-12-01T11:29:19.010Z] Console Error | {"args":["12:29:19 [ERROR] Unhandled promise rejection.","TypeError: can't access property \"error\", e is undefined"],"severity":"MEDIUM","action":"LOG_AND_METRIC"}
-[2025-12-01T11:29:19.013Z] Unhandled Rejection | {"reason":"TypeError: can't access property \"error\", e is undefined","severity":"MEDIUM"}
-[2025-12-01T11:29:19.013Z] Console Error | {"args":["12:29:19 [ERROR] Unhandled promise rejection.","TypeError: can't access property \"error\", e is undefined"],"severity":"MEDIUM","action":"LOG_AND_METRIC"}
-[2025-12-01T11:29:19.868Z] Player mounted
-[2025-12-01T11:29:19.901Z] Player signature found | {"id":"k0","key":"elementType"}
-[2025-12-01T11:29:19.902Z] Player signature found | {"id":"k0","key":"addRestriction"}
-[2025-12-01T11:29:19.902Z] Player signature found | {"id":"k1","key":"addRestriction"}
-[2025-12-01T11:29:19.902Z] Player signature found | {"id":"k2","key":"addRestriction"}
-[2025-12-01T11:29:19.902Z] PlayerContext: Success | {"method":"keyword","key":"__reactFiber$rn3ijh8jnka"}
-[2025-12-01T11:29:19.902Z] [LIFECYCLE] Event: ACQUIRE - Success
-[2025-12-01T11:29:20.028Z] Console Error | {"args":["TypeError: can't convert undefined to object"],"severity":"MEDIUM","action":"LOG_AND_METRIC"}
-[2025-12-01T11:29:20.035Z] Console Error | {"args":["12:29:20 [ERROR] [error-boundary] [VideoPlayer] An unhandled exception occurred in the component hierarchy","TypeError: can't convert undefined to object","[object Object]"],"severity":"MEDIUM","action":"LOG_AND_METRIC"}
-[2025-12-01T11:29:20.038Z] Player unmounted
-[2025-12-01T11:29:20.070Z] Unhandled Rejection | {"reason":"TypeError: can't access property \"error\", e is undefined","severity":"MEDIUM"}
-[2025-12-01T11:29:20.070Z] Console Error | {"args":["12:29:20 [ERROR] Unhandled promise rejection.","TypeError: can't access property \"error\", e is undefined"],"severity":"MEDIUM","action":"LOG_AND_METRIC"}
-[2025-12-01T11:29:20.072Z] Unhandled Rejection | {"reason":"TypeError: can't access property \"error\", e is undefined","severity":"MEDIUM"}
-[2025-12-01T11:29:20.072Z] Console Error | {"args":["12:29:20 [ERROR] Unhandled promise rejection.","TypeError: can't access property \"error\", e is undefined"],"severity":"MEDIUM","action":"LOG_AND_METRIC"}
-[2025-12-01T11:29:20.075Z] Unhandled Rejection | {"reason":"TypeError: can't access property \"error\", e is undefined","severity":"MEDIUM"}
-[2025-12-01T11:29:20.075Z] Console Error | {"args":["12:29:20 [ERROR] Unhandled promise rejection.","TypeError: can't access property \"error\", e is undefined"],"severity":"MEDIUM","action":"LOG_AND_METRIC"}
-[2025-12-01T11:29:20.081Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-12-01T11:29:21.139Z] Console Error | {"args":["[GraphQL] One or more GraphQL errors were detected on request 01KBCTS9KAC035Z7CNPJP5N4ZG. PinnedChatSettings: unauthenticated","[object Object]"],"severity":"LOW","action":"LOG_ONLY"}
-[2025-12-01T11:29:21.248Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-12-01T16:04:57.588Z] Core initialized
+[2025-12-01T16:04:59.861Z] Player mounted
+[2025-12-01T16:04:59.929Z] [Logic] Signature k0 matched NEW key | {"key":"elementType","totalMatches":1}
+[2025-12-01T16:04:59.929Z] Player signature found | {"id":"k0","key":"elementType"}
+[2025-12-01T16:04:59.933Z] [Logic] Signature k0 matched NEW key | {"key":"addRestriction","totalMatches":2}
+[2025-12-01T16:04:59.933Z] Player signature found | {"id":"k0","key":"addRestriction"}
+[2025-12-01T16:04:59.933Z] [Logic] Signature k1 matched NEW key | {"key":"addRestriction","totalMatches":1}
+[2025-12-01T16:04:59.933Z] Player signature found | {"id":"k1","key":"addRestriction"}
+[2025-12-01T16:04:59.933Z] [Logic] Signature k2 matched NEW key | {"key":"addRestriction","totalMatches":1}
+[2025-12-01T16:04:59.933Z] Player signature found | {"id":"k2","key":"addRestriction"}
+[2025-12-01T16:04:59.933Z] PlayerContext: Success | {"method":"keyword","key":"__reactFiber$bdb35fh7d9k"}
+[2025-12-01T16:04:59.933Z] [LIFECYCLE] Event: ACQUIRE - Success
+[2025-12-01T16:05:00.209Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/integrity"}
+[2025-12-01T16:05:00.391Z] Console Error | {"args":["TypeError: can't convert undefined to object"],"severity":"MEDIUM","action":"LOG_AND_METRIC"}
+[2025-12-01T16:05:00.405Z] Player unmounted
+[2025-12-01T16:05:01.114Z] Unhandled Rejection | {"reason":"TypeError: can't access property \"error\", e is undefined","severity":"MEDIUM"}
+[2025-12-01T16:05:01.116Z] Console Error | {"args":["17:05:01 [ERROR] Unhandled promise rejection.","TypeError: can't access property \"error\", e is undefined"],"severity":"MEDIUM","action":"LOG_AND_METRIC"}
+[2025-12-01T16:05:01.152Z] Unhandled Rejection | {"reason":"TypeError: can't access property \"error\", e is undefined","severity":"MEDIUM"}
+[2025-12-01T16:05:01.152Z] Console Error | {"args":["17:05:01 [ERROR] Unhandled promise rejection.","TypeError: can't access property \"error\", e is undefined"],"severity":"MEDIUM","action":"LOG_AND_METRIC"}
+[2025-12-01T16:05:01.161Z] Unhandled Rejection | {"reason":"TypeError: can't access property \"error\", e is undefined","severity":"MEDIUM"}
+[2025-12-01T16:05:01.166Z] Console Error | {"args":["17:05:01 [ERROR] Unhandled promise rejection.","TypeError: can't access property \"error\", e is undefined"],"severity":"MEDIUM","action":"LOG_AND_METRIC"}
+[2025-12-01T16:05:02.855Z] Player mounted
+[2025-12-01T16:05:02.899Z] Player signature found | {"id":"k0","key":"elementType"}
+[2025-12-01T16:05:02.900Z] Player signature found | {"id":"k0","key":"addRestriction"}
+[2025-12-01T16:05:02.900Z] Player signature found | {"id":"k1","key":"addRestriction"}
+[2025-12-01T16:05:02.900Z] Player signature found | {"id":"k2","key":"addRestriction"}
+[2025-12-01T16:05:02.900Z] PlayerContext: Success | {"method":"keyword","key":"__reactFiber$bdb35fh7d9k"}
+[2025-12-01T16:05:02.900Z] [LIFECYCLE] Event: ACQUIRE - Success
+[2025-12-01T16:05:02.956Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-12-01T16:05:03.184Z] Console Error | {"args":["TypeError: can't convert undefined to object"],"severity":"MEDIUM","action":"LOG_AND_METRIC"}
+[2025-12-01T16:05:03.196Z] Console Error | {"args":["17:05:03 [ERROR] [error-boundary] [VideoPlayer] An unhandled exception occurred in the component hierarchy","TypeError: can't convert undefined to object","[object Object]"],"severity":"MEDIUM","action":"LOG_AND_METRIC"}
+[2025-12-01T16:05:03.203Z] Player unmounted
+[2025-12-01T16:05:03.260Z] Unhandled Rejection | {"reason":"TypeError: can't access property \"error\", e is undefined","severity":"MEDIUM"}
+[2025-12-01T16:05:03.261Z] Console Error | {"args":["17:05:03 [ERROR] Unhandled promise rejection.","TypeError: can't access property \"error\", e is undefined"],"severity":"MEDIUM","action":"LOG_AND_METRIC"}
+[2025-12-01T16:05:03.265Z] Unhandled Rejection | {"reason":"TypeError: can't access property \"error\", e is undefined","severity":"MEDIUM"}
+[2025-12-01T16:05:03.266Z] Console Error | {"args":["17:05:03 [ERROR] Unhandled promise rejection.","TypeError: can't access property \"error\", e is undefined"],"severity":"MEDIUM","action":"LOG_AND_METRIC"}
+[2025-12-01T16:05:03.270Z] Unhandled Rejection | {"reason":"TypeError: can't access property \"error\", e is undefined","severity":"MEDIUM"}
+[2025-12-01T16:05:03.271Z] Console Error | {"args":["17:05:03 [ERROR] Unhandled promise rejection.","TypeError: can't access property \"error\", e is undefined"],"severity":"MEDIUM","action":"LOG_AND_METRIC"}
+[2025-12-01T16:05:03.507Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-12-01T16:05:04.423Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-12-01T16:05:05.360Z] Console Error | {"args":["[GraphQL] One or more GraphQL errors were detected on request 01KBDAJ4K2AGY3YTNR72HFV92T. PinnedChatSettings: unauthenticated","[object Object]"],"severity":"LOW","action":"LOG_ONLY"}
+[2025-12-01T16:05:08.899Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-12-01T16:05:49.611Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-12-01T16:06:02.068Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}

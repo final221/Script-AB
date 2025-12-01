@@ -161,7 +161,9 @@ const Logic = (() => {
                     id: 'k0',
                     check: (o, k) => {
                         try {
-                            const result = typeof o[k] === 'function' && o[k](true) === null;
+                            // Check if it's a function and has length 1 (accepts 1 argument)
+                            // DO NOT call the function - that causes React errors
+                            const result = typeof o[k] === 'function' && o[k].length === 1;
                             if (result) {
                                 Logic.Player._signatureStats.k0.matches++;
                                 if (!Logic.Player._signatureStats.k0.keys.includes(k)) {
@@ -180,7 +182,9 @@ const Logic = (() => {
                     id: 'k1',
                     check: (o, k) => {
                         try {
-                            const result = typeof o[k] === 'function' && o[k]() === null;
+                            // Check if it's a function with 0 arguments
+                            // DO NOT call the function - that causes React errors
+                            const result = typeof o[k] === 'function' && o[k].length === 0;
                             if (result) {
                                 Logic.Player._signatureStats.k1.matches++;
                                 if (!Logic.Player._signatureStats.k1.keys.includes(k)) {
@@ -199,7 +203,9 @@ const Logic = (() => {
                     id: 'k2',
                     check: (o, k) => {
                         try {
-                            const result = typeof o[k] === 'function' && o[k]() === null;
+                            // Check if it's a function with 0 arguments
+                            // DO NOT call the function - that causes React errors
+                            const result = typeof o[k] === 'function' && o[k].length === 0;
                             if (result) {
                                 Logic.Player._signatureStats.k2.matches++;
                                 if (!Logic.Player._signatureStats.k2.keys.includes(k)) {

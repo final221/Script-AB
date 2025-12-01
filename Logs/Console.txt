@@ -10,25 +10,49 @@ TypeError: can't convert undefined to object
     ou https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
     x https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
     I https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js:796:27
-12:29:18 [ERROR] Unhandled promise rejection. TypeError: can't access property "error", e is undefined
+Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js:990:27
+    error moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:990
+    fc https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    callback https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    qa https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    ws https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    ys https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    bs https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    ku https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    ku https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    ou https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    x https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    I https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+17:05:01 [ERROR] Unhandled promise rejection. TypeError: can't access property "error", e is undefined
     be https://assets.twitch.tv/assets/9457-385cc443c221f1a30029.js:1
     c https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
     c https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
     i https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js:796:27
-12:29:19 [ERROR] Unhandled promise rejection. TypeError: can't access property "error", e is undefined
+Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js:990:27
+    error moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:990
+    writeToConsole https://assets.twitch.tv/assets/9457-385cc443c221f1a30029.js:1
+    write https://assets.twitch.tv/assets/9457-385cc443c221f1a30029.js:1
+    onUnhandledPromiseRejection https://assets.twitch.tv/assets/9457-385cc443c221f1a30029.js:1
+17:05:01 [ERROR] Unhandled promise rejection. TypeError: can't access property "error", e is undefined
     be https://assets.twitch.tv/assets/9457-385cc443c221f1a30029.js:1
     c https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
     c https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
     i https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js:796:27
-12:29:19 [ERROR] Unhandled promise rejection. TypeError: can't access property "error", e is undefined
+Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js:990:27
+    error moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:990
+    writeToConsole https://assets.twitch.tv/assets/9457-385cc443c221f1a30029.js:1
+    write https://assets.twitch.tv/assets/9457-385cc443c221f1a30029.js:1
+    onUnhandledPromiseRejection https://assets.twitch.tv/assets/9457-385cc443c221f1a30029.js:1
+17:05:01 [ERROR] Unhandled promise rejection. TypeError: can't access property "error", e is undefined
     be https://assets.twitch.tv/assets/9457-385cc443c221f1a30029.js:1
     c https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
     c https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
     i https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js:796:27
+Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js:990:27
+    error moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:990
+    writeToConsole https://assets.twitch.tv/assets/9457-385cc443c221f1a30029.js:1
+    write https://assets.twitch.tv/assets/9457-385cc443c221f1a30029.js:1
+    onUnhandledPromiseRejection https://assets.twitch.tv/assets/9457-385cc443c221f1a30029.js:1
 Uncaught (in promise) TypeError: can't access property "error", e is undefined
     be https://assets.twitch.tv/assets/9457-385cc443c221f1a30029.js:1
     c https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
@@ -47,8 +71,20 @@ TypeError: can't convert undefined to object
     ou https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
     x https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
     I https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js:796:27
-12:29:20 [ERROR] [error-boundary] [VideoPlayer] An unhandled exception occurred in the component hierarchy TypeError: can't convert undefined to object
+Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js:990:27
+    error moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:990
+    fc https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    callback https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    qa https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    ws https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    ys https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    bs https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    ku https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    ku https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    ou https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    x https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    I https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+17:05:03 [ERROR] [error-boundary] [VideoPlayer] An unhandled exception occurred in the component hierarchy TypeError: can't convert undefined to object
     updateContext https://assets.twitch.tv/assets/69847-525e755e34b248de8d4d.js:1
     Ha https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
     Oc https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
@@ -62,8 +98,27 @@ Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js:796:27
     I https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
  
 Object { info: {…} }
-Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js:796:27
-12:29:20 [ERROR] Unhandled promise rejection. TypeError: can't access property "error", e is undefined
+Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js:990:27
+    error moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:990
+    writeToConsole https://assets.twitch.tv/assets/9457-385cc443c221f1a30029.js:1
+    write https://assets.twitch.tv/assets/9457-385cc443c221f1a30029.js:1
+    write https://assets.twitch.tv/assets/9457-385cc443c221f1a30029.js:1
+    errorAndReport https://assets.twitch.tv/assets/9457-385cc443c221f1a30029.js:1
+    componentDidCatch https://assets.twitch.tv/assets/9457-385cc443c221f1a30029.js:1
+    qa https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    ws https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    ys https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    bs https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    ku https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    ku https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    su https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    Ho https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    ku https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    ku https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    ou https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    x https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    I https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+17:05:03 [ERROR] Unhandled promise rejection. TypeError: can't access property "error", e is undefined
     be https://assets.twitch.tv/assets/9457-385cc443c221f1a30029.js:1
     c https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
     c https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
@@ -71,20 +126,24 @@ Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js:796:27
     h https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
     report https://assets.twitch.tv/assets/9457-385cc443c221f1a30029.js:1
     onError https://assets.twitch.tv/assets/9457-385cc443c221f1a30029.js:1
-    check moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:196
-    Logic moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:212
-    tryCatch moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:105
-    validate moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:212
-    foundKey moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:1199
-    detectPlayerSignatures moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:1199
-    traverseForPlayerContext moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:1226
-    get moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:1281
-    init moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:274
-    tryCatch moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:105
-    emit moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:161
-    emit moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:161
-Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js:796:27
-12:29:20 [ERROR] Unhandled promise rejection. TypeError: can't access property "error", e is undefined
+    check moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:349
+    Logic moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:403
+    tryCatch moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:124
+    validate moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:403
+    foundKey moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:1419
+    detectPlayerSignatures moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:1419
+    traverseForPlayerContext moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:1446
+    get moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:1522
+    init moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:468
+    tryCatch moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:124
+    emit moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:180
+    emit moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:180
+Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js:990:27
+    error moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:990
+    writeToConsole https://assets.twitch.tv/assets/9457-385cc443c221f1a30029.js:1
+    write https://assets.twitch.tv/assets/9457-385cc443c221f1a30029.js:1
+    onUnhandledPromiseRejection https://assets.twitch.tv/assets/9457-385cc443c221f1a30029.js:1
+17:05:03 [ERROR] Unhandled promise rejection. TypeError: can't access property "error", e is undefined
     be https://assets.twitch.tv/assets/9457-385cc443c221f1a30029.js:1
     c https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
     c https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
@@ -92,20 +151,24 @@ Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js:796:27
     h https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
     report https://assets.twitch.tv/assets/9457-385cc443c221f1a30029.js:1
     onError https://assets.twitch.tv/assets/9457-385cc443c221f1a30029.js:1
-    check moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:202
-    Logic moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:212
-    tryCatch moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:105
-    validate moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:212
-    foundKey moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:1199
-    detectPlayerSignatures moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:1199
-    traverseForPlayerContext moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:1226
-    get moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:1281
-    init moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:274
-    tryCatch moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:105
-    emit moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:161
-    emit moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:161
-Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js:796:27
-12:29:20 [ERROR] Unhandled promise rejection. TypeError: can't access property "error", e is undefined
+    check moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:368
+    Logic moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:403
+    tryCatch moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:124
+    validate moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:403
+    foundKey moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:1419
+    detectPlayerSignatures moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:1419
+    traverseForPlayerContext moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:1446
+    get moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:1522
+    init moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:468
+    tryCatch moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:124
+    emit moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:180
+    emit moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:180
+Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js:990:27
+    error moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:990
+    writeToConsole https://assets.twitch.tv/assets/9457-385cc443c221f1a30029.js:1
+    write https://assets.twitch.tv/assets/9457-385cc443c221f1a30029.js:1
+    onUnhandledPromiseRejection https://assets.twitch.tv/assets/9457-385cc443c221f1a30029.js:1
+17:05:03 [ERROR] Unhandled promise rejection. TypeError: can't access property "error", e is undefined
     be https://assets.twitch.tv/assets/9457-385cc443c221f1a30029.js:1
     c https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
     c https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
@@ -113,19 +176,23 @@ Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js:796:27
     h https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
     report https://assets.twitch.tv/assets/9457-385cc443c221f1a30029.js:1
     onError https://assets.twitch.tv/assets/9457-385cc443c221f1a30029.js:1
-    check moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:208
-    Logic moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:212
-    tryCatch moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:105
-    validate moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:212
-    foundKey moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:1199
-    detectPlayerSignatures moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:1199
-    traverseForPlayerContext moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:1226
-    get moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:1281
-    init moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:274
-    tryCatch moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:105
-    emit moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:161
-    emit moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:161
-Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js:796:27
+    check moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:387
+    Logic moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:403
+    tryCatch moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:124
+    validate moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:403
+    foundKey moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:1419
+    detectPlayerSignatures moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:1419
+    traverseForPlayerContext moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:1446
+    get moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:1522
+    init moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:468
+    tryCatch moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:124
+    emit moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:180
+    emit moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:180
+Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js:990:27
+    error moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:990
+    writeToConsole https://assets.twitch.tv/assets/9457-385cc443c221f1a30029.js:1
+    write https://assets.twitch.tv/assets/9457-385cc443c221f1a30029.js:1
+    onUnhandledPromiseRejection https://assets.twitch.tv/assets/9457-385cc443c221f1a30029.js:1
 Uncaught (in promise) TypeError: can't access property "error", e is undefined
     be https://assets.twitch.tv/assets/9457-385cc443c221f1a30029.js:1
     c https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
@@ -134,18 +201,18 @@ Uncaught (in promise) TypeError: can't access property "error", e is undefined
     h https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
     report https://assets.twitch.tv/assets/9457-385cc443c221f1a30029.js:1
     onError https://assets.twitch.tv/assets/9457-385cc443c221f1a30029.js:1
-    check moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:196
-    Logic moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:212
-    tryCatch moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:105
-    validate moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:212
-    foundKey moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:1199
-    detectPlayerSignatures moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:1199
-    traverseForPlayerContext moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:1226
-    get moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:1281
-    init moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:274
-    tryCatch moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:105
-    emit moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:161
-    emit moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:161
+    check moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:349
+    Logic moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:403
+    tryCatch moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:124
+    validate moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:403
+    foundKey moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:1419
+    detectPlayerSignatures moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:1419
+    traverseForPlayerContext moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:1446
+    get moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:1522
+    init moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:468
+    tryCatch moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:124
+    emit moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:180
+    emit moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:180
 9457-385cc443c221f1a30029.js:1:392306
 Uncaught (in promise) TypeError: can't access property "error", e is undefined
     be https://assets.twitch.tv/assets/9457-385cc443c221f1a30029.js:1
@@ -155,18 +222,18 @@ Uncaught (in promise) TypeError: can't access property "error", e is undefined
     h https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
     report https://assets.twitch.tv/assets/9457-385cc443c221f1a30029.js:1
     onError https://assets.twitch.tv/assets/9457-385cc443c221f1a30029.js:1
-    check moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:202
-    Logic moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:212
-    tryCatch moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:105
-    validate moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:212
-    foundKey moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:1199
-    detectPlayerSignatures moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:1199
-    traverseForPlayerContext moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:1226
-    get moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:1281
-    init moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:274
-    tryCatch moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:105
-    emit moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:161
-    emit moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:161
+    check moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:368
+    Logic moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:403
+    tryCatch moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:124
+    validate moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:403
+    foundKey moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:1419
+    detectPlayerSignatures moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:1419
+    traverseForPlayerContext moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:1446
+    get moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:1522
+    init moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:468
+    tryCatch moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:124
+    emit moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:180
+    emit moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:180
 9457-385cc443c221f1a30029.js:1:392306
 Uncaught (in promise) TypeError: can't access property "error", e is undefined
     be https://assets.twitch.tv/assets/9457-385cc443c221f1a30029.js:1
@@ -176,18 +243,21 @@ Uncaught (in promise) TypeError: can't access property "error", e is undefined
     h https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
     report https://assets.twitch.tv/assets/9457-385cc443c221f1a30029.js:1
     onError https://assets.twitch.tv/assets/9457-385cc443c221f1a30029.js:1
-    check moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:208
-    Logic moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:212
-    tryCatch moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:105
-    validate moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:212
-    foundKey moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:1199
-    detectPlayerSignatures moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:1199
-    traverseForPlayerContext moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:1226
-    get moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:1281
-    init moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:274
-    tryCatch moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:105
-    emit moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:161
-    emit moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:161
+    check moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:387
+    Logic moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:403
+    tryCatch moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:124
+    validate moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:403
+    foundKey moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:1419
+    detectPlayerSignatures moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:1419
+    traverseForPlayerContext moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:1446
+    get moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:1522
+    init moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:468
+    tryCatch moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:124
+    emit moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:180
+    emit moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:180
 9457-385cc443c221f1a30029.js:1:392306
-[GraphQL] One or more GraphQL errors were detected on request 01KBCTS9KAC035Z7CNPJP5N4ZG. PinnedChatSettings: unauthenticated 
+[GraphQL] One or more GraphQL errors were detected on request 01KBDAJ4K2AGY3YTNR72HFV92T. PinnedChatSettings: unauthenticated 
 Array [ {…} ]
+Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js:990:27
+    error moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:990
+    Jt https://assets.twitch.tv/assets/9457-385cc443c221f1a30029.js:1
