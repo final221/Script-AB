@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       2.1.7
+// @version       2.1.8
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -1194,11 +1194,23 @@ const Store = (() => {
  */
 const AdBlocker = (() => {
     const process = (url, type) => {
-        const isTrigger = Logic.Network.isTrigger(url);
-        const isDelivery = Logic.Network.isDelivery(url);
+        // 1. Input Validation
+        if (!url || typeof url !== 'string') {
+            Logger.debug('[NETWORK] Invalid URL passed to AdBlocker', { url, type });
+            return false;
+        }
 
-        if (isTrigger) {
+        let isAd = false;
+        let isTrigger = false;
+
+        // 2. Check Trigger First (Subset of Ads)
+        if (Logic.Network.isTrigger(url)) {
+            isTrigger = true;
+            isAd = true; // Triggers are always ads
+
+            const isDelivery = Logic.Network.isDelivery(url);
             const triggerCategory = isDelivery ? 'Ad Delivery' : 'Availability Check';
+
             Logger.add(`[NETWORK] Trigger pattern detected | Category: ${triggerCategory}`, {
                 type,
                 url,
@@ -1215,12 +1227,17 @@ const AdBlocker = (() => {
                 });
             }
         }
-
-        const isAd = Logic.Network.isAd(url);
-        if (isAd) {
+        // 3. Check Generic Ad (if not already identified as trigger)
+        else if (Logic.Network.isAd(url)) {
+            isAd = true;
             Logger.add('[NETWORK] Ad pattern detected', { type, url });
+        }
+
+        // 4. Unified Metrics
+        if (isAd) {
             Metrics.increment('ads_detected');
         }
+
         return isAd;
     };
 
@@ -1381,6 +1398,7 @@ const NetworkManager = (() => {
  */
 const PlayerContext = (() => {
     let cachedContext = null;
+    let cachedRootElement = null; // Track the DOM element for validation
     let keyMap = { k0: null, k1: null, k2: null };
     const contextHintKeywords = ['react', 'vue', 'next', 'props', 'fiber', 'internal'];
     const fallbackSelectors = ['.video-player__container', '.highwind-video-player', '[data-a-target="video-player"]'];
@@ -1443,28 +1461,49 @@ const PlayerContext = (() => {
                 const key = Object.keys(el).find(k => k.startsWith('__reactInternalInstance') || k.startsWith('__reactFiber'));
                 if (key && el[key]) {
                     const ctx = traverseForPlayerContext(el[key]);
-                    if (ctx) return { ctx, selector };
+                    if (ctx) return { ctx, element: el };
                 }
             }
         }
         return null;
     };
 
+    /**
+     * Validates the cached context to ensure it's still usable.
+     * @returns {boolean} True if cache is valid, false otherwise
+     */
     const validateCache = () => {
         if (!cachedContext) return false;
-        const isValid = Object.keys(keyMap).every(
-            (key) => keyMap[key] && typeof cachedContext[keyMap[key]] === 'function'
-        );
-        if (!isValid) {
-            Logger.add('PlayerContext: ⚠️ CACHED CONTEXT INVALID', { keyMap });
+
+        // 1. DOM Attachment Check
+        if (cachedRootElement && !cachedRootElement.isConnected) {
+            Logger.add('PlayerContext: Cache invalid - Root element detached from DOM');
             PlayerContext.reset();
             return false;
         }
+
+        // 2. Signature Function Check
+        const signaturesValid = Object.keys(keyMap).every(
+            (key) => keyMap[key] && typeof cachedContext[keyMap[key]] === 'function'
+        );
+
+        if (!signaturesValid) {
+            Logger.add('PlayerContext: Cache invalid - Signatures missing', { keyMap });
+            PlayerContext.reset();
+            return false;
+        }
+
         return true;
     };
 
     return {
         get: (element) => {
+            // Check if element is different from cached root
+            if (element && cachedRootElement && element !== cachedRootElement) {
+                Logger.add('PlayerContext: New element provided, resetting cache');
+                PlayerContext.reset();
+            }
+
             if (validateCache()) {
                 return cachedContext;
             }
@@ -1482,6 +1521,7 @@ const PlayerContext = (() => {
                         const ctx = traverseForPlayerContext(potentialContext);
                         if (ctx) {
                             cachedContext = ctx;
+                            cachedRootElement = element;
                             Logger.add('PlayerContext: Success', { method: 'keyword', key: String(key) });
                             return ctx;
                         }
@@ -1493,7 +1533,8 @@ const PlayerContext = (() => {
             const fallbackResult = findContextFallback();
             if (fallbackResult) {
                 cachedContext = fallbackResult.ctx;
-                Logger.add('PlayerContext: Success', { method: 'fallback', selector: fallbackResult.selector });
+                cachedRootElement = fallbackResult.element;
+                Logger.add('PlayerContext: Success', { method: 'fallback', element: fallbackResult.element });
                 return fallbackResult.ctx;
             }
 
@@ -1502,6 +1543,7 @@ const PlayerContext = (() => {
         },
         reset: () => {
             cachedContext = null;
+            cachedRootElement = null;
             keyMap = { k0: null, k1: null, k2: null };
         },
     };
@@ -1833,6 +1875,19 @@ const PlayRetryHandler = (() => {
  * @responsibility Implement strategy pattern for recovery selection.
  */
 const RecoveryStrategy = (() => {
+    /**
+     * Validates video element
+     * @param {HTMLVideoElement} video - Video element to validate
+     * @returns {boolean} True if valid
+     */
+    const validateVideo = (video) => {
+        if (!video || !(video instanceof HTMLVideoElement)) {
+            Logger.add('[RecoveryStrategy] Invalid video element', { video });
+            return false;
+        }
+        return true;
+    };
+
     return {
         select: (video, options = {}) => {
             // Manual overrides for testing only
@@ -1848,7 +1903,18 @@ const RecoveryStrategy = (() => {
 
             // Normal automatic flow - always start with Standard
             // Cascade to experimental/aggressive handled by ResilienceOrchestrator
-            const analysis = BufferAnalyzer.analyze(video);
+            if (!validateVideo(video)) {
+                Logger.add('[RecoveryStrategy] Defaulting to Standard - invalid video');
+                return StandardRecovery;
+            }
+
+            let analysis;
+            try {
+                analysis = BufferAnalyzer.analyze(video);
+            } catch (error) {
+                Logger.add('[RecoveryStrategy] BufferAnalyzer failed, defaulting to Standard', { error: String(error) });
+                return StandardRecovery;
+            }
             Logger.add('Recovery strategy selection', {
                 initialStrategy: 'Standard',
                 bufferHealth: analysis.bufferHealth,
@@ -1866,7 +1932,23 @@ const RecoveryStrategy = (() => {
          * @returns {Object|null} The next strategy to try, or null if no further escalation
          */
         getEscalation: (video, lastStrategy) => {
-            const analysis = BufferAnalyzer.analyze(video);
+            if (!validateVideo(video)) {
+                return null; // No escalation if video invalid
+            }
+
+            let analysis;
+            try {
+                analysis = BufferAnalyzer.analyze(video);
+            } catch (error) {
+                Logger.add('[RecoveryStrategy] BufferAnalyzer failed during escalation', { error: String(error) });
+                return null; // No escalation on error
+            }
+
+            // Validate analysis object
+            if (!analysis || typeof analysis.needsAggressive !== 'boolean') {
+                Logger.add('[RecoveryStrategy] Invalid analysis object', { analysis });
+                return null;
+            }
 
             // If we just ran StandardRecovery and buffer is still critical
             if (lastStrategy === StandardRecovery) {
@@ -2026,6 +2108,8 @@ const RecoveryUtils = (() => {
  */
 const ResilienceOrchestrator = (() => {
     let isFixing = false;
+    let recoveryStartTime = 0;
+    const RECOVERY_TIMEOUT_MS = 10000;
 
     /**
      * Captures a snapshot of current video element state.
@@ -2059,15 +2143,31 @@ const ResilienceOrchestrator = (() => {
         };
     };
 
-
-
     return {
         execute: async (container, payload = {}) => {
             if (isFixing) {
-                Logger.add('[RECOVERY] Resilience already in progress, skipping');
-                return;
+                // Check for stale lock
+                if (Date.now() - recoveryStartTime > RECOVERY_TIMEOUT_MS) {
+                    Logger.add('[RECOVERY] WARNING: Stale lock detected (timeout exceeded), forcing release');
+                    isFixing = false;
+                } else {
+                    Logger.add('[RECOVERY] Resilience already in progress, skipping');
+                    return;
+                }
             }
+
             isFixing = true;
+            recoveryStartTime = Date.now();
+            let timeoutId = null;
+
+            // Safety valve: Force unlock if execution takes too long
+            timeoutId = setTimeout(() => {
+                if (isFixing && Date.now() - recoveryStartTime >= RECOVERY_TIMEOUT_MS) {
+                    Logger.add('[RECOVERY] WARNING: Execution timed out, forcing lock release');
+                    isFixing = false;
+                }
+            }, RECOVERY_TIMEOUT_MS);
+
             const startTime = performance.now();
 
             try {
@@ -2098,11 +2198,16 @@ const ResilienceOrchestrator = (() => {
                 const preSnapshot = captureVideoSnapshot(video);
                 Logger.add('[RECOVERY] Pre-recovery snapshot', preSnapshot);
 
-                // Execute primary recovery strategy
                 // Execute primary recovery strategy and handle escalation
                 let currentStrategy = RecoveryStrategy.select(video, payload);
 
                 while (currentStrategy) {
+                    // Check if lock was stolen/timed out during execution
+                    if (!isFixing) {
+                        Logger.add('[RECOVERY] Lock lost during execution, aborting');
+                        break;
+                    }
+
                     await currentStrategy.execute(video);
 
                     // Check if we need to escalate to a more aggressive strategy
@@ -2123,6 +2228,7 @@ const ResilienceOrchestrator = (() => {
             } catch (e) {
                 Logger.add('[RECOVERY] Resilience failed', { error: String(e) });
             } finally {
+                if (timeoutId) clearTimeout(timeoutId);
                 isFixing = false;
                 Logger.add('[RECOVERY] Resilience execution finished', {
                     total_duration_ms: performance.now() - startTime

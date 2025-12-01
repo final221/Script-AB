@@ -4,6 +4,19 @@
  * @responsibility Implement strategy pattern for recovery selection.
  */
 const RecoveryStrategy = (() => {
+    /**
+     * Validates video element
+     * @param {HTMLVideoElement} video - Video element to validate
+     * @returns {boolean} True if valid
+     */
+    const validateVideo = (video) => {
+        if (!video || !(video instanceof HTMLVideoElement)) {
+            Logger.add('[RecoveryStrategy] Invalid video element', { video });
+            return false;
+        }
+        return true;
+    };
+
     return {
         select: (video, options = {}) => {
             // Manual overrides for testing only
@@ -19,7 +32,18 @@ const RecoveryStrategy = (() => {
 
             // Normal automatic flow - always start with Standard
             // Cascade to experimental/aggressive handled by ResilienceOrchestrator
-            const analysis = BufferAnalyzer.analyze(video);
+            if (!validateVideo(video)) {
+                Logger.add('[RecoveryStrategy] Defaulting to Standard - invalid video');
+                return StandardRecovery;
+            }
+
+            let analysis;
+            try {
+                analysis = BufferAnalyzer.analyze(video);
+            } catch (error) {
+                Logger.add('[RecoveryStrategy] BufferAnalyzer failed, defaulting to Standard', { error: String(error) });
+                return StandardRecovery;
+            }
             Logger.add('Recovery strategy selection', {
                 initialStrategy: 'Standard',
                 bufferHealth: analysis.bufferHealth,
@@ -37,7 +61,23 @@ const RecoveryStrategy = (() => {
          * @returns {Object|null} The next strategy to try, or null if no further escalation
          */
         getEscalation: (video, lastStrategy) => {
-            const analysis = BufferAnalyzer.analyze(video);
+            if (!validateVideo(video)) {
+                return null; // No escalation if video invalid
+            }
+
+            let analysis;
+            try {
+                analysis = BufferAnalyzer.analyze(video);
+            } catch (error) {
+                Logger.add('[RecoveryStrategy] BufferAnalyzer failed during escalation', { error: String(error) });
+                return null; // No escalation on error
+            }
+
+            // Validate analysis object
+            if (!analysis || typeof analysis.needsAggressive !== 'boolean') {
+                Logger.add('[RecoveryStrategy] Invalid analysis object', { analysis });
+                return null;
+            }
 
             // If we just ran StandardRecovery and buffer is still critical
             if (lastStrategy === StandardRecovery) {
