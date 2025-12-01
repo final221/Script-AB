@@ -1,0 +1,18 @@
+{
+  "name": "twitch-ad-blocker",
+  "version": "2.0.5",
+  "description": "Twitch ad blocker with self-healing recovery",
+  "private": true,
+  "scripts": {
+    "build": "node build/build.js",
+    "build:minor": "node build/build.js --minor",
+    "build:major": "node build/build.js --major",
+    "test": "node tests/run-tests.js",
+    "test:watch": "nodemon --watch src --watch tests --exec npm test",
+    "prebuild": "npm test"
+  },
+  "devDependencies": {
+    "puppeteer-core": "^24.0.0",
+    "nodemon": "^3.0.0"
+  }
+}

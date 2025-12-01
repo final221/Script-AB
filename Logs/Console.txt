@@ -1,27 +1,15 @@
-An error occurred! For more details, see the full error text at https://go.apollo.dev/c/err#%7B%22version%22%3A%223.8.7%22%2C%22message%22%3A12%2C%22args%22%3A%5B%22treasureTrainDetails%22%2C%22%7B%5Cn%20%20%5C%22__typename%5C%22%3A%20%5C%22HypeTrainApproaching%5C%22%2C%5Cn%20%20%5C%22id%5C%22%3A%20%5C%2292038375%5C%22%2C%5Cn%20%20%5C%22goal%5C%22%3A%203%2C%5Cn%20%20%5C%22creatorColor%5C%22%3A%20%5C%228205B3%5C%22%2C%5Cn%20%20%5C%22participants%5C%22%3A%20%5B%5Cn%20%20%20%20%5C%22714436454%5C%22%2C%5Cn%20%20%20%20%5C%22187020903%5C%22%5Cn%20%20%5D%2C%5Cn%20%20%5C%22isGoldenKappaTrain%5C%22%3A%20false%2C%5Cn%20%20%5C%22eventsRemaining%5C%22%3A%20%5B%5Cn%20%20%20%20%7B%5Cn%20%20%20%20%20%20%5C%22__typename%5C%22%3A%20%5C%22HypeTrainApproachingEventsRemaining%5C%22%2C%5Cn%20%20%20%20%20%20%5C%22events%5C%22%3A%201%2C%5Cn%20%20%20%20%20%20%5C%22secondsRemaining%5C%22%3A%2065%5Cn%20%20%20%20%7D%5Cn%20%20%5D%2C%5Cn%20%20%5C%22levelOneRewards%5C%22%3A%20%5B%5Cn%20%20%20%20%7B%5Cn%20%20%20%20%20%20%5C%22__typename%5C%22%3A%20%5C%22HypeTrainEmoteReward%5C%22%2C%5Cn%20%20%20%20%20%20%5C%22id%5C%22%3A%20%5C%22emotesv2_bbbf6d16d9964fcbba2d965a7eea942f%5C%22%2C%5Cn%20%20%20%20%20%20%5C%22type%5C%22%3A%20%5C%22EMOTE%5C%22%2C%5Cn%20%20%20%20%20%20%5C%22emote%5C%22%3A%20%7B%5Cn%20%20%20%20%20%20%20%20%5C%22__typename%5C%22%3A%20%5C%22Emote%5C%22%2C%5Cn%20%20%20%20%20%20%20%20%5C%22id%5C%22%3A%20%5C%22emotesv2_bbbf6d16d9964fcbba2d965a7eea942f%5C%22%2C%5Cn%20%20%20%20%20%20%20%20%5C%22token%5C%22%3A%20%5C%22ConfettiHype%5C%22%5Cn%20%20%20%20%20%20%7D%5Cn%20%20%20%20%7D%2C%5Cn%20%20%20%20%7B%5Cn%20%20%20%20%20%20%5C%22__typename%5C%22%3A%20%5C%22HypeTrainEmoteReward%5C%22%2C%5Cn%20%20%20%20%20%20%5C%22id%5C%22%3A%20%5C%22emotesv2_a3cdcbfcae9b41bb8215b012362eea35%5C%22%2C%5Cn%20%20%20%20%20%20%5C%22type%5C%22%3A%20%5C%22EMOTE%5C%22%2C%5Cn%20%20%20%20%20%20%5C%22emote%5C%22%3A%20%7B%5Cn%20%20%20%20%20%20%20%20%5C%22__typename%5C%22%3A%20%5C%22Emote%5C%22%2C%5Cn%20%20%20%20%20%20%20%20%5C%22id%5C%22%3A%20%5C%22emotesv2_a3cdcbfcae9b41bb8215b012362eea35%5C%22%2C%5Cn%20%20%20%20%20%20%20%20%5C%22token%5C%22%3A%20%5C%22FrogPonder%5C%22%5Cn%20%20%20%20%20%20%7D%5Cn%20%20%20%20%7D%2C%5Cn%20%20%20%20%7B%5Cn%20%20%20%20%20%20%5C%22__typename%5C%22%3A%20%5C%22HypeTrainEmoteReward%5C%22%2C%5Cn%20%20%20%20%20%20%5C%22id%5C%22%3A%20%5C%22emotesv2_%22%5D%7D 3 Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js:996:27
+An error occurred! For more details, see the full error text at https://go.apollo.dev/c/err#%7B%22version%22%3A%223.8.7%22%2C%22message%22%3A12%2C%22args%22%3A%5B%22id%22%2C%22%7B%7D%22%5D%7D Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js:996:27
     error moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:996
     f https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
     m https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
     processSelectionSet https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
     processSelectionSet https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    processFieldValue https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    processSelectionSet https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    processSelectionSet https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    processFieldValue https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    processSelectionSet https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    processSelectionSet https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    processFieldValue https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    processSelectionSet https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    processSelectionSet https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    processFieldValue https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    processSelectionSet https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    processSelectionSet https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
     writeToStore https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
     write https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    writeQuery https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    updateQuery https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    onMessage https://assets.twitch.tv/assets/86650-f6312c6cdd2c3354ba22.js:1
-    onMessage https://assets.twitch.tv/assets/69847-525e755e34b248de8d4d.js:1
+    writeFragment https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    writeFragment https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    N https://assets.twitch.tv/assets/9457-385cc443c221f1a30029.js:1
+    onMessage https://assets.twitch.tv/assets/98437-f0bff35e85aa135ad5c5.js:1
     value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
     value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
     value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
@@ -67,30 +55,122 @@ An error occurred! For more details, see the full error text at https://go.apoll
     value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
     outputNext https://assets.twitch.tv/assets/9457-385cc443c221f1a30029.js:1
     onmessage https://assets.twitch.tv/assets/9457-385cc443c221f1a30029.js:1
-An error occurred! For more details, see the full error text at https://go.apollo.dev/c/err#%7B%22version%22%3A%223.8.7%22%2C%22message%22%3A12%2C%22args%22%3A%5B%22treasureTrainDetails%22%2C%22%7B%5Cn%20%20%5C%22__typename%5C%22%3A%20%5C%22HypeTrainApproaching%5C%22%2C%5Cn%20%20%5C%22id%5C%22%3A%20%5C%2292038375%5C%22%2C%5Cn%20%20%5C%22goal%5C%22%3A%203%2C%5Cn%20%20%5C%22creatorColor%5C%22%3A%20%5C%228205B3%5C%22%2C%5Cn%20%20%5C%22participants%5C%22%3A%20%5B%5Cn%20%20%20%20%5C%22187020903%5C%22%2C%5Cn%20%20%20%20%5C%22180807717%5C%22%5Cn%20%20%5D%2C%5Cn%20%20%5C%22isGoldenKappaTrain%5C%22%3A%20false%2C%5Cn%20%20%5C%22eventsRemaining%5C%22%3A%20%5B%5Cn%20%20%20%20%7B%5Cn%20%20%20%20%20%20%5C%22__typename%5C%22%3A%20%5C%22HypeTrainApproachingEventsRemaining%5C%22%2C%5Cn%20%20%20%20%20%20%5C%22events%5C%22%3A%201%2C%5Cn%20%20%20%20%20%20%5C%22secondsRemaining%5C%22%3A%20200%5Cn%20%20%20%20%7D%5Cn%20%20%5D%2C%5Cn%20%20%5C%22levelOneRewards%5C%22%3A%20%5B%5Cn%20%20%20%20%7B%5Cn%20%20%20%20%20%20%5C%22__typename%5C%22%3A%20%5C%22HypeTrainEmoteReward%5C%22%2C%5Cn%20%20%20%20%20%20%5C%22id%5C%22%3A%20%5C%22emotesv2_bbbf6d16d9964fcbba2d965a7eea942f%5C%22%2C%5Cn%20%20%20%20%20%20%5C%22type%5C%22%3A%20%5C%22EMOTE%5C%22%2C%5Cn%20%20%20%20%20%20%5C%22emote%5C%22%3A%20%7B%5Cn%20%20%20%20%20%20%20%20%5C%22__typename%5C%22%3A%20%5C%22Emote%5C%22%2C%5Cn%20%20%20%20%20%20%20%20%5C%22id%5C%22%3A%20%5C%22emotesv2_bbbf6d16d9964fcbba2d965a7eea942f%5C%22%2C%5Cn%20%20%20%20%20%20%20%20%5C%22token%5C%22%3A%20%5C%22ConfettiHype%5C%22%5Cn%20%20%20%20%20%20%7D%5Cn%20%20%20%20%7D%2C%5Cn%20%20%20%20%7B%5Cn%20%20%20%20%20%20%5C%22__typename%5C%22%3A%20%5C%22HypeTrainEmoteReward%5C%22%2C%5Cn%20%20%20%20%20%20%5C%22id%5C%22%3A%20%5C%22emotesv2_a3cdcbfcae9b41bb8215b012362eea35%5C%22%2C%5Cn%20%20%20%20%20%20%5C%22type%5C%22%3A%20%5C%22EMOTE%5C%22%2C%5Cn%20%20%20%20%20%20%5C%22emote%5C%22%3A%20%7B%5Cn%20%20%20%20%20%20%20%20%5C%22__typename%5C%22%3A%20%5C%22Emote%5C%22%2C%5Cn%20%20%20%20%20%20%20%20%5C%22id%5C%22%3A%20%5C%22emotesv2_a3cdcbfcae9b41bb8215b012362eea35%5C%22%2C%5Cn%20%20%20%20%20%20%20%20%5C%22token%5C%22%3A%20%5C%22FrogPonder%5C%22%5Cn%20%20%20%20%20%20%7D%5Cn%20%20%20%20%7D%2C%5Cn%20%20%20%20%7B%5Cn%20%20%20%20%20%20%5C%22__typename%5C%22%3A%20%5C%22HypeTrainEmoteReward%5C%22%2C%5Cn%20%20%20%20%20%20%5C%22id%5C%22%3A%20%5C%22emotesv2%22%5D%7D 3 Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js:996:27
+    (Async: EventHandlerNonNull)
+    _connectSocket https://assets.twitch.tv/assets/9457-385cc443c221f1a30029.js:1
+    r https://assets.twitch.tv/assets/9457-385cc443c221f1a30029.js:1
+    value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    a https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    o https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    o https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    a https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    a https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    o https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    o https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    a https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    o https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    o https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    859406/e.prototype.createForTopic/i.notification$< https://assets.twitch.tv/assets/9457-385cc443c221f1a30029.js:1
+    value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    a https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    c https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    a https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    createSubWithOpts https://assets.twitch.tv/assets/9457-385cc443c221f1a30029.js:1
+    subscribe https://assets.twitch.tv/assets/9457-385cc443c221f1a30029.js:1
+    d https://assets.twitch.tv/assets/27330-fa683978b85598ab46c9.js:1
+    ns https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    xu https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    ku https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    ku https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    su https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    Ho https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    nu https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    (Async: VoidFunction)
+    nu https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    ru https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    Ci https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    Oi https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    setResult https://assets.twitch.tv/assets/58220-64b2387fff074d05e82a.js:1
+    i https://assets.twitch.tv/assets/58220-64b2387fff074d05e82a.js:1
+    w https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    k https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    next https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    A https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    A https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    reportResult https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    next https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    A https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    A https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    next https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    w https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    k https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    next https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    o https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    (Async: promise callback)
+    a https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    w https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    k https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    next https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    A https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    A https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    next https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    w https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    k https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    next https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    next https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    p https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    next https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    w https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    k https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    next https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    next https://assets.twitch.tv/assets/9457-385cc443c221f1a30029.js:1
+    w https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    k https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    next https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    next https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    w https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    k https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    next https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    next https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    next https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    next https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+An error occurred! For more details, see the full error text at https://go.apollo.dev/c/err#%7B%22version%22%3A%223.8.7%22%2C%22message%22%3A12%2C%22args%22%3A%5B%22game%22%2C%22%7B%7D%22%5D%7D Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js:996:27
     error moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:996
     f https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
     m https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
     processSelectionSet https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
     processSelectionSet https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    processFieldValue https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    processSelectionSet https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    processSelectionSet https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    processFieldValue https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    processSelectionSet https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    processSelectionSet https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    processFieldValue https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    processSelectionSet https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    processSelectionSet https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    processFieldValue https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    processSelectionSet https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    processSelectionSet https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
     writeToStore https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
     write https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    writeQuery https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    updateQuery https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    onMessage https://assets.twitch.tv/assets/86650-f6312c6cdd2c3354ba22.js:1
-    onMessage https://assets.twitch.tv/assets/69847-525e755e34b248de8d4d.js:1
+    writeFragment https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    writeFragment https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    N https://assets.twitch.tv/assets/9457-385cc443c221f1a30029.js:1
+    onMessage https://assets.twitch.tv/assets/98437-f0bff35e85aa135ad5c5.js:1
     value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
     value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
     value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
@@ -136,7 +216,111 @@ An error occurred! For more details, see the full error text at https://go.apoll
     value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
     outputNext https://assets.twitch.tv/assets/9457-385cc443c221f1a30029.js:1
     onmessage https://assets.twitch.tv/assets/9457-385cc443c221f1a30029.js:1
-An error occurred! For more details, see the full error text at https://go.apollo.dev/c/err#%7B%22version%22%3A%223.8.7%22%2C%22message%22%3A12%2C%22args%22%3A%5B%22treasureTrainDetails%22%2C%22%7B%5Cn%20%20%5C%22__typename%5C%22%3A%20%5C%22HypeTrainApproaching%5C%22%2C%5Cn%20%20%5C%22id%5C%22%3A%20%5C%2292038375%5C%22%2C%5Cn%20%20%5C%22goal%5C%22%3A%203%2C%5Cn%20%20%5C%22creatorColor%5C%22%3A%20%5C%228205B3%5C%22%2C%5Cn%20%20%5C%22participants%5C%22%3A%20%5B%5Cn%20%20%20%20%5C%221192292868%5C%22%2C%5Cn%20%20%20%20%5C%2249904792%5C%22%5Cn%20%20%5D%2C%5Cn%20%20%5C%22isGoldenKappaTrain%5C%22%3A%20false%2C%5Cn%20%20%5C%22eventsRemaining%5C%22%3A%20%5B%5Cn%20%20%20%20%7B%5Cn%20%20%20%20%20%20%5C%22__typename%5C%22%3A%20%5C%22HypeTrainApproachingEventsRemaining%5C%22%2C%5Cn%20%20%20%20%20%20%5C%22events%5C%22%3A%201%2C%5Cn%20%20%20%20%20%20%5C%22secondsRemaining%5C%22%3A%20276%5Cn%20%20%20%20%7D%5Cn%20%20%5D%2C%5Cn%20%20%5C%22levelOneRewards%5C%22%3A%20%5B%5Cn%20%20%20%20%7B%5Cn%20%20%20%20%20%20%5C%22__typename%5C%22%3A%20%5C%22HypeTrainEmoteReward%5C%22%2C%5Cn%20%20%20%20%20%20%5C%22id%5C%22%3A%20%5C%22emotesv2_bbbf6d16d9964fcbba2d965a7eea942f%5C%22%2C%5Cn%20%20%20%20%20%20%5C%22type%5C%22%3A%20%5C%22EMOTE%5C%22%2C%5Cn%20%20%20%20%20%20%5C%22emote%5C%22%3A%20%7B%5Cn%20%20%20%20%20%20%20%20%5C%22__typename%5C%22%3A%20%5C%22Emote%5C%22%2C%5Cn%20%20%20%20%20%20%20%20%5C%22id%5C%22%3A%20%5C%22emotesv2_bbbf6d16d9964fcbba2d965a7eea942f%5C%22%2C%5Cn%20%20%20%20%20%20%20%20%5C%22token%5C%22%3A%20%5C%22ConfettiHype%5C%22%5Cn%20%20%20%20%20%20%7D%5Cn%20%20%20%20%7D%2C%5Cn%20%20%20%20%7B%5Cn%20%20%20%20%20%20%5C%22__typename%5C%22%3A%20%5C%22HypeTrainEmoteReward%5C%22%2C%5Cn%20%20%20%20%20%20%5C%22id%5C%22%3A%20%5C%22emotesv2_a3cdcbfcae9b41bb8215b012362eea35%5C%22%2C%5Cn%20%20%20%20%20%20%5C%22type%5C%22%3A%20%5C%22EMOTE%5C%22%2C%5Cn%20%20%20%20%20%20%5C%22emote%5C%22%3A%20%7B%5Cn%20%20%20%20%20%20%20%20%5C%22__typename%5C%22%3A%20%5C%22Emote%5C%22%2C%5Cn%20%20%20%20%20%20%20%20%5C%22id%5C%22%3A%20%5C%22emotesv2_a3cdcbfcae9b41bb8215b012362eea35%5C%22%2C%5Cn%20%20%20%20%20%20%20%20%5C%22token%5C%22%3A%20%5C%22FrogPonder%5C%22%5Cn%20%20%20%20%20%20%7D%5Cn%20%20%20%20%7D%2C%5Cn%20%20%20%20%7B%5Cn%20%20%20%20%20%20%5C%22__typename%5C%22%3A%20%5C%22HypeTrainEmoteReward%5C%22%2C%5Cn%20%20%20%20%20%20%5C%22id%5C%22%3A%20%5C%22emotesv2%22%5D%7D 3 Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js:996:27
+    (Async: EventHandlerNonNull)
+    _connectSocket https://assets.twitch.tv/assets/9457-385cc443c221f1a30029.js:1
+    r https://assets.twitch.tv/assets/9457-385cc443c221f1a30029.js:1
+    value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    a https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    o https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    o https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    a https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    a https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    o https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    o https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    a https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    o https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    o https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    859406/e.prototype.createForTopic/i.notification$< https://assets.twitch.tv/assets/9457-385cc443c221f1a30029.js:1
+    value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    a https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    c https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    a https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    createSubWithOpts https://assets.twitch.tv/assets/9457-385cc443c221f1a30029.js:1
+    subscribe https://assets.twitch.tv/assets/9457-385cc443c221f1a30029.js:1
+    d https://assets.twitch.tv/assets/27330-fa683978b85598ab46c9.js:1
+    ns https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    xu https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    ku https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    ku https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    su https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    Ho https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    nu https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    (Async: VoidFunction)
+    nu https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    ru https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    Ci https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    Oi https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    setResult https://assets.twitch.tv/assets/58220-64b2387fff074d05e82a.js:1
+    i https://assets.twitch.tv/assets/58220-64b2387fff074d05e82a.js:1
+    w https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    k https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    next https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    A https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    A https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    reportResult https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    next https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    A https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    A https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    next https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    w https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    k https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    next https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    o https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    (Async: promise callback)
+    a https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    w https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    k https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    next https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    A https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    A https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    next https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    w https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    k https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    next https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    next https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    p https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    next https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    w https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    k https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    next https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    next https://assets.twitch.tv/assets/9457-385cc443c221f1a30029.js:1
+    w https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    k https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    next https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    next https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    w https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    k https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    next https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    next https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    next https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    next https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+An error occurred! For more details, see the full error text at https://go.apollo.dev/c/err#%7B%22version%22%3A%223.8.7%22%2C%22message%22%3A12%2C%22args%22%3A%5B%22slug%22%2C%22%7B%5Cn%20%20%5C%22__typename%5C%22%3A%20%5C%22Game%5C%22%2C%5Cn%20%20%5C%22name%5C%22%3A%20%5C%22League%20of%20Legends%5C%22%2C%5Cn%20%20%5C%22displayName%5C%22%3A%20%5C%22League%20of%20Legends%5C%22%2C%5Cn%20%20%5C%22id%5C%22%3A%20%5C%2221779%5C%22%5Cn%7D%22%5D%7D Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js:996:27
     error moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:996
     f https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
     m https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
@@ -151,57 +335,117 @@ An error occurred! For more details, see the full error text at https://go.apoll
     processFieldValue https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
     processSelectionSet https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
     processSelectionSet https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    writeToStore https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    write https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    writeQuery https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    writeQuery https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    T https://assets.twitch.tv/assets/9457-385cc443c221f1a30029.js:1
+    k https://assets.twitch.tv/assets/57936-d6ba1435a2b0fedc47dc.js:1
+    ns https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    xu https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    ku https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    x https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    I https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    (Async: EventHandlerNonNull)
+    307463 https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    f https://www.twitch.tv/caedrel:1
+    169982 https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    f https://www.twitch.tv/caedrel:1
+    822551 https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    f https://www.twitch.tv/caedrel:1
+    440961 https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    f https://www.twitch.tv/caedrel:1
+    205338 https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    f https://www.twitch.tv/caedrel:1
+    859406 https://assets.twitch.tv/assets/9457-385cc443c221f1a30029.js:1
+    f https://www.twitch.tv/caedrel:1
+    600165 https://assets.twitch.tv/assets/9457-385cc443c221f1a30029.js:1
+    f https://www.twitch.tv/caedrel:1
+    n https://assets.twitch.tv/assets/core-f40076f6a1c141b5f0c4.js:1
+    <anonym> https://assets.twitch.tv/assets/core-f40076f6a1c141b5f0c4.js:1
+    O https://www.twitch.tv/caedrel:1
+    <anonym> https://assets.twitch.tv/assets/core-f40076f6a1c141b5f0c4.js:1
+    a https://www.twitch.tv/caedrel:1
+    <anonym> https://assets.twitch.tv/assets/core-f40076f6a1c141b5f0c4.js:1
+An error occurred! For more details, see the full error text at https://go.apollo.dev/c/err#%7B%22version%22%3A%223.8.7%22%2C%22message%22%3A12%2C%22args%22%3A%5B%22slug%22%2C%22%7B%5Cn%20%20%5C%22__typename%5C%22%3A%20%5C%22Game%5C%22%2C%5Cn%20%20%5C%22name%5C%22%3A%20%5C%22League%20of%20Legends%5C%22%2C%5Cn%20%20%5C%22displayName%5C%22%3A%20%5C%22League%20of%20Legends%5C%22%2C%5Cn%20%20%5C%22id%5C%22%3A%20%5C%2221779%5C%22%5Cn%7D%22%5D%7D Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js:996:27
+    error moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:996
+    f https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    m https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    processSelectionSet https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    processSelectionSet https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    processFieldValue https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    processSelectionSet https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    processSelectionSet https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    processFieldValue https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    processSelectionSet https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    processSelectionSet https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
     processFieldValue https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
     processSelectionSet https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
     processSelectionSet https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
     writeToStore https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
     write https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
     writeQuery https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    updateQuery https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    onMessage https://assets.twitch.tv/assets/86650-f6312c6cdd2c3354ba22.js:1
-    onMessage https://assets.twitch.tv/assets/69847-525e755e34b248de8d4d.js:1
-    value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    next https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    next https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    D https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    next https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    D https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    next https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    D https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    next https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    D https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    next https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    D https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    next https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    D https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    next https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    next https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    D https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    next https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    D https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    next https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    D https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    next https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    D https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    outputNext https://assets.twitch.tv/assets/9457-385cc443c221f1a30029.js:1
-    onmessage https://assets.twitch.tv/assets/9457-385cc443c221f1a30029.js:1
+    writeQuery https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    T https://assets.twitch.tv/assets/9457-385cc443c221f1a30029.js:1
+    k https://assets.twitch.tv/assets/57936-d6ba1435a2b0fedc47dc.js:1
+    ns https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    xu https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    su https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    Ho https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    ku https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    ku https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    ou https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    x https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    I https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    (Async: EventHandlerNonNull)
+    307463 https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    f https://www.twitch.tv/caedrel:1
+    169982 https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    f https://www.twitch.tv/caedrel:1
+    822551 https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    f https://www.twitch.tv/caedrel:1
+    440961 https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    f https://www.twitch.tv/caedrel:1
+    205338 https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    f https://www.twitch.tv/caedrel:1
+    859406 https://assets.twitch.tv/assets/9457-385cc443c221f1a30029.js:1
+    f https://www.twitch.tv/caedrel:1
+    600165 https://assets.twitch.tv/assets/9457-385cc443c221f1a30029.js:1
+    f https://www.twitch.tv/caedrel:1
+    n https://assets.twitch.tv/assets/core-f40076f6a1c141b5f0c4.js:1
+    <anonym> https://assets.twitch.tv/assets/core-f40076f6a1c141b5f0c4.js:1
+    O https://www.twitch.tv/caedrel:1
+    <anonym> https://assets.twitch.tv/assets/core-f40076f6a1c141b5f0c4.js:1
+    a https://www.twitch.tv/caedrel:1
+    <anonym> https://assets.twitch.tv/assets/core-f40076f6a1c141b5f0c4.js:1
+An error occurred! For more details, see the full error text at https://go.apollo.dev/c/err#%7B%22version%22%3A%223.8.7%22%2C%22message%22%3A12%2C%22args%22%3A%5B%22slug%22%2C%22%7B%5Cn%20%20%5C%22__typename%5C%22%3A%20%5C%22Game%5C%22%2C%5Cn%20%20%5C%22name%5C%22%3A%20%5C%22League%20of%20Legends%5C%22%2C%5Cn%20%20%5C%22displayName%5C%22%3A%20%5C%22League%20of%20Legends%5C%22%2C%5Cn%20%20%5C%22id%5C%22%3A%20%5C%2221779%5C%22%5Cn%7D%22%5D%7D Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js:996:27
+    error moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:996
+    f https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    m https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    processSelectionSet https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    processSelectionSet https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    processFieldValue https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    processSelectionSet https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    processSelectionSet https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    processFieldValue https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    processSelectionSet https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    processSelectionSet https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    processFieldValue https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    processSelectionSet https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    processSelectionSet https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    writeToStore https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    write https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    writeQuery https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    writeQuery https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    T https://assets.twitch.tv/assets/9457-385cc443c221f1a30029.js:1
+    k https://assets.twitch.tv/assets/57936-d6ba1435a2b0fedc47dc.js:1
+    ns https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    xu https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    ku https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    ku https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    su https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    Ho https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+    nu https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
+
+​
+
