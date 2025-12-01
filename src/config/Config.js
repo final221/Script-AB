@@ -41,6 +41,8 @@ const CONFIG = (() => {
         network: {
             AD_PATTERNS: ['/ad/v1/', '/usher/v1/ad/', '/api/v5/ads/', 'pubads.g.doubleclick.net', 'supervisor.ext-twitch.tv', '/3p/ads'],
             TRIGGER_PATTERNS: ['/ad_state/', 'vod_ad_manifest'],
+            DELIVERY_PATTERNS: ['/ad_state/', 'vod_ad_manifest', '/usher/v1/ad/'],
+            AVAILABILITY_PATTERNS: ['/3p/ads?', 'bp=preroll', 'bp=midroll'],
         },
         mock: {
             M3U8: '#EXTM3U\n#EXT-X-VERSION:3\n#EXT-X-ENDLIST\n',

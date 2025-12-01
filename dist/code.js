@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       2.1.5
+// @version       2.1.6
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -54,6 +54,8 @@ const CONFIG = (() => {
         network: {
             AD_PATTERNS: ['/ad/v1/', '/usher/v1/ad/', '/api/v5/ads/', 'pubads.g.doubleclick.net', 'supervisor.ext-twitch.tv', '/3p/ads'],
             TRIGGER_PATTERNS: ['/ad_state/', 'vod_ad_manifest'],
+            DELIVERY_PATTERNS: ['/ad_state/', 'vod_ad_manifest', '/usher/v1/ad/'],
+            AVAILABILITY_PATTERNS: ['/3p/ads?', 'bp=preroll', 'bp=midroll'],
         },
         mock: {
             M3U8: '#EXTM3U\n#EXT-X-VERSION:3\n#EXT-X-ENDLIST\n',
@@ -173,6 +175,8 @@ const Logic = (() => {
         Network: {
             isAd: (url) => CONFIG.regex.AD_BLOCK.test(url),
             isTrigger: (url) => CONFIG.regex.AD_TRIGGER.test(url),
+            isDelivery: (url) => CONFIG.network.DELIVERY_PATTERNS.some(p => url.includes(p)) && !CONFIG.network.AVAILABILITY_PATTERNS.some(p => url.includes(p)),
+            isAvailabilityCheck: (url) => CONFIG.network.AVAILABILITY_PATTERNS.some(p => url.includes(p)),
             getMock: (url) => {
                 if (url.includes('.m3u8')) {
                     return { body: CONFIG.mock.M3U8, type: 'application/vnd.apple.mpegurl' };
@@ -995,33 +999,9 @@ const Store = (() => {
  * 3. Update Metrics.
  */
 const AdBlocker = (() => {
-    const isActualAdDelivery = (url) => {
-        // Actual ad delivery patterns (not just availability checks)
-        const deliveryPatterns = [
-            '/ad_state/',           // Ad state changes (actual injection)
-            'vod_ad_manifest',      // VOD ad manifest (actual ad)
-            '/usher/v1/ad/',        // Ad serving endpoint (some cases)
-        ];
-
-        // Availability check patterns (don't trigger recovery)
-        const availabilityPatterns = [
-            '/3p/ads?',             // Third-party ad availability check
-            'bp=preroll',           // Preroll check parameter
-            'bp=midroll',           // Midroll check parameter
-        ];
-
-        // If it's just an availability check, don't treat as delivery
-        if (availabilityPatterns.some(pattern => url.includes(pattern))) {
-            return false;
-        }
-
-        // Otherwise check if it matches delivery patterns
-        return deliveryPatterns.some(pattern => url.includes(pattern));
-    };
-
     const process = (url, type) => {
         const isTrigger = Logic.Network.isTrigger(url);
-        const isDelivery = isActualAdDelivery(url);
+        const isDelivery = Logic.Network.isDelivery(url);
 
         if (isTrigger) {
             const triggerCategory = isDelivery ? 'Ad Delivery' : 'Availability Check';

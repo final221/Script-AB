@@ -10,6 +10,8 @@ const Logic = (() => {
         Network: {
             isAd: (url) => CONFIG.regex.AD_BLOCK.test(url),
             isTrigger: (url) => CONFIG.regex.AD_TRIGGER.test(url),
+            isDelivery: (url) => CONFIG.network.DELIVERY_PATTERNS.some(p => url.includes(p)) && !CONFIG.network.AVAILABILITY_PATTERNS.some(p => url.includes(p)),
+            isAvailabilityCheck: (url) => CONFIG.network.AVAILABILITY_PATTERNS.some(p => url.includes(p)),
             getMock: (url) => {
                 if (url.includes('.m3u8')) {
                     return { body: CONFIG.mock.M3U8, type: 'application/vnd.apple.mpegurl' };
