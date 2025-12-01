@@ -89,10 +89,11 @@ const ResilienceOrchestrator = (() => {
 
                 // Check buffer health
                 const analysis = BufferAnalyzer.analyze(video);
-                if (!payload.forceAggressive && analysis.bufferHealth === 'critical') {
-                    Logger.add('[RECOVERY] Insufficient buffer for recovery, waiting');
-                    return;
-                }
+                // Removed blocking check for critical buffer to allow recovery to proceed
+                // if (!payload.forceAggressive && analysis.bufferHealth === 'critical') {
+                //    Logger.add('[RECOVERY] Insufficient buffer for recovery, waiting');
+                //    return;
+                // }
 
                 // Capture pre-recovery state
                 const preSnapshot = captureVideoSnapshot(video);

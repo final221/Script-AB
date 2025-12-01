@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       2.1.11
+// @version       2.1.12
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -2195,10 +2195,11 @@ const ResilienceOrchestrator = (() => {
 
                 // Check buffer health
                 const analysis = BufferAnalyzer.analyze(video);
-                if (!payload.forceAggressive && analysis.bufferHealth === 'critical') {
-                    Logger.add('[RECOVERY] Insufficient buffer for recovery, waiting');
-                    return;
-                }
+                // Removed blocking check for critical buffer to allow recovery to proceed
+                // if (!payload.forceAggressive && analysis.bufferHealth === 'critical') {
+                //    Logger.add('[RECOVERY] Insufficient buffer for recovery, waiting');
+                //    return;
+                // }
 
                 // Capture pre-recovery state
                 const preSnapshot = captureVideoSnapshot(video);
