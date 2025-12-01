@@ -1,10 +1,23 @@
 const puppeteer = require('puppeteer-core');
 const path = require('path');
+const fs = require('fs');
+
+// Create log file
+const logFile = path.join(__dirname, 'last-run.log');
+const logStream = fs.createWriteStream(logFile, { flags: 'w' });
+
+// Helper to log to both console and file
+const log = (msg, ...args) => {
+    console.log(msg, ...args);
+    // Strip ANSI color codes for file
+    const cleanMsg = String(msg).replace(/\x1b\[[0-9;]*m/g, '');
+    logStream.write(cleanMsg + '\n');
+};
 
 (async () => {
-    console.log('🧪 Starting automated test runner...');
-    console.log('='.repeat(60));
-    console.log('');
+    log('🧪 Starting automated test runner...');
+    log('='.repeat(60));
+    log('');
 
     const browser = await puppeteer.launch({
         headless: true,
@@ -18,6 +31,7 @@ const path = require('path');
     page.on('console', msg => {
         const text = msg.text();
         logs.push(text);
+        logStream.write(text + '\n');
 
         // Color code output
         if (text.includes('✅ PASS:')) {
@@ -39,13 +53,15 @@ const path = require('path');
 
     // Capture errors
     page.on('pageerror', error => {
-        console.error('\x1b[31m❌ Page Error:\x1b[0m', error.message);
+        const errorMsg = '❌ Page Error: ' + error.message;
+        console.error('\x1b[31m' + errorMsg + '\x1b[0m');
+        logStream.write(errorMsg + '\n');
     });
 
     // Load test runner
     const testFile = 'file://' + path.resolve(__dirname, 'test-runner.html');
-    console.log(`📁 Loading test file: ${testFile}`);
-    console.log('');
+    log(`📁 Loading test file: ${testFile}`);
+    log('');
 
     const startTime = Date.now();
 
@@ -72,37 +88,49 @@ const path = require('path');
 
         const duration = ((Date.now() - startTime) / 1000).toFixed(2);
 
-        console.log('');
-        console.log(`⏱️  Duration: ${duration}s`);
-        console.log(`📊 Tests: ${results.total} total`);
-        console.log(`📝 Logger messages: ${results.loggerMessages}`);
-        console.log('');
+        log('');
+        log(`⏱️  Duration: ${duration}s`);
+        log(`📊 Tests: ${results.total} total`);
+        log(`📝 Logger messages: ${results.loggerMessages}`);
+        log('');
 
         if (results.failed > 0) {
-            console.log('\x1b[31m❌ Failed Tests:\x1b[0m');
+            log('❌ Failed Tests:');
             results.failures.forEach(f => {
                 console.log(`  \x1b[31m✗\x1b[0m ${f.name}`);
+                logStream.write(`  ✗ ${f.name}\n`);
                 console.log(`    \x1b[90m${f.error}\x1b[0m`);
+                logStream.write(`    ${f.error}\n`);
             });
-            console.log('');
+            log('');
         }
 
         // Summary with color
         if (results.failed === 0) {
             console.log('\x1b[32m✅ All tests passed!\x1b[0m');
+            logStream.write('✅ All tests passed!\n');
         } else {
             console.log(`\x1b[31m❌ ${results.failed} test(s) failed\x1b[0m`);
+            logStream.write(`❌ ${results.failed} test(s) failed\n`);
         }
 
+        log('');
+        log(`📄 Full log saved to: ${logFile}`);
+
         await browser.close();
+        logStream.end();
 
         // Exit with appropriate code for CI/CD
         process.exit(results.failed > 0 ? 1 : 0);
 
     } catch (error) {
-        console.error('\n\x1b[31m❌ Test runner failed:\x1b[0m', error.message);
+        const errorMsg = '\n❌ Test runner failed: ' + error.message;
+        console.error('\x1b[31m' + errorMsg + '\x1b[0m');
         console.error(error.stack);
+        logStream.write(errorMsg + '\n');
+        logStream.write(error.stack + '\n');
         await browser.close();
+        logStream.end();
         process.exit(1);
     }
 })();

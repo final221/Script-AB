@@ -31,33 +31,6 @@ const Test = {
     }
 };
 
-// --- Helper: Mock Logger for tests ---
-if (typeof Logger === 'undefined') {
-    window.Logger = {
-        logs: [],
-        add: (msg, data) => {
-            const entry = data ? `${msg} | ${JSON.stringify(data)}` : msg;
-            Logger.logs.push(entry);
-            console.log(entry);
-        },
-        getLogs: () => Logger.logs
-    };
-}
-
-// --- Helper: Mock Metrics for tests ---
-if (typeof Metrics === 'undefined') {
-    window.Metrics = {
-        counters: {},
-        increment: (key) => {
-            Metrics.counters[key] = (Metrics.counters[key] || 0) + 1;
-        },
-        get: (key) => Metrics.counters[key] || 0,
-        reset: () => {
-            Metrics.counters = {};
-        }
-    };
-}
-
 // --- RecoveryDiagnostics Tests ---
 (async () => {
     // Note: These tests will be placeholders until RecoveryDiagnostics.js is created
@@ -95,21 +68,22 @@ if (typeof Metrics === 'undefined') {
     // --- Logger Tests ---
 
     await Test.run('Logger: Captures messages', () => {
-        Logger.logs = []; // Reset
-        Logger.add('[TEST] Test message', { data: 'test' });
+        const testMsg = `[TEST] Test message ${Date.now()}`;
+        Logger.add(testMsg, { data: 'test' });
 
-        assert(Logger.logs.length > 0, 'Logger should capture messages');
-        assert(Logger.logs.some(l => l.includes('[TEST]')), 'Logger should contain test message');
+        const logs = Logger.getLogs();
+        assert(logs.length > 0, 'Logger should capture messages');
+        assert(logs.some(l => l.message && l.message.includes(testMsg)), 'Logger should contain test message');
     });
 
     // --- Metrics Tests ---
 
     await Test.run('Metrics: Increments counters', () => {
         Metrics.reset();
-        Metrics.increment('test_counter');
-        Metrics.increment('test_counter');
+        Metrics.increment('errors');
+        Metrics.increment('errors');
 
-        assert(Metrics.get('test_counter') === 2, 'Counter should be 2');
+        assert(Metrics.get('errors') === 2, 'Counter should be 2');
     });
 
     await Test.run('Metrics: Returns 0 for unknown keys', () => {
@@ -120,14 +94,15 @@ if (typeof Metrics === 'undefined') {
     // --- Integration Test: Logger + Metrics ---
 
     await Test.run('Integration: Logger and Metrics work together', () => {
-        Logger.logs = [];
         Metrics.reset();
 
-        Logger.add('[INTEGRATION] Test log');
-        Metrics.increment('integration_test');
+        const testMsg = `[INTEGRATION] Test log ${Date.now()}`;
+        Logger.add(testMsg);
+        Metrics.increment('errors');
 
-        assert(Logger.logs.length > 0, 'Logger should have messages');
-        assert(Metrics.get('integration_test') === 1, 'Metrics should be incremented');
+        const logs = Logger.getLogs();
+        assert(logs.some(l => l.message && l.message.includes(testMsg)), 'Logger should have messages');
+        assert(Metrics.get('errors') === 1, 'Metrics should be incremented');
     });
 
     // Display summary

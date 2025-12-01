@@ -1,13 +1,15 @@
 <!DOCTYPE html>
 <html>
+
 <head>
     <title>Recovery Tests</title>
     <meta charset="UTF-8">
 </head>
+
 <body>
     <h1>Recovery Tests</h1>
     <div id="test-output"></div>
-    
+
     <!-- Load source modules -->
     <script src="../src/config/Config.js"></script>
     <script src="../src/utils/Utils.js"></script>
@@ -16,15 +18,16 @@
     <script src="../src/monitoring/Logger.js"></script>
     <script src="../src/monitoring/Metrics.js"></script>
     <script src="../src/recovery/BufferAnalyzer.js"></script>
-    <script src="../src/recovery/RecoveryDiagnostics.js"></script>
+    <!-- <script src="../src/recovery/RecoveryDiagnostics.js"></script> -->
     <script src="../src/recovery/PlayRetryHandler.js"></script>
     <script src="../src/recovery/ResilienceOrchestrator.js"></script>
     <script src="../src/health/StuckDetector.js"></script>
     <script src="../src/health/FrameDropDetector.js"></script>
     <script src="../src/health/AVSyncDetector.js"></script>
     <script src="../src/health/HealthMonitor.js"></script>
-    
+
     <!-- Load test file -->
     <script src="recovery-tests.js"></script>
 </body>
+
 </html>

@@ -18,6 +18,7 @@ const Logger = (() => {
 
     return {
         add,
+        getLogs: () => logs, // Expose logs for testing/debugging
         init: () => {
             // Global error and console interception are now handled by the Instrumentation module.
             // This Logger.init is intentionally left empty.
