@@ -8,6 +8,7 @@
  */
 const PlayerContext = (() => {
     let cachedContext = null;
+    let cachedRootElement = null; // Track the DOM element for validation
     let keyMap = { k0: null, k1: null, k2: null };
     const contextHintKeywords = ['react', 'vue', 'next', 'props', 'fiber', 'internal'];
     const fallbackSelectors = ['.video-player__container', '.highwind-video-player', '[data-a-target="video-player"]'];
@@ -70,28 +71,49 @@ const PlayerContext = (() => {
                 const key = Object.keys(el).find(k => k.startsWith('__reactInternalInstance') || k.startsWith('__reactFiber'));
                 if (key && el[key]) {
                     const ctx = traverseForPlayerContext(el[key]);
-                    if (ctx) return { ctx, selector };
+                    if (ctx) return { ctx, element: el };
                 }
             }
         }
         return null;
     };
 
+    /**
+     * Validates the cached context to ensure it's still usable.
+     * @returns {boolean} True if cache is valid, false otherwise
+     */
     const validateCache = () => {
         if (!cachedContext) return false;
-        const isValid = Object.keys(keyMap).every(
-            (key) => keyMap[key] && typeof cachedContext[keyMap[key]] === 'function'
-        );
-        if (!isValid) {
-            Logger.add('PlayerContext: ⚠️ CACHED CONTEXT INVALID', { keyMap });
+
+        // 1. DOM Attachment Check
+        if (cachedRootElement && !cachedRootElement.isConnected) {
+            Logger.add('PlayerContext: Cache invalid - Root element detached from DOM');
             PlayerContext.reset();
             return false;
         }
+
+        // 2. Signature Function Check
+        const signaturesValid = Object.keys(keyMap).every(
+            (key) => keyMap[key] && typeof cachedContext[keyMap[key]] === 'function'
+        );
+
+        if (!signaturesValid) {
+            Logger.add('PlayerContext: Cache invalid - Signatures missing', { keyMap });
+            PlayerContext.reset();
+            return false;
+        }
+
         return true;
     };
 
     return {
         get: (element) => {
+            // Check if element is different from cached root
+            if (element && cachedRootElement && element !== cachedRootElement) {
+                Logger.add('PlayerContext: New element provided, resetting cache');
+                PlayerContext.reset();
+            }
+
             if (validateCache()) {
                 return cachedContext;
             }
@@ -109,6 +131,7 @@ const PlayerContext = (() => {
                         const ctx = traverseForPlayerContext(potentialContext);
                         if (ctx) {
                             cachedContext = ctx;
+                            cachedRootElement = element;
                             Logger.add('PlayerContext: Success', { method: 'keyword', key: String(key) });
                             return ctx;
                         }
@@ -120,7 +143,8 @@ const PlayerContext = (() => {
             const fallbackResult = findContextFallback();
             if (fallbackResult) {
                 cachedContext = fallbackResult.ctx;
-                Logger.add('PlayerContext: Success', { method: 'fallback', selector: fallbackResult.selector });
+                cachedRootElement = fallbackResult.element;
+                Logger.add('PlayerContext: Success', { method: 'fallback', element: fallbackResult.element });
                 return fallbackResult.ctx;
             }
 
@@ -129,6 +153,7 @@ const PlayerContext = (() => {
         },
         reset: () => {
             cachedContext = null;
+            cachedRootElement = null;
             keyMap = { k0: null, k1: null, k2: null };
         },
     };
