@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       2.1.4
+// @version       2.1.5
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -168,29 +168,46 @@ const Adapters = {
  * Pure business logic for Network analysis and Player signature matching.
  * @namespace Logic
  */
-const Logic = {
-    Network: {
-        isAd: (url) => CONFIG.regex.AD_BLOCK.test(url),
-        isTrigger: (url) => CONFIG.regex.AD_TRIGGER.test(url),
-        getMock: (url) => {
-            if (url.includes('.m3u8')) {
-                return { body: CONFIG.mock.M3U8, type: 'application/vnd.apple.mpegurl' };
+const Logic = (() => {
+    return {
+        Network: {
+            isAd: (url) => CONFIG.regex.AD_BLOCK.test(url),
+            isTrigger: (url) => CONFIG.regex.AD_TRIGGER.test(url),
+            getMock: (url) => {
+                if (url.includes('.m3u8')) {
+                    return { body: CONFIG.mock.M3U8, type: 'application/vnd.apple.mpegurl' };
+                }
+                if (url.includes('vast') || url.includes('xml')) {
+                    return { body: CONFIG.mock.VAST, type: 'application/xml' };
+                }
+                return { body: CONFIG.mock.JSON, type: 'application/json' };
             }
-            if (url.includes('vast') || url.includes('xml')) {
-                return { body: CONFIG.mock.VAST, type: 'application/xml' };
-            }
-            return { body: CONFIG.mock.JSON, type: 'application/json' };
+        },
+        Player: {
+            signatures: [
+                {
+                    id: 'k0',
+                    check: (o, k) => {
+                        try { return typeof o[k] === 'function' && o[k](true) === null; } catch (e) { return false; }
+                    }
+                }, // Toggle/Mute
+                {
+                    id: 'k1',
+                    check: (o, k) => {
+                        try { return typeof o[k] === 'function' && o[k]() === null; } catch (e) { return false; }
+                    }
+                }, // Pause
+                {
+                    id: 'k2',
+                    check: (o, k) => {
+                        try { return typeof o[k] === 'function' && o[k]() === null; } catch (e) { return false; }
+                    }
+                }  // Other
+            ],
+            validate: (obj, key, sig) => Fn.tryCatch(() => typeof obj[key] === 'function' && sig.check(obj, key), () => false)(),
         }
-    },
-    Player: {
-        signatures: [
-            { id: 'k0', check: (o, k) => o[k](true) == null }, // Toggle/Mute
-            { id: 'k1', check: (o, k) => o[k]() == null },     // Pause
-            { id: 'k2', check: (o, k) => o[k]() == null }      // Other
-        ],
-        validate: (obj, key, sig) => Fn.tryCatch(() => typeof obj[key] === 'function' && sig.check(obj, key), () => false)(),
-    }
-};
+    };
+})();
 
 // --- DOM Observer ---
 /**
@@ -1184,6 +1201,7 @@ const PlayerContext = (() => {
     let cachedContext = null;
     let keyMap = { k0: null, k1: null, k2: null };
     const contextHintKeywords = ['react', 'vue', 'next', 'props', 'fiber', 'internal'];
+    const fallbackSelectors = ['.video-player__container', '.highwind-video-player', '[data-a-target="video-player"]'];
 
     /**
      * Detects player function signatures in an object.
@@ -1207,26 +1225,45 @@ const PlayerContext = (() => {
     };
 
     /**
-     * Recursively traverses object tree to find the player context.
+     * Recursively traverses object tree to find the player context using Breadth-First Search (BFS).
      * Searches for React/Vue internal player component instance.
-     * @param {Object} obj - Object to traverse
-     * @param {number} depth - Current recursion depth
-     * @param {WeakSet} visited - Set of already-visited objects to prevent cycles
+     * @param {Object} rootObj - Object to traverse
      * @returns {Object|null} Player context object if found, null otherwise
      */
-    const traverseForPlayerContext = (obj, depth = 0, visited = new WeakSet()) => {
-        if (depth > CONFIG.player.MAX_SEARCH_DEPTH || !obj || typeof obj !== 'object' || visited.has(obj)) {
-            return null;
-        }
-        visited.add(obj);
+    const traverseForPlayerContext = (rootObj) => {
+        const queue = [{ node: rootObj, depth: 0 }];
+        const visited = new WeakSet();
 
-        if (detectPlayerSignatures(obj)) {
-            return obj;
-        }
+        while (queue.length > 0) {
+            const { node, depth } = queue.shift();
 
-        for (const key of Object.keys(obj)) {
-            const found = traverseForPlayerContext(obj[key], depth + 1, visited);
-            if (found) return found;
+            if (depth > CONFIG.player.MAX_SEARCH_DEPTH) continue;
+            if (!node || typeof node !== 'object' || visited.has(node)) continue;
+
+            visited.add(node);
+
+            if (detectPlayerSignatures(node)) {
+                return node;
+            }
+
+            // Add children to queue
+            for (const key of Object.keys(node)) {
+                queue.push({ node: node[key], depth: depth + 1 });
+            }
+        }
+        return null;
+    };
+
+    const findContextFallback = () => {
+        for (const selector of fallbackSelectors) {
+            const el = document.querySelector(selector);
+            if (el) {
+                const key = Object.keys(el).find(k => k.startsWith('__reactInternalInstance') || k.startsWith('__reactFiber'));
+                if (key && el[key]) {
+                    const ctx = traverseForPlayerContext(el[key]);
+                    if (ctx) return { ctx, selector };
+                }
+            }
         }
         return null;
     };
@@ -1251,11 +1288,11 @@ const PlayerContext = (() => {
             }
             if (!element) return null;
 
+            // 1. Primary Strategy: Keyword Search on Root Element
             // Use Reflect.ownKeys to include Symbol properties, which React often uses.
             const keys = Reflect.ownKeys(element);
 
             for (const key of keys) {
-                // Check if the property key contains any of our hints.
                 const keyString = String(key).toLowerCase();
                 if (contextHintKeywords.some(hint => keyString.includes(hint))) {
                     const potentialContext = element[key];
@@ -1263,11 +1300,19 @@ const PlayerContext = (() => {
                         const ctx = traverseForPlayerContext(potentialContext);
                         if (ctx) {
                             cachedContext = ctx;
-                            Logger.add('PlayerContext: Fresh context found via keyword search', { key: String(key) });
+                            Logger.add('PlayerContext: Success', { method: 'keyword', key: String(key) });
                             return ctx;
                         }
                     }
                 }
+            }
+
+            // 2. Fallback Strategy: DOM Selectors
+            const fallbackResult = findContextFallback();
+            if (fallbackResult) {
+                cachedContext = fallbackResult.ctx;
+                Logger.add('PlayerContext: Success', { method: 'fallback', selector: fallbackResult.selector });
+                return fallbackResult.ctx;
             }
 
             Logger.add('PlayerContext: Scan failed - no context found');
@@ -1630,6 +1675,39 @@ const RecoveryStrategy = (() => {
             });
 
             return StandardRecovery;
+        },
+
+        /**
+         * Determines the next strategy to try if the current one failed or was insufficient.
+         * @param {HTMLVideoElement} video - The video element
+         * @param {Object} lastStrategy - The strategy that was just executed
+         * @returns {Object|null} The next strategy to try, or null if no further escalation
+         */
+        getEscalation: (video, lastStrategy) => {
+            const analysis = BufferAnalyzer.analyze(video);
+
+            // If we just ran StandardRecovery and buffer is still critical
+            if (lastStrategy === StandardRecovery) {
+                if (analysis.needsAggressive) {
+                    if (ExperimentalRecovery.isEnabled() && ExperimentalRecovery.hasStrategies()) {
+                        Logger.add('[RECOVERY] Standard insufficient, escalating to Experimental');
+                        return ExperimentalRecovery;
+                    } else {
+                        Logger.add('[RECOVERY] Standard insufficient, escalating to Aggressive');
+                        return AggressiveRecovery;
+                    }
+                }
+            }
+
+            // If we just ran ExperimentalRecovery and buffer is still critical
+            if (lastStrategy === ExperimentalRecovery) {
+                if (analysis.needsAggressive) {
+                    Logger.add('[RECOVERY] Experimental insufficient, escalating to Aggressive');
+                    return AggressiveRecovery;
+                }
+            }
+
+            return null;
         }
     };
 })();
@@ -1799,39 +1877,7 @@ const ResilienceOrchestrator = (() => {
         };
     };
 
-    /**
-     * Attempts cascading recovery: Standard → Experimental → Aggressive.
-     * Only cascades if StandardRecovery was used and buffer still needs aggressive recovery.
-     * @param {HTMLVideoElement} video - The video element
-     * @param {Object} strategy - The initially selected recovery strategy
-     */
-    const attemptCascadingRecovery = async (video, strategy) => {
-        if (strategy !== StandardRecovery) {
-            return; // No cascade needed for non-standard strategies
-        }
 
-        const postStandardAnalysis = BufferAnalyzer.analyze(video);
-        if (!postStandardAnalysis.needsAggressive) {
-            return; // Standard recovery was sufficient
-        }
-
-        // Try experimental recovery if enabled
-        if (ExperimentalRecovery.isEnabled() && ExperimentalRecovery.hasStrategies()) {
-            Logger.add('[RECOVERY] Standard insufficient, trying experimental');
-            await ExperimentalRecovery.execute(video);
-
-            const postExperimentalAnalysis = BufferAnalyzer.analyze(video);
-            if (postExperimentalAnalysis.needsAggressive) {
-                Logger.add('[RECOVERY] Experimental insufficient, falling back to aggressive');
-                await AggressiveRecovery.execute(video);
-            } else {
-                Logger.add('[RECOVERY] Experimental recovery successful');
-            }
-        } else {
-            Logger.add('[RECOVERY] Standard insufficient, using aggressive');
-            await AggressiveRecovery.execute(video);
-        }
-    };
 
     return {
         execute: async (container, payload = {}) => {
@@ -1871,11 +1917,15 @@ const ResilienceOrchestrator = (() => {
                 Logger.add('[RECOVERY] Pre-recovery snapshot', preSnapshot);
 
                 // Execute primary recovery strategy
-                const strategy = RecoveryStrategy.select(video, payload);
-                await strategy.execute(video);
+                // Execute primary recovery strategy and handle escalation
+                let currentStrategy = RecoveryStrategy.select(video, payload);
 
-                // Attempt cascading recovery if needed
-                await attemptCascadingRecovery(video, strategy);
+                while (currentStrategy) {
+                    await currentStrategy.execute(video);
+
+                    // Check if we need to escalate to a more aggressive strategy
+                    currentStrategy = RecoveryStrategy.getEscalation(video, currentStrategy);
+                }
 
                 // Capture post-recovery state and calculate delta
                 const postSnapshot = captureVideoSnapshot(video);

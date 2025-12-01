@@ -28,6 +28,39 @@ const RecoveryStrategy = (() => {
             });
 
             return StandardRecovery;
+        },
+
+        /**
+         * Determines the next strategy to try if the current one failed or was insufficient.
+         * @param {HTMLVideoElement} video - The video element
+         * @param {Object} lastStrategy - The strategy that was just executed
+         * @returns {Object|null} The next strategy to try, or null if no further escalation
+         */
+        getEscalation: (video, lastStrategy) => {
+            const analysis = BufferAnalyzer.analyze(video);
+
+            // If we just ran StandardRecovery and buffer is still critical
+            if (lastStrategy === StandardRecovery) {
+                if (analysis.needsAggressive) {
+                    if (ExperimentalRecovery.isEnabled() && ExperimentalRecovery.hasStrategies()) {
+                        Logger.add('[RECOVERY] Standard insufficient, escalating to Experimental');
+                        return ExperimentalRecovery;
+                    } else {
+                        Logger.add('[RECOVERY] Standard insufficient, escalating to Aggressive');
+                        return AggressiveRecovery;
+                    }
+                }
+            }
+
+            // If we just ran ExperimentalRecovery and buffer is still critical
+            if (lastStrategy === ExperimentalRecovery) {
+                if (analysis.needsAggressive) {
+                    Logger.add('[RECOVERY] Experimental insufficient, escalating to Aggressive');
+                    return AggressiveRecovery;
+                }
+            }
+
+            return null;
         }
     };
 })();
