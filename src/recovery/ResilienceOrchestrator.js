@@ -8,6 +8,8 @@
  */
 const ResilienceOrchestrator = (() => {
     let isFixing = false;
+    let recoveryStartTime = 0;
+    const RECOVERY_TIMEOUT_MS = 10000;
 
     /**
      * Captures a snapshot of current video element state.
@@ -41,15 +43,31 @@ const ResilienceOrchestrator = (() => {
         };
     };
 
-
-
     return {
         execute: async (container, payload = {}) => {
             if (isFixing) {
-                Logger.add('[RECOVERY] Resilience already in progress, skipping');
-                return;
+                // Check for stale lock
+                if (Date.now() - recoveryStartTime > RECOVERY_TIMEOUT_MS) {
+                    Logger.add('[RECOVERY] WARNING: Stale lock detected (timeout exceeded), forcing release');
+                    isFixing = false;
+                } else {
+                    Logger.add('[RECOVERY] Resilience already in progress, skipping');
+                    return;
+                }
             }
+
             isFixing = true;
+            recoveryStartTime = Date.now();
+            let timeoutId = null;
+
+            // Safety valve: Force unlock if execution takes too long
+            timeoutId = setTimeout(() => {
+                if (isFixing && Date.now() - recoveryStartTime >= RECOVERY_TIMEOUT_MS) {
+                    Logger.add('[RECOVERY] WARNING: Execution timed out, forcing lock release');
+                    isFixing = false;
+                }
+            }, RECOVERY_TIMEOUT_MS);
+
             const startTime = performance.now();
 
             try {
@@ -80,11 +98,16 @@ const ResilienceOrchestrator = (() => {
                 const preSnapshot = captureVideoSnapshot(video);
                 Logger.add('[RECOVERY] Pre-recovery snapshot', preSnapshot);
 
-                // Execute primary recovery strategy
                 // Execute primary recovery strategy and handle escalation
                 let currentStrategy = RecoveryStrategy.select(video, payload);
 
                 while (currentStrategy) {
+                    // Check if lock was stolen/timed out during execution
+                    if (!isFixing) {
+                        Logger.add('[RECOVERY] Lock lost during execution, aborting');
+                        break;
+                    }
+
                     await currentStrategy.execute(video);
 
                     // Check if we need to escalate to a more aggressive strategy
@@ -105,6 +128,7 @@ const ResilienceOrchestrator = (() => {
             } catch (e) {
                 Logger.add('[RECOVERY] Resilience failed', { error: String(e) });
             } finally {
+                if (timeoutId) clearTimeout(timeoutId);
                 isFixing = false;
                 Logger.add('[RECOVERY] Resilience execution finished', {
                     total_duration_ms: performance.now() - startTime
