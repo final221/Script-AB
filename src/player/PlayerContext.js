@@ -10,6 +10,7 @@ const PlayerContext = (() => {
     let cachedContext = null;
     let keyMap = { k0: null, k1: null, k2: null };
     const contextHintKeywords = ['react', 'vue', 'next', 'props', 'fiber', 'internal'];
+    const fallbackSelectors = ['.video-player__container', '.highwind-video-player', '[data-a-target="video-player"]'];
 
     /**
      * Detects player function signatures in an object.
@@ -33,26 +34,45 @@ const PlayerContext = (() => {
     };
 
     /**
-     * Recursively traverses object tree to find the player context.
+     * Recursively traverses object tree to find the player context using Breadth-First Search (BFS).
      * Searches for React/Vue internal player component instance.
-     * @param {Object} obj - Object to traverse
-     * @param {number} depth - Current recursion depth
-     * @param {WeakSet} visited - Set of already-visited objects to prevent cycles
+     * @param {Object} rootObj - Object to traverse
      * @returns {Object|null} Player context object if found, null otherwise
      */
-    const traverseForPlayerContext = (obj, depth = 0, visited = new WeakSet()) => {
-        if (depth > CONFIG.player.MAX_SEARCH_DEPTH || !obj || typeof obj !== 'object' || visited.has(obj)) {
-            return null;
-        }
-        visited.add(obj);
+    const traverseForPlayerContext = (rootObj) => {
+        const queue = [{ node: rootObj, depth: 0 }];
+        const visited = new WeakSet();
 
-        if (detectPlayerSignatures(obj)) {
-            return obj;
-        }
+        while (queue.length > 0) {
+            const { node, depth } = queue.shift();
 
-        for (const key of Object.keys(obj)) {
-            const found = traverseForPlayerContext(obj[key], depth + 1, visited);
-            if (found) return found;
+            if (depth > CONFIG.player.MAX_SEARCH_DEPTH) continue;
+            if (!node || typeof node !== 'object' || visited.has(node)) continue;
+
+            visited.add(node);
+
+            if (detectPlayerSignatures(node)) {
+                return node;
+            }
+
+            // Add children to queue
+            for (const key of Object.keys(node)) {
+                queue.push({ node: node[key], depth: depth + 1 });
+            }
+        }
+        return null;
+    };
+
+    const findContextFallback = () => {
+        for (const selector of fallbackSelectors) {
+            const el = document.querySelector(selector);
+            if (el) {
+                const key = Object.keys(el).find(k => k.startsWith('__reactInternalInstance') || k.startsWith('__reactFiber'));
+                if (key && el[key]) {
+                    const ctx = traverseForPlayerContext(el[key]);
+                    if (ctx) return { ctx, selector };
+                }
+            }
         }
         return null;
     };
@@ -77,11 +97,11 @@ const PlayerContext = (() => {
             }
             if (!element) return null;
 
+            // 1. Primary Strategy: Keyword Search on Root Element
             // Use Reflect.ownKeys to include Symbol properties, which React often uses.
             const keys = Reflect.ownKeys(element);
 
             for (const key of keys) {
-                // Check if the property key contains any of our hints.
                 const keyString = String(key).toLowerCase();
                 if (contextHintKeywords.some(hint => keyString.includes(hint))) {
                     const potentialContext = element[key];
@@ -89,11 +109,19 @@ const PlayerContext = (() => {
                         const ctx = traverseForPlayerContext(potentialContext);
                         if (ctx) {
                             cachedContext = ctx;
-                            Logger.add('PlayerContext: Fresh context found via keyword search', { key: String(key) });
+                            Logger.add('PlayerContext: Success', { method: 'keyword', key: String(key) });
                             return ctx;
                         }
                     }
                 }
+            }
+
+            // 2. Fallback Strategy: DOM Selectors
+            const fallbackResult = findContextFallback();
+            if (fallbackResult) {
+                cachedContext = fallbackResult.ctx;
+                Logger.add('PlayerContext: Success', { method: 'fallback', selector: fallbackResult.selector });
+                return fallbackResult.ctx;
             }
 
             Logger.add('PlayerContext: Scan failed - no context found');

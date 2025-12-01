@@ -21,9 +21,24 @@ const Logic = {
     },
     Player: {
         signatures: [
-            { id: 'k0', check: (o, k) => o[k](true) == null }, // Toggle/Mute
-            { id: 'k1', check: (o, k) => o[k]() == null },     // Pause
-            { id: 'k2', check: (o, k) => o[k]() == null }      // Other
+            {
+                id: 'k0',
+                check: (o, k) => {
+                    try { return typeof o[k] === 'function' && o[k](true) === null; } catch (e) { return false; }
+                }
+            }, // Toggle/Mute
+            {
+                id: 'k1',
+                check: (o, k) => {
+                    try { return typeof o[k] === 'function' && o[k]() === null; } catch (e) { return false; }
+                }
+            }, // Pause
+            {
+                id: 'k2',
+                check: (o, k) => {
+                    try { return typeof o[k] === 'function' && o[k]() === null; } catch (e) { return false; }
+                }
+            }  // Other
         ],
         validate: (obj, key, sig) => Fn.tryCatch(() => typeof obj[key] === 'function' && sig.check(obj, key), () => false)(),
     }
