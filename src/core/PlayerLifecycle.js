@@ -25,6 +25,9 @@ const PlayerLifecycle = (() => {
             Logger.add('Player mounted');
             activeContainer = container;
 
+            // Start signature session tracking
+            Logic.Player.startSession();
+
             const debouncedInject = Fn.debounce(() => PlayerLifecycle.inject(), 100);
             playerObserver = Adapters.DOM.observe(container, (mutations) => {
                 const shouldReacquire = mutations.some(m => {
@@ -54,6 +57,9 @@ const PlayerLifecycle = (() => {
         handleUnmount: () => {
             if (!activeContainer) return;
             Logger.add('Player unmounted');
+
+            // End signature session tracking
+            Logic.Player.endSession();
 
             if (playerObserver) {
                 playerObserver.disconnect();

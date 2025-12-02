@@ -149,11 +149,89 @@ const Logic = (() => {
             getDiscoveredPatterns: () => Array.from(Logic.Network._suspiciousUrls)
         },
         Player: {
-            // Statistics tracking (internal)
-            _signatureStats: {
-                k0: { matches: 0, keys: [] },
-                k1: { matches: 0, keys: [] },
-                k2: { matches: 0, keys: [] }
+            // Session-based signature tracking
+            _sessionSignatures: {
+                sessionId: null,
+                mountTime: null,
+                k0: null,
+                k1: null,
+                k2: null,
+                keyHistory: []
+            },
+
+            // Initialize new session
+            startSession: () => {
+                const sessionId = `session-${Date.now()}`;
+                Logic.Player._sessionSignatures = {
+                    sessionId,
+                    mountTime: Date.now(),
+                    k0: null,
+                    k1: null,
+                    k2: null,
+                    keyHistory: []
+                };
+                Logger.add('[Logic] New player session started', { sessionId });
+            },
+
+            // End session
+            endSession: () => {
+                const session = Logic.Player._sessionSignatures;
+                if (!session.sessionId) return;
+
+                Logger.add('[Logic] Player session ended', {
+                    sessionId: session.sessionId,
+                    duration: Date.now() - session.mountTime,
+                    finalKeys: {
+                        k0: session.k0,
+                        k1: session.k1,
+                        k2: session.k2
+                    },
+                    keyChanges: session.keyHistory.length
+                });
+
+                if (session.keyHistory.length > 0) {
+                    Logger.add('[Logic] ⚠️ ALERT: Signature keys changed during session', {
+                        sessionId: session.sessionId,
+                        changes: session.keyHistory
+                    });
+                }
+            },
+
+            // Get current session status
+            getSessionStatus: () => {
+                const session = Logic.Player._sessionSignatures;
+                return {
+                    sessionId: session.sessionId,
+                    uptime: session.mountTime ? Date.now() - session.mountTime : 0,
+                    currentKeys: {
+                        k0: session.k0,
+                        k1: session.k1,
+                        k2: session.k2
+                    },
+                    totalChanges: session.keyHistory.length,
+                    recentChanges: session.keyHistory.slice(-5),
+                    allKeysSet: !!(session.k0 && session.k1 && session.k2)
+                };
+            },
+
+            // Check if session is unstable
+            isSessionUnstable: () => {
+                const session = Logic.Player._sessionSignatures;
+
+                const hourAgo = Date.now() - 3600000;
+                const recentChanges = session.keyHistory.filter(c => c.timestamp > hourAgo);
+
+                const isUnstable = recentChanges.length > 3;
+
+                if (isUnstable) {
+                    Logger.add('[Logic] ⚠️ ALERT: Signature session UNSTABLE', {
+                        changesInLastHour: recentChanges.length,
+                        threshold: 3,
+                        suggestion: 'Twitch may have updated player - patterns may break soon'
+                    });
+                }
+
+                return isUnstable;
             },
 
             signatures: [
@@ -161,70 +239,123 @@ const Logic = (() => {
                     id: 'k0',
                     check: (o, k) => {
                         try {
-                            // Check if it's a function and has length 1 (accepts 1 argument)
-                            // DO NOT call the function - that causes React errors
                             const result = typeof o[k] === 'function' && o[k].length === 1;
+
                             if (result) {
-                                Logic.Player._signatureStats.k0.matches++;
-                                if (!Logic.Player._signatureStats.k0.keys.includes(k)) {
-                                    Logic.Player._signatureStats.k0.keys.push(k);
-                                    // ✅ This gets exported with exportTwitchAdLogs()
-                                    Logger.add('[Logic] Signature k0 matched NEW key', { key: k, totalMatches: Logic.Player._signatureStats.k0.matches });
+                                const session = Logic.Player._sessionSignatures;
+
+                                // Check if key changed within this session
+                                if (session.k0 && session.k0 !== k) {
+                                    const change = {
+                                        timestamp: Date.now(),
+                                        signatureId: 'k0',
+                                        oldKey: session.k0,
+                                        newKey: k,
+                                        timeSinceMount: Date.now() - session.mountTime
+                                    };
+
+                                    session.keyHistory.push(change);
+                                    Logger.add('[Logic] ⚠️ SIGNATURE KEY CHANGED DURING SESSION', change);
+                                }
+
+                                // Update session key
+                                if (!session.k0 || session.k0 !== k) {
+                                    session.k0 = k;
+                                    Logger.add('[Logic] Signature k0 key set', {
+                                        key: k,
+                                        sessionId: session.sessionId,
+                                        isChange: session.k0 !== null
+                                    });
                                 }
                             }
+
                             return result;
                         } catch (e) {
                             return false;
                         }
                     }
-                }, // Toggle/Mute
+                },
                 {
                     id: 'k1',
                     check: (o, k) => {
                         try {
-                            // Check if it's a function with 0 arguments
-                            // DO NOT call the function - that causes React errors
                             const result = typeof o[k] === 'function' && o[k].length === 0;
+
                             if (result) {
-                                Logic.Player._signatureStats.k1.matches++;
-                                if (!Logic.Player._signatureStats.k1.keys.includes(k)) {
-                                    Logic.Player._signatureStats.k1.keys.push(k);
-                                    // ✅ This gets exported with exportTwitchAdLogs()
-                                    Logger.add('[Logic] Signature k1 matched NEW key', { key: k, totalMatches: Logic.Player._signatureStats.k1.matches });
+                                const session = Logic.Player._sessionSignatures;
+
+                                if (session.k1 && session.k1 !== k) {
+                                    const change = {
+                                        timestamp: Date.now(),
+                                        signatureId: 'k1',
+                                        oldKey: session.k1,
+                                        newKey: k,
+                                        timeSinceMount: Date.now() - session.mountTime
+                                    };
+
+                                    session.keyHistory.push(change);
+                                    Logger.add('[Logic] ⚠️ SIGNATURE KEY CHANGED DURING SESSION', change);
+                                }
+
+                                if (!session.k1 || session.k1 !== k) {
+                                    session.k1 = k;
+                                    Logger.add('[Logic] Signature k1 key set', {
+                                        key: k,
+                                        sessionId: session.sessionId,
+                                        isChange: session.k1 !== null
+                                    });
                                 }
                             }
+
                             return result;
                         } catch (e) {
                             return false;
                         }
                     }
-                }, // Pause
+                },
                 {
                     id: 'k2',
                     check: (o, k) => {
                         try {
-                            // Check if it's a function with 0 arguments
-                            // DO NOT call the function - that causes React errors
                             const result = typeof o[k] === 'function' && o[k].length === 0;
+
                             if (result) {
-                                Logic.Player._signatureStats.k2.matches++;
-                                if (!Logic.Player._signatureStats.k2.keys.includes(k)) {
-                                    Logic.Player._signatureStats.k2.keys.push(k);
-                                    // ✅ This gets exported with exportTwitchAdLogs()
-                                    Logger.add('[Logic] Signature k2 matched NEW key', { key: k, totalMatches: Logic.Player._signatureStats.k2.matches });
+                                const session = Logic.Player._sessionSignatures;
+
+                                if (session.k2 && session.k2 !== k) {
+                                    const change = {
+                                        timestamp: Date.now(),
+                                        signatureId: 'k2',
+                                        oldKey: session.k2,
+                                        newKey: k,
+                                        timeSinceMount: Date.now() - session.mountTime
+                                    };
+
+                                    session.keyHistory.push(change);
+                                    Logger.add('[Logic] ⚠️ SIGNATURE KEY CHANGED DURING SESSION', change);
+                                }
+
+                                if (!session.k2 || session.k2 !== k) {
+                                    session.k2 = k;
+                                    Logger.add('[Logic] Signature k2 key set', {
+                                        key: k,
+                                        sessionId: session.sessionId,
+                                        isChange: session.k2 !== null
+                                    });
                                 }
                             }
+
                             return result;
                         } catch (e) {
                             return false;
                         }
                     }
-                }  // Other
+                }
             ],
             validate: (obj, key, sig) => Fn.tryCatch(() => typeof obj[key] === 'function' && sig.check(obj, key), () => false)(),
 
-            // Export stats summary (for debugging)
-            getSignatureStats: () => Logic.Player._signatureStats
+            // Export stats summary (for debugging - backward compatibility)
+            getSignatureStats: () => Logic.Player.getSessionStatus()
         }
     };
 })();

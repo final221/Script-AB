@@ -52,12 +52,25 @@
 ✅ Should trigger again after resume
 ✅ PASS: HealthMonitor: Pause/Resume works
 
+🧪 Running: Logic: Session tracking detects key changes
+✅ Should set k0 to ref
+✅ No changes yet
+✅ Should update k0 to foo
+✅ Should detect change
+✅ Should track old key
+✅ Should track new key
+✅ PASS: Logic: Session tracking detects key changes
+
+🧪 Running: Logic: Instability detection works
+✅ Should detect instability after 4 changes
+✅ PASS: Logic: Instability detection works
+
 ==================================================
-📊 Test Summary: 10 passed, 0 failed
+📊 Test Summary: 12 passed, 0 failed
 ==================================================
 
 ⏱️  Duration: 11.43s
-📊 Tests: 10 total
+📊 Tests: 12 total
 📝 Logger messages: 0
 
 ✅ All tests passed!
