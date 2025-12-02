@@ -33,6 +33,18 @@ const ResilienceOrchestrator = (() => {
      * @param {Object} postSnapshot - Snapshot after recovery
      * @returns {Object} Delta object showing what changed
      */
+    const calculateRecoveryDelta = (preSnapshot, postSnapshot) => {
+        return {
+            readyStateChanged: preSnapshot.readyState !== postSnapshot.readyState,
+            networkStateChanged: preSnapshot.networkState !== postSnapshot.networkState,
+            currentTimeChanged: preSnapshot.currentTime !== postSnapshot.currentTime,
+            pausedStateChanged: preSnapshot.paused !== postSnapshot.paused,
+            errorCleared: preSnapshot.error && !postSnapshot.error,
+            errorAppeared: !preSnapshot.error && postSnapshot.error,
+            bufferIncreased: postSnapshot.bufferEnd > preSnapshot.bufferEnd
+        };
+    };
+
     /**
      * Validates if recovery actually improved the state.
      * @param {Object} preSnapshot - Snapshot before recovery
