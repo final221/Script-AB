@@ -98,12 +98,20 @@
 ✅ Should not throw error
 ✅ PASS: PlayerContext: Handles detached element gracefully
 
+🧪 Running: ResilienceOrchestrator: Buffer validation forces aggressive
+✅ Should force aggressive recovery due to low buffer
+✅ PASS: ResilienceOrchestrator: Buffer validation forces aggressive
+
+🧪 Running: ResilienceOrchestrator: Recovery validation detects failures
+✅ ResilienceOrchestrator executed without error
+✅ PASS: ResilienceOrchestrator: Recovery validation detects failures
+
 ==================================================
-📊 Test Summary: 18 passed, 0 failed
+📊 Test Summary: 20 passed, 0 failed
 ==================================================
 
-⏱️  Duration: 11.50s
-📊 Tests: 18 total
+⏱️  Duration: 11.44s
+📊 Tests: 20 total
 📝 Logger messages: 0
 
 ✅ All tests passed!

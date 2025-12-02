@@ -33,13 +33,41 @@ const ResilienceOrchestrator = (() => {
      * @param {Object} postSnapshot - Snapshot after recovery
      * @returns {Object} Delta object showing what changed
      */
-    const calculateRecoveryDelta = (preSnapshot, postSnapshot) => {
+    /**
+     * Validates if recovery actually improved the state.
+     * @param {Object} preSnapshot - Snapshot before recovery
+     * @param {Object} postSnapshot - Snapshot after recovery
+     * @param {Object} delta - Calculated changes
+     * @returns {{isValid: boolean, issues: string[], hasImprovement: boolean}}
+     */
+    const validateRecoverySuccess = (preSnapshot, postSnapshot, delta) => {
+        const issues = [];
+
+        // Check 1: Ready state should not decrease
+        if (delta.readyStateChanged && postSnapshot.readyState < preSnapshot.readyState) {
+            issues.push(`readyState decreased: ${preSnapshot.readyState} → ${postSnapshot.readyState}`);
+        }
+
+        // Check 2: Error should not appear
+        if (delta.errorAppeared) {
+            issues.push(`MediaError appeared: code ${postSnapshot.error}`);
+        }
+
+        // Check 3: Should have some positive change
+        const hasImprovement = (
+            delta.errorCleared ||  // Error was fixed
+            (delta.readyStateChanged && postSnapshot.readyState > preSnapshot.readyState) ||
+            (postSnapshot.bufferEnd > preSnapshot.bufferEnd + 0.1) // Buffer increased
+        );
+
+        if (!hasImprovement && !delta.pausedStateChanged) {
+            issues.push('No measurable improvement detected');
+        }
+
         return {
-            readyStateChanged: preSnapshot.readyState !== postSnapshot.readyState,
-            networkStateChanged: preSnapshot.networkState !== postSnapshot.networkState,
-            errorAppeared: !preSnapshot.error && postSnapshot.error,
-            errorCleared: preSnapshot.error && !postSnapshot.error,
-            pausedStateChanged: preSnapshot.paused !== postSnapshot.paused
+            isValid: issues.length === 0,
+            issues,
+            hasImprovement
         };
     };
 
@@ -80,20 +108,39 @@ const ResilienceOrchestrator = (() => {
                     return;
                 }
 
-                // Check for fatal errors
+                // Fatal error check (existing)
                 const { error } = video;
                 if (error && error.code === CONFIG.codes.MEDIA_ERROR_SRC) {
                     Logger.add('[RECOVERY] Fatal error (code 4) - cannot recover, waiting for Twitch reload');
                     return;
                 }
 
-                // Check buffer health
+                // NEW: Use RecoveryDiagnostics
+                const diagnosis = RecoveryDiagnostics.diagnose(video);
+                if (!diagnosis.canRecover) {
+                    Logger.add('[RECOVERY] Fatal blocker detected', diagnosis);
+                    return;
+                }
+
+                // MODIFIED: Intelligent buffer validation
                 const analysis = BufferAnalyzer.analyze(video);
-                // Removed blocking check for critical buffer to allow recovery to proceed
-                // if (!payload.forceAggressive && analysis.bufferHealth === 'critical') {
-                //    Logger.add('[RECOVERY] Insufficient buffer for recovery, waiting');
-                //    return;
-                // }
+                if (!payload.forceAggressive && analysis.bufferHealth === 'critical') {
+                    // Critical buffer means standard recovery (seeking) will fail
+                    const bufferSize = analysis.bufferSize || 0;
+
+                    if (bufferSize < 2) {
+                        Logger.add('[RECOVERY] Critical buffer - forcing aggressive recovery', {
+                            bufferSize: bufferSize.toFixed(3),
+                            bufferHealth: 'critical',
+                            rationale: 'Standard recovery requires buffer > 2s, forcing stream refresh'
+                        });
+                        payload.forceAggressive = true; // Escalate to aggressive
+                    } else {
+                        Logger.add('[RECOVERY] Insufficient buffer but acceptable for recovery', {
+                            bufferSize: bufferSize.toFixed(3)
+                        });
+                    }
+                }
 
                 // Capture pre-recovery state
                 const preSnapshot = captureVideoSnapshot(video);
@@ -115,17 +162,52 @@ const ResilienceOrchestrator = (() => {
                     currentStrategy = RecoveryStrategy.getEscalation(video, currentStrategy);
                 }
 
-                // Capture post-recovery state and calculate delta
+                // NEW: Validate recovery
                 const postSnapshot = captureVideoSnapshot(video);
                 const delta = calculateRecoveryDelta(preSnapshot, postSnapshot);
-                Logger.add('[RECOVERY] Post-recovery delta', { pre: preSnapshot, post: postSnapshot, changes: delta });
+                const recoverySuccess = validateRecoverySuccess(preSnapshot, postSnapshot, delta);
 
-                // Resume playback if needed
-                if (video.paused) {
-                    await PlayRetryHandler.retry(video, 'post-recovery');
+                Logger.add('[RECOVERY] Post-recovery result', {
+                    pre: preSnapshot,
+                    post: postSnapshot,
+                    changes: delta,
+                    success: recoverySuccess
+                });
+
+                // NEW: Conditional escalation and play retry
+                if (!recoverySuccess.isValid && !payload.forceAggressive) {
+                    Logger.add('[RECOVERY] Escalating to aggressive recovery due to validation failure');
+                    payload.forceAggressive = true;
+
+                    // Re-run recovery with aggressive strategy
+                    const aggressiveStrategy = RecoveryStrategy.select(video, payload);
+                    if (aggressiveStrategy) {
+                        await aggressiveStrategy.execute(video);
+
+                        // Re-validate after aggressive recovery
+                        const postSnapshot2 = captureVideoSnapshot(video);
+                        const delta2 = calculateRecoveryDelta(postSnapshot, postSnapshot2);
+                        const recoverySuccess2 = validateRecoverySuccess(postSnapshot, postSnapshot2, delta2);
+
+                        Logger.add('[RECOVERY] Aggressive recovery result', {
+                            success: recoverySuccess2
+                        });
+                    }
                 }
 
-                Adapters.EventBus.emit(CONFIG.events.REPORT, { status: 'SUCCESS' });
+                // Resume playback if needed AND recovery was successful
+                if (video.paused) {
+                    if (recoverySuccess.isValid) {
+                        Logger.add('[RECOVERY] Recovery validated - attempting playback');
+                        await PlayRetryHandler.retry(video, 'post-recovery');
+                    } else {
+                        Logger.add('[RECOVERY] Skipping play retry - recovery validation failed');
+                    }
+                }
+
+                Adapters.EventBus.emit(CONFIG.events.REPORT, {
+                    status: recoverySuccess.isValid ? 'SUCCESS' : 'FAILED'
+                });
             } catch (e) {
                 Logger.add('[RECOVERY] Resilience failed', { error: String(e) });
             } finally {
