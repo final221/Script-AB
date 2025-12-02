@@ -106,12 +106,16 @@
 ✅ ResilienceOrchestrator executed without error
 ✅ PASS: ResilienceOrchestrator: Recovery validation detects failures
 
+🧪 Running: FrameDropDetector: Ignores drops during normal playback
+✅ Should not trigger when video is progressing
+✅ PASS: FrameDropDetector: Ignores drops during normal playback
+
 ==================================================
-📊 Test Summary: 20 passed, 0 failed
+📊 Test Summary: 21 passed, 0 failed
 ==================================================
 
-⏱️  Duration: 11.44s
-📊 Tests: 20 total
+⏱️  Duration: 11.51s
+📊 Tests: 21 total
 📝 Logger messages: 0
 
 ✅ All tests passed!

@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       2.2.2
+// @version       2.2.3
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -40,9 +40,9 @@ const CONFIG = (() => {
             FORCE_PLAY_DEFER_MS: 1,
             REATTEMPT_DELAY_MS: 60 * 1000,
             PLAYBACK_TIMEOUT_MS: 2500,
-            FRAME_DROP_SEVERE_THRESHOLD: 15,
-            FRAME_DROP_MODERATE_THRESHOLD: 10,
-            FRAME_DROP_RATE_THRESHOLD: 1.0,
+            FRAME_DROP_SEVERE_THRESHOLD: 500,
+            FRAME_DROP_MODERATE_THRESHOLD: 100,
+            FRAME_DROP_RATE_THRESHOLD: 30,
             AV_SYNC_THRESHOLD_MS: 250,
             AV_SYNC_CHECK_INTERVAL_MS: 2000,
         },
@@ -824,12 +824,48 @@ const AVSyncDetector = (() => {
 const FrameDropDetector = (() => {
     let state = {
         lastDroppedFrames: 0,
-        lastTotalFrames: 0
+        lastTotalFrames: 0,
+        lastCurrentTime: -1,
+        lastCheckTimestamp: 0
     };
 
     const reset = () => {
         state.lastDroppedFrames = 0;
         state.lastTotalFrames = 0;
+        state.lastCurrentTime = -1;
+        state.lastCheckTimestamp = 0;
+    };
+
+    const validatePlaybackProgression = (video) => {
+        const now = Date.now();
+        const timeSinceLastCheck = now - state.lastCheckTimestamp;
+
+        // First check or reset
+        if (state.lastCurrentTime === -1) {
+            state.lastCurrentTime = video.currentTime;
+            state.lastCheckTimestamp = now;
+            return true; // Assume playing until proven otherwise
+        }
+
+        const timeAdvanced = video.currentTime - state.lastCurrentTime;
+        // Expected advance is 90% of real time to account for minor variances
+        const expectedAdvance = (timeSinceLastCheck / 1000) * 0.9;
+
+        // Update state for next check
+        state.lastCurrentTime = video.currentTime;
+        state.lastCheckTimestamp = now;
+
+        // If time advanced sufficiently, video is playing
+        if (timeAdvanced >= expectedAdvance) {
+            return true;
+        }
+
+        // Allow for seeking or buffering states
+        if (video.seeking || video.readyState < 3) {
+            return true;
+        }
+
+        return false; // Video is actually stuck
     };
 
     const check = (video) => {
@@ -863,6 +899,20 @@ const FrameDropDetector = (() => {
                 recentDropRate > CONFIG.timing.FRAME_DROP_RATE_THRESHOLD;
 
             if (exceedsSevere || exceedsModerate) {
+                // CRITICAL FIX: Validate video is actually stuck before triggering
+                const isActuallyPlaying = validatePlaybackProgression(video);
+
+                if (isActuallyPlaying) {
+                    Logger.add('[HEALTH] Frame drops detected but video is playing normally - ignoring', {
+                        dropped: newDropped,
+                        currentTime: video.currentTime
+                    });
+                    // Update baseline so we don't re-trigger on these frames
+                    state.lastDroppedFrames = quality.droppedVideoFrames;
+                    state.lastTotalFrames = quality.totalVideoFrames;
+                    return null;
+                }
+
                 const severity = exceedsSevere ? 'SEVERE' : 'MODERATE';
                 Logger.add(`[HEALTH] Frame drop threshold exceeded | Severity: ${severity}`, {
                     newDropped,
@@ -2946,24 +2996,39 @@ const ResilienceOrchestrator = (() => {
                 });
 
                 // NEW: Conditional escalation and play retry
-                if (!recoverySuccess.isValid && !payload.forceAggressive) {
-                    Logger.add('[RECOVERY] Escalating to aggressive recovery due to validation failure');
-                    payload.forceAggressive = true;
+                if (!recoverySuccess.isValid) {
+                    Logger.add('[RECOVERY] Recovery validation detected issues', recoverySuccess.issues);
 
-                    // Re-run recovery with aggressive strategy
-                    const aggressiveStrategy = RecoveryStrategy.select(video, payload);
-                    if (aggressiveStrategy) {
-                        await aggressiveStrategy.execute(video);
+                    // NEW: Check if pre-state was already healthy
+                    const wasAlreadyHealthy = preSnapshot.readyState === 4 &&
+                        !preSnapshot.paused &&
+                        !preSnapshot.error &&
+                        analysis.bufferHealth !== 'critical';
 
-                        // Re-validate after aggressive recovery
-                        const postSnapshot2 = captureVideoSnapshot(video);
-                        const delta2 = calculateRecoveryDelta(postSnapshot, postSnapshot2);
-                        const recoverySuccess2 = validateRecoverySuccess(postSnapshot, postSnapshot2, delta2);
+                    if (wasAlreadyHealthy) {
+                        Logger.add('[RECOVERY] Video was already healthy - recovery was unnecessary, canceling escalation');
+                        // Do not escalate
+                    } else if (!payload.forceAggressive) {
+                        Logger.add('[RECOVERY] Escalating to aggressive recovery due to validation failure');
+                        payload.forceAggressive = true;
 
-                        Logger.add('[RECOVERY] Aggressive recovery result', {
-                            success: recoverySuccess2
-                        });
+                        // Re-run recovery with aggressive strategy
+                        const aggressiveStrategy = RecoveryStrategy.select(video, payload);
+                        if (aggressiveStrategy) {
+                            await aggressiveStrategy.execute(video);
+
+                            // Re-validate after aggressive recovery
+                            const postSnapshot2 = captureVideoSnapshot(video);
+                            const delta2 = calculateRecoveryDelta(postSnapshot, postSnapshot2);
+                            const recoverySuccess2 = validateRecoverySuccess(postSnapshot, postSnapshot2, delta2);
+
+                            Logger.add('[RECOVERY] Aggressive recovery result', {
+                                success: recoverySuccess2
+                            });
+                        }
                     }
+                } else {
+                    Logger.add('[RECOVERY] Recovery validated successfully');
                 }
 
                 // Resume playback if needed AND recovery was successful
@@ -2991,7 +3056,6 @@ const ResilienceOrchestrator = (() => {
         }
     };
 })();
-
 
 // --- Standard Recovery ---
 /**

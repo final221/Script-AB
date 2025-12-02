@@ -6,12 +6,48 @@
 const FrameDropDetector = (() => {
     let state = {
         lastDroppedFrames: 0,
-        lastTotalFrames: 0
+        lastTotalFrames: 0,
+        lastCurrentTime: -1,
+        lastCheckTimestamp: 0
     };
 
     const reset = () => {
         state.lastDroppedFrames = 0;
         state.lastTotalFrames = 0;
+        state.lastCurrentTime = -1;
+        state.lastCheckTimestamp = 0;
+    };
+
+    const validatePlaybackProgression = (video) => {
+        const now = Date.now();
+        const timeSinceLastCheck = now - state.lastCheckTimestamp;
+
+        // First check or reset
+        if (state.lastCurrentTime === -1) {
+            state.lastCurrentTime = video.currentTime;
+            state.lastCheckTimestamp = now;
+            return true; // Assume playing until proven otherwise
+        }
+
+        const timeAdvanced = video.currentTime - state.lastCurrentTime;
+        // Expected advance is 90% of real time to account for minor variances
+        const expectedAdvance = (timeSinceLastCheck / 1000) * 0.9;
+
+        // Update state for next check
+        state.lastCurrentTime = video.currentTime;
+        state.lastCheckTimestamp = now;
+
+        // If time advanced sufficiently, video is playing
+        if (timeAdvanced >= expectedAdvance) {
+            return true;
+        }
+
+        // Allow for seeking or buffering states
+        if (video.seeking || video.readyState < 3) {
+            return true;
+        }
+
+        return false; // Video is actually stuck
     };
 
     const check = (video) => {
@@ -45,6 +81,20 @@ const FrameDropDetector = (() => {
                 recentDropRate > CONFIG.timing.FRAME_DROP_RATE_THRESHOLD;
 
             if (exceedsSevere || exceedsModerate) {
+                // CRITICAL FIX: Validate video is actually stuck before triggering
+                const isActuallyPlaying = validatePlaybackProgression(video);
+
+                if (isActuallyPlaying) {
+                    Logger.add('[HEALTH] Frame drops detected but video is playing normally - ignoring', {
+                        dropped: newDropped,
+                        currentTime: video.currentTime
+                    });
+                    // Update baseline so we don't re-trigger on these frames
+                    state.lastDroppedFrames = quality.droppedVideoFrames;
+                    state.lastTotalFrames = quality.totalVideoFrames;
+                    return null;
+                }
+
                 const severity = exceedsSevere ? 'SEVERE' : 'MODERATE';
                 Logger.add(`[HEALTH] Frame drop threshold exceeded | Severity: ${severity}`, {
                     newDropped,

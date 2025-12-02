@@ -1,92 +1,728 @@
 [METRICS]
-Uptime: 734.6s
-Ads Detected: 0
-Ads Blocked: 0
-Resilience Executions: 1
-Aggressive Recoveries: 0
-Health Triggers: 0
-Errors: 5
+Uptime: 1217.9s
+Ads Detected: 1
+Ads Blocked: 1
+Resilience Executions: 21
+Aggressive Recoveries: 21
+Health Triggers: 20
+Errors: 6
 
 [LOGS]
-[2025-12-01T20:56:44.494Z] Core initialized
-[2025-12-01T20:56:44.765Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql"}
-[2025-12-01T20:56:45.300Z] Player mounted
-[2025-12-01T20:56:45.302Z] [Logic] Signature k0 matched NEW key | {"key":"ref","totalMatches":1}
-[2025-12-01T20:56:45.302Z] Player signature found | {"id":"k0","key":"ref"}
-[2025-12-01T20:56:45.302Z] [Logic] Signature k0 matched NEW key | {"key":"shouldForwardProp","totalMatches":2}
-[2025-12-01T20:56:45.302Z] Player signature found | {"id":"k0","key":"shouldForwardProp"}
-[2025-12-01T20:56:45.302Z] [Logic] Signature k0 matched NEW key | {"key":"elementType","totalMatches":3}
-[2025-12-01T20:56:45.302Z] Player signature found | {"id":"k0","key":"elementType"}
-[2025-12-01T20:56:45.302Z] Player signature found | {"id":"k0","key":"ref"}
-[2025-12-01T20:56:45.303Z] Player signature found | {"id":"k0","key":"elementType"}
-[2025-12-01T20:56:45.303Z] [Logic] Signature k0 matched NEW key | {"key":"onContainerRefDelegate","totalMatches":10}
-[2025-12-01T20:56:45.303Z] Player signature found | {"id":"k0","key":"onContainerRefDelegate"}
-[2025-12-01T20:56:45.303Z] Player signature found | {"id":"k0","key":"elementType"}
-[2025-12-01T20:56:45.303Z] Player signature found | {"id":"k0","key":"ref"}
-[2025-12-01T20:56:45.303Z] [Logic] Signature k0 matched NEW key | {"key":"type","totalMatches":14}
-[2025-12-01T20:56:45.303Z] Player signature found | {"id":"k0","key":"type"}
-[2025-12-01T20:56:45.303Z] Player signature found | {"id":"k0","key":"ref"}
-[2025-12-01T20:56:45.303Z] [Logic] Signature k0 matched NEW key | {"key":"0","totalMatches":16}
-[2025-12-01T20:56:45.303Z] Player signature found | {"id":"k0","key":"0"}
-[2025-12-01T20:56:45.303Z] Player signature found | {"id":"k0","key":"elementType"}
-[2025-12-01T20:56:45.303Z] Player signature found | {"id":"k0","key":"type"}
-[2025-12-01T20:56:45.303Z] [Logic] Signature k0 matched NEW key | {"key":"addMessageListener","totalMatches":22}
-[2025-12-01T20:56:45.303Z] Player signature found | {"id":"k0","key":"addMessageListener"}
-[2025-12-01T20:56:45.304Z] [Logic] Signature k0 matched NEW key | {"key":"onSeek","totalMatches":23}
-[2025-12-01T20:56:45.304Z] Player signature found | {"id":"k0","key":"onSeek"}
-[2025-12-01T20:56:45.304Z] [Logic] Signature k1 matched NEW key | {"key":"onContentRestricted","totalMatches":1}
-[2025-12-01T20:56:45.304Z] Player signature found | {"id":"k1","key":"onContentRestricted"}
-[2025-12-01T20:56:45.304Z] [Logic] Signature k2 matched NEW key | {"key":"onContentRestricted","totalMatches":1}
-[2025-12-01T20:56:45.304Z] Player signature found | {"id":"k2","key":"onContentRestricted"}
-[2025-12-01T20:56:45.304Z] PlayerContext: Success | {"method":"keyword","key":"__reactFiber$y6na8hvllyc"}
-[2025-12-01T20:56:45.304Z] [LIFECYCLE] Event: ACQUIRE - Success
-[2025-12-01T20:56:45.458Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/integrity"}
-[2025-12-01T20:56:45.776Z] [LIFECYCLE] Event: ACQUIRE - Success
-[2025-12-01T20:56:46.614Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-12-01T20:56:47.006Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-12-01T20:56:47.265Z] Console Error | {"args":["[GraphQL] One or more GraphQL errors were detected on request 01KBDV893XGF57MRX8JCADDVT7. PinnedChatSettings: unauthenticated","[object Object]"],"severity":"LOW","action":"LOG_ONLY"}
-[2025-12-01T20:56:47.468Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://assets.twitch.tv/config/manifest.json?v=1"}
-[2025-12-01T20:56:48.276Z] Console Error | {"args":["[GraphQL] One or more GraphQL errors were detected on request 01KBDV8A1QBZEXQ6MWJ2J606X6. PinnedChatSettings: unauthenticated","[object Object]"],"severity":"LOW","action":"LOG_ONLY"}
-[2025-12-01T20:56:48.671Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-12-01T20:56:48.731Z] Console Error | {"args":["[GraphQL] One or more GraphQL errors were detected on request 01KBDV8AJ1C00VBMS9119JHX2G. PinnedChatSettings: unauthenticated","[object Object]"],"severity":"LOW","action":"LOG_ONLY"}
-[2025-12-01T20:56:49.427Z] Console Error | {"args":["[GraphQL] One or more GraphQL errors were detected on request 01KBDV8AZVV4E2ZVBBF4GE08V2. PinnedChatSettings: unauthenticated","[object Object]"],"severity":"LOW","action":"LOG_ONLY"}
-[2025-12-01T20:56:49.735Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-12-01T20:57:22.165Z] [HEALTH] A/V sync issue detected | {"discrepancy":"266.61ms","count":1}
-[2025-12-01T20:57:24.171Z] [HEALTH] A/V sync issue detected | {"discrepancy":"281.49ms","count":2}
-[2025-12-01T20:57:26.188Z] [HEALTH] A/V sync recovered | {"previousIssues":2}
-[2025-12-01T20:57:45.896Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-12-01T21:01:02.393Z] Playhead stalling warning detected (raw) | {"severity":"CRITICAL"}
-[2025-12-01T21:01:03.416Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-12-01T21:01:10.375Z] Console Error | {"args":["An error occurred! For more details, see the full error text at https://go.apollo.dev/c/err#%7B%22version%22%3A%223.8.7%22%2C%22message%22%3A12%2C%22args%22%3A%5B%22id%22%2C%22%7B%7D%22%5D%7D"],"severity":"MEDIUM","action":"LOG_AND_METRIC"}
-[2025-12-01T21:01:10.375Z] Console Error | {"args":["An error occurred! For more details, see the full error text at https://go.apollo.dev/c/err#%7B%22version%22%3A%223.8.7%22%2C%22message%22%3A12%2C%22args%22%3A%5B%22game%22%2C%22%7B%7D%22%5D%7D"],"severity":"MEDIUM","action":"LOG_AND_METRIC"}
-[2025-12-01T21:01:10.549Z] Console Error | {"args":["An error occurred! For more details, see the full error text at https://go.apollo.dev/c/err#%7B%22version%22%3A%223.8.7%22%2C%22message%22%3A12%2C%22args%22%3A%5B%22slug%22%2C%22%7B%5Cn%20%20%5C%22__typename%5C%22%3A%20%5C%22Game%5C%22%2C%5Cn%20%20%5C%22name%5C%22%3A%20%5C%22League%20of%20Legends%5C%22%2C%5Cn%20%20%5C%22displayName%5C%22%3A%20%5C%22League%20of%20Legends%5C%22%2C%5Cn%20%20%5C%22id%5C%22%3A%20%5C%2221779%5C%22%5Cn%7D%22%5D%7D"],"severity":"MEDIUM","action":"LOG_AND_METRIC"}
-[2025-12-01T21:01:12.407Z] Critical warning: Playhead stalling (debounced)
-[2025-12-01T21:01:12.407Z] [EVENT] AD_DETECTED | Source: UNKNOWN
-[2025-12-01T21:01:12.407Z] [RECOVERY] Resilience execution started
-[2025-12-01T21:01:12.407Z] [RECOVERY] Pre-recovery snapshot | {"readyState":3,"networkState":2,"currentTime":255.051507,"paused":true,"error":null,"bufferEnd":255.149}
-[2025-12-01T21:01:12.407Z] Recovery strategy selection | {"initialStrategy":"Standard","bufferHealth":"healthy","bufferSize":30.866000000000014,"forced":false}
-[2025-12-01T21:01:12.407Z] Executing standard recovery: seeking
-[2025-12-01T21:01:12.407Z] Standard recovery complete | {"seekTo":251.649,"bufferEnd":255.149,"telemetry":{"readyState":3,"networkState":2,"buffered":"[224.28, 255.15]"}}
-[2025-12-01T21:01:12.407Z] [RECOVERY] Post-recovery delta | {"pre":{"readyState":3,"networkState":2,"currentTime":255.051507,"paused":true,"error":null,"bufferEnd":255.149},"post":{"readyState":3,"networkState":2,"currentTime":251.649,"paused":true,"error":null,"bufferEnd":255.149},"changes":{"readyStateChanged":false,"networkStateChanged":false,"errorAppeared":null,"errorCleared":null,"pausedStateChanged":false}}
-[2025-12-01T21:01:12.407Z] Play attempt 1/3 (post-recovery) | {"before":{"paused":true,"readyState":3,"currentTime":251.649,"error":null}}
-[2025-12-01T21:01:12.982Z] Play attempt 1 FAILED: video still paused | {"context":"post-recovery","duration_ms":575}
-[2025-12-01T21:01:13.240Z] Console Error | {"args":["An error occurred! For more details, see the full error text at https://go.apollo.dev/c/err#%7B%22version%22%3A%223.8.7%22%2C%22message%22%3A12%2C%22args%22%3A%5B%22slug%22%2C%22%7B%5Cn%20%20%5C%22__typename%5C%22%3A%20%5C%22Game%5C%22%2C%5Cn%20%20%5C%22name%5C%22%3A%20%5C%22League%20of%20Legends%5C%22%2C%5Cn%20%20%5C%22displayName%5C%22%3A%20%5C%22League%20of%20Legends%5C%22%2C%5Cn%20%20%5C%22id%5C%22%3A%20%5C%2221779%5C%22%5Cn%7D%22%5D%7D"],"severity":"MEDIUM","action":"LOG_AND_METRIC"}
-[2025-12-01T21:01:13.293Z] [RECOVERY] Attempting seek-to-unstuck to 251.749 | {"context":"post-recovery"}
-[2025-12-01T21:01:13.293Z] Play attempt 2/3 (post-recovery) | {"before":{"paused":true,"readyState":4,"currentTime":251.749,"error":null}}
-[2025-12-01T21:01:13.417Z] Post-seek health check | {"currentTime":251.749,"readyState":4,"networkState":2,"paused":true,"bufferGap":"-3.400"}
-[2025-12-01T21:01:14.366Z] Play attempt 2 FAILED: video still paused | {"context":"post-recovery","duration_ms":1073}
-[2025-12-01T21:01:14.971Z] [RECOVERY] Attempting seek-to-unstuck to 251.849 | {"context":"post-recovery"}
-[2025-12-01T21:01:14.971Z] Play attempt 3/3 (post-recovery) | {"before":{"paused":true,"readyState":4,"currentTime":251.849,"error":null}}
-[2025-12-01T21:01:16.535Z] Play attempt 3 FAILED: video still paused | {"context":"post-recovery","duration_ms":1564}
-[2025-12-01T21:01:16.535Z] All play attempts exhausted. | {"context":"post-recovery"}
-[2025-12-01T21:01:16.535Z] [RECOVERY] Resilience execution finished | {"total_duration_ms":4129}
-[2025-12-01T21:01:47.468Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://assets.twitch.tv/config/manifest.json?v=1"}
-[2025-12-01T21:02:05.442Z] Console Error | {"args":["An error occurred! For more details, see the full error text at https://go.apollo.dev/c/err#%7B%22version%22%3A%223.8.7%22%2C%22message%22%3A12%2C%22args%22%3A%5B%22slug%22%2C%22%7B%5Cn%20%20%5C%22__typename%5C%22%3A%20%5C%22Game%5C%22%2C%5Cn%20%20%5C%22name%5C%22%3A%20%5C%22League%20of%20Legends%5C%22%2C%5Cn%20%20%5C%22displayName%5C%22%3A%20%5C%22League%20of%20Legends%5C%22%2C%5Cn%20%20%5C%22id%5C%22%3A%20%5C%2221779%5C%22%5Cn%7D%22%5D%7D"],"severity":"MEDIUM","action":"LOG_AND_METRIC"}
-[2025-12-01T21:02:10.423Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-12-01T21:02:46.933Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-12-01T21:07:46.973Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-12-01T21:08:38.820Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-12-01T21:08:40.180Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-12-01T21:08:44.703Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-12-01T21:08:47.849Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-12-01T21:08:55.981Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-12-02T16:15:55.421Z] Core initialized
+[2025-12-02T16:15:56.081Z] Player mounted
+[2025-12-02T16:15:56.081Z] [Logic] New player session started | {"sessionId":"session-1764692156081"}
+[2025-12-02T16:15:56.083Z] [Logic] Signature k0 key set | {"key":"ref","sessionId":"session-1764692156081","isChange":true}
+[2025-12-02T16:15:56.083Z] Player signature found | {"id":"k0","key":"ref"}
+[2025-12-02T16:15:56.084Z] [Logic] ⚠️ SIGNATURE KEY CHANGED DURING SESSION | {"timestamp":1764692156084,"signatureId":"k0","oldKey":"ref","newKey":"shouldForwardProp","timeSinceMount":3}
+[2025-12-02T16:15:56.084Z] [Logic] Signature k0 key set | {"key":"shouldForwardProp","sessionId":"session-1764692156081","isChange":true}
+[2025-12-02T16:15:56.084Z] Player signature found | {"id":"k0","key":"shouldForwardProp"}
+[2025-12-02T16:15:56.084Z] [Logic] ⚠️ SIGNATURE KEY CHANGED DURING SESSION | {"timestamp":1764692156084,"signatureId":"k0","oldKey":"shouldForwardProp","newKey":"elementType","timeSinceMount":3}
+[2025-12-02T16:15:56.084Z] [Logic] Signature k0 key set | {"key":"elementType","sessionId":"session-1764692156081","isChange":true}
+[2025-12-02T16:15:56.084Z] Player signature found | {"id":"k0","key":"elementType"}
+[2025-12-02T16:15:56.084Z] [Logic] ⚠️ SIGNATURE KEY CHANGED DURING SESSION | {"timestamp":1764692156084,"signatureId":"k0","oldKey":"elementType","newKey":"ref","timeSinceMount":3}
+[2025-12-02T16:15:56.084Z] [Logic] Signature k0 key set | {"key":"ref","sessionId":"session-1764692156081","isChange":true}
+[2025-12-02T16:15:56.084Z] Player signature found | {"id":"k0","key":"ref"}
+[2025-12-02T16:15:56.084Z] [Logic] ⚠️ SIGNATURE KEY CHANGED DURING SESSION | {"timestamp":1764692156084,"signatureId":"k0","oldKey":"ref","newKey":"elementType","timeSinceMount":3}
+[2025-12-02T16:15:56.084Z] [Logic] Signature k0 key set | {"key":"elementType","sessionId":"session-1764692156081","isChange":true}
+[2025-12-02T16:15:56.084Z] Player signature found | {"id":"k0","key":"elementType"}
+[2025-12-02T16:15:56.084Z] [Logic] ⚠️ SIGNATURE KEY CHANGED DURING SESSION | {"timestamp":1764692156084,"signatureId":"k0","oldKey":"elementType","newKey":"onContainerRefDelegate","timeSinceMount":3}
+[2025-12-02T16:15:56.084Z] [Logic] Signature k0 key set | {"key":"onContainerRefDelegate","sessionId":"session-1764692156081","isChange":true}
+[2025-12-02T16:15:56.084Z] Player signature found | {"id":"k0","key":"onContainerRefDelegate"}
+[2025-12-02T16:15:56.084Z] [Logic] ⚠️ SIGNATURE KEY CHANGED DURING SESSION | {"timestamp":1764692156084,"signatureId":"k0","oldKey":"onContainerRefDelegate","newKey":"elementType","timeSinceMount":3}
+[2025-12-02T16:15:56.084Z] [Logic] Signature k0 key set | {"key":"elementType","sessionId":"session-1764692156081","isChange":true}
+[2025-12-02T16:15:56.084Z] Player signature found | {"id":"k0","key":"elementType"}
+[2025-12-02T16:15:56.084Z] [Logic] ⚠️ SIGNATURE KEY CHANGED DURING SESSION | {"timestamp":1764692156084,"signatureId":"k0","oldKey":"elementType","newKey":"ref","timeSinceMount":3}
+[2025-12-02T16:15:56.084Z] [Logic] Signature k0 key set | {"key":"ref","sessionId":"session-1764692156081","isChange":true}
+[2025-12-02T16:15:56.084Z] Player signature found | {"id":"k0","key":"ref"}
+[2025-12-02T16:15:56.084Z] [Logic] ⚠️ SIGNATURE KEY CHANGED DURING SESSION | {"timestamp":1764692156084,"signatureId":"k0","oldKey":"ref","newKey":"type","timeSinceMount":3}
+[2025-12-02T16:15:56.084Z] [Logic] Signature k0 key set | {"key":"type","sessionId":"session-1764692156081","isChange":true}
+[2025-12-02T16:15:56.084Z] Player signature found | {"id":"k0","key":"type"}
+[2025-12-02T16:15:56.084Z] [Logic] ⚠️ SIGNATURE KEY CHANGED DURING SESSION | {"timestamp":1764692156084,"signatureId":"k0","oldKey":"type","newKey":"ref","timeSinceMount":3}
+[2025-12-02T16:15:56.084Z] [Logic] Signature k0 key set | {"key":"ref","sessionId":"session-1764692156081","isChange":true}
+[2025-12-02T16:15:56.084Z] Player signature found | {"id":"k0","key":"ref"}
+[2025-12-02T16:15:56.084Z] [Logic] ⚠️ SIGNATURE KEY CHANGED DURING SESSION | {"timestamp":1764692156084,"signatureId":"k0","oldKey":"ref","newKey":"0","timeSinceMount":3}
+[2025-12-02T16:15:56.084Z] [Logic] Signature k0 key set | {"key":"0","sessionId":"session-1764692156081","isChange":true}
+[2025-12-02T16:15:56.084Z] Player signature found | {"id":"k0","key":"0"}
+[2025-12-02T16:15:56.084Z] [Logic] ⚠️ SIGNATURE KEY CHANGED DURING SESSION | {"timestamp":1764692156084,"signatureId":"k0","oldKey":"0","newKey":"elementType","timeSinceMount":3}
+[2025-12-02T16:15:56.084Z] [Logic] Signature k0 key set | {"key":"elementType","sessionId":"session-1764692156081","isChange":true}
+[2025-12-02T16:15:56.084Z] Player signature found | {"id":"k0","key":"elementType"}
+[2025-12-02T16:15:56.085Z] [Logic] ⚠️ SIGNATURE KEY CHANGED DURING SESSION | {"timestamp":1764692156085,"signatureId":"k0","oldKey":"elementType","newKey":"type","timeSinceMount":4}
+[2025-12-02T16:15:56.085Z] [Logic] Signature k0 key set | {"key":"type","sessionId":"session-1764692156081","isChange":true}
+[2025-12-02T16:15:56.085Z] Player signature found | {"id":"k0","key":"type"}
+[2025-12-02T16:15:56.085Z] [Logic] ⚠️ SIGNATURE KEY CHANGED DURING SESSION | {"timestamp":1764692156085,"signatureId":"k0","oldKey":"type","newKey":"addMessageListener","timeSinceMount":4}
+[2025-12-02T16:15:56.085Z] [Logic] Signature k0 key set | {"key":"addMessageListener","sessionId":"session-1764692156081","isChange":true}
+[2025-12-02T16:15:56.085Z] Player signature found | {"id":"k0","key":"addMessageListener"}
+[2025-12-02T16:15:56.085Z] [Logic] ⚠️ SIGNATURE KEY CHANGED DURING SESSION | {"timestamp":1764692156085,"signatureId":"k0","oldKey":"addMessageListener","newKey":"onSeek","timeSinceMount":4}
+[2025-12-02T16:15:56.085Z] [Logic] Signature k0 key set | {"key":"onSeek","sessionId":"session-1764692156081","isChange":true}
+[2025-12-02T16:15:56.085Z] Player signature found | {"id":"k0","key":"onSeek"}
+[2025-12-02T16:15:56.085Z] [Logic] Signature k1 key set | {"key":"onContentRestricted","sessionId":"session-1764692156081","isChange":true}
+[2025-12-02T16:15:56.085Z] Player signature found | {"id":"k1","key":"onContentRestricted"}
+[2025-12-02T16:15:56.085Z] [Logic] Signature k2 key set | {"key":"onContentRestricted","sessionId":"session-1764692156081","isChange":true}
+[2025-12-02T16:15:56.085Z] Player signature found | {"id":"k2","key":"onContentRestricted"}
+[2025-12-02T16:15:56.085Z] PlayerContext: Success | {"method":"keyword","key":"__reactFiber$6adwa2i32zo"}
+[2025-12-02T16:15:56.085Z] [LIFECYCLE] Event: ACQUIRE - Success
+[2025-12-02T16:15:56.704Z] [LIFECYCLE] Event: ACQUIRE - Success
+[2025-12-02T16:15:57.421Z] Player unmounted
+[2025-12-02T16:15:57.421Z] [Logic] Player session ended | {"sessionId":"session-1764692156081","duration":1340,"finalKeys":{"k0":"onSeek","k1":"onContentRestricted","k2":"onContentRestricted"},"keyChanges":14}
+[2025-12-02T16:15:57.421Z] [Logic] ⚠️ ALERT: Signature keys changed during session | {"sessionId":"session-1764692156081","changes":[{"timestamp":1764692156084,"signatureId":"k0","oldKey":"ref","newKey":"shouldForwardProp","timeSinceMount":3},{"timestamp":1764692156084,"signatureId":"k0","oldKey":"shouldForwardProp","newKey":"elementType","timeSinceMount":3},{"timestamp":1764692156084,"signatureId":"k0","oldKey":"elementType","newKey":"ref","timeSinceMount":3},{"timestamp":1764692156084,"signatureId":"k0","oldKey":"ref","newKey":"elementType","timeSinceMount":3},{"timestamp":1764692156084,"signatureId":"k0","oldKey":"elementType","newKey":"onContainerRefDelegate","timeSinceMount":3},{"timestamp":1764692156084,"signatureId":"k0","oldKey":"onContainerRefDelegate","newKey":"elementType","timeSinceMount":3},{"timestamp":1764692156084,"signatureId":"k0","oldKey":"elementType","newKey":"ref","timeSinceMount":3},{"timestamp":1764692156084,"signatureId":"k0","oldKey":"ref","newKey":"type","timeSinceMount":3},{"timestamp":1764692156084,"signatureId":"k0","oldKey":"type","newKey":"ref","timeSinceMount":3},{"timestamp":1764692156084,"signatureId":"k0","oldKey":"ref","newKey":"0","timeSinceMount":3},{"timestamp":1764692156084,"signatureId":"k0","oldKey":"0","newKey":"elementType","timeSinceMount":3},{"timestamp":1764692156085,"signatureId":"k0","oldKey":"elementType","newKey":"type","timeSinceMount":4},{"timestamp":1764692156085,"signatureId":"k0","oldKey":"type","newKey":"addMessageListener","timeSinceMount":4},{"timestamp":1764692156085,"signatureId":"k0","oldKey":"addMessageListener","newKey":"onSeek","timeSinceMount":4}]}
+[2025-12-02T16:15:57.797Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-12-02T16:15:58.324Z] Console Error | {"args":["[GraphQL] One or more GraphQL errors were detected on request 01KBFXJT0MFV16J2SHF8N921TA. PinnedChatSettings: unauthenticated","[object Object]"],"severity":"LOW","action":"LOG_ONLY"}
+[2025-12-02T16:15:58.875Z] Player mounted
+[2025-12-02T16:15:58.875Z] [Logic] New player session started | {"sessionId":"session-1764692158875"}
+[2025-12-02T16:15:58.879Z] [Logic] Signature k0 key set | {"key":"ref","sessionId":"session-1764692158875","isChange":true}
+[2025-12-02T16:15:58.879Z] Player signature found | {"id":"k0","key":"ref"}
+[2025-12-02T16:15:58.879Z] [Logic] ⚠️ SIGNATURE KEY CHANGED DURING SESSION | {"timestamp":1764692158879,"signatureId":"k0","oldKey":"ref","newKey":"shouldForwardProp","timeSinceMount":4}
+[2025-12-02T16:15:58.879Z] [Logic] Signature k0 key set | {"key":"shouldForwardProp","sessionId":"session-1764692158875","isChange":true}
+[2025-12-02T16:15:58.879Z] Player signature found | {"id":"k0","key":"shouldForwardProp"}
+[2025-12-02T16:15:58.880Z] [Logic] ⚠️ SIGNATURE KEY CHANGED DURING SESSION | {"timestamp":1764692158880,"signatureId":"k0","oldKey":"shouldForwardProp","newKey":"elementType","timeSinceMount":5}
+[2025-12-02T16:15:58.880Z] [Logic] Signature k0 key set | {"key":"elementType","sessionId":"session-1764692158875","isChange":true}
+[2025-12-02T16:15:58.880Z] Player signature found | {"id":"k0","key":"elementType"}
+[2025-12-02T16:15:58.881Z] [Logic] ⚠️ SIGNATURE KEY CHANGED DURING SESSION | {"timestamp":1764692158881,"signatureId":"k0","oldKey":"elementType","newKey":"ref","timeSinceMount":6}
+[2025-12-02T16:15:58.881Z] [Logic] Signature k0 key set | {"key":"ref","sessionId":"session-1764692158875","isChange":true}
+[2025-12-02T16:15:58.881Z] Player signature found | {"id":"k0","key":"ref"}
+[2025-12-02T16:15:58.881Z] [Logic] ⚠️ SIGNATURE KEY CHANGED DURING SESSION | {"timestamp":1764692158881,"signatureId":"k0","oldKey":"ref","newKey":"elementType","timeSinceMount":6}
+[2025-12-02T16:15:58.881Z] [Logic] Signature k0 key set | {"key":"elementType","sessionId":"session-1764692158875","isChange":true}
+[2025-12-02T16:15:58.881Z] Player signature found | {"id":"k0","key":"elementType"}
+[2025-12-02T16:15:58.881Z] [Logic] Signature k1 key set | {"key":"elementType","sessionId":"session-1764692158875","isChange":true}
+[2025-12-02T16:15:58.881Z] Player signature found | {"id":"k1","key":"elementType"}
+[2025-12-02T16:15:58.881Z] [Logic] Signature k2 key set | {"key":"elementType","sessionId":"session-1764692158875","isChange":true}
+[2025-12-02T16:15:58.881Z] Player signature found | {"id":"k2","key":"elementType"}
+[2025-12-02T16:15:58.881Z] PlayerContext: Success | {"method":"keyword","key":"__reactFiber$6adwa2i32zo"}
+[2025-12-02T16:15:58.881Z] [LIFECYCLE] Event: ACQUIRE - Success
+[2025-12-02T16:15:59.130Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-12-02T16:15:59.385Z] [LIFECYCLE] Event: ACQUIRE - Success
+[2025-12-02T16:15:59.552Z] Console Error | {"args":["[GraphQL] One or more GraphQL errors were detected on request 01KBFXJV7MT4NPSZX0NJ9FZHQD. PinnedChatSettings: unauthenticated","[object Object]"],"severity":"LOW","action":"LOG_ONLY"}
+[2025-12-02T16:16:00.137Z] Console Error | {"args":["[GraphQL] One or more GraphQL errors were detected on request 01KBFXJVVNVP3XJ0QMJ59NM3R2. PinnedChatSettings: unauthenticated","[object Object]"],"severity":"LOW","action":"LOG_ONLY"}
+[2025-12-02T16:16:00.603Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-12-02T16:16:00.666Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-12-02T16:16:00.810Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-12-02T16:16:01.059Z] [NETWORK] Trigger pattern detected | Category: Availability Check | {"type":"XHR","url":"https://edge.ads.twitch.tv/2018-01-01/3p/ads?rt=vast3&dur=30&geoc=DE&dt=2&pid=935700912741764692161059&cb=183401&ws=1920x927&u=https%3A%2F%2Fwww.twitch.tv%2Flol_nemesis&slots=%5B%7B%22id%22%3A%22twitch-player-ui%22%2C%22mt%22%3A%22v%22%2C%22kv%22%3A%7B%7D%2C%22s%22%3A%22640x480%22%7D%5D&pj=%7B%22game%22%3A%22league_of_legends%22%2C%22chan%22%3A%22caedrel%22%2C%22chanid%22%3A%2292038375%22%2C%22twitchcorrelator%22%3A%223VhbzmhzlUzkj6VFA2Mb4nyg9Ar8LDEe%22%2C%22ad_session_id%22%3A%223VhbzmhzlUzkj6VFA2Mb4nyg9Ar8LDEe%22%2C%22embed%22%3A%22false%22%2C%22platform%22%3A%22web%22%2C%22mature%22%3A%22false%22%2C%22pos%22%3A%221%22%2C%22timebreak%22%3A%2230%22%2C%22tag%22%3A%22%22%2C%22content_labels%22%3A%22%22%2C%22chantype%22%3A%22partner%22%2C%22delivery_type%22%3A%22csai%22%2C%22vb%22%3A%22null%22%2C%22adunit%22%3A%22web_csai%22%2C%22loggedin%22%3A%22false%22%2C%22v%22%3A%22ARCHIVE%22%2C%22vod_type%22%3A%22undefined%22%2C%22embed_url%22%3A%22null%22%2C%22game_id%22%3A%2221779%22%2C%22user_lang%22%3A%22en%22%7D&gdprl=%7B%22status%22%3A%22cmp%22%7D&pbid=twitch&bp=preroll&aid=MyJILP1jfuUz2VBuUB2ZPajiR0aXfrYe&ulang=en","isDelivery":false}
+[2025-12-02T16:16:01.060Z] Ad request blocked (XHR) | {}
+[2025-12-02T16:16:01.126Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-12-02T16:16:01.809Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-12-02T16:16:02.220Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-12-02T16:16:02.339Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-12-02T16:16:02.491Z] Console Error | {"args":["[GraphQL] One or more GraphQL errors were detected on request 01KBFXJXV8Z4JPDXGNFKM16CGG. PinnedChatSettings: unauthenticated","[object Object]"],"severity":"LOW","action":"LOG_ONLY"}
+[2025-12-02T16:16:06.238Z] [HEALTH] A/V sync issue detected | {"discrepancy":"929.67ms","count":1}
+[2025-12-02T16:16:08.240Z] [HEALTH] A/V sync recovered | {"previousIssues":1}
+[2025-12-02T16:16:49.277Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-12-02T16:17:00.348Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-12-02T16:17:02.948Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-12-02T16:18:49.946Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-12-02T16:19:51.361Z] [HEALTH] Frame drop detected | {"newDropped":1,"newTotal":71,"recentDropRate":"1.41%"}
+[2025-12-02T16:20:49.117Z] Playhead stalling warning detected (raw) | {"severity":"CRITICAL"}
+[2025-12-02T16:20:49.934Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-12-02T16:20:53.588Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-12-02T16:20:59.126Z] Critical warning: Playhead stalling (debounced)
+[2025-12-02T16:20:59.126Z] [EVENT] AD_DETECTED | Source: UNKNOWN
+[2025-12-02T16:20:59.126Z] [RECOVERY] Resilience execution started
+[2025-12-02T16:20:59.126Z] [DIAGNOSTICS] Insufficient data | {"readyState":2}
+[2025-12-02T16:20:59.126Z] [RECOVERY] Pre-recovery snapshot | {"readyState":2,"networkState":2,"currentTime":284.017,"paused":true,"error":null,"bufferEnd":284.003999}
+[2025-12-02T16:20:59.126Z] Recovery strategy selection | {"initialStrategy":"Standard","bufferHealth":"healthy","bufferSize":29.970999000000035,"forced":false}
+[2025-12-02T16:20:59.126Z] Executing standard recovery: seeking
+[2025-12-02T16:20:59.127Z] Standard recovery complete | {"seekTo":280.503999,"bufferEnd":284.003999,"telemetry":{"readyState":2,"networkState":2,"buffered":"[254.03, 284.00]"}}
+[2025-12-02T16:20:59.127Z] [RECOVERY] Post-recovery result | {"pre":{"readyState":2,"networkState":2,"currentTime":284.017,"paused":true,"error":null,"bufferEnd":284.003999},"post":{"readyState":2,"networkState":2,"currentTime":280.503999,"paused":true,"error":null,"bufferEnd":284.003999},"changes":{"readyStateChanged":false,"networkStateChanged":false,"currentTimeChanged":true,"pausedStateChanged":false,"errorCleared":null,"errorAppeared":null,"bufferIncreased":false},"success":{"isValid":false,"issues":["No measurable improvement detected"],"hasImprovement":false}}
+[2025-12-02T16:20:59.127Z] [RECOVERY] Escalating to aggressive recovery due to validation failure
+[2025-12-02T16:20:59.127Z] Executing aggressive recovery: waiting for player to stabilize
+[2025-12-02T16:20:59.127Z] Aggressive recovery telemetry | {"strategy":"PASSIVE_WAIT","url":"blob:https://www.twitch.tv/cae10342-a0a1-4af6-a5f1-b90eafb75757","isBlobUrl":true,"telemetry":{"readyState":2,"networkState":2,"currentTime":280.503999,"paused":true,"error":null,"bufferEnd":284.003999}}
+[2025-12-02T16:20:59.636Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-12-02T16:20:59.727Z] Recovery: readyState transition | {"from":1,"to":4,"elapsed_ms":"600"}
+[2025-12-02T16:20:59.727Z] Player stabilized successfully | {"duration_ms":"600","finalReadyState":4,"totalChecks":5}
+[2025-12-02T16:20:59.727Z] [RECOVERY] Aggressive recovery result | {"success":{"isValid":true,"issues":[],"hasImprovement":true}}
+[2025-12-02T16:20:59.727Z] [RECOVERY] Skipping play retry - recovery validation failed
+[2025-12-02T16:20:59.727Z] [RECOVERY] Resilience execution finished | {"total_duration_ms":601}
+[2025-12-02T16:20:59.727Z] [HEALTH] Recovery completed, resuming monitoring
+[2025-12-02T16:20:59.727Z] [HEALTH] Recovery completed, resuming monitoring
+[2025-12-02T16:21:00.141Z] Post-seek health check | {"currentTime":280.881605,"readyState":4,"networkState":2,"paused":false,"bufferGap":"-3.122"}
+[2025-12-02T16:21:01.341Z] [HEALTH] A/V sync issue detected | {"discrepancy":"14168.83ms","count":1}
+[2025-12-02T16:21:04.354Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-12-02T16:21:06.719Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-12-02T16:21:07.548Z] [HEALTH] A/V sync recovered | {"previousIssues":1}
+[2025-12-02T16:21:08.283Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-12-02T16:21:09.711Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-12-02T16:21:52.674Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-12-02T16:24:01.091Z] Console Error | {"args":["An error occurred! For more details, see the full error text at https://go.apollo.dev/c/err#%7B%22version%22%3A%223.8.7%22%2C%22message%22%3A12%2C%22args%22%3A%5B%22treasureTrainDetails%22%2C%22%7B%5Cn%20%20%5C%22__typename%5C%22%3A%20%5C%22HypeTrainApproaching%5C%22%2C%5Cn%20%20%5C%22id%5C%22%3A%20%5C%2286131599%5C%22%2C%5Cn%20%20%5C%22goal%5C%22%3A%203%2C%5Cn%20%20%5C%22creatorColor%5C%22%3A%20%5C%22%5C%22%2C%5Cn%20%20%5C%22participants%5C%22%3A%20%5B%5Cn%20%20%20%20%5C%22464549561%5C%22%2C%5Cn%20%20%20%20%5C%22587725415%5C%22%5Cn%20%20%5D%2C%5Cn%20%20%5C%22isGoldenKappaTrain%5C%22%3A%20false%2C%5Cn%20%20%5C%22eventsRemaining%5C%22%3A%20%5B%5Cn%20%20%20%20%7B%5Cn%20%20%20%20%20%20%5C%22__typename%5C%22%3A%20%5C%22HypeTrainApproachingEventsRemaining%5C%22%2C%5Cn%20%20%20%20%20%20%5C%22events%5C%22%3A%201%2C%5Cn%20%20%20%20%20%20%5C%22secondsRemaining%5C%22%3A%20259%5Cn%20%20%20%20%7D%5Cn%20%20%5D%2C%5Cn%20%20%5C%22levelOneRewards%5C%22%3A%20%5B%5Cn%20%20%20%20%7B%5Cn%20%20%20%20%20%20%5C%22__typename%5C%22%3A%20%5C%22HypeTrainEmoteReward%5C%22%2C%5Cn%20%20%20%20%20%20%5C%22id%5C%22%3A%20%5C%22emotesv2_bbbf6d16d9964fcbba2d965a7eea942f%5C%22%2C%5Cn%20%20%20%20%20%20%5C%22type%5C%22%3A%20%5C%22EMOTE%5C%22%2C%5Cn%20%20%20%20%20%20%5C%22emote%5C%22%3A%20%7B%5Cn%20%20%20%20%20%20%20%20%5C%22__typename%5C%22%3A%20%5C%22Emote%5C%22%2C%5Cn%20%20%20%20%20%20%20%20%5C%22id%5C%22%3A%20%5C%22emotesv2_bbbf6d16d9964fcbba2d965a7eea942f%5C%22%2C%5Cn%20%20%20%20%20%20%20%20%5C%22token%5C%22%3A%20%5C%22ConfettiHype%5C%22%5Cn%20%20%20%20%20%20%7D%5Cn%20%20%20%20%7D%2C%5Cn%20%20%20%20%7B%5Cn%20%20%20%20%20%20%5C%22__typename%5C%22%3A%20%5C%22HypeTrainEmoteReward%5C%22%2C%5Cn%20%20%20%20%20%20%5C%22id%5C%22%3A%20%5C%22emotesv2_a3cdcbfcae9b41bb8215b012362eea35%5C%22%2C%5Cn%20%20%20%20%20%20%5C%22type%5C%22%3A%20%5C%22EMOTE%5C%22%2C%5Cn%20%20%20%20%20%20%5C%22emote%5C%22%3A%20%7B%5Cn%20%20%20%20%20%20%20%20%5C%22__typename%5C%22%3A%20%5C%22Emote%5C%22%2C%5Cn%20%20%20%20%20%20%20%20%5C%22id%5C%22%3A%20%5C%22emotesv2_a3cdcbfcae9b41bb8215b012362eea35%5C%22%2C%5Cn%20%20%20%20%20%20%20%20%5C%22token%5C%22%3A%20%5C%22FrogPonder%5C%22%5Cn%20%20%20%20%20%20%7D%5Cn%20%20%20%20%7D%2C%5Cn%20%20%20%20%7B%5Cn%20%20%20%20%20%20%5C%22__typename%5C%22%3A%20%5C%22HypeTrainEmoteReward%5C%22%2C%5Cn%20%20%20%20%20%20%5C%22id%5C%22%3A%20%5C%22emotesv2_7fa0b%22%5D%7D"],"severity":"MEDIUM","action":"LOG_AND_METRIC"}
+[2025-12-02T16:24:01.134Z] Console Error | {"args":["An error occurred! For more details, see the full error text at https://go.apollo.dev/c/err#%7B%22version%22%3A%223.8.7%22%2C%22message%22%3A12%2C%22args%22%3A%5B%22treasureTrainDetails%22%2C%22%7B%5Cn%20%20%5C%22__typename%5C%22%3A%20%5C%22HypeTrainApproaching%5C%22%2C%5Cn%20%20%5C%22id%5C%22%3A%20%5C%2286131599%5C%22%2C%5Cn%20%20%5C%22goal%5C%22%3A%203%2C%5Cn%20%20%5C%22creatorColor%5C%22%3A%20%5C%22%5C%22%2C%5Cn%20%20%5C%22participants%5C%22%3A%20%5B%5Cn%20%20%20%20%5C%22464549561%5C%22%2C%5Cn%20%20%20%20%5C%22587725415%5C%22%5Cn%20%20%5D%2C%5Cn%20%20%5C%22isGoldenKappaTrain%5C%22%3A%20false%2C%5Cn%20%20%5C%22eventsRemaining%5C%22%3A%20%5B%5Cn%20%20%20%20%7B%5Cn%20%20%20%20%20%20%5C%22__typename%5C%22%3A%20%5C%22HypeTrainApproachingEventsRemaining%5C%22%2C%5Cn%20%20%20%20%20%20%5C%22events%5C%22%3A%201%2C%5Cn%20%20%20%20%20%20%5C%22secondsRemaining%5C%22%3A%20259%5Cn%20%20%20%20%7D%5Cn%20%20%5D%2C%5Cn%20%20%5C%22levelOneRewards%5C%22%3A%20%5B%5Cn%20%20%20%20%7B%5Cn%20%20%20%20%20%20%5C%22__typename%5C%22%3A%20%5C%22HypeTrainEmoteReward%5C%22%2C%5Cn%20%20%20%20%20%20%5C%22id%5C%22%3A%20%5C%22emotesv2_bbbf6d16d9964fcbba2d965a7eea942f%5C%22%2C%5Cn%20%20%20%20%20%20%5C%22type%5C%22%3A%20%5C%22EMOTE%5C%22%2C%5Cn%20%20%20%20%20%20%5C%22emote%5C%22%3A%20%7B%5Cn%20%20%20%20%20%20%20%20%5C%22__typename%5C%22%3A%20%5C%22Emote%5C%22%2C%5Cn%20%20%20%20%20%20%20%20%5C%22id%5C%22%3A%20%5C%22emotesv2_bbbf6d16d9964fcbba2d965a7eea942f%5C%22%2C%5Cn%20%20%20%20%20%20%20%20%5C%22token%5C%22%3A%20%5C%22ConfettiHype%5C%22%5Cn%20%20%20%20%20%20%7D%5Cn%20%20%20%20%7D%2C%5Cn%20%20%20%20%7B%5Cn%20%20%20%20%20%20%5C%22__typename%5C%22%3A%20%5C%22HypeTrainEmoteReward%5C%22%2C%5Cn%20%20%20%20%20%20%5C%22id%5C%22%3A%20%5C%22emotesv2_a3cdcbfcae9b41bb8215b012362eea35%5C%22%2C%5Cn%20%20%20%20%20%20%5C%22type%5C%22%3A%20%5C%22EMOTE%5C%22%2C%5Cn%20%20%20%20%20%20%5C%22emote%5C%22%3A%20%7B%5Cn%20%20%20%20%20%20%20%20%5C%22__typename%5C%22%3A%20%5C%22Emote%5C%22%2C%5Cn%20%20%20%20%20%20%20%20%5C%22id%5C%22%3A%20%5C%22emotesv2_a3cdcbfcae9b41bb8215b012362eea35%5C%22%2C%5Cn%20%20%20%20%20%20%20%20%5C%22token%5C%22%3A%20%5C%22FrogPonder%5C%22%5Cn%20%20%20%20%20%20%7D%5Cn%20%20%20%20%7D%2C%5Cn%20%20%20%20%7B%5Cn%20%20%20%20%20%20%5C%22__typename%5C%22%3A%20%5C%22HypeTrainEmoteReward%5C%22%2C%5Cn%20%20%20%20%20%20%5C%22id%5C%22%3A%20%5C%22emotesv2_7fa0b%22%5D%7D"],"severity":"MEDIUM","action":"LOG_AND_METRIC"}
+[2025-12-02T16:24:01.151Z] Console Error | {"args":["An error occurred! For more details, see the full error text at https://go.apollo.dev/c/err#%7B%22version%22%3A%223.8.7%22%2C%22message%22%3A12%2C%22args%22%3A%5B%22treasureTrainDetails%22%2C%22%7B%5Cn%20%20%5C%22__typename%5C%22%3A%20%5C%22HypeTrainApproaching%5C%22%2C%5Cn%20%20%5C%22id%5C%22%3A%20%5C%2286131599%5C%22%2C%5Cn%20%20%5C%22goal%5C%22%3A%203%2C%5Cn%20%20%5C%22creatorColor%5C%22%3A%20%5C%22%5C%22%2C%5Cn%20%20%5C%22participants%5C%22%3A%20%5B%5Cn%20%20%20%20%5C%22464549561%5C%22%2C%5Cn%20%20%20%20%5C%22587725415%5C%22%5Cn%20%20%5D%2C%5Cn%20%20%5C%22isGoldenKappaTrain%5C%22%3A%20false%2C%5Cn%20%20%5C%22eventsRemaining%5C%22%3A%20%5B%5Cn%20%20%20%20%7B%5Cn%20%20%20%20%20%20%5C%22__typename%5C%22%3A%20%5C%22HypeTrainApproachingEventsRemaining%5C%22%2C%5Cn%20%20%20%20%20%20%5C%22events%5C%22%3A%201%2C%5Cn%20%20%20%20%20%20%5C%22secondsRemaining%5C%22%3A%20259%5Cn%20%20%20%20%7D%5Cn%20%20%5D%2C%5Cn%20%20%5C%22levelOneRewards%5C%22%3A%20%5B%5Cn%20%20%20%20%7B%5Cn%20%20%20%20%20%20%5C%22__typename%5C%22%3A%20%5C%22HypeTrainEmoteReward%5C%22%2C%5Cn%20%20%20%20%20%20%5C%22id%5C%22%3A%20%5C%22emotesv2_bbbf6d16d9964fcbba2d965a7eea942f%5C%22%2C%5Cn%20%20%20%20%20%20%5C%22type%5C%22%3A%20%5C%22EMOTE%5C%22%2C%5Cn%20%20%20%20%20%20%5C%22emote%5C%22%3A%20%7B%5Cn%20%20%20%20%20%20%20%20%5C%22__typename%5C%22%3A%20%5C%22Emote%5C%22%2C%5Cn%20%20%20%20%20%20%20%20%5C%22id%5C%22%3A%20%5C%22emotesv2_bbbf6d16d9964fcbba2d965a7eea942f%5C%22%2C%5Cn%20%20%20%20%20%20%20%20%5C%22token%5C%22%3A%20%5C%22ConfettiHype%5C%22%5Cn%20%20%20%20%20%20%7D%5Cn%20%20%20%20%7D%2C%5Cn%20%20%20%20%7B%5Cn%20%20%20%20%20%20%5C%22__typename%5C%22%3A%20%5C%22HypeTrainEmoteReward%5C%22%2C%5Cn%20%20%20%20%20%20%5C%22id%5C%22%3A%20%5C%22emotesv2_a3cdcbfcae9b41bb8215b012362eea35%5C%22%2C%5Cn%20%20%20%20%20%20%5C%22type%5C%22%3A%20%5C%22EMOTE%5C%22%2C%5Cn%20%20%20%20%20%20%5C%22emote%5C%22%3A%20%7B%5Cn%20%20%20%20%20%20%20%20%5C%22__typename%5C%22%3A%20%5C%22Emote%5C%22%2C%5Cn%20%20%20%20%20%20%20%20%5C%22id%5C%22%3A%20%5C%22emotesv2_a3cdcbfcae9b41bb8215b012362eea35%5C%22%2C%5Cn%20%20%20%20%20%20%20%20%5C%22token%5C%22%3A%20%5C%22FrogPonder%5C%22%5Cn%20%20%20%20%20%20%7D%5Cn%20%20%20%20%7D%2C%5Cn%20%20%20%20%7B%5Cn%20%20%20%20%20%20%5C%22__typename%5C%22%3A%20%5C%22HypeTrainEmoteReward%5C%22%2C%5Cn%20%20%20%20%20%20%5C%22id%5C%22%3A%20%5C%22emotesv2_7fa0b%22%5D%7D"],"severity":"MEDIUM","action":"LOG_AND_METRIC"}
+[2025-12-02T16:24:49.960Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-12-02T16:25:52.930Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-12-02T16:26:01.408Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-12-02T16:26:22.863Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-12-02T16:26:49.944Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-12-02T16:27:01.410Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-12-02T16:29:52.683Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-12-02T16:30:30.569Z] [HEALTH] Frame drop detected | {"newDropped":2,"newTotal":120,"recentDropRate":"1.67%"}
+[2025-12-02T16:30:51.753Z] [HEALTH] Frame drop detected | {"newDropped":956,"newTotal":960,"recentDropRate":"99.58%"}
+[2025-12-02T16:30:51.753Z] [HEALTH] Frame drop threshold exceeded | Severity: SEVERE | {"newDropped":956,"threshold":15,"recentDropRate":99.58333333333333}
+[2025-12-02T16:30:51.753Z] [HEALTH] Recovery trigger | Reason: SEVERE frame drop, Type: FRAME_DROP | {"newDropped":956,"newTotal":960,"recentDropRate":99.58333333333333,"severity":"SEVERE"}
+[2025-12-02T16:30:51.753Z] [HEALTH] Monitoring paused
+[2025-12-02T16:30:51.753Z] [EVENT] AD_DETECTED | Source: HEALTH | Trigger: FRAME_DROP | Reason: SEVERE frame drop | {"newDropped":956,"newTotal":960,"recentDropRate":99.58333333333333,"severity":"SEVERE"}
+[2025-12-02T16:30:51.753Z] [RECOVERY] Resilience execution started
+[2025-12-02T16:30:51.753Z] [Logic] ⚠️ ALERT: Signature session UNSTABLE | {"changesInLastHour":4,"threshold":3,"suggestion":"Twitch may have updated player - patterns may break soon"}
+[2025-12-02T16:30:51.753Z] [DIAGNOSTICS] Warning: Player signatures unstable
+[2025-12-02T16:30:51.753Z] [DIAGNOSTICS] Video state appears recoverable | {"readyState":4,"paused":false,"bufferHealth":"healthy"}
+[2025-12-02T16:30:51.753Z] [RECOVERY] Pre-recovery snapshot | {"readyState":4,"networkState":2,"currentTime":872.509947,"paused":false,"error":null,"bufferEnd":877.993333}
+[2025-12-02T16:30:51.753Z] Recovery strategy selection | {"initialStrategy":"Standard","bufferHealth":"healthy","bufferSize":19.988000000000056,"forced":false}
+[2025-12-02T16:30:51.753Z] Executing standard recovery: seeking
+[2025-12-02T16:30:51.754Z] Standard recovery complete | {"seekTo":874.493333,"bufferEnd":877.993333,"telemetry":{"readyState":4,"networkState":2,"buffered":"[858.01, 877.99]"}}
+[2025-12-02T16:30:51.754Z] [CORRELATION] Recovery triggered without recent ad detection | {"trigger":"FRAME_DROP","reason":"SEVERE frame drop","timeSinceLastNetworkAd":"1764693051.8s","totalMissedCount":1,"suggestion":"Possible missed ad pattern or legitimate stuck state"}
+[2025-12-02T16:30:51.754Z] [RECOVERY] Post-recovery result | {"pre":{"readyState":4,"networkState":2,"currentTime":872.509947,"paused":false,"error":null,"bufferEnd":877.993333},"post":{"readyState":4,"networkState":2,"currentTime":874.493333,"paused":false,"error":null,"bufferEnd":877.993333},"changes":{"readyStateChanged":false,"networkStateChanged":false,"currentTimeChanged":true,"pausedStateChanged":false,"errorCleared":null,"errorAppeared":null,"bufferIncreased":false},"success":{"isValid":false,"issues":["No measurable improvement detected"],"hasImprovement":false}}
+[2025-12-02T16:30:51.754Z] [RECOVERY] Escalating to aggressive recovery due to validation failure
+[2025-12-02T16:30:51.754Z] Executing aggressive recovery: waiting for player to stabilize
+[2025-12-02T16:30:51.754Z] Aggressive recovery telemetry | {"strategy":"PASSIVE_WAIT","url":"blob:https://www.twitch.tv/cae10342-a0a1-4af6-a5f1-b90eafb75757","isBlobUrl":true,"telemetry":{"readyState":4,"networkState":2,"currentTime":874.493333,"paused":false,"error":null,"bufferEnd":877.993333}}
+[2025-12-02T16:30:51.932Z] Player stabilized successfully | {"duration_ms":"178","finalReadyState":4,"totalChecks":1}
+[2025-12-02T16:30:51.932Z] [RECOVERY] Aggressive recovery result | {"success":{"isValid":false,"issues":["No measurable improvement detected"],"hasImprovement":false}}
+[2025-12-02T16:30:51.932Z] [RECOVERY] Resilience execution finished | {"total_duration_ms":179}
+[2025-12-02T16:30:51.932Z] [HEALTH] Recovery completed, resuming monitoring
+[2025-12-02T16:30:51.932Z] [HEALTH] Monitoring resumed
+[2025-12-02T16:30:51.932Z] [HEALTH] Recovery completed, resuming monitoring
+[2025-12-02T16:30:52.756Z] [HEALTH] Frame drop detected | {"newDropped":959,"newTotal":52301,"recentDropRate":"1.83%"}
+[2025-12-02T16:30:52.756Z] [HEALTH] Frame drop threshold exceeded | Severity: SEVERE | {"newDropped":959,"threshold":15,"recentDropRate":1.8336169480507065}
+[2025-12-02T16:30:52.756Z] [HEALTH] Trigger skipped - cooldown active | {"timeSinceLast":1.003}
+[2025-12-02T16:30:52.756Z] Post-seek health check | {"currentTime":875.414442,"readyState":4,"networkState":2,"paused":false,"bufferGap":"-2.579"}
+[2025-12-02T16:31:01.969Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-12-02T16:31:07.878Z] [HEALTH] Frame drop detected | {"newDropped":956,"newTotal":960,"recentDropRate":"99.58%"}
+[2025-12-02T16:31:07.878Z] [HEALTH] Frame drop threshold exceeded | Severity: SEVERE | {"newDropped":956,"threshold":15,"recentDropRate":99.58333333333333}
+[2025-12-02T16:31:07.878Z] [HEALTH] Recovery trigger | Reason: SEVERE frame drop, Type: FRAME_DROP | {"newDropped":956,"newTotal":960,"recentDropRate":99.58333333333333,"severity":"SEVERE"}
+[2025-12-02T16:31:07.878Z] [HEALTH] Monitoring paused
+[2025-12-02T16:31:07.878Z] [EVENT] AD_DETECTED | Source: HEALTH | Trigger: FRAME_DROP | Reason: SEVERE frame drop | {"newDropped":956,"newTotal":960,"recentDropRate":99.58333333333333,"severity":"SEVERE"}
+[2025-12-02T16:31:07.878Z] [RECOVERY] Resilience execution started
+[2025-12-02T16:31:07.878Z] [Logic] ⚠️ ALERT: Signature session UNSTABLE | {"changesInLastHour":4,"threshold":3,"suggestion":"Twitch may have updated player - patterns may break soon"}
+[2025-12-02T16:31:07.878Z] [DIAGNOSTICS] Warning: Player signatures unstable
+[2025-12-02T16:31:07.878Z] [DIAGNOSTICS] Video state appears recoverable | {"readyState":4,"paused":false,"bufferHealth":"healthy"}
+[2025-12-02T16:31:07.878Z] [RECOVERY] Pre-recovery snapshot | {"readyState":4,"networkState":2,"currentTime":890.567038,"paused":false,"error":null,"bufferEnd":893.993333}
+[2025-12-02T16:31:07.878Z] Recovery strategy selection | {"initialStrategy":"Standard","bufferHealth":"healthy","bufferSize":17.986999999999966,"forced":false}
+[2025-12-02T16:31:07.878Z] Executing standard recovery: seeking
+[2025-12-02T16:31:07.878Z] Standard recovery complete | {"seekTo":890.493333,"bufferEnd":893.993333,"telemetry":{"readyState":4,"networkState":2,"buffered":"[876.01, 893.99]"}}
+[2025-12-02T16:31:07.878Z] [CORRELATION] Recovery triggered without recent ad detection | {"trigger":"FRAME_DROP","reason":"SEVERE frame drop","timeSinceLastNetworkAd":"1764693067.9s","totalMissedCount":2,"suggestion":"Possible missed ad pattern or legitimate stuck state"}
+[2025-12-02T16:31:07.879Z] [RECOVERY] Post-recovery result | {"pre":{"readyState":4,"networkState":2,"currentTime":890.567038,"paused":false,"error":null,"bufferEnd":893.993333},"post":{"readyState":4,"networkState":2,"currentTime":890.493333,"paused":false,"error":null,"bufferEnd":893.993333},"changes":{"readyStateChanged":false,"networkStateChanged":false,"currentTimeChanged":true,"pausedStateChanged":false,"errorCleared":null,"errorAppeared":null,"bufferIncreased":false},"success":{"isValid":false,"issues":["No measurable improvement detected"],"hasImprovement":false}}
+[2025-12-02T16:31:07.879Z] [RECOVERY] Escalating to aggressive recovery due to validation failure
+[2025-12-02T16:31:07.879Z] Executing aggressive recovery: waiting for player to stabilize
+[2025-12-02T16:31:07.879Z] Aggressive recovery telemetry | {"strategy":"PASSIVE_WAIT","url":"blob:https://www.twitch.tv/cae10342-a0a1-4af6-a5f1-b90eafb75757","isBlobUrl":true,"telemetry":{"readyState":4,"networkState":2,"currentTime":890.493333,"paused":false,"error":null,"bufferEnd":893.993333}}
+[2025-12-02T16:31:07.986Z] Player stabilized successfully | {"duration_ms":"107","finalReadyState":4,"totalChecks":1}
+[2025-12-02T16:31:07.986Z] [RECOVERY] Aggressive recovery result | {"success":{"isValid":false,"issues":["No measurable improvement detected"],"hasImprovement":false}}
+[2025-12-02T16:31:07.986Z] [RECOVERY] Resilience execution finished | {"total_duration_ms":108}
+[2025-12-02T16:31:07.986Z] [HEALTH] Recovery completed, resuming monitoring
+[2025-12-02T16:31:07.986Z] [HEALTH] Monitoring resumed
+[2025-12-02T16:31:07.986Z] [HEALTH] Recovery completed, resuming monitoring
+[2025-12-02T16:31:08.882Z] [HEALTH] Frame drop detected | {"newDropped":1915,"newTotal":53261,"recentDropRate":"3.60%"}
+[2025-12-02T16:31:08.882Z] [HEALTH] Frame drop threshold exceeded | Severity: SEVERE | {"newDropped":1915,"threshold":15,"recentDropRate":3.5955013987720843}
+[2025-12-02T16:31:08.882Z] [HEALTH] Trigger skipped - cooldown active | {"timeSinceLast":1.004}
+[2025-12-02T16:31:08.882Z] Post-seek health check | {"currentTime":891.428856,"readyState":4,"networkState":2,"paused":false,"bufferGap":"-2.564"}
+[2025-12-02T16:31:23.945Z] [HEALTH] Frame drop detected | {"newDropped":956,"newTotal":960,"recentDropRate":"99.58%"}
+[2025-12-02T16:31:23.945Z] [HEALTH] Frame drop threshold exceeded | Severity: SEVERE | {"newDropped":956,"threshold":15,"recentDropRate":99.58333333333333}
+[2025-12-02T16:31:23.945Z] [HEALTH] Recovery trigger | Reason: SEVERE frame drop, Type: FRAME_DROP | {"newDropped":956,"newTotal":960,"recentDropRate":99.58333333333333,"severity":"SEVERE"}
+[2025-12-02T16:31:23.945Z] [HEALTH] Monitoring paused
+[2025-12-02T16:31:23.945Z] [EVENT] AD_DETECTED | Source: HEALTH | Trigger: FRAME_DROP | Reason: SEVERE frame drop | {"newDropped":956,"newTotal":960,"recentDropRate":99.58333333333333,"severity":"SEVERE"}
+[2025-12-02T16:31:23.945Z] [RECOVERY] Resilience execution started
+[2025-12-02T16:31:23.945Z] [Logic] ⚠️ ALERT: Signature session UNSTABLE | {"changesInLastHour":4,"threshold":3,"suggestion":"Twitch may have updated player - patterns may break soon"}
+[2025-12-02T16:31:23.945Z] [DIAGNOSTICS] Warning: Player signatures unstable
+[2025-12-02T16:31:23.945Z] [DIAGNOSTICS] Video state appears recoverable | {"readyState":4,"paused":false,"bufferHealth":"healthy"}
+[2025-12-02T16:31:23.945Z] [RECOVERY] Pre-recovery snapshot | {"readyState":4,"networkState":2,"currentTime":906.508076,"paused":false,"error":null,"bufferEnd":909.993333}
+[2025-12-02T16:31:23.945Z] Recovery strategy selection | {"initialStrategy":"Standard","bufferHealth":"healthy","bufferSize":17.986999999999966,"forced":false}
+[2025-12-02T16:31:23.945Z] Executing standard recovery: seeking
+[2025-12-02T16:31:23.945Z] Standard recovery complete | {"seekTo":906.493333,"bufferEnd":909.993333,"telemetry":{"readyState":4,"networkState":2,"buffered":"[892.01, 909.99]"}}
+[2025-12-02T16:31:23.945Z] [CORRELATION] Recovery triggered without recent ad detection | {"trigger":"FRAME_DROP","reason":"SEVERE frame drop","timeSinceLastNetworkAd":"1764693083.9s","totalMissedCount":3,"suggestion":"Possible missed ad pattern or legitimate stuck state"}
+[2025-12-02T16:31:23.945Z] [RECOVERY] Post-recovery result | {"pre":{"readyState":4,"networkState":2,"currentTime":906.508076,"paused":false,"error":null,"bufferEnd":909.993333},"post":{"readyState":4,"networkState":2,"currentTime":906.493333,"paused":false,"error":null,"bufferEnd":909.993333},"changes":{"readyStateChanged":false,"networkStateChanged":false,"currentTimeChanged":true,"pausedStateChanged":false,"errorCleared":null,"errorAppeared":null,"bufferIncreased":false},"success":{"isValid":false,"issues":["No measurable improvement detected"],"hasImprovement":false}}
+[2025-12-02T16:31:23.945Z] [RECOVERY] Escalating to aggressive recovery due to validation failure
+[2025-12-02T16:31:23.945Z] Executing aggressive recovery: waiting for player to stabilize
+[2025-12-02T16:31:23.946Z] Aggressive recovery telemetry | {"strategy":"PASSIVE_WAIT","url":"blob:https://www.twitch.tv/cae10342-a0a1-4af6-a5f1-b90eafb75757","isBlobUrl":true,"telemetry":{"readyState":4,"networkState":2,"currentTime":906.493333,"paused":false,"error":null,"bufferEnd":909.993333}}
+[2025-12-02T16:31:24.054Z] Player stabilized successfully | {"duration_ms":"107","finalReadyState":4,"totalChecks":1}
+[2025-12-02T16:31:24.054Z] [RECOVERY] Aggressive recovery result | {"success":{"isValid":false,"issues":["No measurable improvement detected"],"hasImprovement":false}}
+[2025-12-02T16:31:24.054Z] [RECOVERY] Resilience execution finished | {"total_duration_ms":108}
+[2025-12-02T16:31:24.054Z] [HEALTH] Recovery completed, resuming monitoring
+[2025-12-02T16:31:24.054Z] [HEALTH] Monitoring resumed
+[2025-12-02T16:31:24.054Z] [HEALTH] Recovery completed, resuming monitoring
+[2025-12-02T16:31:24.950Z] [HEALTH] Frame drop detected | {"newDropped":2871,"newTotal":54221,"recentDropRate":"5.29%"}
+[2025-12-02T16:31:24.950Z] [HEALTH] Frame drop threshold exceeded | Severity: SEVERE | {"newDropped":2871,"threshold":15,"recentDropRate":5.294996403607458}
+[2025-12-02T16:31:24.950Z] [HEALTH] Trigger skipped - cooldown active | {"timeSinceLast":1.005}
+[2025-12-02T16:31:24.950Z] Post-seek health check | {"currentTime":907.415867,"readyState":4,"networkState":2,"paused":false,"bufferGap":"-2.577"}
+[2025-12-02T16:31:40.028Z] [HEALTH] Frame drop detected | {"newDropped":956,"newTotal":960,"recentDropRate":"99.58%"}
+[2025-12-02T16:31:40.028Z] [HEALTH] Frame drop threshold exceeded | Severity: SEVERE | {"newDropped":956,"threshold":15,"recentDropRate":99.58333333333333}
+[2025-12-02T16:31:40.028Z] [HEALTH] Recovery trigger | Reason: SEVERE frame drop, Type: FRAME_DROP | {"newDropped":956,"newTotal":960,"recentDropRate":99.58333333333333,"severity":"SEVERE"}
+[2025-12-02T16:31:40.028Z] [HEALTH] Monitoring paused
+[2025-12-02T16:31:40.028Z] [EVENT] AD_DETECTED | Source: HEALTH | Trigger: FRAME_DROP | Reason: SEVERE frame drop | {"newDropped":956,"newTotal":960,"recentDropRate":99.58333333333333,"severity":"SEVERE"}
+[2025-12-02T16:31:40.028Z] [RECOVERY] Resilience execution started
+[2025-12-02T16:31:40.028Z] [Logic] ⚠️ ALERT: Signature session UNSTABLE | {"changesInLastHour":4,"threshold":3,"suggestion":"Twitch may have updated player - patterns may break soon"}
+[2025-12-02T16:31:40.028Z] [DIAGNOSTICS] Warning: Player signatures unstable
+[2025-12-02T16:31:40.028Z] [DIAGNOSTICS] Video state appears recoverable | {"readyState":4,"paused":false,"bufferHealth":"healthy"}
+[2025-12-02T16:31:40.028Z] [RECOVERY] Pre-recovery snapshot | {"readyState":4,"networkState":2,"currentTime":922.479981,"paused":false,"error":null,"bufferEnd":925.993333}
+[2025-12-02T16:31:40.028Z] Recovery strategy selection | {"initialStrategy":"Standard","bufferHealth":"healthy","bufferSize":17.986999999999966,"forced":false}
+[2025-12-02T16:31:40.028Z] Executing standard recovery: seeking
+[2025-12-02T16:31:40.028Z] Standard recovery complete | {"seekTo":922.493333,"bufferEnd":925.993333,"telemetry":{"readyState":4,"networkState":2,"buffered":"[908.01, 925.99]"}}
+[2025-12-02T16:31:40.028Z] [CORRELATION] Recovery triggered without recent ad detection | {"trigger":"FRAME_DROP","reason":"SEVERE frame drop","timeSinceLastNetworkAd":"1764693100.0s","totalMissedCount":4,"suggestion":"Possible missed ad pattern or legitimate stuck state"}
+[2025-12-02T16:31:40.028Z] [RECOVERY] Post-recovery result | {"pre":{"readyState":4,"networkState":2,"currentTime":922.479981,"paused":false,"error":null,"bufferEnd":925.993333},"post":{"readyState":4,"networkState":2,"currentTime":922.493333,"paused":false,"error":null,"bufferEnd":925.993333},"changes":{"readyStateChanged":false,"networkStateChanged":false,"currentTimeChanged":true,"pausedStateChanged":false,"errorCleared":null,"errorAppeared":null,"bufferIncreased":false},"success":{"isValid":false,"issues":["No measurable improvement detected"],"hasImprovement":false}}
+[2025-12-02T16:31:40.028Z] [RECOVERY] Escalating to aggressive recovery due to validation failure
+[2025-12-02T16:31:40.028Z] Executing aggressive recovery: waiting for player to stabilize
+[2025-12-02T16:31:40.028Z] Aggressive recovery telemetry | {"strategy":"PASSIVE_WAIT","url":"blob:https://www.twitch.tv/cae10342-a0a1-4af6-a5f1-b90eafb75757","isBlobUrl":true,"telemetry":{"readyState":4,"networkState":2,"currentTime":922.493333,"paused":false,"error":null,"bufferEnd":925.993333}}
+[2025-12-02T16:31:40.137Z] Player stabilized successfully | {"duration_ms":"108","finalReadyState":4,"totalChecks":1}
+[2025-12-02T16:31:40.137Z] [RECOVERY] Aggressive recovery result | {"success":{"isValid":false,"issues":["No measurable improvement detected"],"hasImprovement":false}}
+[2025-12-02T16:31:40.137Z] [RECOVERY] Resilience execution finished | {"total_duration_ms":108}
+[2025-12-02T16:31:40.137Z] [HEALTH] Recovery completed, resuming monitoring
+[2025-12-02T16:31:40.137Z] [HEALTH] Monitoring resumed
+[2025-12-02T16:31:40.137Z] [HEALTH] Recovery completed, resuming monitoring
+[2025-12-02T16:31:41.030Z] [HEALTH] Frame drop detected | {"newDropped":3827,"newTotal":55181,"recentDropRate":"6.94%"}
+[2025-12-02T16:31:41.030Z] [HEALTH] Frame drop threshold exceeded | Severity: SEVERE | {"newDropped":3827,"threshold":15,"recentDropRate":6.935358184882477}
+[2025-12-02T16:31:41.030Z] [HEALTH] Trigger skipped - cooldown active | {"timeSinceLast":1.002}
+[2025-12-02T16:31:41.030Z] Post-seek health check | {"currentTime":923.418258,"readyState":4,"networkState":2,"paused":false,"bufferGap":"-2.575"}
+[2025-12-02T16:31:49.957Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-12-02T16:31:52.387Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-12-02T16:31:53.532Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-12-02T16:31:56.143Z] [HEALTH] Frame drop detected | {"newDropped":957,"newTotal":961,"recentDropRate":"99.58%"}
+[2025-12-02T16:31:56.143Z] [HEALTH] Frame drop threshold exceeded | Severity: SEVERE | {"newDropped":957,"threshold":15,"recentDropRate":99.5837669094693}
+[2025-12-02T16:31:56.143Z] [HEALTH] Recovery trigger | Reason: SEVERE frame drop, Type: FRAME_DROP | {"newDropped":957,"newTotal":961,"recentDropRate":99.5837669094693,"severity":"SEVERE"}
+[2025-12-02T16:31:56.143Z] [HEALTH] Monitoring paused
+[2025-12-02T16:31:56.143Z] [EVENT] AD_DETECTED | Source: HEALTH | Trigger: FRAME_DROP | Reason: SEVERE frame drop | {"newDropped":957,"newTotal":961,"recentDropRate":99.5837669094693,"severity":"SEVERE"}
+[2025-12-02T16:31:56.143Z] [RECOVERY] Resilience execution started
+[2025-12-02T16:31:56.143Z] [Logic] ⚠️ ALERT: Signature session UNSTABLE | {"changesInLastHour":4,"threshold":3,"suggestion":"Twitch may have updated player - patterns may break soon"}
+[2025-12-02T16:31:56.143Z] [DIAGNOSTICS] Warning: Player signatures unstable
+[2025-12-02T16:31:56.143Z] [DIAGNOSTICS] Video state appears recoverable | {"readyState":4,"paused":false,"bufferHealth":"healthy"}
+[2025-12-02T16:31:56.143Z] [RECOVERY] Pre-recovery snapshot | {"readyState":4,"networkState":2,"currentTime":938.538512,"paused":false,"error":null,"bufferEnd":941.993333}
+[2025-12-02T16:31:56.143Z] Recovery strategy selection | {"initialStrategy":"Standard","bufferHealth":"healthy","bufferSize":17.988000000000056,"forced":false}
+[2025-12-02T16:31:56.143Z] Executing standard recovery: seeking
+[2025-12-02T16:31:56.144Z] Standard recovery complete | {"seekTo":938.493333,"bufferEnd":941.993333,"telemetry":{"readyState":4,"networkState":2,"buffered":"[924.01, 941.99]"}}
+[2025-12-02T16:31:56.144Z] [CORRELATION] Recovery triggered without recent ad detection | {"trigger":"FRAME_DROP","reason":"SEVERE frame drop","timeSinceLastNetworkAd":"1764693116.1s","totalMissedCount":5,"suggestion":"Possible missed ad pattern or legitimate stuck state"}
+[2025-12-02T16:31:56.144Z] [RECOVERY] Post-recovery result | {"pre":{"readyState":4,"networkState":2,"currentTime":938.538512,"paused":false,"error":null,"bufferEnd":941.993333},"post":{"readyState":4,"networkState":2,"currentTime":938.493333,"paused":false,"error":null,"bufferEnd":941.993333},"changes":{"readyStateChanged":false,"networkStateChanged":false,"currentTimeChanged":true,"pausedStateChanged":false,"errorCleared":null,"errorAppeared":null,"bufferIncreased":false},"success":{"isValid":false,"issues":["No measurable improvement detected"],"hasImprovement":false}}
+[2025-12-02T16:31:56.144Z] [RECOVERY] Escalating to aggressive recovery due to validation failure
+[2025-12-02T16:31:56.144Z] Executing aggressive recovery: waiting for player to stabilize
+[2025-12-02T16:31:56.144Z] Aggressive recovery telemetry | {"strategy":"PASSIVE_WAIT","url":"blob:https://www.twitch.tv/cae10342-a0a1-4af6-a5f1-b90eafb75757","isBlobUrl":true,"telemetry":{"readyState":4,"networkState":2,"currentTime":938.493333,"paused":false,"error":null,"bufferEnd":941.993333}}
+[2025-12-02T16:31:56.258Z] Player stabilized successfully | {"duration_ms":"115","finalReadyState":4,"totalChecks":1}
+[2025-12-02T16:31:56.258Z] [RECOVERY] Aggressive recovery result | {"success":{"isValid":false,"issues":["No measurable improvement detected"],"hasImprovement":false}}
+[2025-12-02T16:31:56.258Z] [RECOVERY] Resilience execution finished | {"total_duration_ms":116}
+[2025-12-02T16:31:56.258Z] [HEALTH] Recovery completed, resuming monitoring
+[2025-12-02T16:31:56.258Z] [HEALTH] Monitoring resumed
+[2025-12-02T16:31:56.258Z] [HEALTH] Recovery completed, resuming monitoring
+[2025-12-02T16:31:57.156Z] [HEALTH] Frame drop detected | {"newDropped":4784,"newTotal":56142,"recentDropRate":"8.52%"}
+[2025-12-02T16:31:57.156Z] [HEALTH] Frame drop threshold exceeded | Severity: SEVERE | {"newDropped":4784,"threshold":15,"recentDropRate":8.521249688290407}
+[2025-12-02T16:31:57.156Z] [HEALTH] Trigger skipped - cooldown active | {"timeSinceLast":1.013}
+[2025-12-02T16:31:57.156Z] Post-seek health check | {"currentTime":939.419019,"readyState":4,"networkState":2,"paused":false,"bufferGap":"-2.574"}
+[2025-12-02T16:32:12.246Z] [HEALTH] Frame drop detected | {"newDropped":956,"newTotal":960,"recentDropRate":"99.58%"}
+[2025-12-02T16:32:12.246Z] [HEALTH] Frame drop threshold exceeded | Severity: SEVERE | {"newDropped":956,"threshold":15,"recentDropRate":99.58333333333333}
+[2025-12-02T16:32:12.246Z] [HEALTH] Recovery trigger | Reason: SEVERE frame drop, Type: FRAME_DROP | {"newDropped":956,"newTotal":960,"recentDropRate":99.58333333333333,"severity":"SEVERE"}
+[2025-12-02T16:32:12.246Z] [HEALTH] Monitoring paused
+[2025-12-02T16:32:12.246Z] [EVENT] AD_DETECTED | Source: HEALTH | Trigger: FRAME_DROP | Reason: SEVERE frame drop | {"newDropped":956,"newTotal":960,"recentDropRate":99.58333333333333,"severity":"SEVERE"}
+[2025-12-02T16:32:12.246Z] [RECOVERY] Resilience execution started
+[2025-12-02T16:32:12.246Z] [Logic] ⚠️ ALERT: Signature session UNSTABLE | {"changesInLastHour":4,"threshold":3,"suggestion":"Twitch may have updated player - patterns may break soon"}
+[2025-12-02T16:32:12.246Z] [DIAGNOSTICS] Warning: Player signatures unstable
+[2025-12-02T16:32:12.246Z] [DIAGNOSTICS] Video state appears recoverable | {"readyState":4,"paused":false,"bufferHealth":"healthy"}
+[2025-12-02T16:32:12.246Z] [RECOVERY] Pre-recovery snapshot | {"readyState":4,"networkState":2,"currentTime":954.528559,"paused":false,"error":null,"bufferEnd":957.993333}
+[2025-12-02T16:32:12.246Z] Recovery strategy selection | {"initialStrategy":"Standard","bufferHealth":"healthy","bufferSize":17.986999999999966,"forced":false}
+[2025-12-02T16:32:12.246Z] Executing standard recovery: seeking
+[2025-12-02T16:32:12.247Z] Standard recovery complete | {"seekTo":954.493333,"bufferEnd":957.993333,"telemetry":{"readyState":4,"networkState":2,"buffered":"[940.01, 957.99]"}}
+[2025-12-02T16:32:12.247Z] [CORRELATION] Recovery triggered without recent ad detection | {"trigger":"FRAME_DROP","reason":"SEVERE frame drop","timeSinceLastNetworkAd":"1764693132.2s","totalMissedCount":6,"suggestion":"Possible missed ad pattern or legitimate stuck state"}
+[2025-12-02T16:32:12.247Z] [RECOVERY] Post-recovery result | {"pre":{"readyState":4,"networkState":2,"currentTime":954.528559,"paused":false,"error":null,"bufferEnd":957.993333},"post":{"readyState":4,"networkState":2,"currentTime":954.493333,"paused":false,"error":null,"bufferEnd":957.993333},"changes":{"readyStateChanged":false,"networkStateChanged":false,"currentTimeChanged":true,"pausedStateChanged":false,"errorCleared":null,"errorAppeared":null,"bufferIncreased":false},"success":{"isValid":false,"issues":["No measurable improvement detected"],"hasImprovement":false}}
+[2025-12-02T16:32:12.247Z] [RECOVERY] Escalating to aggressive recovery due to validation failure
+[2025-12-02T16:32:12.247Z] Executing aggressive recovery: waiting for player to stabilize
+[2025-12-02T16:32:12.247Z] Aggressive recovery telemetry | {"strategy":"PASSIVE_WAIT","url":"blob:https://www.twitch.tv/cae10342-a0a1-4af6-a5f1-b90eafb75757","isBlobUrl":true,"telemetry":{"readyState":4,"networkState":2,"currentTime":954.493333,"paused":false,"error":null,"bufferEnd":957.993333}}
+[2025-12-02T16:32:12.354Z] Player stabilized successfully | {"duration_ms":"107","finalReadyState":4,"totalChecks":1}
+[2025-12-02T16:32:12.354Z] [RECOVERY] Aggressive recovery result | {"success":{"isValid":false,"issues":["No measurable improvement detected"],"hasImprovement":false}}
+[2025-12-02T16:32:12.354Z] [RECOVERY] Resilience execution finished | {"total_duration_ms":109}
+[2025-12-02T16:32:12.354Z] [HEALTH] Recovery completed, resuming monitoring
+[2025-12-02T16:32:12.354Z] [HEALTH] Monitoring resumed
+[2025-12-02T16:32:12.354Z] [HEALTH] Recovery completed, resuming monitoring
+[2025-12-02T16:32:13.250Z] [HEALTH] Frame drop detected | {"newDropped":5740,"newTotal":57102,"recentDropRate":"10.05%"}
+[2025-12-02T16:32:13.250Z] [HEALTH] Frame drop threshold exceeded | Severity: SEVERE | {"newDropped":5740,"threshold":15,"recentDropRate":10.05218731392946}
+[2025-12-02T16:32:13.250Z] [HEALTH] Trigger skipped - cooldown active | {"timeSinceLast":1.004}
+[2025-12-02T16:32:13.250Z] Post-seek health check | {"currentTime":955.4145,"readyState":4,"networkState":2,"paused":false,"bufferGap":"-2.579"}
+[2025-12-02T16:32:28.367Z] [HEALTH] Frame drop detected | {"newDropped":956,"newTotal":960,"recentDropRate":"99.58%"}
+[2025-12-02T16:32:28.368Z] [HEALTH] Frame drop threshold exceeded | Severity: SEVERE | {"newDropped":956,"threshold":15,"recentDropRate":99.58333333333333}
+[2025-12-02T16:32:28.368Z] [HEALTH] Recovery trigger | Reason: SEVERE frame drop, Type: FRAME_DROP | {"newDropped":956,"newTotal":960,"recentDropRate":99.58333333333333,"severity":"SEVERE"}
+[2025-12-02T16:32:28.368Z] [HEALTH] Monitoring paused
+[2025-12-02T16:32:28.368Z] [EVENT] AD_DETECTED | Source: HEALTH | Trigger: FRAME_DROP | Reason: SEVERE frame drop | {"newDropped":956,"newTotal":960,"recentDropRate":99.58333333333333,"severity":"SEVERE"}
+[2025-12-02T16:32:28.368Z] [RECOVERY] Resilience execution started
+[2025-12-02T16:32:28.368Z] [Logic] ⚠️ ALERT: Signature session UNSTABLE | {"changesInLastHour":4,"threshold":3,"suggestion":"Twitch may have updated player - patterns may break soon"}
+[2025-12-02T16:32:28.368Z] [DIAGNOSTICS] Warning: Player signatures unstable
+[2025-12-02T16:32:28.368Z] [DIAGNOSTICS] Video state appears recoverable | {"readyState":4,"paused":false,"bufferHealth":"healthy"}
+[2025-12-02T16:32:28.368Z] [RECOVERY] Pre-recovery snapshot | {"readyState":4,"networkState":2,"currentTime":970.516392,"paused":false,"error":null,"bufferEnd":973.993333}
+[2025-12-02T16:32:28.368Z] Recovery strategy selection | {"initialStrategy":"Standard","bufferHealth":"healthy","bufferSize":17.986999999999966,"forced":false}
+[2025-12-02T16:32:28.368Z] Executing standard recovery: seeking
+[2025-12-02T16:32:28.369Z] Standard recovery complete | {"seekTo":970.493333,"bufferEnd":973.993333,"telemetry":{"readyState":4,"networkState":2,"buffered":"[956.01, 973.99]"}}
+[2025-12-02T16:32:28.369Z] [CORRELATION] Recovery triggered without recent ad detection | {"trigger":"FRAME_DROP","reason":"SEVERE frame drop","timeSinceLastNetworkAd":"1764693148.4s","totalMissedCount":7,"suggestion":"Possible missed ad pattern or legitimate stuck state"}
+[2025-12-02T16:32:28.370Z] [RECOVERY] Post-recovery result | {"pre":{"readyState":4,"networkState":2,"currentTime":970.516392,"paused":false,"error":null,"bufferEnd":973.993333},"post":{"readyState":4,"networkState":2,"currentTime":970.493333,"paused":false,"error":null,"bufferEnd":973.993333},"changes":{"readyStateChanged":false,"networkStateChanged":false,"currentTimeChanged":true,"pausedStateChanged":false,"errorCleared":null,"errorAppeared":null,"bufferIncreased":false},"success":{"isValid":false,"issues":["No measurable improvement detected"],"hasImprovement":false}}
+[2025-12-02T16:32:28.370Z] [RECOVERY] Escalating to aggressive recovery due to validation failure
+[2025-12-02T16:32:28.370Z] Executing aggressive recovery: waiting for player to stabilize
+[2025-12-02T16:32:28.370Z] Aggressive recovery telemetry | {"strategy":"PASSIVE_WAIT","url":"blob:https://www.twitch.tv/cae10342-a0a1-4af6-a5f1-b90eafb75757","isBlobUrl":true,"telemetry":{"readyState":4,"networkState":2,"currentTime":970.493333,"paused":false,"error":null,"bufferEnd":973.993333}}
+[2025-12-02T16:32:28.470Z] Player stabilized successfully | {"duration_ms":"101","finalReadyState":4,"totalChecks":1}
+[2025-12-02T16:32:28.471Z] [RECOVERY] Aggressive recovery result | {"success":{"isValid":false,"issues":["No measurable improvement detected"],"hasImprovement":false}}
+[2025-12-02T16:32:28.471Z] [RECOVERY] Resilience execution finished | {"total_duration_ms":102}
+[2025-12-02T16:32:28.471Z] [HEALTH] Recovery completed, resuming monitoring
+[2025-12-02T16:32:28.471Z] [HEALTH] Monitoring resumed
+[2025-12-02T16:32:28.471Z] [HEALTH] Recovery completed, resuming monitoring
+[2025-12-02T16:32:29.369Z] [HEALTH] Frame drop detected | {"newDropped":6696,"newTotal":58062,"recentDropRate":"11.53%"}
+[2025-12-02T16:32:29.369Z] [HEALTH] Frame drop threshold exceeded | Severity: SEVERE | {"newDropped":6696,"threshold":15,"recentDropRate":11.532499741655473}
+[2025-12-02T16:32:29.370Z] [HEALTH] Trigger skipped - cooldown active | {"timeSinceLast":1.002}
+[2025-12-02T16:32:29.370Z] Post-seek health check | {"currentTime":971.420075,"readyState":4,"networkState":2,"paused":false,"bufferGap":"-2.573"}
+[2025-12-02T16:32:44.462Z] [HEALTH] Frame drop detected | {"newDropped":956,"newTotal":960,"recentDropRate":"99.58%"}
+[2025-12-02T16:32:44.462Z] [HEALTH] Frame drop threshold exceeded | Severity: SEVERE | {"newDropped":956,"threshold":15,"recentDropRate":99.58333333333333}
+[2025-12-02T16:32:44.462Z] [HEALTH] Recovery trigger | Reason: SEVERE frame drop, Type: FRAME_DROP | {"newDropped":956,"newTotal":960,"recentDropRate":99.58333333333333,"severity":"SEVERE"}
+[2025-12-02T16:32:44.462Z] [HEALTH] Monitoring paused
+[2025-12-02T16:32:44.463Z] [EVENT] AD_DETECTED | Source: HEALTH | Trigger: FRAME_DROP | Reason: SEVERE frame drop | {"newDropped":956,"newTotal":960,"recentDropRate":99.58333333333333,"severity":"SEVERE"}
+[2025-12-02T16:32:44.463Z] [RECOVERY] Resilience execution started
+[2025-12-02T16:32:44.463Z] [Logic] ⚠️ ALERT: Signature session UNSTABLE | {"changesInLastHour":4,"threshold":3,"suggestion":"Twitch may have updated player - patterns may break soon"}
+[2025-12-02T16:32:44.463Z] [DIAGNOSTICS] Warning: Player signatures unstable
+[2025-12-02T16:32:44.463Z] [DIAGNOSTICS] Video state appears recoverable | {"readyState":4,"paused":false,"bufferHealth":"healthy"}
+[2025-12-02T16:32:44.463Z] [RECOVERY] Pre-recovery snapshot | {"readyState":4,"networkState":2,"currentTime":986.480579,"paused":false,"error":null,"bufferEnd":989.993333}
+[2025-12-02T16:32:44.463Z] Recovery strategy selection | {"initialStrategy":"Standard","bufferHealth":"healthy","bufferSize":17.986999999999966,"forced":false}
+[2025-12-02T16:32:44.463Z] Executing standard recovery: seeking
+[2025-12-02T16:32:44.463Z] Standard recovery complete | {"seekTo":986.493333,"bufferEnd":989.993333,"telemetry":{"readyState":4,"networkState":2,"buffered":"[972.01, 989.99]"}}
+[2025-12-02T16:32:44.463Z] [CORRELATION] Recovery triggered without recent ad detection | {"trigger":"FRAME_DROP","reason":"SEVERE frame drop","timeSinceLastNetworkAd":"1764693164.5s","totalMissedCount":8,"suggestion":"Possible missed ad pattern or legitimate stuck state"}
+[2025-12-02T16:32:44.463Z] [RECOVERY] Post-recovery result | {"pre":{"readyState":4,"networkState":2,"currentTime":986.480579,"paused":false,"error":null,"bufferEnd":989.993333},"post":{"readyState":4,"networkState":2,"currentTime":986.493333,"paused":false,"error":null,"bufferEnd":989.993333},"changes":{"readyStateChanged":false,"networkStateChanged":false,"currentTimeChanged":true,"pausedStateChanged":false,"errorCleared":null,"errorAppeared":null,"bufferIncreased":false},"success":{"isValid":false,"issues":["No measurable improvement detected"],"hasImprovement":false}}
+[2025-12-02T16:32:44.463Z] [RECOVERY] Escalating to aggressive recovery due to validation failure
+[2025-12-02T16:32:44.463Z] Executing aggressive recovery: waiting for player to stabilize
+[2025-12-02T16:32:44.463Z] Aggressive recovery telemetry | {"strategy":"PASSIVE_WAIT","url":"blob:https://www.twitch.tv/cae10342-a0a1-4af6-a5f1-b90eafb75757","isBlobUrl":true,"telemetry":{"readyState":4,"networkState":2,"currentTime":986.493333,"paused":false,"error":null,"bufferEnd":989.993333}}
+[2025-12-02T16:32:44.628Z] Player stabilized successfully | {"duration_ms":"166","finalReadyState":4,"totalChecks":1}
+[2025-12-02T16:32:44.628Z] [RECOVERY] Aggressive recovery result | {"success":{"isValid":false,"issues":["No measurable improvement detected"],"hasImprovement":false}}
+[2025-12-02T16:32:44.628Z] [RECOVERY] Resilience execution finished | {"total_duration_ms":166}
+[2025-12-02T16:32:44.628Z] [HEALTH] Recovery completed, resuming monitoring
+[2025-12-02T16:32:44.628Z] [HEALTH] Monitoring resumed
+[2025-12-02T16:32:44.628Z] [HEALTH] Recovery completed, resuming monitoring
+[2025-12-02T16:32:45.465Z] [HEALTH] Frame drop detected | {"newDropped":7652,"newTotal":59022,"recentDropRate":"12.96%"}
+[2025-12-02T16:32:45.465Z] [HEALTH] Frame drop threshold exceeded | Severity: SEVERE | {"newDropped":7652,"threshold":15,"recentDropRate":12.964657246450475}
+[2025-12-02T16:32:45.465Z] [HEALTH] Trigger skipped - cooldown active | {"timeSinceLast":1.003}
+[2025-12-02T16:32:45.465Z] Post-seek health check | {"currentTime":987.419215,"readyState":4,"networkState":2,"paused":false,"bufferGap":"-2.574"}
+[2025-12-02T16:32:49.952Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-12-02T16:33:00.585Z] [HEALTH] Frame drop detected | {"newDropped":956,"newTotal":960,"recentDropRate":"99.58%"}
+[2025-12-02T16:33:00.585Z] [HEALTH] Frame drop threshold exceeded | Severity: SEVERE | {"newDropped":956,"threshold":15,"recentDropRate":99.58333333333333}
+[2025-12-02T16:33:00.585Z] [HEALTH] Recovery trigger | Reason: SEVERE frame drop, Type: FRAME_DROP | {"newDropped":956,"newTotal":960,"recentDropRate":99.58333333333333,"severity":"SEVERE"}
+[2025-12-02T16:33:00.585Z] [HEALTH] Monitoring paused
+[2025-12-02T16:33:00.585Z] [EVENT] AD_DETECTED | Source: HEALTH | Trigger: FRAME_DROP | Reason: SEVERE frame drop | {"newDropped":956,"newTotal":960,"recentDropRate":99.58333333333333,"severity":"SEVERE"}
+[2025-12-02T16:33:00.585Z] [RECOVERY] Resilience execution started
+[2025-12-02T16:33:00.586Z] [Logic] ⚠️ ALERT: Signature session UNSTABLE | {"changesInLastHour":4,"threshold":3,"suggestion":"Twitch may have updated player - patterns may break soon"}
+[2025-12-02T16:33:00.586Z] [DIAGNOSTICS] Warning: Player signatures unstable
+[2025-12-02T16:33:00.586Z] [DIAGNOSTICS] Video state appears recoverable | {"readyState":4,"paused":false,"bufferHealth":"healthy"}
+[2025-12-02T16:33:00.586Z] [RECOVERY] Pre-recovery snapshot | {"readyState":4,"networkState":2,"currentTime":1002.570161,"paused":false,"error":null,"bufferEnd":1005.993333}
+[2025-12-02T16:33:00.586Z] Recovery strategy selection | {"initialStrategy":"Standard","bufferHealth":"healthy","bufferSize":17.986999999999966,"forced":false}
+[2025-12-02T16:33:00.586Z] Executing standard recovery: seeking
+[2025-12-02T16:33:00.586Z] Standard recovery complete | {"seekTo":1002.493333,"bufferEnd":1005.993333,"telemetry":{"readyState":4,"networkState":2,"buffered":"[988.01, 1005.99]"}}
+[2025-12-02T16:33:00.586Z] [CORRELATION] Recovery triggered without recent ad detection | {"trigger":"FRAME_DROP","reason":"SEVERE frame drop","timeSinceLastNetworkAd":"1764693180.6s","totalMissedCount":9,"suggestion":"Possible missed ad pattern or legitimate stuck state"}
+[2025-12-02T16:33:00.586Z] [RECOVERY] Post-recovery result | {"pre":{"readyState":4,"networkState":2,"currentTime":1002.570161,"paused":false,"error":null,"bufferEnd":1005.993333},"post":{"readyState":4,"networkState":2,"currentTime":1002.493333,"paused":false,"error":null,"bufferEnd":1005.993333},"changes":{"readyStateChanged":false,"networkStateChanged":false,"currentTimeChanged":true,"pausedStateChanged":false,"errorCleared":null,"errorAppeared":null,"bufferIncreased":false},"success":{"isValid":false,"issues":["No measurable improvement detected"],"hasImprovement":false}}
+[2025-12-02T16:33:00.586Z] [RECOVERY] Escalating to aggressive recovery due to validation failure
+[2025-12-02T16:33:00.586Z] Executing aggressive recovery: waiting for player to stabilize
+[2025-12-02T16:33:00.587Z] Aggressive recovery telemetry | {"strategy":"PASSIVE_WAIT","url":"blob:https://www.twitch.tv/cae10342-a0a1-4af6-a5f1-b90eafb75757","isBlobUrl":true,"telemetry":{"readyState":4,"networkState":2,"currentTime":1002.493333,"paused":false,"error":null,"bufferEnd":1005.993333}}
+[2025-12-02T16:33:00.693Z] Player stabilized successfully | {"duration_ms":"107","finalReadyState":4,"totalChecks":1}
+[2025-12-02T16:33:00.693Z] [RECOVERY] Aggressive recovery result | {"success":{"isValid":false,"issues":["No measurable improvement detected"],"hasImprovement":false}}
+[2025-12-02T16:33:00.693Z] [RECOVERY] Resilience execution finished | {"total_duration_ms":108}
+[2025-12-02T16:33:00.693Z] [HEALTH] Recovery completed, resuming monitoring
+[2025-12-02T16:33:00.693Z] [HEALTH] Monitoring resumed
+[2025-12-02T16:33:00.693Z] [HEALTH] Recovery completed, resuming monitoring
+[2025-12-02T16:33:01.586Z] [HEALTH] Frame drop detected | {"newDropped":8608,"newTotal":59982,"recentDropRate":"14.35%"}
+[2025-12-02T16:33:01.586Z] [HEALTH] Frame drop threshold exceeded | Severity: SEVERE | {"newDropped":8608,"threshold":15,"recentDropRate":14.350971958254144}
+[2025-12-02T16:33:01.586Z] [HEALTH] Trigger skipped - cooldown active | {"timeSinceLast":1.001}
+[2025-12-02T16:33:01.586Z] Post-seek health check | {"currentTime":1003.417997,"readyState":4,"networkState":2,"paused":false,"bufferGap":"-4.581"}
+[2025-12-02T16:33:16.682Z] [HEALTH] Frame drop detected | {"newDropped":956,"newTotal":960,"recentDropRate":"99.58%"}
+[2025-12-02T16:33:16.682Z] [HEALTH] Frame drop threshold exceeded | Severity: SEVERE | {"newDropped":956,"threshold":15,"recentDropRate":99.58333333333333}
+[2025-12-02T16:33:16.682Z] [HEALTH] Recovery trigger | Reason: SEVERE frame drop, Type: FRAME_DROP | {"newDropped":956,"newTotal":960,"recentDropRate":99.58333333333333,"severity":"SEVERE"}
+[2025-12-02T16:33:16.682Z] [HEALTH] Monitoring paused
+[2025-12-02T16:33:16.682Z] [EVENT] AD_DETECTED | Source: HEALTH | Trigger: FRAME_DROP | Reason: SEVERE frame drop | {"newDropped":956,"newTotal":960,"recentDropRate":99.58333333333333,"severity":"SEVERE"}
+[2025-12-02T16:33:16.682Z] [RECOVERY] Resilience execution started
+[2025-12-02T16:33:16.682Z] [Logic] ⚠️ ALERT: Signature session UNSTABLE | {"changesInLastHour":4,"threshold":3,"suggestion":"Twitch may have updated player - patterns may break soon"}
+[2025-12-02T16:33:16.682Z] [DIAGNOSTICS] Warning: Player signatures unstable
+[2025-12-02T16:33:16.682Z] [DIAGNOSTICS] Video state appears recoverable | {"readyState":4,"paused":false,"bufferHealth":"healthy"}
+[2025-12-02T16:33:16.682Z] [RECOVERY] Pre-recovery snapshot | {"readyState":4,"networkState":2,"currentTime":1018.501393,"paused":false,"error":null,"bufferEnd":1021.993333}
+[2025-12-02T16:33:16.682Z] Recovery strategy selection | {"initialStrategy":"Standard","bufferHealth":"healthy","bufferSize":17.986999999999966,"forced":false}
+[2025-12-02T16:33:16.682Z] Executing standard recovery: seeking
+[2025-12-02T16:33:16.683Z] Standard recovery complete | {"seekTo":1018.493333,"bufferEnd":1021.993333,"telemetry":{"readyState":4,"networkState":2,"buffered":"[1004.01, 1021.99]"}}
+[2025-12-02T16:33:16.683Z] [CORRELATION] Recovery triggered without recent ad detection | {"trigger":"FRAME_DROP","reason":"SEVERE frame drop","timeSinceLastNetworkAd":"1764693196.7s","totalMissedCount":10,"suggestion":"Possible missed ad pattern or legitimate stuck state"}
+[2025-12-02T16:33:16.683Z] [RECOVERY] Post-recovery result | {"pre":{"readyState":4,"networkState":2,"currentTime":1018.501393,"paused":false,"error":null,"bufferEnd":1021.993333},"post":{"readyState":4,"networkState":2,"currentTime":1018.493333,"paused":false,"error":null,"bufferEnd":1021.993333},"changes":{"readyStateChanged":false,"networkStateChanged":false,"currentTimeChanged":true,"pausedStateChanged":false,"errorCleared":null,"errorAppeared":null,"bufferIncreased":false},"success":{"isValid":false,"issues":["No measurable improvement detected"],"hasImprovement":false}}
+[2025-12-02T16:33:16.683Z] [RECOVERY] Escalating to aggressive recovery due to validation failure
+[2025-12-02T16:33:16.683Z] Executing aggressive recovery: waiting for player to stabilize
+[2025-12-02T16:33:16.683Z] Aggressive recovery telemetry | {"strategy":"PASSIVE_WAIT","url":"blob:https://www.twitch.tv/cae10342-a0a1-4af6-a5f1-b90eafb75757","isBlobUrl":true,"telemetry":{"readyState":4,"networkState":2,"currentTime":1018.493333,"paused":false,"error":null,"bufferEnd":1021.993333}}
+[2025-12-02T16:33:16.793Z] Player stabilized successfully | {"duration_ms":"112","finalReadyState":4,"totalChecks":1}
+[2025-12-02T16:33:16.793Z] [RECOVERY] Aggressive recovery result | {"success":{"isValid":false,"issues":["No measurable improvement detected"],"hasImprovement":false}}
+[2025-12-02T16:33:16.793Z] [RECOVERY] Resilience execution finished | {"total_duration_ms":113}
+[2025-12-02T16:33:16.794Z] [HEALTH] Recovery completed, resuming monitoring
+[2025-12-02T16:33:16.794Z] [HEALTH] Monitoring resumed
+[2025-12-02T16:33:16.794Z] [HEALTH] Recovery completed, resuming monitoring
+[2025-12-02T16:33:17.687Z] [HEALTH] Frame drop detected | {"newDropped":9564,"newTotal":60942,"recentDropRate":"15.69%"}
+[2025-12-02T16:33:17.687Z] [HEALTH] Frame drop threshold exceeded | Severity: SEVERE | {"newDropped":9564,"threshold":15,"recentDropRate":15.693610318007286}
+[2025-12-02T16:33:17.687Z] [HEALTH] Trigger skipped - cooldown active | {"timeSinceLast":1.005}
+[2025-12-02T16:33:17.687Z] Post-seek health check | {"currentTime":1019.414779,"readyState":4,"networkState":2,"paused":false,"bufferGap":"-4.584"}
+[2025-12-02T16:33:32.795Z] [HEALTH] Frame drop detected | {"newDropped":956,"newTotal":960,"recentDropRate":"99.58%"}
+[2025-12-02T16:33:32.795Z] [HEALTH] Frame drop threshold exceeded | Severity: SEVERE | {"newDropped":956,"threshold":15,"recentDropRate":99.58333333333333}
+[2025-12-02T16:33:32.795Z] [HEALTH] Recovery trigger | Reason: SEVERE frame drop, Type: FRAME_DROP | {"newDropped":956,"newTotal":960,"recentDropRate":99.58333333333333,"severity":"SEVERE"}
+[2025-12-02T16:33:32.795Z] [HEALTH] Monitoring paused
+[2025-12-02T16:33:32.795Z] [EVENT] AD_DETECTED | Source: HEALTH | Trigger: FRAME_DROP | Reason: SEVERE frame drop | {"newDropped":956,"newTotal":960,"recentDropRate":99.58333333333333,"severity":"SEVERE"}
+[2025-12-02T16:33:32.795Z] [RECOVERY] Resilience execution started
+[2025-12-02T16:33:32.795Z] [Logic] ⚠️ ALERT: Signature session UNSTABLE | {"changesInLastHour":4,"threshold":3,"suggestion":"Twitch may have updated player - patterns may break soon"}
+[2025-12-02T16:33:32.795Z] [DIAGNOSTICS] Warning: Player signatures unstable
+[2025-12-02T16:33:32.795Z] [DIAGNOSTICS] Video state appears recoverable | {"readyState":4,"paused":false,"bufferHealth":"healthy"}
+[2025-12-02T16:33:32.796Z] [RECOVERY] Pre-recovery snapshot | {"readyState":4,"networkState":2,"currentTime":1034.522078,"paused":false,"error":null,"bufferEnd":1037.993333}
+[2025-12-02T16:33:32.796Z] Recovery strategy selection | {"initialStrategy":"Standard","bufferHealth":"healthy","bufferSize":17.986999999999853,"forced":false}
+[2025-12-02T16:33:32.796Z] Executing standard recovery: seeking
+[2025-12-02T16:33:32.796Z] Standard recovery complete | {"seekTo":1034.493333,"bufferEnd":1037.993333,"telemetry":{"readyState":4,"networkState":2,"buffered":"[1020.01, 1037.99]"}}
+[2025-12-02T16:33:32.796Z] [CORRELATION] Recovery triggered without recent ad detection | {"trigger":"FRAME_DROP","reason":"SEVERE frame drop","timeSinceLastNetworkAd":"1764693212.8s","totalMissedCount":11,"suggestion":"Possible missed ad pattern or legitimate stuck state"}
+[2025-12-02T16:33:32.796Z] [RECOVERY] Post-recovery result | {"pre":{"readyState":4,"networkState":2,"currentTime":1034.522078,"paused":false,"error":null,"bufferEnd":1037.993333},"post":{"readyState":4,"networkState":2,"currentTime":1034.493333,"paused":false,"error":null,"bufferEnd":1037.993333},"changes":{"readyStateChanged":false,"networkStateChanged":false,"currentTimeChanged":true,"pausedStateChanged":false,"errorCleared":null,"errorAppeared":null,"bufferIncreased":false},"success":{"isValid":false,"issues":["No measurable improvement detected"],"hasImprovement":false}}
+[2025-12-02T16:33:32.796Z] [RECOVERY] Escalating to aggressive recovery due to validation failure
+[2025-12-02T16:33:32.796Z] Executing aggressive recovery: waiting for player to stabilize
+[2025-12-02T16:33:32.796Z] Aggressive recovery telemetry | {"strategy":"PASSIVE_WAIT","url":"blob:https://www.twitch.tv/cae10342-a0a1-4af6-a5f1-b90eafb75757","isBlobUrl":true,"telemetry":{"readyState":4,"networkState":2,"currentTime":1034.493333,"paused":false,"error":null,"bufferEnd":1037.993333}}
+[2025-12-02T16:33:32.901Z] Player stabilized successfully | {"duration_ms":"105","finalReadyState":4,"totalChecks":1}
+[2025-12-02T16:33:32.901Z] [RECOVERY] Aggressive recovery result | {"success":{"isValid":false,"issues":["No measurable improvement detected"],"hasImprovement":false}}
+[2025-12-02T16:33:32.901Z] [RECOVERY] Resilience execution finished | {"total_duration_ms":107}
+[2025-12-02T16:33:32.901Z] [HEALTH] Recovery completed, resuming monitoring
+[2025-12-02T16:33:32.901Z] [HEALTH] Monitoring resumed
+[2025-12-02T16:33:32.901Z] [HEALTH] Recovery completed, resuming monitoring
+[2025-12-02T16:33:33.809Z] [HEALTH] Frame drop detected | {"newDropped":10520,"newTotal":61902,"recentDropRate":"16.99%"}
+[2025-12-02T16:33:33.809Z] [HEALTH] Frame drop threshold exceeded | Severity: SEVERE | {"newDropped":10520,"threshold":15,"recentDropRate":16.994604374656717}
+[2025-12-02T16:33:33.809Z] [HEALTH] Trigger skipped - cooldown active | {"timeSinceLast":1.014}
+[2025-12-02T16:33:33.809Z] Post-seek health check | {"currentTime":1035.421009,"readyState":4,"networkState":2,"paused":false,"bufferGap":"-4.578"}
+[2025-12-02T16:33:48.915Z] [HEALTH] Frame drop detected | {"newDropped":956,"newTotal":960,"recentDropRate":"99.58%"}
+[2025-12-02T16:33:48.915Z] [HEALTH] Frame drop threshold exceeded | Severity: SEVERE | {"newDropped":956,"threshold":15,"recentDropRate":99.58333333333333}
+[2025-12-02T16:33:48.915Z] [HEALTH] Recovery trigger | Reason: SEVERE frame drop, Type: FRAME_DROP | {"newDropped":956,"newTotal":960,"recentDropRate":99.58333333333333,"severity":"SEVERE"}
+[2025-12-02T16:33:48.915Z] [HEALTH] Monitoring paused
+[2025-12-02T16:33:48.915Z] [EVENT] AD_DETECTED | Source: HEALTH | Trigger: FRAME_DROP | Reason: SEVERE frame drop | {"newDropped":956,"newTotal":960,"recentDropRate":99.58333333333333,"severity":"SEVERE"}
+[2025-12-02T16:33:48.915Z] [RECOVERY] Resilience execution started
+[2025-12-02T16:33:48.915Z] [Logic] ⚠️ ALERT: Signature session UNSTABLE | {"changesInLastHour":4,"threshold":3,"suggestion":"Twitch may have updated player - patterns may break soon"}
+[2025-12-02T16:33:48.915Z] [DIAGNOSTICS] Warning: Player signatures unstable
+[2025-12-02T16:33:48.915Z] [DIAGNOSTICS] Video state appears recoverable | {"readyState":4,"paused":false,"bufferHealth":"healthy"}
+[2025-12-02T16:33:48.916Z] [RECOVERY] Pre-recovery snapshot | {"readyState":4,"networkState":2,"currentTime":1050.525434,"paused":false,"error":null,"bufferEnd":1053.993333}
+[2025-12-02T16:33:48.916Z] Recovery strategy selection | {"initialStrategy":"Standard","bufferHealth":"healthy","bufferSize":17.986999999999853,"forced":false}
+[2025-12-02T16:33:48.916Z] Executing standard recovery: seeking
+[2025-12-02T16:33:48.916Z] Standard recovery complete | {"seekTo":1050.493333,"bufferEnd":1053.993333,"telemetry":{"readyState":4,"networkState":2,"buffered":"[1036.01, 1053.99]"}}
+[2025-12-02T16:33:48.916Z] [CORRELATION] Recovery triggered without recent ad detection | {"trigger":"FRAME_DROP","reason":"SEVERE frame drop","timeSinceLastNetworkAd":"1764693228.9s","totalMissedCount":12,"suggestion":"Possible missed ad pattern or legitimate stuck state"}
+[2025-12-02T16:33:48.916Z] [RECOVERY] Post-recovery result | {"pre":{"readyState":4,"networkState":2,"currentTime":1050.525434,"paused":false,"error":null,"bufferEnd":1053.993333},"post":{"readyState":4,"networkState":2,"currentTime":1050.493333,"paused":false,"error":null,"bufferEnd":1053.993333},"changes":{"readyStateChanged":false,"networkStateChanged":false,"currentTimeChanged":true,"pausedStateChanged":false,"errorCleared":null,"errorAppeared":null,"bufferIncreased":false},"success":{"isValid":false,"issues":["No measurable improvement detected"],"hasImprovement":false}}
+[2025-12-02T16:33:48.916Z] [RECOVERY] Escalating to aggressive recovery due to validation failure
+[2025-12-02T16:33:48.916Z] Executing aggressive recovery: waiting for player to stabilize
+[2025-12-02T16:33:48.916Z] Aggressive recovery telemetry | {"strategy":"PASSIVE_WAIT","url":"blob:https://www.twitch.tv/cae10342-a0a1-4af6-a5f1-b90eafb75757","isBlobUrl":true,"telemetry":{"readyState":4,"networkState":2,"currentTime":1050.493333,"paused":false,"error":null,"bufferEnd":1053.993333}}
+[2025-12-02T16:33:49.024Z] Player stabilized successfully | {"duration_ms":"109","finalReadyState":4,"totalChecks":1}
+[2025-12-02T16:33:49.024Z] [RECOVERY] Aggressive recovery result | {"success":{"isValid":false,"issues":["No measurable improvement detected"],"hasImprovement":false}}
+[2025-12-02T16:33:49.024Z] [RECOVERY] Resilience execution finished | {"total_duration_ms":110}
+[2025-12-02T16:33:49.024Z] [HEALTH] Recovery completed, resuming monitoring
+[2025-12-02T16:33:49.024Z] [HEALTH] Monitoring resumed
+[2025-12-02T16:33:49.024Z] [HEALTH] Recovery completed, resuming monitoring
+[2025-12-02T16:33:49.924Z] [HEALTH] Frame drop detected | {"newDropped":11476,"newTotal":62862,"recentDropRate":"18.26%"}
+[2025-12-02T16:33:49.924Z] [HEALTH] Frame drop threshold exceeded | Severity: SEVERE | {"newDropped":11476,"threshold":15,"recentDropRate":18.255862047023637}
+[2025-12-02T16:33:49.924Z] [HEALTH] Trigger skipped - cooldown active | {"timeSinceLast":1.009}
+[2025-12-02T16:33:49.924Z] Post-seek health check | {"currentTime":1051.407797,"readyState":4,"networkState":2,"paused":false,"bufferGap":"-4.591"}
+[2025-12-02T16:33:50.042Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-12-02T16:34:05.027Z] [HEALTH] Frame drop detected | {"newDropped":1076,"newTotal":1079,"recentDropRate":"99.72%"}
+[2025-12-02T16:34:05.027Z] [HEALTH] Frame drop threshold exceeded | Severity: SEVERE | {"newDropped":1076,"threshold":15,"recentDropRate":99.72196478220575}
+[2025-12-02T16:34:05.027Z] [HEALTH] Recovery trigger | Reason: SEVERE frame drop, Type: FRAME_DROP | {"newDropped":1076,"newTotal":1079,"recentDropRate":99.72196478220575,"severity":"SEVERE"}
+[2025-12-02T16:34:05.027Z] [HEALTH] Monitoring paused
+[2025-12-02T16:34:05.027Z] [EVENT] AD_DETECTED | Source: HEALTH | Trigger: FRAME_DROP | Reason: SEVERE frame drop | {"newDropped":1076,"newTotal":1079,"recentDropRate":99.72196478220575,"severity":"SEVERE"}
+[2025-12-02T16:34:05.027Z] [RECOVERY] Resilience execution started
+[2025-12-02T16:34:05.027Z] [Logic] ⚠️ ALERT: Signature session UNSTABLE | {"changesInLastHour":4,"threshold":3,"suggestion":"Twitch may have updated player - patterns may break soon"}
+[2025-12-02T16:34:05.027Z] [DIAGNOSTICS] Warning: Player signatures unstable
+[2025-12-02T16:34:05.027Z] [DIAGNOSTICS] Video state appears recoverable | {"readyState":4,"paused":false,"bufferHealth":"healthy"}
+[2025-12-02T16:34:05.027Z] [RECOVERY] Pre-recovery snapshot | {"readyState":4,"networkState":2,"currentTime":1066.494631,"paused":false,"error":null,"bufferEnd":1069.993333}
+[2025-12-02T16:34:05.027Z] Recovery strategy selection | {"initialStrategy":"Standard","bufferHealth":"healthy","bufferSize":17.98799999999983,"forced":false}
+[2025-12-02T16:34:05.027Z] Executing standard recovery: seeking
+[2025-12-02T16:34:05.027Z] Standard recovery complete | {"seekTo":1066.493333,"bufferEnd":1069.993333,"telemetry":{"readyState":4,"networkState":2,"buffered":"[1052.01, 1069.99]"}}
+[2025-12-02T16:34:05.027Z] [CORRELATION] Recovery triggered without recent ad detection | {"trigger":"FRAME_DROP","reason":"SEVERE frame drop","timeSinceLastNetworkAd":"1764693245.0s","totalMissedCount":13,"suggestion":"Possible missed ad pattern or legitimate stuck state"}
+[2025-12-02T16:34:05.027Z] [RECOVERY] Post-recovery result | {"pre":{"readyState":4,"networkState":2,"currentTime":1066.494631,"paused":false,"error":null,"bufferEnd":1069.993333},"post":{"readyState":4,"networkState":2,"currentTime":1066.493333,"paused":false,"error":null,"bufferEnd":1069.993333},"changes":{"readyStateChanged":false,"networkStateChanged":false,"currentTimeChanged":true,"pausedStateChanged":false,"errorCleared":null,"errorAppeared":null,"bufferIncreased":false},"success":{"isValid":false,"issues":["No measurable improvement detected"],"hasImprovement":false}}
+[2025-12-02T16:34:05.027Z] [RECOVERY] Escalating to aggressive recovery due to validation failure
+[2025-12-02T16:34:05.027Z] Executing aggressive recovery: waiting for player to stabilize
+[2025-12-02T16:34:05.027Z] Aggressive recovery telemetry | {"strategy":"PASSIVE_WAIT","url":"blob:https://www.twitch.tv/cae10342-a0a1-4af6-a5f1-b90eafb75757","isBlobUrl":true,"telemetry":{"readyState":4,"networkState":2,"currentTime":1066.493333,"paused":false,"error":null,"bufferEnd":1069.993333}}
+[2025-12-02T16:34:05.128Z] Player stabilized successfully | {"duration_ms":"102","finalReadyState":4,"totalChecks":1}
+[2025-12-02T16:34:05.128Z] [RECOVERY] Aggressive recovery result | {"success":{"isValid":false,"issues":["No measurable improvement detected"],"hasImprovement":false}}
+[2025-12-02T16:34:05.128Z] [RECOVERY] Resilience execution finished | {"total_duration_ms":103}
+[2025-12-02T16:34:05.128Z] [HEALTH] Recovery completed, resuming monitoring
+[2025-12-02T16:34:05.128Z] [HEALTH] Monitoring resumed
+[2025-12-02T16:34:05.128Z] [HEALTH] Recovery completed, resuming monitoring
+[2025-12-02T16:34:06.027Z] [HEALTH] Frame drop detected | {"newDropped":12552,"newTotal":63941,"recentDropRate":"19.63%"}
+[2025-12-02T16:34:06.027Z] [HEALTH] Frame drop threshold exceeded | Severity: SEVERE | {"newDropped":12552,"threshold":15,"recentDropRate":19.630596956569338}
+[2025-12-02T16:34:06.027Z] [HEALTH] Trigger skipped - cooldown active | {"timeSinceLast":1}
+[2025-12-02T16:34:06.027Z] Post-seek health check | {"currentTime":1067.424065,"readyState":4,"networkState":2,"paused":false,"bufferGap":"-4.575"}
+[2025-12-02T16:34:21.113Z] [HEALTH] Frame drop detected | {"newDropped":1076,"newTotal":1079,"recentDropRate":"99.72%"}
+[2025-12-02T16:34:21.113Z] [HEALTH] Frame drop threshold exceeded | Severity: SEVERE | {"newDropped":1076,"threshold":15,"recentDropRate":99.72196478220575}
+[2025-12-02T16:34:21.114Z] [HEALTH] Recovery trigger | Reason: SEVERE frame drop, Type: FRAME_DROP | {"newDropped":1076,"newTotal":1079,"recentDropRate":99.72196478220575,"severity":"SEVERE"}
+[2025-12-02T16:34:21.114Z] [HEALTH] Monitoring paused
+[2025-12-02T16:34:21.114Z] [EVENT] AD_DETECTED | Source: HEALTH | Trigger: FRAME_DROP | Reason: SEVERE frame drop | {"newDropped":1076,"newTotal":1079,"recentDropRate":99.72196478220575,"severity":"SEVERE"}
+[2025-12-02T16:34:21.114Z] [RECOVERY] Resilience execution started
+[2025-12-02T16:34:21.114Z] [Logic] ⚠️ ALERT: Signature session UNSTABLE | {"changesInLastHour":4,"threshold":3,"suggestion":"Twitch may have updated player - patterns may break soon"}
+[2025-12-02T16:34:21.114Z] [DIAGNOSTICS] Warning: Player signatures unstable
+[2025-12-02T16:34:21.114Z] [DIAGNOSTICS] Video state appears recoverable | {"readyState":4,"paused":false,"bufferHealth":"healthy"}
+[2025-12-02T16:34:21.114Z] [RECOVERY] Pre-recovery snapshot | {"readyState":4,"networkState":2,"currentTime":1082.495194,"paused":false,"error":null,"bufferEnd":1085.993333}
+[2025-12-02T16:34:21.114Z] Recovery strategy selection | {"initialStrategy":"Standard","bufferHealth":"healthy","bufferSize":17.986999999999853,"forced":false}
+[2025-12-02T16:34:21.114Z] Executing standard recovery: seeking
+[2025-12-02T16:34:21.114Z] Standard recovery complete | {"seekTo":1082.493333,"bufferEnd":1085.993333,"telemetry":{"readyState":4,"networkState":2,"buffered":"[1068.01, 1085.99]"}}
+[2025-12-02T16:34:21.114Z] [CORRELATION] Recovery triggered without recent ad detection | {"trigger":"FRAME_DROP","reason":"SEVERE frame drop","timeSinceLastNetworkAd":"1764693261.1s","totalMissedCount":14,"suggestion":"Possible missed ad pattern or legitimate stuck state"}
+[2025-12-02T16:34:21.114Z] [RECOVERY] Post-recovery result | {"pre":{"readyState":4,"networkState":2,"currentTime":1082.495194,"paused":false,"error":null,"bufferEnd":1085.993333},"post":{"readyState":4,"networkState":2,"currentTime":1082.493333,"paused":false,"error":null,"bufferEnd":1085.993333},"changes":{"readyStateChanged":false,"networkStateChanged":false,"currentTimeChanged":true,"pausedStateChanged":false,"errorCleared":null,"errorAppeared":null,"bufferIncreased":false},"success":{"isValid":false,"issues":["No measurable improvement detected"],"hasImprovement":false}}
+[2025-12-02T16:34:21.114Z] [RECOVERY] Escalating to aggressive recovery due to validation failure
+[2025-12-02T16:34:21.114Z] Executing aggressive recovery: waiting for player to stabilize
+[2025-12-02T16:34:21.114Z] Aggressive recovery telemetry | {"strategy":"PASSIVE_WAIT","url":"blob:https://www.twitch.tv/cae10342-a0a1-4af6-a5f1-b90eafb75757","isBlobUrl":true,"telemetry":{"readyState":4,"networkState":2,"currentTime":1082.493333,"paused":false,"error":null,"bufferEnd":1085.993333}}
+[2025-12-02T16:34:21.221Z] Player stabilized successfully | {"duration_ms":"107","finalReadyState":4,"totalChecks":1}
+[2025-12-02T16:34:21.222Z] [RECOVERY] Aggressive recovery result | {"success":{"isValid":false,"issues":["No measurable improvement detected"],"hasImprovement":false}}
+[2025-12-02T16:34:21.222Z] [RECOVERY] Resilience execution finished | {"total_duration_ms":108}
+[2025-12-02T16:34:21.222Z] [HEALTH] Recovery completed, resuming monitoring
+[2025-12-02T16:34:21.222Z] [HEALTH] Monitoring resumed
+[2025-12-02T16:34:21.222Z] [HEALTH] Recovery completed, resuming monitoring
+[2025-12-02T16:34:22.130Z] [HEALTH] Frame drop detected | {"newDropped":13628,"newTotal":65020,"recentDropRate":"20.96%"}
+[2025-12-02T16:34:22.130Z] [HEALTH] Frame drop threshold exceeded | Severity: SEVERE | {"newDropped":13628,"threshold":15,"recentDropRate":20.959704706244235}
+[2025-12-02T16:34:22.130Z] [HEALTH] Trigger skipped - cooldown active | {"timeSinceLast":1.016}
+[2025-12-02T16:34:22.130Z] Post-seek health check | {"currentTime":1083.456886,"readyState":4,"networkState":2,"paused":false,"bufferGap":"-4.542"}
+[2025-12-02T16:34:22.569Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-12-02T16:34:37.360Z] [HEALTH] Frame drop detected | {"newDropped":956,"newTotal":960,"recentDropRate":"99.58%"}
+[2025-12-02T16:34:37.360Z] [HEALTH] Frame drop threshold exceeded | Severity: SEVERE | {"newDropped":956,"threshold":15,"recentDropRate":99.58333333333333}
+[2025-12-02T16:34:37.360Z] [HEALTH] Recovery trigger | Reason: SEVERE frame drop, Type: FRAME_DROP | {"newDropped":956,"newTotal":960,"recentDropRate":99.58333333333333,"severity":"SEVERE"}
+[2025-12-02T16:34:37.360Z] [HEALTH] Monitoring paused
+[2025-12-02T16:34:37.360Z] [EVENT] AD_DETECTED | Source: HEALTH | Trigger: FRAME_DROP | Reason: SEVERE frame drop | {"newDropped":956,"newTotal":960,"recentDropRate":99.58333333333333,"severity":"SEVERE"}
+[2025-12-02T16:34:37.360Z] [RECOVERY] Resilience execution started
+[2025-12-02T16:34:37.360Z] [Logic] ⚠️ ALERT: Signature session UNSTABLE | {"changesInLastHour":4,"threshold":3,"suggestion":"Twitch may have updated player - patterns may break soon"}
+[2025-12-02T16:34:37.360Z] [DIAGNOSTICS] Warning: Player signatures unstable
+[2025-12-02T16:34:37.360Z] [DIAGNOSTICS] Video state appears recoverable | {"readyState":4,"paused":false,"bufferHealth":"healthy"}
+[2025-12-02T16:34:37.360Z] [RECOVERY] Pre-recovery snapshot | {"readyState":4,"networkState":2,"currentTime":1098.656552,"paused":false,"error":null,"bufferEnd":1101.993333}
+[2025-12-02T16:34:37.360Z] Recovery strategy selection | {"initialStrategy":"Standard","bufferHealth":"healthy","bufferSize":17.986999999999853,"forced":false}
+[2025-12-02T16:34:37.360Z] Executing standard recovery: seeking
+[2025-12-02T16:34:37.360Z] Standard recovery complete | {"seekTo":1098.493333,"bufferEnd":1101.993333,"telemetry":{"readyState":4,"networkState":2,"buffered":"[1084.01, 1101.99]"}}
+[2025-12-02T16:34:37.360Z] [CORRELATION] Recovery triggered without recent ad detection | {"trigger":"FRAME_DROP","reason":"SEVERE frame drop","timeSinceLastNetworkAd":"1764693277.4s","totalMissedCount":15,"suggestion":"Possible missed ad pattern or legitimate stuck state"}
+[2025-12-02T16:34:37.360Z] [RECOVERY] Post-recovery result | {"pre":{"readyState":4,"networkState":2,"currentTime":1098.656552,"paused":false,"error":null,"bufferEnd":1101.993333},"post":{"readyState":4,"networkState":2,"currentTime":1098.493333,"paused":false,"error":null,"bufferEnd":1101.993333},"changes":{"readyStateChanged":false,"networkStateChanged":false,"currentTimeChanged":true,"pausedStateChanged":false,"errorCleared":null,"errorAppeared":null,"bufferIncreased":false},"success":{"isValid":false,"issues":["No measurable improvement detected"],"hasImprovement":false}}
+[2025-12-02T16:34:37.360Z] [RECOVERY] Escalating to aggressive recovery due to validation failure
+[2025-12-02T16:34:37.360Z] Executing aggressive recovery: waiting for player to stabilize
+[2025-12-02T16:34:37.360Z] Aggressive recovery telemetry | {"strategy":"PASSIVE_WAIT","url":"blob:https://www.twitch.tv/cae10342-a0a1-4af6-a5f1-b90eafb75757","isBlobUrl":true,"telemetry":{"readyState":4,"networkState":2,"currentTime":1098.493333,"paused":false,"error":null,"bufferEnd":1101.993333}}
+[2025-12-02T16:34:37.468Z] Player stabilized successfully | {"duration_ms":"107","finalReadyState":4,"totalChecks":1}
+[2025-12-02T16:34:37.468Z] [RECOVERY] Aggressive recovery result | {"success":{"isValid":false,"issues":["No measurable improvement detected"],"hasImprovement":false}}
+[2025-12-02T16:34:37.468Z] [RECOVERY] Resilience execution finished | {"total_duration_ms":109}
+[2025-12-02T16:34:37.468Z] [HEALTH] Recovery completed, resuming monitoring
+[2025-12-02T16:34:37.468Z] [HEALTH] Monitoring resumed
+[2025-12-02T16:34:37.468Z] [HEALTH] Recovery completed, resuming monitoring
+[2025-12-02T16:34:38.374Z] [HEALTH] Frame drop detected | {"newDropped":14584,"newTotal":65980,"recentDropRate":"22.10%"}
+[2025-12-02T16:34:38.374Z] [HEALTH] Frame drop threshold exceeded | Severity: SEVERE | {"newDropped":14584,"threshold":15,"recentDropRate":22.10366777811458}
+[2025-12-02T16:34:38.374Z] [HEALTH] Trigger skipped - cooldown active | {"timeSinceLast":1.014}
+[2025-12-02T16:34:38.374Z] Post-seek health check | {"currentTime":1099.455315,"readyState":4,"networkState":2,"paused":false,"bufferGap":"-4.543"}
+[2025-12-02T16:34:49.945Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-12-02T16:34:53.468Z] [HEALTH] Frame drop detected | {"newDropped":1076,"newTotal":1079,"recentDropRate":"99.72%"}
+[2025-12-02T16:34:53.468Z] [HEALTH] Frame drop threshold exceeded | Severity: SEVERE | {"newDropped":1076,"threshold":15,"recentDropRate":99.72196478220575}
+[2025-12-02T16:34:53.468Z] [HEALTH] Recovery trigger | Reason: SEVERE frame drop, Type: FRAME_DROP | {"newDropped":1076,"newTotal":1079,"recentDropRate":99.72196478220575,"severity":"SEVERE"}
+[2025-12-02T16:34:53.468Z] [HEALTH] Monitoring paused
+[2025-12-02T16:34:53.468Z] [EVENT] AD_DETECTED | Source: HEALTH | Trigger: FRAME_DROP | Reason: SEVERE frame drop | {"newDropped":1076,"newTotal":1079,"recentDropRate":99.72196478220575,"severity":"SEVERE"}
+[2025-12-02T16:34:53.468Z] [RECOVERY] Resilience execution started
+[2025-12-02T16:34:53.468Z] [Logic] ⚠️ ALERT: Signature session UNSTABLE | {"changesInLastHour":4,"threshold":3,"suggestion":"Twitch may have updated player - patterns may break soon"}
+[2025-12-02T16:34:53.468Z] [DIAGNOSTICS] Warning: Player signatures unstable
+[2025-12-02T16:34:53.468Z] [DIAGNOSTICS] Video state appears recoverable | {"readyState":4,"paused":false,"bufferHealth":"healthy"}
+[2025-12-02T16:34:53.468Z] [RECOVERY] Pre-recovery snapshot | {"readyState":4,"networkState":2,"currentTime":1114.533938,"paused":false,"error":null,"bufferEnd":1117.993333}
+[2025-12-02T16:34:53.468Z] Recovery strategy selection | {"initialStrategy":"Standard","bufferHealth":"healthy","bufferSize":17.98799999999983,"forced":false}
+[2025-12-02T16:34:53.468Z] Executing standard recovery: seeking
+[2025-12-02T16:34:53.468Z] Standard recovery complete | {"seekTo":1114.493333,"bufferEnd":1117.993333,"telemetry":{"readyState":4,"networkState":2,"buffered":"[1100.01, 1117.99]"}}
+[2025-12-02T16:34:53.468Z] [CORRELATION] Recovery triggered without recent ad detection | {"trigger":"FRAME_DROP","reason":"SEVERE frame drop","timeSinceLastNetworkAd":"1764693293.5s","totalMissedCount":16,"suggestion":"Possible missed ad pattern or legitimate stuck state"}
+[2025-12-02T16:34:53.468Z] [RECOVERY] Post-recovery result | {"pre":{"readyState":4,"networkState":2,"currentTime":1114.533938,"paused":false,"error":null,"bufferEnd":1117.993333},"post":{"readyState":4,"networkState":2,"currentTime":1114.493333,"paused":false,"error":null,"bufferEnd":1117.993333},"changes":{"readyStateChanged":false,"networkStateChanged":false,"currentTimeChanged":true,"pausedStateChanged":false,"errorCleared":null,"errorAppeared":null,"bufferIncreased":false},"success":{"isValid":false,"issues":["No measurable improvement detected"],"hasImprovement":false}}
+[2025-12-02T16:34:53.468Z] [RECOVERY] Escalating to aggressive recovery due to validation failure
+[2025-12-02T16:34:53.468Z] Executing aggressive recovery: waiting for player to stabilize
+[2025-12-02T16:34:53.469Z] Aggressive recovery telemetry | {"strategy":"PASSIVE_WAIT","url":"blob:https://www.twitch.tv/cae10342-a0a1-4af6-a5f1-b90eafb75757","isBlobUrl":true,"telemetry":{"readyState":4,"networkState":2,"currentTime":1114.493333,"paused":false,"error":null,"bufferEnd":1117.993333}}
+[2025-12-02T16:34:53.579Z] Player stabilized successfully | {"duration_ms":"111","finalReadyState":4,"totalChecks":1}
+[2025-12-02T16:34:53.579Z] [RECOVERY] Aggressive recovery result | {"success":{"isValid":false,"issues":["No measurable improvement detected"],"hasImprovement":false}}
+[2025-12-02T16:34:53.579Z] [RECOVERY] Resilience execution finished | {"total_duration_ms":111}
+[2025-12-02T16:34:53.579Z] [HEALTH] Recovery completed, resuming monitoring
+[2025-12-02T16:34:53.579Z] [HEALTH] Monitoring resumed
+[2025-12-02T16:34:53.579Z] [HEALTH] Recovery completed, resuming monitoring
+[2025-12-02T16:34:54.470Z] [HEALTH] Frame drop detected | {"newDropped":15660,"newTotal":67059,"recentDropRate":"23.35%"}
+[2025-12-02T16:34:54.470Z] [HEALTH] Frame drop threshold exceeded | Severity: SEVERE | {"newDropped":15660,"threshold":15,"recentDropRate":23.35257012481546}
+[2025-12-02T16:34:54.470Z] [HEALTH] Trigger skipped - cooldown active | {"timeSinceLast":1.002}
+[2025-12-02T16:34:54.470Z] Post-seek health check | {"currentTime":1115.42283,"readyState":4,"networkState":2,"paused":false,"bufferGap":"-4.576"}
+[2025-12-02T16:34:58.834Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-12-02T16:35:09.551Z] [HEALTH] Frame drop detected | {"newDropped":956,"newTotal":960,"recentDropRate":"99.58%"}
+[2025-12-02T16:35:09.551Z] [HEALTH] Frame drop threshold exceeded | Severity: SEVERE | {"newDropped":956,"threshold":15,"recentDropRate":99.58333333333333}
+[2025-12-02T16:35:09.551Z] [HEALTH] Recovery trigger | Reason: SEVERE frame drop, Type: FRAME_DROP | {"newDropped":956,"newTotal":960,"recentDropRate":99.58333333333333,"severity":"SEVERE"}
+[2025-12-02T16:35:09.551Z] [HEALTH] Monitoring paused
+[2025-12-02T16:35:09.551Z] [EVENT] AD_DETECTED | Source: HEALTH | Trigger: FRAME_DROP | Reason: SEVERE frame drop | {"newDropped":956,"newTotal":960,"recentDropRate":99.58333333333333,"severity":"SEVERE"}
+[2025-12-02T16:35:09.551Z] [RECOVERY] Resilience execution started
+[2025-12-02T16:35:09.551Z] [Logic] ⚠️ ALERT: Signature session UNSTABLE | {"changesInLastHour":4,"threshold":3,"suggestion":"Twitch may have updated player - patterns may break soon"}
+[2025-12-02T16:35:09.551Z] [DIAGNOSTICS] Warning: Player signatures unstable
+[2025-12-02T16:35:09.551Z] [DIAGNOSTICS] Video state appears recoverable | {"readyState":4,"paused":false,"bufferHealth":"healthy"}
+[2025-12-02T16:35:09.551Z] [RECOVERY] Pre-recovery snapshot | {"readyState":4,"networkState":2,"currentTime":1130.463427,"paused":false,"error":null,"bufferEnd":1133.993333}
+[2025-12-02T16:35:09.551Z] Recovery strategy selection | {"initialStrategy":"Standard","bufferHealth":"healthy","bufferSize":17.986999999999853,"forced":false}
+[2025-12-02T16:35:09.551Z] Executing standard recovery: seeking
+[2025-12-02T16:35:09.551Z] Standard recovery complete | {"seekTo":1130.493333,"bufferEnd":1133.993333,"telemetry":{"readyState":4,"networkState":2,"buffered":"[1116.01, 1133.99]"}}
+[2025-12-02T16:35:09.551Z] [CORRELATION] Recovery triggered without recent ad detection | {"trigger":"FRAME_DROP","reason":"SEVERE frame drop","timeSinceLastNetworkAd":"1764693309.6s","totalMissedCount":17,"suggestion":"Possible missed ad pattern or legitimate stuck state"}
+[2025-12-02T16:35:09.551Z] [RECOVERY] Post-recovery result | {"pre":{"readyState":4,"networkState":2,"currentTime":1130.463427,"paused":false,"error":null,"bufferEnd":1133.993333},"post":{"readyState":4,"networkState":2,"currentTime":1130.493333,"paused":false,"error":null,"bufferEnd":1133.993333},"changes":{"readyStateChanged":false,"networkStateChanged":false,"currentTimeChanged":true,"pausedStateChanged":false,"errorCleared":null,"errorAppeared":null,"bufferIncreased":false},"success":{"isValid":false,"issues":["No measurable improvement detected"],"hasImprovement":false}}
+[2025-12-02T16:35:09.551Z] [RECOVERY] Escalating to aggressive recovery due to validation failure
+[2025-12-02T16:35:09.551Z] Executing aggressive recovery: waiting for player to stabilize
+[2025-12-02T16:35:09.551Z] Aggressive recovery telemetry | {"strategy":"PASSIVE_WAIT","url":"blob:https://www.twitch.tv/cae10342-a0a1-4af6-a5f1-b90eafb75757","isBlobUrl":true,"telemetry":{"readyState":4,"networkState":2,"currentTime":1130.493333,"paused":false,"error":null,"bufferEnd":1133.993333}}
+[2025-12-02T16:35:09.659Z] Player stabilized successfully | {"duration_ms":"107","finalReadyState":4,"totalChecks":1}
+[2025-12-02T16:35:09.659Z] [RECOVERY] Aggressive recovery result | {"success":{"isValid":false,"issues":["No measurable improvement detected"],"hasImprovement":false}}
+[2025-12-02T16:35:09.659Z] [RECOVERY] Resilience execution finished | {"total_duration_ms":107}
+[2025-12-02T16:35:09.659Z] [HEALTH] Recovery completed, resuming monitoring
+[2025-12-02T16:35:09.659Z] [HEALTH] Monitoring resumed
+[2025-12-02T16:35:09.659Z] [HEALTH] Recovery completed, resuming monitoring
+[2025-12-02T16:35:10.566Z] [HEALTH] Frame drop detected | {"newDropped":16616,"newTotal":68019,"recentDropRate":"24.43%"}
+[2025-12-02T16:35:10.566Z] [HEALTH] Frame drop threshold exceeded | Severity: SEVERE | {"newDropped":16616,"threshold":15,"recentDropRate":24.4284685161499}
+[2025-12-02T16:35:10.566Z] [HEALTH] Trigger skipped - cooldown active | {"timeSinceLast":1.015}
+[2025-12-02T16:35:10.566Z] Post-seek health check | {"currentTime":1131.458097,"readyState":4,"networkState":2,"paused":false,"bufferGap":"-4.541"}
+[2025-12-02T16:35:12.102Z] Console Error | {"args":["An error occurred! For more details, see the full error text at https://go.apollo.dev/c/err#%7B%22version%22%3A%223.8.7%22%2C%22message%22%3A12%2C%22args%22%3A%5B%22treasureTrainDetails%22%2C%22%7B%5Cn%20%20%5C%22__typename%5C%22%3A%20%5C%22HypeTrainApproaching%5C%22%2C%5Cn%20%20%5C%22id%5C%22%3A%20%5C%2286131599%5C%22%2C%5Cn%20%20%5C%22goal%5C%22%3A%203%2C%5Cn%20%20%5C%22creatorColor%5C%22%3A%20%5C%22%5C%22%2C%5Cn%20%20%5C%22participants%5C%22%3A%20%5B%5Cn%20%20%20%20%5C%22447754834%5C%22%2C%5Cn%20%20%20%20%5C%22194961244%5C%22%5Cn%20%20%5D%2C%5Cn%20%20%5C%22isGoldenKappaTrain%5C%22%3A%20false%2C%5Cn%20%20%5C%22eventsRemaining%5C%22%3A%20%5B%5Cn%20%20%20%20%7B%5Cn%20%20%20%20%20%20%5C%22__typename%5C%22%3A%20%5C%22HypeTrainApproachingEventsRemaining%5C%22%2C%5Cn%20%20%20%20%20%20%5C%22events%5C%22%3A%201%2C%5Cn%20%20%20%20%20%20%5C%22secondsRemaining%5C%22%3A%20177%5Cn%20%20%20%20%7D%5Cn%20%20%5D%2C%5Cn%20%20%5C%22levelOneRewards%5C%22%3A%20%5B%5Cn%20%20%20%20%7B%5Cn%20%20%20%20%20%20%5C%22__typename%5C%22%3A%20%5C%22HypeTrainEmoteReward%5C%22%2C%5Cn%20%20%20%20%20%20%5C%22id%5C%22%3A%20%5C%22emotesv2_bbbf6d16d9964fcbba2d965a7eea942f%5C%22%2C%5Cn%20%20%20%20%20%20%5C%22type%5C%22%3A%20%5C%22EMOTE%5C%22%2C%5Cn%20%20%20%20%20%20%5C%22emote%5C%22%3A%20%7B%5Cn%20%20%20%20%20%20%20%20%5C%22__typename%5C%22%3A%20%5C%22Emote%5C%22%2C%5Cn%20%20%20%20%20%20%20%20%5C%22id%5C%22%3A%20%5C%22emotesv2_bbbf6d16d9964fcbba2d965a7eea942f%5C%22%2C%5Cn%20%20%20%20%20%20%20%20%5C%22token%5C%22%3A%20%5C%22ConfettiHype%5C%22%5Cn%20%20%20%20%20%20%7D%5Cn%20%20%20%20%7D%2C%5Cn%20%20%20%20%7B%5Cn%20%20%20%20%20%20%5C%22__typename%5C%22%3A%20%5C%22HypeTrainEmoteReward%5C%22%2C%5Cn%20%20%20%20%20%20%5C%22id%5C%22%3A%20%5C%22emotesv2_a3cdcbfcae9b41bb8215b012362eea35%5C%22%2C%5Cn%20%20%20%20%20%20%5C%22type%5C%22%3A%20%5C%22EMOTE%5C%22%2C%5Cn%20%20%20%20%20%20%5C%22emote%5C%22%3A%20%7B%5Cn%20%20%20%20%20%20%20%20%5C%22__typename%5C%22%3A%20%5C%22Emote%5C%22%2C%5Cn%20%20%20%20%20%20%20%20%5C%22id%5C%22%3A%20%5C%22emotesv2_a3cdcbfcae9b41bb8215b012362eea35%5C%22%2C%5Cn%20%20%20%20%20%20%20%20%5C%22token%5C%22%3A%20%5C%22FrogPonder%5C%22%5Cn%20%20%20%20%20%20%7D%5Cn%20%20%20%20%7D%2C%5Cn%20%20%20%20%7B%5Cn%20%20%20%20%20%20%5C%22__typename%5C%22%3A%20%5C%22HypeTrainEmoteReward%5C%22%2C%5Cn%20%20%20%20%20%20%5C%22id%5C%22%3A%20%5C%22emotesv2_7fa0b%22%5D%7D"],"severity":"MEDIUM","action":"LOG_AND_METRIC"}
+[2025-12-02T16:35:12.121Z] Console Error | {"args":["An error occurred! For more details, see the full error text at https://go.apollo.dev/c/err#%7B%22version%22%3A%223.8.7%22%2C%22message%22%3A12%2C%22args%22%3A%5B%22treasureTrainDetails%22%2C%22%7B%5Cn%20%20%5C%22__typename%5C%22%3A%20%5C%22HypeTrainApproaching%5C%22%2C%5Cn%20%20%5C%22id%5C%22%3A%20%5C%2286131599%5C%22%2C%5Cn%20%20%5C%22goal%5C%22%3A%203%2C%5Cn%20%20%5C%22creatorColor%5C%22%3A%20%5C%22%5C%22%2C%5Cn%20%20%5C%22participants%5C%22%3A%20%5B%5Cn%20%20%20%20%5C%22447754834%5C%22%2C%5Cn%20%20%20%20%5C%22194961244%5C%22%5Cn%20%20%5D%2C%5Cn%20%20%5C%22isGoldenKappaTrain%5C%22%3A%20false%2C%5Cn%20%20%5C%22eventsRemaining%5C%22%3A%20%5B%5Cn%20%20%20%20%7B%5Cn%20%20%20%20%20%20%5C%22__typename%5C%22%3A%20%5C%22HypeTrainApproachingEventsRemaining%5C%22%2C%5Cn%20%20%20%20%20%20%5C%22events%5C%22%3A%201%2C%5Cn%20%20%20%20%20%20%5C%22secondsRemaining%5C%22%3A%20177%5Cn%20%20%20%20%7D%5Cn%20%20%5D%2C%5Cn%20%20%5C%22levelOneRewards%5C%22%3A%20%5B%5Cn%20%20%20%20%7B%5Cn%20%20%20%20%20%20%5C%22__typename%5C%22%3A%20%5C%22HypeTrainEmoteReward%5C%22%2C%5Cn%20%20%20%20%20%20%5C%22id%5C%22%3A%20%5C%22emotesv2_bbbf6d16d9964fcbba2d965a7eea942f%5C%22%2C%5Cn%20%20%20%20%20%20%5C%22type%5C%22%3A%20%5C%22EMOTE%5C%22%2C%5Cn%20%20%20%20%20%20%5C%22emote%5C%22%3A%20%7B%5Cn%20%20%20%20%20%20%20%20%5C%22__typename%5C%22%3A%20%5C%22Emote%5C%22%2C%5Cn%20%20%20%20%20%20%20%20%5C%22id%5C%22%3A%20%5C%22emotesv2_bbbf6d16d9964fcbba2d965a7eea942f%5C%22%2C%5Cn%20%20%20%20%20%20%20%20%5C%22token%5C%22%3A%20%5C%22ConfettiHype%5C%22%5Cn%20%20%20%20%20%20%7D%5Cn%20%20%20%20%7D%2C%5Cn%20%20%20%20%7B%5Cn%20%20%20%20%20%20%5C%22__typename%5C%22%3A%20%5C%22HypeTrainEmoteReward%5C%22%2C%5Cn%20%20%20%20%20%20%5C%22id%5C%22%3A%20%5C%22emotesv2_a3cdcbfcae9b41bb8215b012362eea35%5C%22%2C%5Cn%20%20%20%20%20%20%5C%22type%5C%22%3A%20%5C%22EMOTE%5C%22%2C%5Cn%20%20%20%20%20%20%5C%22emote%5C%22%3A%20%7B%5Cn%20%20%20%20%20%20%20%20%5C%22__typename%5C%22%3A%20%5C%22Emote%5C%22%2C%5Cn%20%20%20%20%20%20%20%20%5C%22id%5C%22%3A%20%5C%22emotesv2_a3cdcbfcae9b41bb8215b012362eea35%5C%22%2C%5Cn%20%20%20%20%20%20%20%20%5C%22token%5C%22%3A%20%5C%22FrogPonder%5C%22%5Cn%20%20%20%20%20%20%7D%5Cn%20%20%20%20%7D%2C%5Cn%20%20%20%20%7B%5Cn%20%20%20%20%20%20%5C%22__typename%5C%22%3A%20%5C%22HypeTrainEmoteReward%5C%22%2C%5Cn%20%20%20%20%20%20%5C%22id%5C%22%3A%20%5C%22emotesv2_7fa0b%22%5D%7D"],"severity":"MEDIUM","action":"LOG_AND_METRIC"}
+[2025-12-02T16:35:12.139Z] Console Error | {"args":["An error occurred! For more details, see the full error text at https://go.apollo.dev/c/err#%7B%22version%22%3A%223.8.7%22%2C%22message%22%3A12%2C%22args%22%3A%5B%22treasureTrainDetails%22%2C%22%7B%5Cn%20%20%5C%22__typename%5C%22%3A%20%5C%22HypeTrainApproaching%5C%22%2C%5Cn%20%20%5C%22id%5C%22%3A%20%5C%2286131599%5C%22%2C%5Cn%20%20%5C%22goal%5C%22%3A%203%2C%5Cn%20%20%5C%22creatorColor%5C%22%3A%20%5C%22%5C%22%2C%5Cn%20%20%5C%22participants%5C%22%3A%20%5B%5Cn%20%20%20%20%5C%22447754834%5C%22%2C%5Cn%20%20%20%20%5C%22194961244%5C%22%5Cn%20%20%5D%2C%5Cn%20%20%5C%22isGoldenKappaTrain%5C%22%3A%20false%2C%5Cn%20%20%5C%22eventsRemaining%5C%22%3A%20%5B%5Cn%20%20%20%20%7B%5Cn%20%20%20%20%20%20%5C%22__typename%5C%22%3A%20%5C%22HypeTrainApproachingEventsRemaining%5C%22%2C%5Cn%20%20%20%20%20%20%5C%22events%5C%22%3A%201%2C%5Cn%20%20%20%20%20%20%5C%22secondsRemaining%5C%22%3A%20177%5Cn%20%20%20%20%7D%5Cn%20%20%5D%2C%5Cn%20%20%5C%22levelOneRewards%5C%22%3A%20%5B%5Cn%20%20%20%20%7B%5Cn%20%20%20%20%20%20%5C%22__typename%5C%22%3A%20%5C%22HypeTrainEmoteReward%5C%22%2C%5Cn%20%20%20%20%20%20%5C%22id%5C%22%3A%20%5C%22emotesv2_bbbf6d16d9964fcbba2d965a7eea942f%5C%22%2C%5Cn%20%20%20%20%20%20%5C%22type%5C%22%3A%20%5C%22EMOTE%5C%22%2C%5Cn%20%20%20%20%20%20%5C%22emote%5C%22%3A%20%7B%5Cn%20%20%20%20%20%20%20%20%5C%22__typename%5C%22%3A%20%5C%22Emote%5C%22%2C%5Cn%20%20%20%20%20%20%20%20%5C%22id%5C%22%3A%20%5C%22emotesv2_bbbf6d16d9964fcbba2d965a7eea942f%5C%22%2C%5Cn%20%20%20%20%20%20%20%20%5C%22token%5C%22%3A%20%5C%22ConfettiHype%5C%22%5Cn%20%20%20%20%20%20%7D%5Cn%20%20%20%20%7D%2C%5Cn%20%20%20%20%7B%5Cn%20%20%20%20%20%20%5C%22__typename%5C%22%3A%20%5C%22HypeTrainEmoteReward%5C%22%2C%5Cn%20%20%20%20%20%20%5C%22id%5C%22%3A%20%5C%22emotesv2_a3cdcbfcae9b41bb8215b012362eea35%5C%22%2C%5Cn%20%20%20%20%20%20%5C%22type%5C%22%3A%20%5C%22EMOTE%5C%22%2C%5Cn%20%20%20%20%20%20%5C%22emote%5C%22%3A%20%7B%5Cn%20%20%20%20%20%20%20%20%5C%22__typename%5C%22%3A%20%5C%22Emote%5C%22%2C%5Cn%20%20%20%20%20%20%20%20%5C%22id%5C%22%3A%20%5C%22emotesv2_a3cdcbfcae9b41bb8215b012362eea35%5C%22%2C%5Cn%20%20%20%20%20%20%20%20%5C%22token%5C%22%3A%20%5C%22FrogPonder%5C%22%5Cn%20%20%20%20%20%20%7D%5Cn%20%20%20%20%7D%2C%5Cn%20%20%20%20%7B%5Cn%20%20%20%20%20%20%5C%22__typename%5C%22%3A%20%5C%22HypeTrainEmoteReward%5C%22%2C%5Cn%20%20%20%20%20%20%5C%22id%5C%22%3A%20%5C%22emotesv2_7fa0b%22%5D%7D"],"severity":"MEDIUM","action":"LOG_AND_METRIC"}
+[2025-12-02T16:35:25.649Z] [HEALTH] Frame drop detected | {"newDropped":1076,"newTotal":1079,"recentDropRate":"99.72%"}
+[2025-12-02T16:35:25.649Z] [HEALTH] Frame drop threshold exceeded | Severity: SEVERE | {"newDropped":1076,"threshold":15,"recentDropRate":99.72196478220575}
+[2025-12-02T16:35:25.649Z] [HEALTH] Recovery trigger | Reason: SEVERE frame drop, Type: FRAME_DROP | {"newDropped":1076,"newTotal":1079,"recentDropRate":99.72196478220575,"severity":"SEVERE"}
+[2025-12-02T16:35:25.649Z] [HEALTH] Monitoring paused
+[2025-12-02T16:35:25.649Z] [EVENT] AD_DETECTED | Source: HEALTH | Trigger: FRAME_DROP | Reason: SEVERE frame drop | {"newDropped":1076,"newTotal":1079,"recentDropRate":99.72196478220575,"severity":"SEVERE"}
+[2025-12-02T16:35:25.650Z] [RECOVERY] Resilience execution started
+[2025-12-02T16:35:25.650Z] [Logic] ⚠️ ALERT: Signature session UNSTABLE | {"changesInLastHour":4,"threshold":3,"suggestion":"Twitch may have updated player - patterns may break soon"}
+[2025-12-02T16:35:25.650Z] [DIAGNOSTICS] Warning: Player signatures unstable
+[2025-12-02T16:35:25.650Z] [DIAGNOSTICS] Video state appears recoverable | {"readyState":4,"paused":false,"bufferHealth":"healthy"}
+[2025-12-02T16:35:25.650Z] [RECOVERY] Pre-recovery snapshot | {"readyState":4,"networkState":2,"currentTime":1146.542071,"paused":false,"error":null,"bufferEnd":1151.785333}
+[2025-12-02T16:35:25.650Z] Recovery strategy selection | {"initialStrategy":"Standard","bufferHealth":"healthy","bufferSize":19.779999999999973,"forced":false}
+[2025-12-02T16:35:25.650Z] Executing standard recovery: seeking
+[2025-12-02T16:35:25.650Z] Standard recovery complete | {"seekTo":1148.285333,"bufferEnd":1151.785333,"telemetry":{"readyState":4,"networkState":2,"buffered":"[1132.01, 1151.79]"}}
+[2025-12-02T16:35:25.650Z] [CORRELATION] Recovery triggered without recent ad detection | {"trigger":"FRAME_DROP","reason":"SEVERE frame drop","timeSinceLastNetworkAd":"1764693325.7s","totalMissedCount":18,"suggestion":"Possible missed ad pattern or legitimate stuck state"}
+[2025-12-02T16:35:25.650Z] [RECOVERY] Post-recovery result | {"pre":{"readyState":4,"networkState":2,"currentTime":1146.542071,"paused":false,"error":null,"bufferEnd":1151.785333},"post":{"readyState":4,"networkState":2,"currentTime":1148.285333,"paused":false,"error":null,"bufferEnd":1151.785333},"changes":{"readyStateChanged":false,"networkStateChanged":false,"currentTimeChanged":true,"pausedStateChanged":false,"errorCleared":null,"errorAppeared":null,"bufferIncreased":false},"success":{"isValid":false,"issues":["No measurable improvement detected"],"hasImprovement":false}}
+[2025-12-02T16:35:25.650Z] [RECOVERY] Escalating to aggressive recovery due to validation failure
+[2025-12-02T16:35:25.650Z] Executing aggressive recovery: waiting for player to stabilize
+[2025-12-02T16:35:25.650Z] Aggressive recovery telemetry | {"strategy":"PASSIVE_WAIT","url":"blob:https://www.twitch.tv/cae10342-a0a1-4af6-a5f1-b90eafb75757","isBlobUrl":true,"telemetry":{"readyState":4,"networkState":2,"currentTime":1148.285333,"paused":false,"error":null,"bufferEnd":1151.785333}}
+[2025-12-02T16:35:25.755Z] Player stabilized successfully | {"duration_ms":"107","finalReadyState":4,"totalChecks":1}
+[2025-12-02T16:35:25.756Z] [RECOVERY] Aggressive recovery result | {"success":{"isValid":true,"issues":[],"hasImprovement":true}}
+[2025-12-02T16:35:25.756Z] [RECOVERY] Resilience execution finished | {"total_duration_ms":107}
+[2025-12-02T16:35:25.756Z] [HEALTH] Recovery completed, resuming monitoring
+[2025-12-02T16:35:25.756Z] [HEALTH] Monitoring resumed
+[2025-12-02T16:35:25.756Z] [HEALTH] Recovery completed, resuming monitoring
+[2025-12-02T16:35:26.650Z] [HEALTH] Frame drop detected | {"newDropped":17692,"newTotal":69098,"recentDropRate":"25.60%"}
+[2025-12-02T16:35:26.650Z] [HEALTH] Frame drop threshold exceeded | Severity: SEVERE | {"newDropped":17692,"threshold":15,"recentDropRate":25.6042143043214}
+[2025-12-02T16:35:26.650Z] [HEALTH] Trigger skipped - cooldown active | {"timeSinceLast":1.001}
+[2025-12-02T16:35:26.650Z] Post-seek health check | {"currentTime":1149.11477,"readyState":4,"networkState":2,"paused":false,"bufferGap":"-2.884"}
+[2025-12-02T16:35:41.794Z] [HEALTH] Frame drop detected | {"newDropped":957,"newTotal":961,"recentDropRate":"99.58%"}
+[2025-12-02T16:35:41.794Z] [HEALTH] Frame drop threshold exceeded | Severity: SEVERE | {"newDropped":957,"threshold":15,"recentDropRate":99.5837669094693}
+[2025-12-02T16:35:41.794Z] [HEALTH] Recovery trigger | Reason: SEVERE frame drop, Type: FRAME_DROP | {"newDropped":957,"newTotal":961,"recentDropRate":99.5837669094693,"severity":"SEVERE"}
+[2025-12-02T16:35:41.794Z] [HEALTH] Monitoring paused
+[2025-12-02T16:35:41.794Z] [EVENT] AD_DETECTED | Source: HEALTH | Trigger: FRAME_DROP | Reason: SEVERE frame drop | {"newDropped":957,"newTotal":961,"recentDropRate":99.5837669094693,"severity":"SEVERE"}
+[2025-12-02T16:35:41.794Z] [RECOVERY] Resilience execution started
+[2025-12-02T16:35:41.794Z] [Logic] ⚠️ ALERT: Signature session UNSTABLE | {"changesInLastHour":4,"threshold":3,"suggestion":"Twitch may have updated player - patterns may break soon"}
+[2025-12-02T16:35:41.794Z] [DIAGNOSTICS] Warning: Player signatures unstable
+[2025-12-02T16:35:41.794Z] [DIAGNOSTICS] Video state appears recoverable | {"readyState":4,"paused":false,"bufferHealth":"healthy"}
+[2025-12-02T16:35:41.794Z] [RECOVERY] Pre-recovery snapshot | {"readyState":4,"networkState":2,"currentTime":1164.260194,"paused":false,"error":null,"bufferEnd":1167.998666}
+[2025-12-02T16:35:41.794Z] Recovery strategy selection | {"initialStrategy":"Standard","bufferHealth":"healthy","bufferSize":17.992332999999917,"forced":false}
+[2025-12-02T16:35:41.794Z] Executing standard recovery: seeking
+[2025-12-02T16:35:41.794Z] Standard recovery complete | {"seekTo":1164.498666,"bufferEnd":1167.998666,"telemetry":{"readyState":4,"networkState":2,"buffered":"[1150.01, 1168.00]"}}
+[2025-12-02T16:35:41.794Z] [CORRELATION] Recovery triggered without recent ad detection | {"trigger":"FRAME_DROP","reason":"SEVERE frame drop","timeSinceLastNetworkAd":"1764693341.8s","totalMissedCount":19,"suggestion":"Possible missed ad pattern or legitimate stuck state"}
+[2025-12-02T16:35:41.794Z] [RECOVERY] Post-recovery result | {"pre":{"readyState":4,"networkState":2,"currentTime":1164.260194,"paused":false,"error":null,"bufferEnd":1167.998666},"post":{"readyState":4,"networkState":2,"currentTime":1164.498666,"paused":false,"error":null,"bufferEnd":1167.998666},"changes":{"readyStateChanged":false,"networkStateChanged":false,"currentTimeChanged":true,"pausedStateChanged":false,"errorCleared":null,"errorAppeared":null,"bufferIncreased":false},"success":{"isValid":false,"issues":["No measurable improvement detected"],"hasImprovement":false}}
+[2025-12-02T16:35:41.794Z] [RECOVERY] Escalating to aggressive recovery due to validation failure
+[2025-12-02T16:35:41.794Z] Executing aggressive recovery: waiting for player to stabilize
+[2025-12-02T16:35:41.794Z] Aggressive recovery telemetry | {"strategy":"PASSIVE_WAIT","url":"blob:https://www.twitch.tv/cae10342-a0a1-4af6-a5f1-b90eafb75757","isBlobUrl":true,"telemetry":{"readyState":4,"networkState":2,"currentTime":1164.498666,"paused":false,"error":null,"bufferEnd":1167.998666}}
+[2025-12-02T16:35:41.902Z] Player stabilized successfully | {"duration_ms":"108","finalReadyState":4,"totalChecks":1}
+[2025-12-02T16:35:41.902Z] [RECOVERY] Aggressive recovery result | {"success":{"isValid":false,"issues":["No measurable improvement detected"],"hasImprovement":false}}
+[2025-12-02T16:35:41.902Z] [RECOVERY] Resilience execution finished | {"total_duration_ms":109}
+[2025-12-02T16:35:41.902Z] [HEALTH] Recovery completed, resuming monitoring
+[2025-12-02T16:35:41.902Z] [HEALTH] Monitoring resumed
+[2025-12-02T16:35:41.902Z] [HEALTH] Recovery completed, resuming monitoring
+[2025-12-02T16:35:42.795Z] [HEALTH] Frame drop detected | {"newDropped":18649,"newTotal":70059,"recentDropRate":"26.62%"}
+[2025-12-02T16:35:42.795Z] [HEALTH] Frame drop threshold exceeded | Severity: SEVERE | {"newDropped":18649,"threshold":15,"recentDropRate":26.61899256341084}
+[2025-12-02T16:35:42.795Z] [HEALTH] Trigger skipped - cooldown active | {"timeSinceLast":1.001}
+[2025-12-02T16:35:42.795Z] Post-seek health check | {"currentTime":1165.420902,"readyState":4,"networkState":2,"paused":false,"bufferGap":"-2.578"}
+[2025-12-02T16:35:49.962Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-12-02T16:35:57.889Z] [HEALTH] Frame drop detected | {"newDropped":957,"newTotal":961,"recentDropRate":"99.58%"}
+[2025-12-02T16:35:57.889Z] [HEALTH] Frame drop threshold exceeded | Severity: SEVERE | {"newDropped":957,"threshold":15,"recentDropRate":99.5837669094693}
+[2025-12-02T16:35:57.889Z] [HEALTH] Recovery trigger | Reason: SEVERE frame drop, Type: FRAME_DROP | {"newDropped":957,"newTotal":961,"recentDropRate":99.5837669094693,"severity":"SEVERE"}
+[2025-12-02T16:35:57.890Z] [HEALTH] Monitoring paused
+[2025-12-02T16:35:57.890Z] [EVENT] AD_DETECTED | Source: HEALTH | Trigger: FRAME_DROP | Reason: SEVERE frame drop | {"newDropped":957,"newTotal":961,"recentDropRate":99.5837669094693,"severity":"SEVERE"}
+[2025-12-02T16:35:57.890Z] [RECOVERY] Resilience execution started
+[2025-12-02T16:35:57.890Z] [Logic] ⚠️ ALERT: Signature session UNSTABLE | {"changesInLastHour":4,"threshold":3,"suggestion":"Twitch may have updated player - patterns may break soon"}
+[2025-12-02T16:35:57.890Z] [DIAGNOSTICS] Warning: Player signatures unstable
+[2025-12-02T16:35:57.890Z] [DIAGNOSTICS] Video state appears recoverable | {"readyState":4,"paused":false,"bufferHealth":"healthy"}
+[2025-12-02T16:35:57.890Z] [RECOVERY] Pre-recovery snapshot | {"readyState":4,"networkState":2,"currentTime":1180.528493,"paused":false,"error":null,"bufferEnd":1183.998666}
+[2025-12-02T16:35:57.890Z] Recovery strategy selection | {"initialStrategy":"Standard","bufferHealth":"healthy","bufferSize":17.992332999999917,"forced":false}
+[2025-12-02T16:35:57.890Z] Executing standard recovery: seeking
+[2025-12-02T16:35:57.890Z] Standard recovery complete | {"seekTo":1180.498666,"bufferEnd":1183.998666,"telemetry":{"readyState":4,"networkState":2,"buffered":"[1166.01, 1184.00]"}}
+[2025-12-02T16:35:57.890Z] [CORRELATION] Recovery triggered without recent ad detection | {"trigger":"FRAME_DROP","reason":"SEVERE frame drop","timeSinceLastNetworkAd":"1764693357.9s","totalMissedCount":20,"suggestion":"Possible missed ad pattern or legitimate stuck state"}
+[2025-12-02T16:35:57.890Z] [RECOVERY] Post-recovery result | {"pre":{"readyState":4,"networkState":2,"currentTime":1180.528493,"paused":false,"error":null,"bufferEnd":1183.998666},"post":{"readyState":4,"networkState":2,"currentTime":1180.498666,"paused":false,"error":null,"bufferEnd":1183.998666},"changes":{"readyStateChanged":false,"networkStateChanged":false,"currentTimeChanged":true,"pausedStateChanged":false,"errorCleared":null,"errorAppeared":null,"bufferIncreased":false},"success":{"isValid":false,"issues":["No measurable improvement detected"],"hasImprovement":false}}
+[2025-12-02T16:35:57.890Z] [RECOVERY] Escalating to aggressive recovery due to validation failure
+[2025-12-02T16:35:57.890Z] Executing aggressive recovery: waiting for player to stabilize
+[2025-12-02T16:35:57.890Z] Aggressive recovery telemetry | {"strategy":"PASSIVE_WAIT","url":"blob:https://www.twitch.tv/cae10342-a0a1-4af6-a5f1-b90eafb75757","isBlobUrl":true,"telemetry":{"readyState":4,"networkState":2,"currentTime":1180.498666,"paused":false,"error":null,"bufferEnd":1183.998666}}
+[2025-12-02T16:35:57.996Z] Player stabilized successfully | {"duration_ms":"107","finalReadyState":4,"totalChecks":1}
+[2025-12-02T16:35:57.996Z] [RECOVERY] Aggressive recovery result | {"success":{"isValid":false,"issues":["No measurable improvement detected"],"hasImprovement":false}}
+[2025-12-02T16:35:57.996Z] [RECOVERY] Resilience execution finished | {"total_duration_ms":108}
+[2025-12-02T16:35:57.996Z] [HEALTH] Recovery completed, resuming monitoring
+[2025-12-02T16:35:57.996Z] [HEALTH] Monitoring resumed
+[2025-12-02T16:35:57.996Z] [HEALTH] Recovery completed, resuming monitoring
+[2025-12-02T16:35:58.902Z] [HEALTH] Frame drop detected | {"newDropped":19606,"newTotal":71020,"recentDropRate":"27.61%"}
+[2025-12-02T16:35:58.903Z] [HEALTH] Frame drop threshold exceeded | Severity: SEVERE | {"newDropped":19606,"threshold":15,"recentDropRate":27.606308082230356}
+[2025-12-02T16:35:58.903Z] [HEALTH] Trigger skipped - cooldown active | {"timeSinceLast":1.014}
+[2025-12-02T16:35:58.903Z] Post-seek health check | {"currentTime":1181.422677,"readyState":4,"networkState":2,"paused":false,"bufferGap":"-2.576"}
+[2025-12-02T16:36:09.739Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}

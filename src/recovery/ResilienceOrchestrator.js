@@ -187,24 +187,39 @@ const ResilienceOrchestrator = (() => {
                 });
 
                 // NEW: Conditional escalation and play retry
-                if (!recoverySuccess.isValid && !payload.forceAggressive) {
-                    Logger.add('[RECOVERY] Escalating to aggressive recovery due to validation failure');
-                    payload.forceAggressive = true;
+                if (!recoverySuccess.isValid) {
+                    Logger.add('[RECOVERY] Recovery validation detected issues', recoverySuccess.issues);
 
-                    // Re-run recovery with aggressive strategy
-                    const aggressiveStrategy = RecoveryStrategy.select(video, payload);
-                    if (aggressiveStrategy) {
-                        await aggressiveStrategy.execute(video);
+                    // NEW: Check if pre-state was already healthy
+                    const wasAlreadyHealthy = preSnapshot.readyState === 4 &&
+                        !preSnapshot.paused &&
+                        !preSnapshot.error &&
+                        analysis.bufferHealth !== 'critical';
 
-                        // Re-validate after aggressive recovery
-                        const postSnapshot2 = captureVideoSnapshot(video);
-                        const delta2 = calculateRecoveryDelta(postSnapshot, postSnapshot2);
-                        const recoverySuccess2 = validateRecoverySuccess(postSnapshot, postSnapshot2, delta2);
+                    if (wasAlreadyHealthy) {
+                        Logger.add('[RECOVERY] Video was already healthy - recovery was unnecessary, canceling escalation');
+                        // Do not escalate
+                    } else if (!payload.forceAggressive) {
+                        Logger.add('[RECOVERY] Escalating to aggressive recovery due to validation failure');
+                        payload.forceAggressive = true;
 
-                        Logger.add('[RECOVERY] Aggressive recovery result', {
-                            success: recoverySuccess2
-                        });
+                        // Re-run recovery with aggressive strategy
+                        const aggressiveStrategy = RecoveryStrategy.select(video, payload);
+                        if (aggressiveStrategy) {
+                            await aggressiveStrategy.execute(video);
+
+                            // Re-validate after aggressive recovery
+                            const postSnapshot2 = captureVideoSnapshot(video);
+                            const delta2 = calculateRecoveryDelta(postSnapshot, postSnapshot2);
+                            const recoverySuccess2 = validateRecoverySuccess(postSnapshot, postSnapshot2, delta2);
+
+                            Logger.add('[RECOVERY] Aggressive recovery result', {
+                                success: recoverySuccess2
+                            });
+                        }
                     }
+                } else {
+                    Logger.add('[RECOVERY] Recovery validated successfully');
                 }
 
                 // Resume playback if needed AND recovery was successful
@@ -232,4 +247,3 @@ const ResilienceOrchestrator = (() => {
         }
     };
 })();
-
