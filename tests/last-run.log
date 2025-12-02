@@ -90,12 +90,20 @@
 ✅ Should detect instability after 4 changes
 ✅ PASS: Logic: Instability detection works
 
+🧪 Running: PlayerContext: Returns null for invalid element
+✅ Should return null for null element
+✅ PASS: PlayerContext: Returns null for invalid element
+
+🧪 Running: PlayerContext: Handles detached element gracefully
+✅ Should not throw error
+✅ PASS: PlayerContext: Handles detached element gracefully
+
 ==================================================
-📊 Test Summary: 16 passed, 0 failed
+📊 Test Summary: 18 passed, 0 failed
 ==================================================
 
-⏱️  Duration: 11.47s
-📊 Tests: 16 total
+⏱️  Duration: 11.50s
+📊 Tests: 18 total
 📝 Logger messages: 0
 
 ✅ All tests passed!

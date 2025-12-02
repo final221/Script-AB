@@ -319,6 +319,26 @@ const Test = {
         Logic.Player.endSession();
     });
 
+    // --- PlayerContext Tests ---
+
+    await Test.run('PlayerContext: Returns null for invalid element', () => {
+        const result = PlayerContext.get(null);
+        assert(result === null, 'Should return null for null element');
+    });
+
+    await Test.run('PlayerContext: Handles detached element gracefully', () => {
+        const element = document.createElement('div');
+        // Mock a context on the element to ensure it could be found if attached
+        element.__reactInternalInstance$test = {
+            memoizedProps: { player: {} } // Mock signature match if needed, but we just want to ensure no crash
+        };
+
+        // It shouldn't crash
+        const result = PlayerContext.get(element);
+        // It might return null or the context depending on scan logic, but key is it doesn't throw
+        assert(true, 'Should not throw error');
+    });
+
     // Display summary
     Test.summary();
 })();

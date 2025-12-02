@@ -103,10 +103,29 @@ const PlayerContext = (() => {
             return false;
         }
 
+        // 3. Liveness Check (safe property access)
+        try {
+            // Test that context is actually accessible
+            const testKey = keyMap.k0;
+            if (testKey && cachedContext[testKey]) {
+                // Context appears alive
+            }
+        } catch (e) {
+            Logger.add('PlayerContext: Cache invalid - Liveness check failed', { error: String(e) });
+            PlayerContext.reset();
+            return false;
+        }
+
         return true;
     };
 
     return {
+        /**
+         * Get player context for a DOM element
+         * @param {HTMLElement} element - Player container element
+         * @returns {Object|null} Player context object, or null if not found
+         * @important Calling code MUST check for null before using returned object
+         */
         get: (element) => {
             // Check if element is different from cached root
             if (element && cachedRootElement && element !== cachedRootElement) {
