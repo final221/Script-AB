@@ -47,16 +47,28 @@ const AVSyncDetector = (() => {
             }
 
             if (state.syncIssueCount >= 3) {
+                const discrepancyMs = discrepancy * 1000;
+                let severity = 'minor';
+                if (discrepancyMs >= 10000) severity = 'critical';
+                else if (discrepancyMs >= 3000) severity = 'severe';
+                else if (discrepancyMs >= 1000) severity = 'moderate';
+
                 Logger.add('[HEALTH] A/V sync threshold exceeded', {
                     syncIssueCount: state.syncIssueCount,
                     threshold: 3,
-                    discrepancy: (discrepancy * 1000).toFixed(2) + 'ms'
+                    discrepancy: discrepancyMs.toFixed(2) + 'ms',
+                    severity
                 });
                 state.lastSyncCheckTime = now;
                 state.lastSyncVideoTime = video.currentTime;
                 return {
                     reason: 'Persistent A/V sync issue',
-                    details: { syncIssueCount: state.syncIssueCount, discrepancy, threshold: 3 }
+                    details: {
+                        syncIssueCount: state.syncIssueCount,
+                        discrepancy: discrepancyMs,
+                        threshold: 3,
+                        severity
+                    }
                 };
             }
         }

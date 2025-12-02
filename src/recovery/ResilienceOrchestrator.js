@@ -158,6 +158,26 @@ const ResilienceOrchestrator = (() => {
                 const preSnapshot = captureVideoSnapshot(video);
                 Logger.add('[RECOVERY] Pre-recovery snapshot', preSnapshot);
 
+                // NEW: Route A/V sync issues to specialized recovery
+                if (payload.trigger === 'AV_SYNC' || (payload.reason && payload.reason.includes('A/V sync'))) {
+                    const discrepancy = payload.details ? payload.details.discrepancy : 0;
+                    Logger.add('[RECOVERY] Routing to specialized A/V sync recovery', { discrepancy });
+
+                    await AVSyncRecovery.execute(video, discrepancy);
+
+                    // Validate post-recovery state
+                    const postSnapshot = captureVideoSnapshot(video);
+                    const delta = calculateRecoveryDelta(preSnapshot, postSnapshot);
+                    Logger.add('[RECOVERY] A/V sync recovery result', {
+                        pre: preSnapshot,
+                        post: postSnapshot,
+                        changes: delta
+                    });
+
+                    isFixing = false;
+                    return;
+                }
+
                 // Execute primary recovery strategy and handle escalation
                 let currentStrategy = RecoveryStrategy.select(video, payload);
 

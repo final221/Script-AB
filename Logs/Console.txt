@@ -1,141 +1,90 @@
-An error occurred! For more details, see the full error text at https://go.apollo.dev/c/err#%7B%22version%22%3A%223.8.7%22%2C%22message%22%3A12%2C%22args%22%3A%5B%22treasureTrainDetails%22%2C%22%7B%5Cn%20%20%5C%22__typename%5C%22%3A%20%5C%22HypeTrainApproaching%5C%22%2C%5Cn%20%20%5C%22id%5C%22%3A%20%5C%2286131599%5C%22%2C%5Cn%20%20%5C%22goal%5C%22%3A%203%2C%5Cn%20%20%5C%22creatorColor%5C%22%3A%20%5C%22%5C%22%2C%5Cn%20%20%5C%22participants%5C%22%3A%20%5B%5Cn%20%20%20%20%5C%22464549561%5C%22%2C%5Cn%20%20%20%20%5C%22587725415%5C%22%5Cn%20%20%5D%2C%5Cn%20%20%5C%22isGoldenKappaTrain%5C%22%3A%20false%2C%5Cn%20%20%5C%22eventsRemaining%5C%22%3A%20%5B%5Cn%20%20%20%20%7B%5Cn%20%20%20%20%20%20%5C%22__typename%5C%22%3A%20%5C%22HypeTrainApproachingEventsRemaining%5C%22%2C%5Cn%20%20%20%20%20%20%5C%22events%5C%22%3A%201%2C%5Cn%20%20%20%20%20%20%5C%22secondsRemaining%5C%22%3A%20259%5Cn%20%20%20%20%7D%5Cn%20%20%5D%2C%5Cn%20%20%5C%22levelOneRewards%5C%22%3A%20%5B%5Cn%20%20%20%20%7B%5Cn%20%20%20%20%20%20%5C%22__typename%5C%22%3A%20%5C%22HypeTrainEmoteReward%5C%22%2C%5Cn%20%20%20%20%20%20%5C%22id%5C%22%3A%20%5C%22emotesv2_bbbf6d16d9964fcbba2d965a7eea942f%5C%22%2C%5Cn%20%20%20%20%20%20%5C%22type%5C%22%3A%20%5C%22EMOTE%5C%22%2C%5Cn%20%20%20%20%20%20%5C%22emote%5C%22%3A%20%7B%5Cn%20%20%20%20%20%20%20%20%5C%22__typename%5C%22%3A%20%5C%22Emote%5C%22%2C%5Cn%20%20%20%20%20%20%20%20%5C%22id%5C%22%3A%20%5C%22emotesv2_bbbf6d16d9964fcbba2d965a7eea942f%5C%22%2C%5Cn%20%20%20%20%20%20%20%20%5C%22token%5C%22%3A%20%5C%22ConfettiHype%5C%22%5Cn%20%20%20%20%20%20%7D%5Cn%20%20%20%20%7D%2C%5Cn%20%20%20%20%7B%5Cn%20%20%20%20%20%20%5C%22__typename%5C%22%3A%20%5C%22HypeTrainEmoteReward%5C%22%2C%5Cn%20%20%20%20%20%20%5C%22id%5C%22%3A%20%5C%22emotesv2_a3cdcbfcae9b41bb8215b012362eea35%5C%22%2C%5Cn%20%20%20%20%20%20%5C%22type%5C%22%3A%20%5C%22EMOTE%5C%22%2C%5Cn%20%20%20%20%20%20%5C%22emote%5C%22%3A%20%7B%5Cn%20%20%20%20%20%20%20%20%5C%22__typename%5C%22%3A%20%5C%22Emote%5C%22%2C%5Cn%20%20%20%20%20%20%20%20%5C%22id%5C%22%3A%20%5C%22emotesv2_a3cdcbfcae9b41bb8215b012362eea35%5C%22%2C%5Cn%20%20%20%20%20%20%20%20%5C%22token%5C%22%3A%20%5C%22FrogPonder%5C%22%5Cn%20%20%20%20%20%20%7D%5Cn%20%20%20%20%7D%2C%5Cn%20%20%20%20%7B%5Cn%20%20%20%20%20%20%5C%22__typename%5C%22%3A%20%5C%22HypeTrainEmoteReward%5C%22%2C%5Cn%20%20%20%20%20%20%5C%22id%5C%22%3A%20%5C%22emotesv2_7fa0b%22%5D%7D 3 Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js:1233:27
-    error moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:1233
-    f https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    m https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    processSelectionSet https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    processSelectionSet https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    processFieldValue https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    processSelectionSet https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    processSelectionSet https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    processFieldValue https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    processSelectionSet https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    processSelectionSet https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    processFieldValue https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    processSelectionSet https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    processSelectionSet https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    processFieldValue https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    processSelectionSet https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    processSelectionSet https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    writeToStore https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    write https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    writeQuery https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    updateQuery https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    onMessage https://assets.twitch.tv/assets/86650-087f5fe24393b7173c42.js:1
-    onMessage https://assets.twitch.tv/assets/69847-0129d2d44e1b3124fcc2.js:1
-    value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    next https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    next https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    D https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    next https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    D https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    next https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    D https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    next https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    D https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    next https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    D https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    next https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    D https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    next https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    next https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    D https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    next https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    D https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    next https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    D https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    next https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    D https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    outputNext https://assets.twitch.tv/assets/9457-c9687d360f36fffdad8e.js:1
-    onmessage https://assets.twitch.tv/assets/9457-c9687d360f36fffdad8e.js:1
-17:24:08 - (playback-monitor) Config changed 
+Player stopping playback - error MasterPlaylist:11 (ErrorNotAvailable code 404 - Failed to load playlist) amazon-ivs-wasmworker.min-d93ef086db8694d73a04.js:1:49765
+[GraphQL] One or more GraphQL errors were detected on request 01KBGHZ0XD0JAF6R4CWPQ174SP. PinnedChatSettings: unauthenticated 
+Array [ {…} ]
+Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js:1283:27
+[GraphQL] One or more GraphQL errors were detected on request 01KBGHZ22RH44CPM3EB84HEDXX. PinnedChatSettings: unauthenticated 
+Array [ {…} ]
+Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js:1283:27
+[GraphQL] One or more GraphQL errors were detected on request 01KBGHZ2NE21E3QGKAC0KNGBDM. PinnedChatSettings: unauthenticated 
+Array [ {…} ]
+Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js:1283:27
+23:12:11 - (playback-monitor) Config changed 
 Object {  }
 player-core-base-2b671b16d67c24859970.js:1:63061
-An error occurred! For more details, see the full error text at https://go.apollo.dev/c/err#%7B%22version%22%3A%223.8.7%22%2C%22message%22%3A12%2C%22args%22%3A%5B%22treasureTrainDetails%22%2C%22%7B%5Cn%20%20%5C%22__typename%5C%22%3A%20%5C%22HypeTrainApproaching%5C%22%2C%5Cn%20%20%5C%22id%5C%22%3A%20%5C%2286131599%5C%22%2C%5Cn%20%20%5C%22goal%5C%22%3A%203%2C%5Cn%20%20%5C%22creatorColor%5C%22%3A%20%5C%22%5C%22%2C%5Cn%20%20%5C%22participants%5C%22%3A%20%5B%5Cn%20%20%20%20%5C%22447754834%5C%22%2C%5Cn%20%20%20%20%5C%22194961244%5C%22%5Cn%20%20%5D%2C%5Cn%20%20%5C%22isGoldenKappaTrain%5C%22%3A%20false%2C%5Cn%20%20%5C%22eventsRemaining%5C%22%3A%20%5B%5Cn%20%20%20%20%7B%5Cn%20%20%20%20%20%20%5C%22__typename%5C%22%3A%20%5C%22HypeTrainApproachingEventsRemaining%5C%22%2C%5Cn%20%20%20%20%20%20%5C%22events%5C%22%3A%201%2C%5Cn%20%20%20%20%20%20%5C%22secondsRemaining%5C%22%3A%20177%5Cn%20%20%20%20%7D%5Cn%20%20%5D%2C%5Cn%20%20%5C%22levelOneRewards%5C%22%3A%20%5B%5Cn%20%20%20%20%7B%5Cn%20%20%20%20%20%20%5C%22__typename%5C%22%3A%20%5C%22HypeTrainEmoteReward%5C%22%2C%5Cn%20%20%20%20%20%20%5C%22id%5C%22%3A%20%5C%22emotesv2_bbbf6d16d9964fcbba2d965a7eea942f%5C%22%2C%5Cn%20%20%20%20%20%20%5C%22type%5C%22%3A%20%5C%22EMOTE%5C%22%2C%5Cn%20%20%20%20%20%20%5C%22emote%5C%22%3A%20%7B%5Cn%20%20%20%20%20%20%20%20%5C%22__typename%5C%22%3A%20%5C%22Emote%5C%22%2C%5Cn%20%20%20%20%20%20%20%20%5C%22id%5C%22%3A%20%5C%22emotesv2_bbbf6d16d9964fcbba2d965a7eea942f%5C%22%2C%5Cn%20%20%20%20%20%20%20%20%5C%22token%5C%22%3A%20%5C%22ConfettiHype%5C%22%5Cn%20%20%20%20%20%20%7D%5Cn%20%20%20%20%7D%2C%5Cn%20%20%20%20%7B%5Cn%20%20%20%20%20%20%5C%22__typename%5C%22%3A%20%5C%22HypeTrainEmoteReward%5C%22%2C%5Cn%20%20%20%20%20%20%5C%22id%5C%22%3A%20%5C%22emotesv2_a3cdcbfcae9b41bb8215b012362eea35%5C%22%2C%5Cn%20%20%20%20%20%20%5C%22type%5C%22%3A%20%5C%22EMOTE%5C%22%2C%5Cn%20%20%20%20%20%20%5C%22emote%5C%22%3A%20%7B%5Cn%20%20%20%20%20%20%20%20%5C%22__typename%5C%22%3A%20%5C%22Emote%5C%22%2C%5Cn%20%20%20%20%20%20%20%20%5C%22id%5C%22%3A%20%5C%22emotesv2_a3cdcbfcae9b41bb8215b012362eea35%5C%22%2C%5Cn%20%20%20%20%20%20%20%20%5C%22token%5C%22%3A%20%5C%22FrogPonder%5C%22%5Cn%20%20%20%20%20%20%7D%5Cn%20%20%20%20%7D%2C%5Cn%20%20%20%20%7B%5Cn%20%20%20%20%20%20%5C%22__typename%5C%22%3A%20%5C%22HypeTrainEmoteReward%5C%22%2C%5Cn%20%20%20%20%20%20%5C%22id%5C%22%3A%20%5C%22emotesv2_7fa0b%22%5D%7D 3 Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js:1233:27
-    error moz-extension://e6f6b0e1-3453-467f-84d3-1e3133c5b01b/userscripts/Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js?id=f1f01d30-6813-4cfa-98b6-f6eee159bae3:1233
-    f https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    m https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    processSelectionSet https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    processSelectionSet https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    processFieldValue https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    processSelectionSet https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    processSelectionSet https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    processFieldValue https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    processSelectionSet https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    processSelectionSet https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    processFieldValue https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    processSelectionSet https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    processSelectionSet https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    processFieldValue https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    processSelectionSet https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    processSelectionSet https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    writeToStore https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    write https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    writeQuery https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    updateQuery https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    onMessage https://assets.twitch.tv/assets/86650-087f5fe24393b7173c42.js:1
-    onMessage https://assets.twitch.tv/assets/69847-0129d2d44e1b3124fcc2.js:1
-    value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    next https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    next https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    D https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    next https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    D https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    next https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    D https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    next https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    D https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    next https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    D https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    next https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    D https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    next https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    next https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    D https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    next https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    D https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    next https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    D https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    next https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    D https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    value https://assets.twitch.tv/assets/91474-b5635daf6078332b1e3c.js:1
-    outputNext https://assets.twitch.tv/assets/9457-c9687d360f36fffdad8e.js:1
-    onmessage https://assets.twitch.tv/assets/9457-c9687d360f36fffdad8e.js:1
+23:13:35 - (playback-monitor) Config changed 
+Object {  }
+player-core-base-2b671b16d67c24859970.js:1:63061
+[GraphQL] One or more GraphQL errors were detected on request 01KBGJ1P5WRDX9Y1F146QWR1NE. PinnedChatSettings: unauthenticated 
+Array [ {…} ]
+Mega-Ad-Dodger-3000-Stealth-Reactor-Core.user.js:1283:27
+23:13:37 - (playback-monitor) Config changed 
+Object {  }
+player-core-base-2b671b16d67c24859970.js:1:63061
+Content-Security-Policy: Die Einstellungen der Seite haben die Ausführung eines Inline-Skripts (script-src-elem) blockiert, da es gegen folgende Direktive verstößt: "script-src 'self' https://9gxdmz93ockiljbh4c24cmuvgo4r86.ext-twitch.tv https://extension-files.twitch.tv". Ziehen Sie die Verwendung eines Hashs ('sha256-jscuypcL6R2tqOAStU609hmwy955CiRj380rf+8T1XM=') oder einer Nonce in Erwägung. content.js:71:183
+Content-Security-Policy: Die Einstellungen der Seite haben die Ausführung eines Inline-Skripts (script-src-elem) blockiert, da es gegen folgende Direktive verstößt: "script-src 'self' https://9gxdmz93ockiljbh4c24cmuvgo4r86.ext-twitch.tv https://extension-files.twitch.tv". Ziehen Sie die Verwendung eines Hashs ('sha256-pUQRwjM2ELAaQJJuGD/w7SxgzLmG2sbORp0wZL4sHzk=') oder einer Nonce in Erwägung. content.js:71:183
+Das Cookie "ph_phc_asFC1Ri1uLBshzCpxbtNQ1Af2NV7m2Gl5IFE0kuoUp2_posthog" wurde abgelehnt, weil es sich in einem seitenübergreifenden Kontext befindet und sein "SameSite" auf "Lax" oder "Strict" gesetzt ist. video_overlay.html
+Das Cookie "dmn_chk_019ae120-dc78-7895-a37d-905c1da47780" wurde wegen ungültiger Domain abgelehnt. video_overlay.html
+Das Cookie "ph_phc_asFC1Ri1uLBshzCpxbtNQ1Af2NV7m2Gl5IFE0kuoUp2_posthog" wurde abgelehnt, weil es sich in einem seitenübergreifenden Kontext befindet und sein "SameSite" auf "Lax" oder "Strict" gesetzt ist. 6 video_overlay.html
+Content-Security-Policy: Die Einstellungen der Seite haben die Anwendung eines Scripts (script-src-elem) auf https://www.googletagmanager.com/gtag/js?id=G-CC81LBYX2W blockiert, da es gegen folgende Direktive verstößt: "script-src 'self' https://9gxdmz93ockiljbh4c24cmuvgo4r86.ext-twitch.tv https://extension-files.twitch.tv" useTwitchSetup-CM8S2gBO.js:27623:27
+Das Cookie "ph_phc_asFC1Ri1uLBshzCpxbtNQ1Af2NV7m2Gl5IFE0kuoUp2_posthog" wurde abgelehnt, weil es sich in einem seitenübergreifenden Kontext befindet und sein "SameSite" auf "Lax" oder "Strict" gesetzt ist. 5 video_overlay.html
+23:13:39 - (playback-monitor) Config changed 
+Object {  }
+player-core-base-2b671b16d67c24859970.js:1:63061
+Das Cookie "ph_phc_asFC1Ri1uLBshzCpxbtNQ1Af2NV7m2Gl5IFE0kuoUp2_posthog" wurde abgelehnt, weil es sich in einem seitenübergreifenden Kontext befindet und sein "SameSite" auf "Lax" oder "Strict" gesetzt ist. 10 video_overlay.html
+AVC finishFrame called without active frame amazon-ivs-wasmworker.min-d93ef086db8694d73a04.js:1:49765
+    _emscripten_log_js https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-d93ef086db8694d73a04.js:1
+    logMessage https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-d93ef086db8694d73a04.js:1
+    x https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-d93ef086db8694d73a04.js:1
+    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-d0819f1e578a9e45059f.wasm:736152
+    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-d0819f1e578a9e45059f.wasm:13386
+    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-d0819f1e578a9e45059f.wasm:543714
+    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-d0819f1e578a9e45059f.wasm:940948
+    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-d0819f1e578a9e45059f.wasm:1058020
+    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-d0819f1e578a9e45059f.wasm:674689
+    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-d0819f1e578a9e45059f.wasm:1080984
+    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-d0819f1e578a9e45059f.wasm:1060041
+    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-d0819f1e578a9e45059f.wasm:1058604
+    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-d0819f1e578a9e45059f.wasm:716096
+    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-d0819f1e578a9e45059f.wasm:201696
+    Ie https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-d93ef086db8694d73a04.js:1
+    a https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-d93ef086db8694d73a04.js:1
+23:20:13 - (playback-monitor) Config changed 
+Object {  }
+player-core-base-2b671b16d67c24859970.js:1:63061
+AVC finishFrame called without active frame amazon-ivs-wasmworker.min-d93ef086db8694d73a04.js:1:49765
+    _emscripten_log_js https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-d93ef086db8694d73a04.js:1
+    logMessage https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-d93ef086db8694d73a04.js:1
+    x https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-d93ef086db8694d73a04.js:1
+    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-d0819f1e578a9e45059f.wasm:736152
+    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-d0819f1e578a9e45059f.wasm:736099
+    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-d0819f1e578a9e45059f.wasm:13386
+    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-d0819f1e578a9e45059f.wasm:543714
+    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-d0819f1e578a9e45059f.wasm:940948
+    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-d0819f1e578a9e45059f.wasm:1058020
+    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-d0819f1e578a9e45059f.wasm:674689
+    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-d0819f1e578a9e45059f.wasm:1080984
+    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-d0819f1e578a9e45059f.wasm:1060041
+    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-d0819f1e578a9e45059f.wasm:1058604
+    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-d0819f1e578a9e45059f.wasm:716096
+    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-d0819f1e578a9e45059f.wasm:201696
+    Ie https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-d93ef086db8694d73a04.js:1
+    a https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-d93ef086db8694d73a04.js:1
+Das Cookie "ph_phc_asFC1Ri1uLBshzCpxbtNQ1Af2NV7m2Gl5IFE0kuoUp2_posthog" wurde abgelehnt, weil es sich in einem seitenübergreifenden Kontext befindet und sein "SameSite" auf "Lax" oder "Strict" gesetzt ist. video_overlay.html
+AVC finishFrame called without active frame 2 amazon-ivs-wasmworker.min-d93ef086db8694d73a04.js:1:49765
+    _emscripten_log_js https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-d93ef086db8694d73a04.js:1
+    logMessage https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-d93ef086db8694d73a04.js:1
+    x https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-d93ef086db8694d73a04.js:1
+    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-d0819f1e578a9e45059f.wasm:736152
+    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-d0819f1e578a9e45059f.wasm:736099
+    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-d0819f1e578a9e45059f.wasm:13386
+    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-d0819f1e578a9e45059f.wasm:543714
+    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-d0819f1e578a9e45059f.wasm:940948
+    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-d0819f1e578a9e45059f.wasm:1058020
+    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-d0819f1e578a9e45059f.wasm:674689
+    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-d0819f1e578a9e45059f.wasm:1080984
+    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-d0819f1e578a9e45059f.wasm:1060041
+    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-d0819f1e578a9e45059f.wasm:1058604
+    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-d0819f1e578a9e45059f.wasm:716096
+    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-d0819f1e578a9e45059f.wasm:201696
+    Ie https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-d93ef086db8694d73a04.js:1
+    a https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-d93ef086db8694d73a04.js:1

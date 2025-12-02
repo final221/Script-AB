@@ -2,7 +2,7 @@
 ============================================================
 
 🔨 Generating test runner...
-✅ Generated test-runner.html with 34 source files
+✅ Generated test-runner.html with 35 source files
 📁 Loading test file: file://F:\Fynn\Projects\Tw Adb\tests\test-runner.html
 
 
@@ -114,7 +114,7 @@
 📊 Test Summary: 21 passed, 0 failed
 ==================================================
 
-⏱️  Duration: 11.51s
+⏱️  Duration: 11.55s
 📊 Tests: 21 total
 📝 Logger messages: 0
 
