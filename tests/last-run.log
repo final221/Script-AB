@@ -3,6 +3,7 @@
 
 📁 Loading test file: file://F:\Fynn\Projects\Tw Adb\tests\test-runner.html
 
+Failed to load resource: net::ERR_FILE_NOT_FOUND
 
 🧪 Running: RecoveryDiagnostics: Placeholder test
 ✅ Placeholder - RecoveryDiagnostics not yet implemented
@@ -29,17 +30,22 @@
 ✅ Unknown key should return 0
 ✅ PASS: Metrics: Returns 0 for unknown keys
 
+🧪 Running: AdBlocker: Correlation detects missed ads
+✅ Should have lastAdDetectionTime
+✅ Should have recoveryTriggersWithoutAds
+✅ PASS: AdBlocker: Correlation detects missed ads
+
 🧪 Running: Integration: Logger and Metrics work together
 ✅ Logger should have messages
 ✅ Metrics should be incremented
 ✅ PASS: Integration: Logger and Metrics work together
 
 ==================================================
-📊 Test Summary: 7 passed, 0 failed
+📊 Test Summary: 8 passed, 0 failed
 ==================================================
 
-⏱️  Duration: 1.03s
-📊 Tests: 7 total
+⏱️  Duration: 1.04s
+📊 Tests: 8 total
 📝 Logger messages: 0
 
 ✅ All tests passed!
