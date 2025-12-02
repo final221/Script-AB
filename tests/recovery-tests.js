@@ -24,9 +24,17 @@ const Test = {
     summary: () => {
         const passed = Test.results.filter(r => r.status === 'PASS').length;
         const failed = Test.results.filter(r => r.status === 'FAIL').length;
+        const summaryText = `📊 Test Summary: ${passed} passed, ${failed} failed`;
+
         console.log(`\n${'='.repeat(50)}`);
-        console.log(`📊 Test Summary: ${passed} passed, ${failed} failed`);
+        console.log(summaryText);
         console.log(`${'='.repeat(50)}`);
+
+        // Write to DOM for Puppeteer to detect
+        const div = document.createElement('div');
+        div.textContent = summaryText;
+        document.body.appendChild(div);
+
         return failed === 0;
     }
 };
