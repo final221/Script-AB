@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       2.1.14
+// @version       2.1.15
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -333,11 +333,89 @@ const Logic = (() => {
             getDiscoveredPatterns: () => Array.from(Logic.Network._suspiciousUrls)
         },
         Player: {
-            // Statistics tracking (internal)
-            _signatureStats: {
-                k0: { matches: 0, keys: [] },
-                k1: { matches: 0, keys: [] },
-                k2: { matches: 0, keys: [] }
+            // Session-based signature tracking
+            _sessionSignatures: {
+                sessionId: null,
+                mountTime: null,
+                k0: null,
+                k1: null,
+                k2: null,
+                keyHistory: []
+            },
+
+            // Initialize new session
+            startSession: () => {
+                const sessionId = `session-${Date.now()}`;
+                Logic.Player._sessionSignatures = {
+                    sessionId,
+                    mountTime: Date.now(),
+                    k0: null,
+                    k1: null,
+                    k2: null,
+                    keyHistory: []
+                };
+                Logger.add('[Logic] New player session started', { sessionId });
+            },
+
+            // End session
+            endSession: () => {
+                const session = Logic.Player._sessionSignatures;
+                if (!session.sessionId) return;
+
+                Logger.add('[Logic] Player session ended', {
+                    sessionId: session.sessionId,
+                    duration: Date.now() - session.mountTime,
+                    finalKeys: {
+                        k0: session.k0,
+                        k1: session.k1,
+                        k2: session.k2
+                    },
+                    keyChanges: session.keyHistory.length
+                });
+
+                if (session.keyHistory.length > 0) {
+                    Logger.add('[Logic] ⚠️ ALERT: Signature keys changed during session', {
+                        sessionId: session.sessionId,
+                        changes: session.keyHistory
+                    });
+                }
+            },
+
+            // Get current session status
+            getSessionStatus: () => {
+                const session = Logic.Player._sessionSignatures;
+                return {
+                    sessionId: session.sessionId,
+                    uptime: session.mountTime ? Date.now() - session.mountTime : 0,
+                    currentKeys: {
+                        k0: session.k0,
+                        k1: session.k1,
+                        k2: session.k2
+                    },
+                    totalChanges: session.keyHistory.length,
+                    recentChanges: session.keyHistory.slice(-5),
+                    allKeysSet: !!(session.k0 && session.k1 && session.k2)
+                };
+            },
+
+            // Check if session is unstable
+            isSessionUnstable: () => {
+                const session = Logic.Player._sessionSignatures;
+
+                const hourAgo = Date.now() - 3600000;
+                const recentChanges = session.keyHistory.filter(c => c.timestamp > hourAgo);
+
+                const isUnstable = recentChanges.length > 3;
+
+                if (isUnstable) {
+                    Logger.add('[Logic] ⚠️ ALERT: Signature session UNSTABLE', {
+                        changesInLastHour: recentChanges.length,
+                        threshold: 3,
+                        suggestion: 'Twitch may have updated player - patterns may break soon'
+                    });
+                }
+
+                return isUnstable;
             },
 
             signatures: [
@@ -345,70 +423,123 @@ const Logic = (() => {
                     id: 'k0',
                     check: (o, k) => {
                         try {
-                            // Check if it's a function and has length 1 (accepts 1 argument)
-                            // DO NOT call the function - that causes React errors
                             const result = typeof o[k] === 'function' && o[k].length === 1;
+
                             if (result) {
-                                Logic.Player._signatureStats.k0.matches++;
-                                if (!Logic.Player._signatureStats.k0.keys.includes(k)) {
-                                    Logic.Player._signatureStats.k0.keys.push(k);
-                                    // ✅ This gets exported with exportTwitchAdLogs()
-                                    Logger.add('[Logic] Signature k0 matched NEW key', { key: k, totalMatches: Logic.Player._signatureStats.k0.matches });
+                                const session = Logic.Player._sessionSignatures;
+
+                                // Check if key changed within this session
+                                if (session.k0 && session.k0 !== k) {
+                                    const change = {
+                                        timestamp: Date.now(),
+                                        signatureId: 'k0',
+                                        oldKey: session.k0,
+                                        newKey: k,
+                                        timeSinceMount: Date.now() - session.mountTime
+                                    };
+
+                                    session.keyHistory.push(change);
+                                    Logger.add('[Logic] ⚠️ SIGNATURE KEY CHANGED DURING SESSION', change);
+                                }
+
+                                // Update session key
+                                if (!session.k0 || session.k0 !== k) {
+                                    session.k0 = k;
+                                    Logger.add('[Logic] Signature k0 key set', {
+                                        key: k,
+                                        sessionId: session.sessionId,
+                                        isChange: session.k0 !== null
+                                    });
                                 }
                             }
+
                             return result;
                         } catch (e) {
                             return false;
                         }
                     }
-                }, // Toggle/Mute
+                },
                 {
                     id: 'k1',
                     check: (o, k) => {
                         try {
-                            // Check if it's a function with 0 arguments
-                            // DO NOT call the function - that causes React errors
                             const result = typeof o[k] === 'function' && o[k].length === 0;
+
                             if (result) {
-                                Logic.Player._signatureStats.k1.matches++;
-                                if (!Logic.Player._signatureStats.k1.keys.includes(k)) {
-                                    Logic.Player._signatureStats.k1.keys.push(k);
-                                    // ✅ This gets exported with exportTwitchAdLogs()
-                                    Logger.add('[Logic] Signature k1 matched NEW key', { key: k, totalMatches: Logic.Player._signatureStats.k1.matches });
+                                const session = Logic.Player._sessionSignatures;
+
+                                if (session.k1 && session.k1 !== k) {
+                                    const change = {
+                                        timestamp: Date.now(),
+                                        signatureId: 'k1',
+                                        oldKey: session.k1,
+                                        newKey: k,
+                                        timeSinceMount: Date.now() - session.mountTime
+                                    };
+
+                                    session.keyHistory.push(change);
+                                    Logger.add('[Logic] ⚠️ SIGNATURE KEY CHANGED DURING SESSION', change);
+                                }
+
+                                if (!session.k1 || session.k1 !== k) {
+                                    session.k1 = k;
+                                    Logger.add('[Logic] Signature k1 key set', {
+                                        key: k,
+                                        sessionId: session.sessionId,
+                                        isChange: session.k1 !== null
+                                    });
                                 }
                             }
+
                             return result;
                         } catch (e) {
                             return false;
                         }
                     }
-                }, // Pause
+                },
                 {
                     id: 'k2',
                     check: (o, k) => {
                         try {
-                            // Check if it's a function with 0 arguments
-                            // DO NOT call the function - that causes React errors
                             const result = typeof o[k] === 'function' && o[k].length === 0;
+
                             if (result) {
-                                Logic.Player._signatureStats.k2.matches++;
-                                if (!Logic.Player._signatureStats.k2.keys.includes(k)) {
-                                    Logic.Player._signatureStats.k2.keys.push(k);
-                                    // ✅ This gets exported with exportTwitchAdLogs()
-                                    Logger.add('[Logic] Signature k2 matched NEW key', { key: k, totalMatches: Logic.Player._signatureStats.k2.matches });
+                                const session = Logic.Player._sessionSignatures;
+
+                                if (session.k2 && session.k2 !== k) {
+                                    const change = {
+                                        timestamp: Date.now(),
+                                        signatureId: 'k2',
+                                        oldKey: session.k2,
+                                        newKey: k,
+                                        timeSinceMount: Date.now() - session.mountTime
+                                    };
+
+                                    session.keyHistory.push(change);
+                                    Logger.add('[Logic] ⚠️ SIGNATURE KEY CHANGED DURING SESSION', change);
+                                }
+
+                                if (!session.k2 || session.k2 !== k) {
+                                    session.k2 = k;
+                                    Logger.add('[Logic] Signature k2 key set', {
+                                        key: k,
+                                        sessionId: session.sessionId,
+                                        isChange: session.k2 !== null
+                                    });
                                 }
                             }
+
                             return result;
                         } catch (e) {
                             return false;
                         }
                     }
-                }  // Other
+                }
             ],
             validate: (obj, key, sig) => Fn.tryCatch(() => typeof obj[key] === 'function' && sig.check(obj, key), () => false)(),
 
-            // Export stats summary (for debugging)
-            getSignatureStats: () => Logic.Player._signatureStats
+            // Export stats summary (for debugging - backward compatibility)
+            getSignatureStats: () => Logic.Player.getSessionStatus()
         }
     };
 })();
@@ -526,6 +657,9 @@ const PlayerLifecycle = (() => {
             Logger.add('Player mounted');
             activeContainer = container;
 
+            // Start signature session tracking
+            Logic.Player.startSession();
+
             const debouncedInject = Fn.debounce(() => PlayerLifecycle.inject(), 100);
             playerObserver = Adapters.DOM.observe(container, (mutations) => {
                 const shouldReacquire = mutations.some(m => {
@@ -555,6 +689,9 @@ const PlayerLifecycle = (() => {
         handleUnmount: () => {
             if (!activeContainer) return;
             Logger.add('Player unmounted');
+
+            // End signature session tracking
+            Logic.Player.endSession();
 
             if (playerObserver) {
                 playerObserver.disconnect();
@@ -765,10 +902,28 @@ const HealthMonitor = (() => {
     let videoRef = null;
     const timers = { main: null, sync: null };
 
+    // State tracking
+    let isPaused = false;
+    let lastTriggerTime = 0;
+    const COOLDOWN_MS = 5000; // 5 seconds
+    let pendingIssues = [];
+
     const triggerRecovery = (reason, details, triggerType) => {
+        // Cooldown check
+        const now = Date.now();
+        if (now - lastTriggerTime < COOLDOWN_MS) {
+            Logger.add('[HEALTH] Trigger skipped - cooldown active', {
+                timeSinceLast: (now - lastTriggerTime) / 1000
+            });
+            return;
+        }
+
         Logger.add(`[HEALTH] Recovery trigger | Reason: ${reason}, Type: ${triggerType}`, details);
         Metrics.increment('health_triggers');
-        HealthMonitor.stop();
+
+        lastTriggerTime = now;
+        HealthMonitor.pause(); // Pause instead of stop
+
         Adapters.EventBus.emit(CONFIG.events.AD_DETECTED, {
             source: 'HEALTH',
             trigger: triggerType,
@@ -778,37 +933,58 @@ const HealthMonitor = (() => {
     };
 
     const runMainChecks = () => {
-        if (!videoRef || !document.body.contains(videoRef)) {
-            HealthMonitor.stop();
+        if (!videoRef || !document.body.contains(videoRef) || isPaused) {
             return;
         }
 
-        // Check for stuck playback
+        // Accumulate all issues
         const stuckResult = StuckDetector.check(videoRef);
         if (stuckResult) {
-            triggerRecovery(stuckResult.reason, stuckResult.details, 'STUCK_PLAYBACK');
-            return;
+            pendingIssues.push({ type: 'STUCK_PLAYBACK', priority: 3, ...stuckResult });
         }
 
-        // Check for frame drops
         const frameDropResult = FrameDropDetector.check(videoRef);
         if (frameDropResult) {
-            triggerRecovery(frameDropResult.reason, frameDropResult.details, 'FRAME_DROP');
-            return;
+            pendingIssues.push({ type: 'FRAME_DROP', priority: 2, ...frameDropResult });
+        }
+
+        // Process issues if any found
+        if (pendingIssues.length > 0) {
+            // Sort by priority (highest first)
+            pendingIssues.sort((a, b) => b.priority - a.priority);
+
+            const topIssue = pendingIssues[0];
+            if (pendingIssues.length > 1) {
+                Logger.add('[HEALTH] Multiple issues detected, triggering for highest priority', {
+                    allIssues: pendingIssues.map(i => i.type),
+                    selected: topIssue.type
+                });
+            }
+
+            triggerRecovery(topIssue.reason, topIssue.details, topIssue.type);
+            pendingIssues = []; // Clear
         }
     };
 
     const runSyncCheck = () => {
-        if (!videoRef || !document.body.contains(videoRef)) {
-            HealthMonitor.stop();
+        if (!videoRef || !document.body.contains(videoRef) || isPaused) {
             return;
         }
 
         // Check A/V sync
         const syncResult = AVSyncDetector.check(videoRef);
         if (syncResult) {
-            triggerRecovery(syncResult.reason, syncResult.details, 'AV_SYNC');
-            return;
+            pendingIssues.push({ type: 'AV_SYNC', priority: 1, ...syncResult });
+
+            // A/V sync is lowest priority - only trigger if no other issues pending
+            // We use a small timeout to allow main checks to run if they happen simultaneously
+            setTimeout(() => {
+                if (pendingIssues.some(i => i.type === 'AV_SYNC') && !isPaused) {
+                    const avIssue = pendingIssues.find(i => i.type === 'AV_SYNC');
+                    triggerRecovery(avIssue.reason, avIssue.details, 'AV_SYNC');
+                    pendingIssues = [];
+                }
+            }, 100);
         }
     };
 
@@ -832,17 +1008,56 @@ const HealthMonitor = (() => {
             if (!timers.sync) {
                 timers.sync = setInterval(runSyncCheck, CONFIG.timing.AV_SYNC_CHECK_INTERVAL_MS);
             }
+
+            // Auto-resume on recovery completion
+            Adapters.EventBus.on(CONFIG.events.REPORT, (payload) => {
+                if (payload.status === 'SUCCESS' || payload.status === 'FAILED') {
+                    Logger.add('[HEALTH] Recovery completed, resuming monitoring');
+                    HealthMonitor.resume();
+                }
+            });
         },
+
         stop: () => {
             clearInterval(timers.main);
             clearInterval(timers.sync);
             timers.main = null;
             timers.sync = null;
             videoRef = null;
+            isPaused = false;
+            lastTriggerTime = 0; // Reset cooldown
             StuckDetector.reset();
             FrameDropDetector.reset();
             AVSyncDetector.reset();
         },
+
+        pause: () => {
+            if (isPaused) return;
+
+            Logger.add('[HEALTH] Monitoring paused');
+            isPaused = true;
+
+            // Auto-resume after timeout as safety net
+            setTimeout(() => {
+                if (isPaused) {
+                    Logger.add('[HEALTH] Auto-resuming after recovery timeout');
+                    HealthMonitor.resume();
+                }
+            }, 15000);
+        },
+
+        resume: () => {
+            if (!isPaused) return;
+
+            Logger.add('[HEALTH] Monitoring resumed');
+            isPaused = false;
+
+            if (videoRef) {
+                StuckDetector.reset(videoRef);
+                FrameDropDetector.reset();
+                AVSyncDetector.reset(videoRef);
+            }
+        }
     };
 })();
 
@@ -867,6 +1082,28 @@ const StuckDetector = (() => {
         if (video.paused || video.ended) {
             if (CONFIG.debug && state.stuckCount > 0) {
                 Logger.add('StuckDetector[Debug]: Stuck count reset due to paused/ended state.');
+            }
+            state.stuckCount = 0;
+            state.lastTime = video.currentTime;
+            return null;
+        }
+
+        // Skip if actively buffering (readyState < 3: HAVE_FUTURE_DATA)
+        if (video.readyState < 3) {
+            if (CONFIG.debug) {
+                Logger.add('StuckDetector: Skipping check - buffering', {
+                    readyState: video.readyState
+                });
+            }
+            state.stuckCount = 0;
+            state.lastTime = video.currentTime;
+            return null;
+        }
+
+        // Skip if seeking
+        if (video.seeking) {
+            if (CONFIG.debug) {
+                Logger.add('StuckDetector: Skipping check - seeking');
             }
             state.stuckCount = 0;
             state.lastTime = video.currentTime;
@@ -1211,6 +1448,10 @@ const Store = (() => {
  * 3. Update Metrics.
  */
 const AdBlocker = (() => {
+    // Correlation tracking
+    let lastAdDetectionTime = 0;
+    let recoveryTriggersWithoutAds = 0;
+
     const process = (url, type) => {
         // 1. Input Validation
         if (!url || typeof url !== 'string') {
@@ -1218,10 +1459,13 @@ const AdBlocker = (() => {
             return false;
         }
 
+        // 2. Pattern Discovery (Always run)
+        Logic.Network.detectNewPatterns(url);
+
         let isAd = false;
         let isTrigger = false;
 
-        // 2. Check Trigger First (Subset of Ads)
+        // 3. Check Trigger First (Subset of Ads)
         if (Logic.Network.isTrigger(url)) {
             isTrigger = true;
             isAd = true; // Triggers are always ads
@@ -1237,6 +1481,8 @@ const AdBlocker = (() => {
 
             // Only emit AD_DETECTED for actual ad delivery
             if (isDelivery) {
+                lastAdDetectionTime = Date.now();
+
                 Adapters.EventBus.emit(CONFIG.events.AD_DETECTED, {
                     source: 'NETWORK',
                     trigger: 'AD_DELIVERY',
@@ -1245,13 +1491,13 @@ const AdBlocker = (() => {
                 });
             }
         }
-        // 3. Check Generic Ad (if not already identified as trigger)
+        // 4. Check Generic Ad (if not already identified as trigger)
         else if (Logic.Network.isAd(url)) {
             isAd = true;
             Logger.add('[NETWORK] Ad pattern detected', { type, url });
         }
 
-        // 4. Unified Metrics
+        // 5. Unified Metrics
         if (isAd) {
             Metrics.increment('ads_detected');
         }
@@ -1259,8 +1505,65 @@ const AdBlocker = (() => {
         return isAd;
     };
 
+    // Listen for health-triggered recoveries to detect missed ads
+    const initCorrelationTracking = () => {
+        // 1. Listen for Health Triggers
+        Adapters.EventBus.on(CONFIG.events.AD_DETECTED, (payload) => {
+            if (payload.source === 'HEALTH') {
+                // Health monitor triggered recovery
+                const timeSinceLastAd = Date.now() - lastAdDetectionTime;
+
+                // If > 10 seconds since last network detection, could be a missed ad
+                if (timeSinceLastAd > 10000) {
+                    recoveryTriggersWithoutAds++;
+
+                    Logger.add('[CORRELATION] Recovery triggered without recent ad detection', {
+                        trigger: payload.trigger,
+                        reason: payload.reason,
+                        timeSinceLastNetworkAd: (timeSinceLastAd / 1000).toFixed(1) + 's',
+                        totalMissedCount: recoveryTriggersWithoutAds,
+                        suggestion: 'Possible missed ad pattern or legitimate stuck state'
+                    });
+                }
+            }
+        });
+
+        // 2. Listen for Log/Report Requests
+        Adapters.EventBus.on(CONFIG.events.LOG, () => {
+            generateCorrelationReport();
+        });
+    };
+
+    const generateCorrelationReport = () => {
+        const adsDetected = Metrics.get('ads_detected');
+        const healthTriggers = Metrics.get('health_triggers');
+
+        const report = {
+            ads_detected_network: adsDetected,
+            health_triggered_recoveries: healthTriggers,
+            recoveries_without_ads: recoveryTriggersWithoutAds,
+            detection_accuracy: healthTriggers > 0 ?
+                ((adsDetected / healthTriggers) * 100).toFixed(1) + '%' : 'N/A',
+            interpretation: healthTriggers > adsDetected * 1.5 ?
+                'ALERT: Health triggers significantly exceed ad detections - patterns may be incomplete' :
+                'Normal: Ad detection appears accurate'
+        };
+
+        Logger.add('[CORRELATION] Statistical report', report);
+        return report;
+    };
+
     return {
-        process
+        process,
+        init: initCorrelationTracking,
+
+        // Get correlation stats
+        getCorrelationStats: () => ({
+            lastAdDetectionTime,
+            recoveryTriggersWithoutAds,
+            ratio: recoveryTriggersWithoutAds > 0 ?
+                recoveryTriggersWithoutAds / (Metrics.get('ads_detected') || 1) : 0
+        })
     };
 })();
 
@@ -1511,10 +1814,29 @@ const PlayerContext = (() => {
             return false;
         }
 
+        // 3. Liveness Check (safe property access)
+        try {
+            // Test that context is actually accessible
+            const testKey = keyMap.k0;
+            if (testKey && cachedContext[testKey]) {
+                // Context appears alive
+            }
+        } catch (e) {
+            Logger.add('PlayerContext: Cache invalid - Liveness check failed', { error: String(e) });
+            PlayerContext.reset();
+            return false;
+        }
+
         return true;
     };
 
     return {
+        /**
+         * Get player context for a DOM element
+         * @param {HTMLElement} element - Player container element
+         * @returns {Object|null} Player context object, or null if not found
+         * @important Calling code MUST check for null before using returned object
+         */
         get: (element) => {
             // Check if element is different from cached root
             if (element && cachedRootElement && element !== cachedRootElement) {
@@ -1834,6 +2156,34 @@ const ExperimentalRecovery = (() => {
 const PlayRetryHandler = (() => {
     const MAX_RETRIES = 3;
     const BASE_DELAY_MS = 300;
+    const PLAY_CONFIRMATION_TIMEOUT_MS = 2000; // Increased from dynamic
+
+    /**
+     * Validates if the video is in a playable state before attempting play()
+     * @param {HTMLVideoElement} video
+     * @returns {{isValid: boolean, issues: string[]}}
+     */
+    const validatePlayable = (video) => {
+        const issues = [];
+
+        if (video.readyState < 3) {
+            issues.push(`readyState too low: ${video.readyState}`);
+        }
+        if (video.error) {
+            issues.push(`MediaError code: ${video.error.code}`);
+        }
+        if (!video.isConnected) {
+            issues.push('Video element detached from DOM');
+        }
+        if (video.seeking) {
+            issues.push('Already seeking');
+        }
+
+        return {
+            isValid: issues.length === 0,
+            issues
+        };
+    };
 
     /**
      * Waits for the video to actually start playing.
@@ -1885,12 +2235,57 @@ const PlayRetryHandler = (() => {
             for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
                 const playStartTime = performance.now();
 
-                // Strategy: Seek slightly if previous attempts failed to "unstuck" the player
+                // Pre-flight validation
+                const validation = validatePlayable(video);
+                if (!validation.isValid) {
+                    Logger.add(`Play attempt ${attempt}/${MAX_RETRIES} blocked by validation`, {
+                        context,
+                        issues: validation.issues,
+                        videoState: {
+                            readyState: video.readyState,
+                            paused: video.paused,
+                            isConnected: video.isConnected
+                        }
+                    });
+
+                    if (attempt < MAX_RETRIES) {
+                        await Fn.sleep(BASE_DELAY_MS * Math.pow(2, attempt - 1));
+                    }
+                    continue;
+                }
+
+                // Intelligent micro-seek strategy
                 if (attempt > 1) {
-                    const target = Math.min(video.currentTime + 0.1, video.duration - 0.1);
-                    if (target > 0 && Number.isFinite(target)) {
-                        Logger.add(`[RECOVERY] Attempting seek-to-unstuck to ${target.toFixed(3)}`, { context });
-                        video.currentTime = target;
+                    const shouldSeek = (
+                        video.readyState >= 3 &&
+                        !video.seeking &&
+                        video.buffered.length > 0
+                    );
+
+                    if (shouldSeek) {
+                        const bufferEnd = video.buffered.end(video.buffered.length - 1);
+                        const gap = bufferEnd - video.currentTime;
+
+                        if (gap > 1) {
+                            const target = Math.min(video.currentTime + 0.5, bufferEnd - 0.1);
+                            Logger.add(`[RECOVERY] Seeking to skip stuck point: ${target.toFixed(3)}`, {
+                                context,
+                                gap: gap.toFixed(3),
+                                rationale: 'Player has buffer but stuck at current position'
+                            });
+                            video.currentTime = target;
+                        } else {
+                            Logger.add(`[RECOVERY] Skipping seek - insufficient buffer gap: ${gap.toFixed(3)}`, {
+                                context
+                            });
+                        }
+                    } else {
+                        Logger.add('[RECOVERY] Skipping seek - conditions not met', {
+                            context,
+                            readyState: video.readyState,
+                            seeking: video.seeking,
+                            hasBuffer: video.buffered.length > 0
+                        });
                     }
                 }
 
@@ -1907,30 +2302,53 @@ const PlayRetryHandler = (() => {
                     await video.play();
 
                     // Wait for the 'playing' event to confirm success
-                    const isPlaying = await waitForPlaying(video, 500 * attempt);
+                    const isPlaying = await waitForPlaying(video, PLAY_CONFIRMATION_TIMEOUT_MS);
                     await Fn.sleep(50); // Small buffer after event
 
                     if (isPlaying && !video.paused) {
                         Logger.add(`Play attempt ${attempt} SUCCESS`, {
                             context,
-                            duration_ms: performance.now() - playStartTime
+                            duration_ms: (performance.now() - playStartTime).toFixed(2)
                         });
                         return true;
                     }
 
                     Logger.add(`Play attempt ${attempt} FAILED: video still paused`, {
                         context,
-                        duration_ms: performance.now() - playStartTime
+                        duration_ms: (performance.now() - playStartTime).toFixed(2),
+                        currentState: {
+                            paused: video.paused,
+                            readyState: video.readyState,
+                            currentTime: video.currentTime
+                        }
                     });
                 } catch (error) {
                     Logger.add(`Play attempt ${attempt} threw error`, {
                         context,
-                        error: error.message,
-                        duration_ms: performance.now() - playStartTime
+                        errorName: error.name,
+                        errorMessage: error.message,
+                        errorCode: error.code || null,
+                        duration_ms: (performance.now() - playStartTime).toFixed(2),
+                        videoState: {
+                            readyState: video.readyState,
+                            paused: video.paused,
+                            networkState: video.networkState,
+                            error: video.error ? video.error.code : null
+                        }
                     });
 
+                    // Categorize errors
                     if (error.name === 'NotAllowedError') {
-                        return false;
+                        Logger.add('[PLAYBACK] Browser blocked autoplay - cannot recover', { context });
+                        return false; // Fatal, cannot recover
+                    }
+                    if (error.name === 'NotSupportedError') {
+                        Logger.add('[PLAYBACK] Source not supported - cannot recover', { context });
+                        return false; // Fatal
+                    }
+                    if (error.name === 'AbortError') {
+                        Logger.add('[PLAYBACK] Play interrupted - possible DOM manipulation, retry allowed', { context });
+                        // Continue to next attempt
                     }
                 }
 
@@ -1939,9 +2357,174 @@ const PlayRetryHandler = (() => {
                 }
             }
 
-            Logger.add('All play attempts exhausted.', { context });
+            // Diagnostic summary
+            Logger.add('All play attempts exhausted - DIAGNOSTIC SUMMARY', {
+                context,
+                attempts: MAX_RETRIES,
+                finalState: {
+                    paused: video.paused,
+                    readyState: video.readyState,
+                    networkState: video.networkState,
+                    error: video.error ? video.error.code : null,
+                    currentTime: video.currentTime,
+                    bufferEnd: video.buffered.length ? video.buffered.end(video.buffered.length - 1) : 0
+                },
+                analysis: 'Player appears stuck - recommend aggressive recovery (stream refresh)'
+            });
+
             return false;
         }
+    };
+})();
+
+// --- Recovery Diagnostics ---
+/**
+ * Diagnoses playback blockers before attempting recovery.
+ * @responsibility
+ * 1. Identify WHY the player is stuck.
+ * 2. Suggest targeted recovery strategies.
+ * 3. Prevent wasted recovery attempts on unrecoverable states.
+ */
+const RecoveryDiagnostics = (() => {
+
+    /**
+     * Diagnoses the current video state to determine recovery feasibility.
+     * @param {HTMLVideoElement} video
+     * @returns {{canRecover: boolean, blockers: string[], suggestedStrategy: string, details: Object}}
+     */
+    const diagnose = (video) => {
+        if (!video) {
+            return {
+                canRecover: false,
+                blockers: ['NO_VIDEO_ELEMENT'],
+                suggestedStrategy: 'fatal',
+                details: { error: 'Video element is null or undefined' }
+            };
+        }
+
+        // 1. DOM Attachment Check
+        if (!video.isConnected) {
+            Logger.add('[DIAGNOSTICS] Video element detached from DOM');
+            return {
+                canRecover: false,
+                blockers: ['VIDEO_DETACHED'],
+                suggestedStrategy: 'fatal',
+                details: { error: 'Video element not connected to DOM' }
+            };
+        }
+
+        // 2. Media Error Check
+        if (video.error) {
+            const errorCode = video.error.code;
+            const isFatal = errorCode === video.error.MEDIA_ERR_SRC_NOT_SUPPORTED;
+
+            Logger.add('[DIAGNOSTICS] Media error detected', {
+                code: errorCode,
+                message: video.error.message
+            });
+
+            return {
+                canRecover: !isFatal,
+                blockers: [`MEDIA_ERROR_${errorCode}`],
+                suggestedStrategy: isFatal ? 'fatal' : 'aggressive',
+                details: {
+                    errorCode,
+                    errorMessage: video.error.message,
+                    isFatal
+                }
+            };
+        }
+
+        // 3. Network State Check
+        if (video.networkState === video.NETWORK_NO_SOURCE) {
+            Logger.add('[DIAGNOSTICS] No source available');
+            return {
+                canRecover: false,
+                blockers: ['NO_SOURCE'],
+                suggestedStrategy: 'fatal',
+                details: { networkState: video.networkState }
+            };
+        }
+
+        // 4. Seeking State Check
+        if (video.seeking) {
+            Logger.add('[DIAGNOSTICS] Video currently seeking');
+            return {
+                canRecover: true,
+                blockers: ['ALREADY_SEEKING'],
+                suggestedStrategy: 'wait',
+                details: {
+                    suggestion: 'Wait for seek to complete',
+                    currentTime: video.currentTime
+                }
+            };
+        }
+
+        // 5. Ready State Check
+        if (video.readyState < 3) {
+            Logger.add('[DIAGNOSTICS] Insufficient data', {
+                readyState: video.readyState
+            });
+
+            return {
+                canRecover: true,
+                blockers: ['INSUFFICIENT_DATA'],
+                suggestedStrategy: 'wait',
+                details: {
+                    readyState: video.readyState,
+                    suggestion: 'Wait for buffering to complete before recovery'
+                }
+            };
+        }
+
+        // 6. Buffer Health Check
+        const bufferAnalysis = BufferAnalyzer.analyze(video);
+        // Only report critical buffer if we have actual buffered content
+        if (bufferAnalysis.bufferHealth === 'critical' && video.buffered.length > 0) {
+            Logger.add('[DIAGNOSTICS] Critical buffer detected', bufferAnalysis);
+            return {
+                canRecover: true,
+                blockers: ['CRITICAL_BUFFER'],
+                suggestedStrategy: 'aggressive',
+                details: {
+                    bufferSize: bufferAnalysis.bufferSize,
+                    bufferHealth: bufferAnalysis.bufferHealth,
+                    suggestion: 'Standard recovery (seeking) will fail - need stream refresh'
+                }
+            };
+        }
+
+        // 7. Check signature stability (if available)
+        if (Logic && Logic.Player && Logic.Player.isSessionUnstable) {
+            const isUnstable = Logic.Player.isSessionUnstable();
+            if (isUnstable) {
+                Logger.add('[DIAGNOSTICS] Warning: Player signatures unstable');
+            }
+        }
+
+        // All checks passed - standard recovery can proceed
+        Logger.add('[DIAGNOSTICS] Video state appears recoverable', {
+            readyState: video.readyState,
+            paused: video.paused,
+            bufferHealth: bufferAnalysis.bufferHealth
+        });
+
+        return {
+            canRecover: true,
+            blockers: [],
+            suggestedStrategy: 'standard',
+            details: {
+                readyState: video.readyState,
+                paused: video.paused,
+                currentTime: video.currentTime,
+                bufferHealth: bufferAnalysis.bufferHealth,
+                bufferSize: bufferAnalysis.bufferSize
+            }
+        };
+    };
+
+    return {
+        diagnose
     };
 })();
 
@@ -2209,13 +2792,41 @@ const ResilienceOrchestrator = (() => {
      * @param {Object} postSnapshot - Snapshot after recovery
      * @returns {Object} Delta object showing what changed
      */
-    const calculateRecoveryDelta = (preSnapshot, postSnapshot) => {
+    /**
+     * Validates if recovery actually improved the state.
+     * @param {Object} preSnapshot - Snapshot before recovery
+     * @param {Object} postSnapshot - Snapshot after recovery
+     * @param {Object} delta - Calculated changes
+     * @returns {{isValid: boolean, issues: string[], hasImprovement: boolean}}
+     */
+    const validateRecoverySuccess = (preSnapshot, postSnapshot, delta) => {
+        const issues = [];
+
+        // Check 1: Ready state should not decrease
+        if (delta.readyStateChanged && postSnapshot.readyState < preSnapshot.readyState) {
+            issues.push(`readyState decreased: ${preSnapshot.readyState} → ${postSnapshot.readyState}`);
+        }
+
+        // Check 2: Error should not appear
+        if (delta.errorAppeared) {
+            issues.push(`MediaError appeared: code ${postSnapshot.error}`);
+        }
+
+        // Check 3: Should have some positive change
+        const hasImprovement = (
+            delta.errorCleared ||  // Error was fixed
+            (delta.readyStateChanged && postSnapshot.readyState > preSnapshot.readyState) ||
+            (postSnapshot.bufferEnd > preSnapshot.bufferEnd + 0.1) // Buffer increased
+        );
+
+        if (!hasImprovement && !delta.pausedStateChanged) {
+            issues.push('No measurable improvement detected');
+        }
+
         return {
-            readyStateChanged: preSnapshot.readyState !== postSnapshot.readyState,
-            networkStateChanged: preSnapshot.networkState !== postSnapshot.networkState,
-            errorAppeared: !preSnapshot.error && postSnapshot.error,
-            errorCleared: preSnapshot.error && !postSnapshot.error,
-            pausedStateChanged: preSnapshot.paused !== postSnapshot.paused
+            isValid: issues.length === 0,
+            issues,
+            hasImprovement
         };
     };
 
@@ -2256,20 +2867,39 @@ const ResilienceOrchestrator = (() => {
                     return;
                 }
 
-                // Check for fatal errors
+                // Fatal error check (existing)
                 const { error } = video;
                 if (error && error.code === CONFIG.codes.MEDIA_ERROR_SRC) {
                     Logger.add('[RECOVERY] Fatal error (code 4) - cannot recover, waiting for Twitch reload');
                     return;
                 }
 
-                // Check buffer health
+                // NEW: Use RecoveryDiagnostics
+                const diagnosis = RecoveryDiagnostics.diagnose(video);
+                if (!diagnosis.canRecover) {
+                    Logger.add('[RECOVERY] Fatal blocker detected', diagnosis);
+                    return;
+                }
+
+                // MODIFIED: Intelligent buffer validation
                 const analysis = BufferAnalyzer.analyze(video);
-                // Removed blocking check for critical buffer to allow recovery to proceed
-                // if (!payload.forceAggressive && analysis.bufferHealth === 'critical') {
-                //    Logger.add('[RECOVERY] Insufficient buffer for recovery, waiting');
-                //    return;
-                // }
+                if (!payload.forceAggressive && analysis.bufferHealth === 'critical') {
+                    // Critical buffer means standard recovery (seeking) will fail
+                    const bufferSize = analysis.bufferSize || 0;
+
+                    if (bufferSize < 2) {
+                        Logger.add('[RECOVERY] Critical buffer - forcing aggressive recovery', {
+                            bufferSize: bufferSize.toFixed(3),
+                            bufferHealth: 'critical',
+                            rationale: 'Standard recovery requires buffer > 2s, forcing stream refresh'
+                        });
+                        payload.forceAggressive = true; // Escalate to aggressive
+                    } else {
+                        Logger.add('[RECOVERY] Insufficient buffer but acceptable for recovery', {
+                            bufferSize: bufferSize.toFixed(3)
+                        });
+                    }
+                }
 
                 // Capture pre-recovery state
                 const preSnapshot = captureVideoSnapshot(video);
@@ -2291,17 +2921,52 @@ const ResilienceOrchestrator = (() => {
                     currentStrategy = RecoveryStrategy.getEscalation(video, currentStrategy);
                 }
 
-                // Capture post-recovery state and calculate delta
+                // NEW: Validate recovery
                 const postSnapshot = captureVideoSnapshot(video);
                 const delta = calculateRecoveryDelta(preSnapshot, postSnapshot);
-                Logger.add('[RECOVERY] Post-recovery delta', { pre: preSnapshot, post: postSnapshot, changes: delta });
+                const recoverySuccess = validateRecoverySuccess(preSnapshot, postSnapshot, delta);
 
-                // Resume playback if needed
-                if (video.paused) {
-                    await PlayRetryHandler.retry(video, 'post-recovery');
+                Logger.add('[RECOVERY] Post-recovery result', {
+                    pre: preSnapshot,
+                    post: postSnapshot,
+                    changes: delta,
+                    success: recoverySuccess
+                });
+
+                // NEW: Conditional escalation and play retry
+                if (!recoverySuccess.isValid && !payload.forceAggressive) {
+                    Logger.add('[RECOVERY] Escalating to aggressive recovery due to validation failure');
+                    payload.forceAggressive = true;
+
+                    // Re-run recovery with aggressive strategy
+                    const aggressiveStrategy = RecoveryStrategy.select(video, payload);
+                    if (aggressiveStrategy) {
+                        await aggressiveStrategy.execute(video);
+
+                        // Re-validate after aggressive recovery
+                        const postSnapshot2 = captureVideoSnapshot(video);
+                        const delta2 = calculateRecoveryDelta(postSnapshot, postSnapshot2);
+                        const recoverySuccess2 = validateRecoverySuccess(postSnapshot, postSnapshot2, delta2);
+
+                        Logger.add('[RECOVERY] Aggressive recovery result', {
+                            success: recoverySuccess2
+                        });
+                    }
                 }
 
-                Adapters.EventBus.emit(CONFIG.events.REPORT, { status: 'SUCCESS' });
+                // Resume playback if needed AND recovery was successful
+                if (video.paused) {
+                    if (recoverySuccess.isValid) {
+                        Logger.add('[RECOVERY] Recovery validated - attempting playback');
+                        await PlayRetryHandler.retry(video, 'post-recovery');
+                    } else {
+                        Logger.add('[RECOVERY] Skipping play retry - recovery validation failed');
+                    }
+                }
+
+                Adapters.EventBus.emit(CONFIG.events.REPORT, {
+                    status: recoverySuccess.isValid ? 'SUCCESS' : 'FAILED'
+                });
             } catch (e) {
                 Logger.add('[RECOVERY] Resilience failed', { error: String(e) });
             } finally {
@@ -2393,6 +3058,7 @@ const CoreOrchestrator = (() => {
             Instrumentation.init();
             EventCoordinator.init();
             ScriptBlocker.init();
+            AdBlocker.init();
 
             // Wait for DOM if needed
             if (document.body) {
