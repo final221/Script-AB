@@ -1,9 +1,10 @@
 🧪 Starting automated test runner...
 ============================================================
 
+🔨 Generating test runner...
+✅ Generated test-runner.html with 33 source files
 📁 Loading test file: file://F:\Fynn\Projects\Tw Adb\tests\test-runner.html
 
-Failed to load resource: net::ERR_FILE_NOT_FOUND
 
 🧪 Running: RecoveryDiagnostics: Placeholder test
 ✅ Placeholder - RecoveryDiagnostics not yet implemented
@@ -44,7 +45,7 @@ Failed to load resource: net::ERR_FILE_NOT_FOUND
 📊 Test Summary: 8 passed, 0 failed
 ==================================================
 
-⏱️  Duration: 1.04s
+⏱️  Duration: 1.05s
 📊 Tests: 8 total
 📝 Logger messages: 0
 

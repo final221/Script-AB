@@ -1,3 +1,8 @@
 logs/
 node_modules/
 .DS_Store
+
+# Logs
+*.log
+tests/last-run.log
+tests/test-runner.html

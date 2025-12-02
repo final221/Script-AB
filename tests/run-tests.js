@@ -14,10 +14,99 @@ const log = (msg, ...args) => {
     logStream.write(cleanMsg + '\n');
 };
 
+// Configuration for source file scanning (mirrors build/build.js)
+const CONFIG = {
+    BASE: path.join(__dirname, '..'),
+    TEMPLATE: path.join(__dirname, 'test-runner.template.html'),
+    OUTPUT: path.join(__dirname, 'test-runner.html'),
+    PRIORITY: ['config/Config.js', 'utils/Utils.js', 'utils/Adapters.js', 'utils/Logic.js'],
+    ENTRY: 'core/CoreOrchestrator.js',
+    // Optional: Files to exclude from tests if needed
+    EXCLUDES: []
+};
+
+/**
+ * Recursively gets all files in a directory.
+ * @param {string} dir - The directory to search.
+ * @returns {string[]} List of absolute file paths.
+ */
+const getFiles = (dir) => {
+    let results = [];
+    const list = fs.readdirSync(dir);
+
+    for (const file of list) {
+        const filePath = path.join(dir, file);
+        const stat = fs.statSync(filePath);
+
+        if (stat.isDirectory()) {
+            results = results.concat(getFiles(filePath));
+        } else {
+            results.push(filePath);
+        }
+    }
+
+    return results;
+};
+
+/**
+ * Generates the test runner HTML file dynamically.
+ */
+const generateTestRunner = () => {
+    log('🔨 Generating test runner...');
+
+    const srcDir = path.join(CONFIG.BASE, 'src');
+    const allFiles = getFiles(srcDir);
+    const normalize = p => path.normalize(p);
+
+    const priorityFiles = CONFIG.PRIORITY.map(file => path.join(srcDir, file));
+    const entryFile = path.join(srcDir, CONFIG.ENTRY);
+
+    // Filter and sort files
+    const sourceFiles = allFiles.filter(file => {
+        if (!file.endsWith('.js')) return false;
+
+        // Check excludes
+        if (CONFIG.EXCLUDES.some(ex => file.includes(ex))) return false;
+
+        const isPriority = priorityFiles.some(p => normalize(p) === normalize(file));
+        if (isPriority) return false;
+
+        const isEntry = normalize(file) === normalize(entryFile);
+        if (isEntry) return false;
+
+        return true;
+    });
+
+    // Combine priority files, other files, and entry file last
+    const finalFiles = [...priorityFiles, ...sourceFiles, entryFile];
+
+    // Generate script tags
+    const scriptTags = finalFiles.map(file => {
+        // Create relative path from tests/ folder to src/ file
+        const relativePath = path.relative(__dirname, file).replace(/\\/g, '/');
+        return `    <script src="${relativePath}"></script>`;
+    }).join('\n');
+
+    // Read template and inject scripts
+    let template = fs.readFileSync(CONFIG.TEMPLATE, 'utf8');
+    const outputContent = template.replace('<!-- INJECT_SCRIPTS -->', scriptTags);
+
+    fs.writeFileSync(CONFIG.OUTPUT, outputContent);
+    log(`✅ Generated test-runner.html with ${finalFiles.length} source files`);
+};
+
 (async () => {
     log('🧪 Starting automated test runner...');
     log('='.repeat(60));
     log('');
+
+    // Generate the test runner HTML before starting
+    try {
+        generateTestRunner();
+    } catch (error) {
+        log('❌ Failed to generate test runner: ' + error.message);
+        process.exit(1);
+    }
 
     const browser = await puppeteer.launch({
         headless: true,
