@@ -28,6 +28,7 @@ const CoreOrchestrator = (() => {
             Instrumentation.init();
             EventCoordinator.init();
             ScriptBlocker.init();
+            AdBlocker.init();
 
             // Wait for DOM if needed
             if (document.body) {

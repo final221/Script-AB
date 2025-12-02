@@ -66,6 +66,7 @@ const AdBlocker = (() => {
 
     // Listen for health-triggered recoveries to detect missed ads
     const initCorrelationTracking = () => {
+        // 1. Listen for Health Triggers
         Adapters.EventBus.on(CONFIG.events.AD_DETECTED, (payload) => {
             if (payload.source === 'HEALTH') {
                 // Health monitor triggered recovery
@@ -85,6 +86,30 @@ const AdBlocker = (() => {
                 }
             }
         });
+
+        // 2. Listen for Log/Report Requests
+        Adapters.EventBus.on(CONFIG.events.LOG, () => {
+            generateCorrelationReport();
+        });
+    };
+
+    const generateCorrelationReport = () => {
+        const adsDetected = Metrics.get('ads_detected');
+        const healthTriggers = Metrics.get('health_triggers');
+
+        const report = {
+            ads_detected_network: adsDetected,
+            health_triggered_recoveries: healthTriggers,
+            recoveries_without_ads: recoveryTriggersWithoutAds,
+            detection_accuracy: healthTriggers > 0 ?
+                ((adsDetected / healthTriggers) * 100).toFixed(1) + '%' : 'N/A',
+            interpretation: healthTriggers > adsDetected * 1.5 ?
+                'ALERT: Health triggers significantly exceed ad detections - patterns may be incomplete' :
+                'Normal: Ad detection appears accurate'
+        };
+
+        Logger.add('[CORRELATION] Statistical report', report);
+        return report;
     };
 
     return {
