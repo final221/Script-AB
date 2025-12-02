@@ -107,6 +107,35 @@ const Test = {
         }
     });
 
+    await Test.run('StuckDetector: Ignores buffering state', () => {
+        const video = document.createElement('video');
+        Object.defineProperty(video, 'readyState', { value: 2, configurable: true }); // HAVE_CURRENT_DATA (Buffering)
+        Object.defineProperty(video, 'paused', { value: false, configurable: true });
+        Object.defineProperty(video, 'ended', { value: false, configurable: true });
+        Object.defineProperty(video, 'currentTime', { value: 10, configurable: true });
+
+        StuckDetector.reset(video);
+
+        // Multiple checks while buffering
+        for (let i = 0; i < 5; i++) {
+            const result = StuckDetector.check(video);
+            assert(result === null, 'Should not detect stuck while buffering');
+        }
+    });
+
+    await Test.run('StuckDetector: Ignores seeking state', () => {
+        const video = document.createElement('video');
+        Object.defineProperty(video, 'readyState', { value: 4, configurable: true });
+        Object.defineProperty(video, 'paused', { value: false, configurable: true });
+        Object.defineProperty(video, 'seeking', { value: true, configurable: true });
+        Object.defineProperty(video, 'currentTime', { value: 10, configurable: true });
+
+        StuckDetector.reset(video);
+
+        const result = StuckDetector.check(video);
+        assert(result === null, 'Should not detect stuck while seeking');
+    });
+
     // --- Logger Tests ---
 
     await Test.run('Logger: Captures messages', () => {

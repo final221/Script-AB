@@ -31,6 +31,18 @@
 ✅ Should not detect stuck when paused
 ✅ PASS: StuckDetector: Ignores paused video
 
+🧪 Running: StuckDetector: Ignores buffering state
+✅ Should not detect stuck while buffering
+✅ Should not detect stuck while buffering
+✅ Should not detect stuck while buffering
+✅ Should not detect stuck while buffering
+✅ Should not detect stuck while buffering
+✅ PASS: StuckDetector: Ignores buffering state
+
+🧪 Running: StuckDetector: Ignores seeking state
+✅ Should not detect stuck while seeking
+✅ PASS: StuckDetector: Ignores seeking state
+
 🧪 Running: Logger: Captures messages
 ✅ Logger should capture messages
 ✅ Logger should contain test message
@@ -79,11 +91,11 @@
 ✅ PASS: Logic: Instability detection works
 
 ==================================================
-📊 Test Summary: 14 passed, 0 failed
+📊 Test Summary: 16 passed, 0 failed
 ==================================================
 
-⏱️  Duration: 11.44s
-📊 Tests: 14 total
+⏱️  Duration: 11.47s
+📊 Tests: 16 total
 📝 Logger messages: 0
 
 ✅ All tests passed!

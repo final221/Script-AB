@@ -25,6 +25,28 @@ const StuckDetector = (() => {
             return null;
         }
 
+        // Skip if actively buffering (readyState < 3: HAVE_FUTURE_DATA)
+        if (video.readyState < 3) {
+            if (CONFIG.debug) {
+                Logger.add('StuckDetector: Skipping check - buffering', {
+                    readyState: video.readyState
+                });
+            }
+            state.stuckCount = 0;
+            state.lastTime = video.currentTime;
+            return null;
+        }
+
+        // Skip if seeking
+        if (video.seeking) {
+            if (CONFIG.debug) {
+                Logger.add('StuckDetector: Skipping check - seeking');
+            }
+            state.stuckCount = 0;
+            state.lastTime = video.currentTime;
+            return null;
+        }
+
         const currentTime = video.currentTime;
         const lastTime = state.lastTime;
         const diff = Math.abs(currentTime - lastTime);
