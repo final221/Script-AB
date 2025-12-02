@@ -2,13 +2,26 @@
 ============================================================
 
 🔨 Generating test runner...
-✅ Generated test-runner.html with 33 source files
+✅ Generated test-runner.html with 34 source files
 📁 Loading test file: file://F:\Fynn\Projects\Tw Adb\tests\test-runner.html
 
 
-🧪 Running: RecoveryDiagnostics: Placeholder test
-✅ Placeholder - RecoveryDiagnostics not yet implemented
-✅ PASS: RecoveryDiagnostics: Placeholder test
+🧪 Running: RecoveryDiagnostics: Detects detached video
+✅ Should not be recoverable
+✅ Should suggest fatal strategy
+✅ Should detect VIDEO_DETACHED blocker
+✅ PASS: RecoveryDiagnostics: Detects detached video
+
+🧪 Running: RecoveryDiagnostics: Detects insufficient ready state
+✅ Should be recoverable
+✅ Should suggest wait strategy
+✅ Should detect INSUFFICIENT_DATA
+✅ PASS: RecoveryDiagnostics: Detects insufficient ready state
+
+🧪 Running: RecoveryDiagnostics: Healthy video state
+✅ Should be recoverable
+✅ Should not be fatal
+✅ PASS: RecoveryDiagnostics: Healthy video state
 
 🧪 Running: PlayRetryHandler: Placeholder test
 ✅ Placeholder - PlayRetryHandler refactor not yet implemented
@@ -66,11 +79,11 @@
 ✅ PASS: Logic: Instability detection works
 
 ==================================================
-📊 Test Summary: 12 passed, 0 failed
+📊 Test Summary: 14 passed, 0 failed
 ==================================================
 
-⏱️  Duration: 11.46s
-📊 Tests: 12 total
+⏱️  Duration: 11.44s
+📊 Tests: 14 total
 📝 Logger messages: 0
 
 ✅ All tests passed!

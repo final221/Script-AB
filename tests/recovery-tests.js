@@ -43,10 +43,44 @@ const Test = {
 (async () => {
     // Note: These tests will be placeholders until RecoveryDiagnostics.js is created
 
-    await Test.run('RecoveryDiagnostics: Placeholder test', () => {
-        // This test will PASS as a placeholder
-        // Once RecoveryDiagnostics.js is implemented, replace with real tests
-        assert(true, 'Placeholder - RecoveryDiagnostics not yet implemented');
+    await Test.run('RecoveryDiagnostics: Detects detached video', () => {
+        const detachedVideo = document.createElement('video');
+        const result = RecoveryDiagnostics.diagnose(detachedVideo);
+
+        assert(result.canRecover === false, 'Should not be recoverable');
+        assert(result.suggestedStrategy === 'fatal', 'Should suggest fatal strategy');
+        assert(result.blockers.includes('VIDEO_DETACHED'), 'Should detect VIDEO_DETACHED blocker');
+    });
+
+    await Test.run('RecoveryDiagnostics: Detects insufficient ready state', () => {
+        const container = document.createElement('div');
+        const video = document.createElement('video');
+        container.appendChild(video);
+        document.body.appendChild(container);
+
+        video.readyState = 2;
+        const result = RecoveryDiagnostics.diagnose(video);
+
+        assert(result.canRecover === true, 'Should be recoverable');
+        assert(result.suggestedStrategy === 'wait', 'Should suggest wait strategy');
+        assert(result.blockers.includes('INSUFFICIENT_DATA'), 'Should detect INSUFFICIENT_DATA');
+
+        document.body.removeChild(container);
+    });
+
+    await Test.run('RecoveryDiagnostics: Healthy video state', () => {
+        const container = document.createElement('div');
+        const video = document.createElement('video');
+        container.appendChild(video);
+        document.body.appendChild(container);
+
+        video.readyState = 4;
+        const result = RecoveryDiagnostics.diagnose(video);
+
+        assert(result.canRecover === true, 'Should be recoverable');
+        assert(result.suggestedStrategy !== 'fatal', 'Should not be fatal');
+
+        document.body.removeChild(container);
     });
 
     // --- PlayRetryHandler Tests ---
