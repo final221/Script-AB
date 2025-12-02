@@ -131,6 +131,89 @@ const Test = {
         assert(Metrics.get('errors') === 1, 'Metrics should be incremented');
     });
 
+    // --- HealthMonitor Tests ---
+
+    await Test.run('HealthMonitor: Cooldown prevents spam', async () => {
+        // Mock container and video
+        const container = document.createElement('div');
+        const video = document.createElement('video');
+        container.appendChild(video);
+        document.body.appendChild(container);
+
+        // Reset metrics
+        Metrics.reset();
+
+        // Start monitor
+        HealthMonitor.start(container);
+
+        // Mock StuckDetector to return true
+        const originalCheck = StuckDetector.check;
+        StuckDetector.check = () => ({ reason: 'test', details: {} });
+
+        try {
+            // First trigger
+            // We need to wait for the interval to fire or manually trigger if we could expose it
+            // Since we can't easily expose the internal interval callback, we'll simulate the effect
+            // by calling the internal logic if it were exposed, OR we just wait.
+            // Waiting 1s (interval is 1000ms)
+            await Fn.sleep(1100);
+
+            const triggersAfterFirst = Metrics.get('health_triggers');
+            assert(triggersAfterFirst >= 1, 'Should trigger once');
+
+            // Wait less than cooldown (5s)
+            await Fn.sleep(2000);
+
+            const triggersAfterShortWait = Metrics.get('health_triggers');
+            assert(triggersAfterShortWait === triggersAfterFirst, 'Should NOT trigger again during cooldown');
+
+        } finally {
+            StuckDetector.check = originalCheck;
+            HealthMonitor.stop();
+            document.body.removeChild(container);
+        }
+    });
+
+    await Test.run('HealthMonitor: Pause/Resume works', async () => {
+        const container = document.createElement('div');
+        const video = document.createElement('video');
+        container.appendChild(video);
+        document.body.appendChild(container);
+        Metrics.reset();
+        HealthMonitor.start(container);
+
+        const originalCheck = StuckDetector.check;
+        StuckDetector.check = () => ({ reason: 'test', details: {} });
+
+        try {
+            // Trigger once
+            await Fn.sleep(1100);
+            const initialTriggers = Metrics.get('health_triggers');
+            assert(initialTriggers >= 1, 'Should trigger initially');
+
+            // Pause
+            HealthMonitor.pause();
+
+            // Wait for cooldown to expire (5s) + interval
+            await Fn.sleep(6000);
+
+            const triggersWhilePaused = Metrics.get('health_triggers');
+            assert(triggersWhilePaused === initialTriggers, 'Should NOT trigger while paused');
+
+            // Resume
+            HealthMonitor.resume();
+            await Fn.sleep(1100);
+
+            const triggersAfterResume = Metrics.get('health_triggers');
+            assert(triggersAfterResume > initialTriggers, 'Should trigger again after resume');
+
+        } finally {
+            StuckDetector.check = originalCheck;
+            HealthMonitor.stop();
+            document.body.removeChild(container);
+        }
+    });
+
     // Display summary
     Test.summary();
 })();

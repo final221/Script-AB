@@ -41,12 +41,23 @@
 ✅ Metrics should be incremented
 ✅ PASS: Integration: Logger and Metrics work together
 
+🧪 Running: HealthMonitor: Cooldown prevents spam
+✅ Should trigger once
+✅ Should NOT trigger again during cooldown
+✅ PASS: HealthMonitor: Cooldown prevents spam
+
+🧪 Running: HealthMonitor: Pause/Resume works
+✅ Should trigger initially
+✅ Should NOT trigger while paused
+✅ Should trigger again after resume
+✅ PASS: HealthMonitor: Pause/Resume works
+
 ==================================================
-📊 Test Summary: 8 passed, 0 failed
+📊 Test Summary: 10 passed, 0 failed
 ==================================================
 
-⏱️  Duration: 1.01s
-📊 Tests: 8 total
+⏱️  Duration: 11.43s
+📊 Tests: 10 total
 📝 Logger messages: 0
 
 ✅ All tests passed!
