@@ -1,123 +1,81 @@
 🧪 Starting automated test runner...
 ============================================================
-
 🔨 Generating test runner...
-✅ Generated test-runner.html with 35 source files
-📁 Loading test file: file://F:\Fynn\Projects\Tw Adb\tests\test-runner.html
+✅ Generated tests/runner.html with 35 source files
+Using default Chrome path: C:\Program Files\Google\Chrome\Application\chrome.exe
+📁 Loading test file: file://F:\Fynn\Projects\Tw Adb\tests\runner.html
 
 
 🧪 Running: RecoveryDiagnostics: Detects detached video
-✅ Should not be recoverable
-✅ Should suggest fatal strategy
-✅ Should detect VIDEO_DETACHED blocker
 ✅ PASS: RecoveryDiagnostics: Detects detached video
 
 🧪 Running: RecoveryDiagnostics: Detects insufficient ready state
-✅ Should be recoverable
-✅ Should suggest wait strategy
-✅ Should detect INSUFFICIENT_DATA
 ✅ PASS: RecoveryDiagnostics: Detects insufficient ready state
 
 🧪 Running: RecoveryDiagnostics: Healthy video state
-✅ Should be recoverable
-✅ Should not be fatal
 ✅ PASS: RecoveryDiagnostics: Healthy video state
 
-🧪 Running: PlayRetryHandler: Placeholder test
-✅ Placeholder - PlayRetryHandler refactor not yet implemented
-✅ PASS: PlayRetryHandler: Placeholder test
-
 🧪 Running: StuckDetector: Ignores paused video
-✅ Should not detect stuck when paused
 ✅ PASS: StuckDetector: Ignores paused video
 
 🧪 Running: StuckDetector: Ignores buffering state
-✅ Should not detect stuck while buffering
-✅ Should not detect stuck while buffering
-✅ Should not detect stuck while buffering
-✅ Should not detect stuck while buffering
-✅ Should not detect stuck while buffering
 ✅ PASS: StuckDetector: Ignores buffering state
 
 🧪 Running: StuckDetector: Ignores seeking state
-✅ Should not detect stuck while seeking
 ✅ PASS: StuckDetector: Ignores seeking state
 
 🧪 Running: Logger: Captures messages
-✅ Logger should capture messages
-✅ Logger should contain test message
 ✅ PASS: Logger: Captures messages
 
 🧪 Running: Metrics: Increments counters
-✅ Counter should be 2
 ✅ PASS: Metrics: Increments counters
 
 🧪 Running: Metrics: Returns 0 for unknown keys
-✅ Unknown key should return 0
 ✅ PASS: Metrics: Returns 0 for unknown keys
 
 🧪 Running: AdBlocker: Correlation detects missed ads
-✅ Should have lastAdDetectionTime
-✅ Should have recoveryTriggersWithoutAds
 ✅ PASS: AdBlocker: Correlation detects missed ads
 
 🧪 Running: Integration: Logger and Metrics work together
-✅ Logger should have messages
-✅ Metrics should be incremented
 ✅ PASS: Integration: Logger and Metrics work together
 
 🧪 Running: HealthMonitor: Cooldown prevents spam
-✅ Should trigger once
-✅ Should NOT trigger again during cooldown
 ✅ PASS: HealthMonitor: Cooldown prevents spam
 
 🧪 Running: HealthMonitor: Pause/Resume works
-✅ Should trigger initially
-✅ Should NOT trigger while paused
-✅ Should trigger again after resume
 ✅ PASS: HealthMonitor: Pause/Resume works
 
 🧪 Running: Logic: Session tracking detects key changes
-✅ Should set k0 to ref
-✅ No changes yet
-✅ Should update k0 to foo
-✅ Should detect change
-✅ Should track old key
-✅ Should track new key
 ✅ PASS: Logic: Session tracking detects key changes
 
 🧪 Running: Logic: Instability detection works
-✅ Should detect instability after 4 changes
 ✅ PASS: Logic: Instability detection works
 
 🧪 Running: PlayerContext: Returns null for invalid element
-✅ Should return null for null element
 ✅ PASS: PlayerContext: Returns null for invalid element
 
 🧪 Running: PlayerContext: Handles detached element gracefully
-✅ Should not throw error
 ✅ PASS: PlayerContext: Handles detached element gracefully
 
 🧪 Running: ResilienceOrchestrator: Buffer validation forces aggressive
-✅ Should force aggressive recovery due to low buffer
 ✅ PASS: ResilienceOrchestrator: Buffer validation forces aggressive
 
 🧪 Running: ResilienceOrchestrator: Recovery validation detects failures
-✅ ResilienceOrchestrator executed without error
 ✅ PASS: ResilienceOrchestrator: Recovery validation detects failures
 
 🧪 Running: FrameDropDetector: Ignores drops during normal playback
-✅ Should not trigger when video is progressing
 ✅ PASS: FrameDropDetector: Ignores drops during normal playback
 
-==================================================
-📊 Test Summary: 21 passed, 0 failed
-==================================================
-
-⏱️  Duration: 11.55s
-📊 Tests: 21 total
-📝 Logger messages: 0
+========================================
+TEST SUMMARY
+========================================
+Total:  20
+Passed: 20
+Failed: 0
+Time:   11442.90ms
+========================================
 
 ✅ All tests passed!
 
 📄 Full log saved to: F:\Fynn\Projects\Tw Adb\tests\last-run.log
+🔒 Browser closed

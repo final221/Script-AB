@@ -1,10 +1,12 @@
 const puppeteer = require('puppeteer-core');
 const path = require('path');
-const fs = require('fs');
+const fs = require('fs').promises;
+const { createWriteStream } = require('fs');
+const CONFIG = require('./test.config.js');
 
 // Create log file
 const logFile = path.join(__dirname, 'last-run.log');
-const logStream = fs.createWriteStream(logFile, { flags: 'w' });
+const logStream = createWriteStream(logFile, { flags: 'w' });
 
 // Helper to log to both console and file
 const log = (msg, ...args) => {
@@ -14,59 +16,43 @@ const log = (msg, ...args) => {
     logStream.write(cleanMsg + '\n');
 };
 
-// Configuration for source file scanning (mirrors build/build.js)
-const CONFIG = {
-    BASE: path.join(__dirname, '..'),
-    TEMPLATE: path.join(__dirname, 'test-runner.template.html'),
-    OUTPUT: path.join(__dirname, 'test-runner.html'),
-    PRIORITY: ['config/Config.js', 'utils/Utils.js', 'utils/Adapters.js', 'utils/Logic.js'],
-    ENTRY: 'core/CoreOrchestrator.js',
-    // Optional: Files to exclude from tests if needed
-    EXCLUDES: []
-};
-
 /**
  * Recursively gets all files in a directory.
  * @param {string} dir - The directory to search.
- * @returns {string[]} List of absolute file paths.
+ * @returns {Promise<string[]>} List of absolute file paths.
  */
-const getFiles = (dir) => {
-    let results = [];
-    const list = fs.readdirSync(dir);
-
-    for (const file of list) {
-        const filePath = path.join(dir, file);
-        const stat = fs.statSync(filePath);
-
-        if (stat.isDirectory()) {
-            results = results.concat(getFiles(filePath));
-        } else {
-            results.push(filePath);
-        }
-    }
-
-    return results;
+const getFiles = async (dir) => {
+    const entries = await fs.readdir(dir, { withFileTypes: true });
+    const files = await Promise.all(entries.map((entry) => {
+        const res = path.resolve(dir, entry.name);
+        return entry.isDirectory() ? getFiles(res) : res;
+    }));
+    return files.flat();
 };
 
 /**
  * Generates the test runner HTML file dynamically.
  */
-const generateTestRunner = () => {
+const generateTestRunner = async () => {
     log('🔨 Generating test runner...');
 
-    const srcDir = path.join(CONFIG.BASE, 'src');
-    const allFiles = getFiles(srcDir);
+    const baseDir = path.join(__dirname, '..');
+    const srcDir = path.join(baseDir, 'src');
+
+    // Build configuration (mirrors build/build.js logic)
+    const PRIORITY = ['config/Config.js', 'utils/Utils.js', 'utils/Adapters.js', 'utils/Logic.js'];
+    const ENTRY = 'core/CoreOrchestrator.js';
+
+    const allFiles = await getFiles(srcDir);
     const normalize = p => path.normalize(p);
 
-    const priorityFiles = CONFIG.PRIORITY.map(file => path.join(srcDir, file));
-    const entryFile = path.join(srcDir, CONFIG.ENTRY);
+    const priorityFiles = PRIORITY.map(file => path.join(srcDir, file));
+    const entryFile = path.join(srcDir, ENTRY);
 
     // Filter and sort files
     const sourceFiles = allFiles.filter(file => {
         if (!file.endsWith('.js')) return false;
-
-        // Check excludes
-        if (CONFIG.EXCLUDES.some(ex => file.includes(ex))) return false;
+        if (CONFIG.excludes.some(ex => file.includes(ex))) return false;
 
         const isPriority = priorityFiles.some(p => normalize(p) === normalize(file));
         if (isPriority) return false;
@@ -88,113 +74,116 @@ const generateTestRunner = () => {
     }).join('\n');
 
     // Read template and inject scripts
-    let template = fs.readFileSync(CONFIG.TEMPLATE, 'utf8');
+    let template = await fs.readFile(CONFIG.paths.template, 'utf8');
     const outputContent = template.replace('<!-- INJECT_SCRIPTS -->', scriptTags);
 
-    fs.writeFileSync(CONFIG.OUTPUT, outputContent);
-    log(`✅ Generated test-runner.html with ${finalFiles.length} source files`);
+    await fs.writeFile(CONFIG.paths.output, outputContent);
+    log(`✅ Generated ${CONFIG.paths.output} with ${finalFiles.length} source files`);
+};
+
+const cleanupResources = async (browser, stream, error) => {
+    if (error) {
+        const msg = `\n❌ Test runner failed: ${error.message}`;
+        console.error('\x1b[31m' + msg + '\x1b[0m');
+        if (error.stack) console.error(error.stack);
+        try { stream?.write(msg + '\n'); } catch { }
+    }
+
+    if (browser) {
+        try {
+            await browser.close();
+            log('🔒 Browser closed');
+        } catch (e) {
+            console.error('Error closing browser:', e.message);
+        }
+    }
+
+    if (stream) {
+        try {
+            stream.end();
+        } catch (e) {
+            console.error('Error closing log stream:', e.message);
+        }
+    }
 };
 
 (async () => {
     log('🧪 Starting automated test runner...');
     log('='.repeat(60));
-    log('');
 
-    // Generate the test runner HTML before starting
+    let browser = null;
+
     try {
-        generateTestRunner();
-    } catch (error) {
-        log('❌ Failed to generate test runner: ' + error.message);
-        process.exit(1);
-    }
+        await generateTestRunner();
 
-    const browser = await puppeteer.launch({
-        headless: true,
-        executablePath: 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
-        args: ['--no-sandbox', '--disable-setuid-sandbox']
-    });
-    const page = await browser.newPage();
+        const launchOptions = {
+            headless: CONFIG.headless,
+            args: [
+                '--no-sandbox',
+                '--disable-setuid-sandbox',
+                '--allow-file-access-from-files' // Important for ES modules over file://
+            ]
+        };
 
-    // Capture ALL console output with categorization
-    const logs = [];
-    page.on('console', msg => {
-        const text = msg.text();
-        logs.push(text);
-        logStream.write(text + '\n');
-
-        // Color code output
-        if (text.includes('✅ PASS:')) {
-            console.log('\x1b[32m%s\x1b[0m', text); // Green
-        } else if (text.includes('❌ FAIL:')) {
-            console.log('\x1b[31m%s\x1b[0m', text); // Red
-        } else if (text.includes('🧪 Running:')) {
-            console.log('\x1b[36m%s\x1b[0m', text); // Cyan
-        } else if (text.includes('[DIAGNOSTICS]') || text.includes('[RECOVERY]') || text.includes('[HEALTH]')) {
-            console.log('\x1b[90m  └─ %s\x1b[0m', text); // Gray (indented)
-        } else if (text.includes('Test Summary')) {
-            console.log('\n' + '='.repeat(60));
-            console.log(text);
-            console.log('='.repeat(60));
+        // puppeteer-core requires explicit path, so fallback to default Windows Chrome
+        if (CONFIG.executablePath) {
+            launchOptions.executablePath = CONFIG.executablePath;
+            log(`Using configured Chrome: ${CONFIG.executablePath}`);
         } else {
-            console.log('  ', text); // Indent non-test output
+            launchOptions.executablePath = 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
+            log(`Using default Chrome path: ${launchOptions.executablePath}`);
         }
-    });
 
-    // Capture errors
-    page.on('pageerror', error => {
-        const errorMsg = '❌ Page Error: ' + error.message;
-        console.error('\x1b[31m' + errorMsg + '\x1b[0m');
-        logStream.write(errorMsg + '\n');
-    });
+        browser = await puppeteer.launch(launchOptions);
+        const page = await browser.newPage();
 
-    // Load test runner
-    const testFile = 'file://' + path.resolve(__dirname, 'test-runner.html');
-    log(`📁 Loading test file: ${testFile}`);
-    log('');
+        // Capture ALL console output with categorization
+        page.on('console', msg => {
+            const text = msg.text();
+            logStream.write(text + '\n');
 
-    const startTime = Date.now();
-
-    try {
-        await page.goto(testFile, { waitUntil: 'networkidle0' });
-
-        // Wait for tests to complete
-        await page.waitForFunction(
-            () => document.body.textContent.includes('Test Summary'),
-            { timeout: 30000 }
-        );
-
-        // Get detailed results
-        const results = await page.evaluate(() => {
-            return {
-                passed: Test.results.filter(r => r.status === 'PASS').length,
-                failed: Test.results.filter(r => r.status === 'FAIL').length,
-                total: Test.results.length,
-                failures: Test.results.filter(r => r.status === 'FAIL'),
-                // Capture logger output
-                loggerMessages: Logger.logs ? Logger.logs.length : 0
-            };
+            // Color code output
+            if (text.includes('✅ PASS:')) {
+                console.log('\x1b[32m%s\x1b[0m', text); // Green
+            } else if (text.includes('❌ FAIL:')) {
+                console.log('\x1b[31m%s\x1b[0m', text); // Red
+            } else if (text.includes('🧪 Running:')) {
+                console.log('\x1b[36m%s\x1b[0m', text); // Cyan
+            } else if (text.includes('TEST SUMMARY')) {
+                console.log('\n' + '='.repeat(60));
+                console.log(text);
+            } else if (text.includes('Total:') || text.includes('Passed:') || text.includes('Failed:') || text.includes('Time:')) {
+                console.log(text);
+            } else {
+                // Default log
+                console.log('  ', text);
+            }
         });
 
-        const duration = ((Date.now() - startTime) / 1000).toFixed(2);
+        // Capture errors
+        page.on('pageerror', error => {
+            const errorMsg = '❌ Page Error: ' + error.message;
+            console.error('\x1b[31m' + errorMsg + '\x1b[0m');
+            logStream.write(errorMsg + '\n');
+        });
+
+        // Load test runner
+        const testFile = 'file://' + path.resolve(CONFIG.paths.output);
+        log(`📁 Loading test file: ${testFile}`);
+        log('');
+
+        await page.goto(testFile, { waitUntil: 'networkidle0' });
+
+        // Wait for tests to complete using the explicit flag
+        await page.waitForFunction(
+            () => window.__TEST_COMPLETE__ === true,
+            { timeout: CONFIG.timeout }
+        );
+
+        // Get results
+        const results = await page.evaluate(() => window.__TEST_RESULTS__);
 
         log('');
-        log(`⏱️  Duration: ${duration}s`);
-        log(`📊 Tests: ${results.total} total`);
-        log(`📝 Logger messages: ${results.loggerMessages}`);
-        log('');
-
-        if (results.failed > 0) {
-            log('❌ Failed Tests:');
-            results.failures.forEach(f => {
-                console.log(`  \x1b[31m✗\x1b[0m ${f.name}`);
-                logStream.write(`  ✗ ${f.name}\n`);
-                console.log(`    \x1b[90m${f.error}\x1b[0m`);
-                logStream.write(`    ${f.error}\n`);
-            });
-            log('');
-        }
-
-        // Summary with color
         if (results.failed === 0) {
             console.log('\x1b[32m✅ All tests passed!\x1b[0m');
             logStream.write('✅ All tests passed!\n');
@@ -206,20 +195,11 @@ const generateTestRunner = () => {
         log('');
         log(`📄 Full log saved to: ${logFile}`);
 
-        await browser.close();
-        logStream.end();
-
-        // Exit with appropriate code for CI/CD
+        await cleanupResources(browser, logStream);
         process.exit(results.failed > 0 ? 1 : 0);
 
     } catch (error) {
-        const errorMsg = '\n❌ Test runner failed: ' + error.message;
-        console.error('\x1b[31m' + errorMsg + '\x1b[0m');
-        console.error(error.stack);
-        logStream.write(errorMsg + '\n');
-        logStream.write(error.stack + '\n');
-        await browser.close();
-        logStream.end();
+        await cleanupResources(browser, logStream, error);
         process.exit(1);
     }
 })();
