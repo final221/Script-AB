@@ -37,12 +37,3 @@
 ==================================================
 📊 Test Summary: 7 passed, 0 failed
 ==================================================
-
-❌ Test runner failed: Waiting failed: 30000ms exceeded
-TimeoutError: Waiting failed: 30000ms exceeded
-    at new WaitTask (F:\Fynn\Projects\Tw Adb\node_modules\puppeteer-core\lib\cjs\puppeteer\common\WaitTask.js:49:34)
-    at IsolatedWorld.waitForFunction (F:\Fynn\Projects\Tw Adb\node_modules\puppeteer-core\lib\cjs\puppeteer\api\Realm.js:25:26)
-    at CdpFrame.waitForFunction (F:\Fynn\Projects\Tw Adb\node_modules\puppeteer-core\lib\cjs\puppeteer\api\Frame.js:583:43)
-    at CdpFrame.<anonymous> (F:\Fynn\Projects\Tw Adb\node_modules\puppeteer-core\lib\cjs\puppeteer\util\decorators.js:109:27)
-    at CdpPage.waitForFunction (F:\Fynn\Projects\Tw Adb\node_modules\puppeteer-core\lib\cjs\puppeteer\api\Page.js:1437:37)
-    at F:\Fynn\Projects\Tw Adb\tests\run-tests.js:72:20

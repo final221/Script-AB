@@ -61,6 +61,15 @@ const updateVersion = (type = 'patch') => {
 
     const newVersion = parts.join('.');
     fs.writeFileSync(CONFIG.VERSION, newVersion);
+
+    // Sync with package.json
+    const packageJsonPath = path.join(CONFIG.BASE, 'package.json');
+    if (fs.existsSync(packageJsonPath)) {
+        const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+        packageJson.version = newVersion;
+        fs.writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2));
+    }
+
     return { old: version, new: newVersion };
 };
 

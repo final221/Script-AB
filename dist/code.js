@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       2.1.13
+// @version       2.1.14
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -1069,6 +1069,7 @@ const Logger = (() => {
 
     return {
         add,
+        getLogs: () => logs, // Expose logs for testing/debugging
         init: () => {
             // Global error and console interception are now handled by the Instrumentation module.
             // This Logger.init is intentionally left empty.
@@ -1112,8 +1113,19 @@ const Metrics = (() => {
         block_rate: counters.ads_detected > 0 ? (counters.ads_blocked / counters.ads_detected * 100).toFixed(2) + '%' : 'N/A',
     });
 
+    const get = (category) => counters[category] || 0;
+
+    const reset = () => {
+        Object.keys(counters).forEach(key => {
+            if (key !== 'session_start') counters[key] = 0;
+        });
+        counters.session_start = Date.now();
+    };
+
     return {
         increment,
+        get,
+        reset,
         getSummary,
     };
 })();
