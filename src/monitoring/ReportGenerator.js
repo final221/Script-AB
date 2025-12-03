@@ -25,7 +25,7 @@ const ReportGenerator = (() => {
 
     return {
         exportReport: (metricsSummary, logs) => {
-            console.log("Generating and exporting report...");
+            Logger.add("Generating and exporting report...");
             const content = generateContent(metricsSummary, logs);
             downloadFile(content);
         },

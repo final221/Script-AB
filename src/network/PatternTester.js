@@ -54,7 +54,6 @@ const PatternTester = (() => {
 
             const summary = `Tests Complete: ${passed} passed, ${failed} failed`;
             Logger.add(`========== ${summary} ==========`);
-            console.log(summary);
             return { passed, failed, total: tests.length };
         }
     };
