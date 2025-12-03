@@ -1,361 +1,272 @@
 [METRICS]
-Uptime: 3086.7s
-Ads Detected: 2
-Ads Blocked: 2
-Resilience Executions: 6
-Aggressive Recoveries: 6
-Health Triggers: 1
-Errors: 1
+Uptime: 3430.3s
+Ads Detected: 1
+Ads Blocked: 1
+Resilience Executions: 0
+Aggressive Recoveries: 0
+Health Triggers: 0
+Errors: 0
 
 [LOGS]
-[2025-12-02T22:12:06.358Z] Core initialized
-[2025-12-02T22:12:07.185Z] Player mounted
-[2025-12-02T22:12:07.185Z] [Logic] New player session started | {"sessionId":"session-1764713527185"}
-[2025-12-02T22:12:07.188Z] [Logic] Signature k0 key set | {"key":"ref","sessionId":"session-1764713527185","isChange":true}
-[2025-12-02T22:12:07.188Z] Player signature found | {"id":"k0","key":"ref"}
-[2025-12-02T22:12:07.188Z] [Logic] ⚠️ SIGNATURE KEY CHANGED DURING SESSION | {"timestamp":1764713527188,"signatureId":"k0","oldKey":"ref","newKey":"shouldForwardProp","timeSinceMount":3}
-[2025-12-02T22:12:07.188Z] [Logic] Signature k0 key set | {"key":"shouldForwardProp","sessionId":"session-1764713527185","isChange":true}
-[2025-12-02T22:12:07.188Z] Player signature found | {"id":"k0","key":"shouldForwardProp"}
-[2025-12-02T22:12:07.188Z] [Logic] ⚠️ SIGNATURE KEY CHANGED DURING SESSION | {"timestamp":1764713527188,"signatureId":"k0","oldKey":"shouldForwardProp","newKey":"elementType","timeSinceMount":3}
-[2025-12-02T22:12:07.188Z] [Logic] Signature k0 key set | {"key":"elementType","sessionId":"session-1764713527185","isChange":true}
-[2025-12-02T22:12:07.188Z] Player signature found | {"id":"k0","key":"elementType"}
-[2025-12-02T22:12:07.188Z] [Logic] ⚠️ SIGNATURE KEY CHANGED DURING SESSION | {"timestamp":1764713527188,"signatureId":"k0","oldKey":"elementType","newKey":"ref","timeSinceMount":3}
-[2025-12-02T22:12:07.188Z] [Logic] Signature k0 key set | {"key":"ref","sessionId":"session-1764713527185","isChange":true}
-[2025-12-02T22:12:07.188Z] Player signature found | {"id":"k0","key":"ref"}
-[2025-12-02T22:12:07.188Z] [Logic] ⚠️ SIGNATURE KEY CHANGED DURING SESSION | {"timestamp":1764713527188,"signatureId":"k0","oldKey":"ref","newKey":"elementType","timeSinceMount":3}
-[2025-12-02T22:12:07.188Z] [Logic] Signature k0 key set | {"key":"elementType","sessionId":"session-1764713527185","isChange":true}
-[2025-12-02T22:12:07.188Z] Player signature found | {"id":"k0","key":"elementType"}
-[2025-12-02T22:12:07.188Z] [Logic] ⚠️ SIGNATURE KEY CHANGED DURING SESSION | {"timestamp":1764713527188,"signatureId":"k0","oldKey":"elementType","newKey":"onContainerRefDelegate","timeSinceMount":3}
-[2025-12-02T22:12:07.188Z] [Logic] Signature k0 key set | {"key":"onContainerRefDelegate","sessionId":"session-1764713527185","isChange":true}
-[2025-12-02T22:12:07.188Z] Player signature found | {"id":"k0","key":"onContainerRefDelegate"}
-[2025-12-02T22:12:07.188Z] [Logic] ⚠️ SIGNATURE KEY CHANGED DURING SESSION | {"timestamp":1764713527188,"signatureId":"k0","oldKey":"onContainerRefDelegate","newKey":"elementType","timeSinceMount":3}
-[2025-12-02T22:12:07.188Z] [Logic] Signature k0 key set | {"key":"elementType","sessionId":"session-1764713527185","isChange":true}
-[2025-12-02T22:12:07.188Z] Player signature found | {"id":"k0","key":"elementType"}
-[2025-12-02T22:12:07.188Z] [Logic] ⚠️ SIGNATURE KEY CHANGED DURING SESSION | {"timestamp":1764713527188,"signatureId":"k0","oldKey":"elementType","newKey":"ref","timeSinceMount":3}
-[2025-12-02T22:12:07.188Z] [Logic] Signature k0 key set | {"key":"ref","sessionId":"session-1764713527185","isChange":true}
-[2025-12-02T22:12:07.188Z] Player signature found | {"id":"k0","key":"ref"}
-[2025-12-02T22:12:07.188Z] [Logic] ⚠️ SIGNATURE KEY CHANGED DURING SESSION | {"timestamp":1764713527188,"signatureId":"k0","oldKey":"ref","newKey":"type","timeSinceMount":3}
-[2025-12-02T22:12:07.188Z] [Logic] Signature k0 key set | {"key":"type","sessionId":"session-1764713527185","isChange":true}
-[2025-12-02T22:12:07.188Z] Player signature found | {"id":"k0","key":"type"}
-[2025-12-02T22:12:07.188Z] [Logic] ⚠️ SIGNATURE KEY CHANGED DURING SESSION | {"timestamp":1764713527188,"signatureId":"k0","oldKey":"type","newKey":"ref","timeSinceMount":3}
-[2025-12-02T22:12:07.188Z] [Logic] Signature k0 key set | {"key":"ref","sessionId":"session-1764713527185","isChange":true}
-[2025-12-02T22:12:07.188Z] Player signature found | {"id":"k0","key":"ref"}
-[2025-12-02T22:12:07.189Z] [Logic] ⚠️ SIGNATURE KEY CHANGED DURING SESSION | {"timestamp":1764713527189,"signatureId":"k0","oldKey":"ref","newKey":"0","timeSinceMount":4}
-[2025-12-02T22:12:07.189Z] [Logic] Signature k0 key set | {"key":"0","sessionId":"session-1764713527185","isChange":true}
-[2025-12-02T22:12:07.189Z] Player signature found | {"id":"k0","key":"0"}
-[2025-12-02T22:12:07.189Z] [Logic] ⚠️ SIGNATURE KEY CHANGED DURING SESSION | {"timestamp":1764713527189,"signatureId":"k0","oldKey":"0","newKey":"elementType","timeSinceMount":4}
-[2025-12-02T22:12:07.189Z] [Logic] Signature k0 key set | {"key":"elementType","sessionId":"session-1764713527185","isChange":true}
-[2025-12-02T22:12:07.189Z] Player signature found | {"id":"k0","key":"elementType"}
-[2025-12-02T22:12:07.189Z] [Logic] ⚠️ SIGNATURE KEY CHANGED DURING SESSION | {"timestamp":1764713527189,"signatureId":"k0","oldKey":"elementType","newKey":"type","timeSinceMount":4}
-[2025-12-02T22:12:07.189Z] [Logic] Signature k0 key set | {"key":"type","sessionId":"session-1764713527185","isChange":true}
-[2025-12-02T22:12:07.189Z] Player signature found | {"id":"k0","key":"type"}
-[2025-12-02T22:12:07.189Z] [Logic] ⚠️ SIGNATURE KEY CHANGED DURING SESSION | {"timestamp":1764713527189,"signatureId":"k0","oldKey":"type","newKey":"addMessageListener","timeSinceMount":4}
-[2025-12-02T22:12:07.189Z] [Logic] Signature k0 key set | {"key":"addMessageListener","sessionId":"session-1764713527185","isChange":true}
-[2025-12-02T22:12:07.189Z] Player signature found | {"id":"k0","key":"addMessageListener"}
-[2025-12-02T22:12:07.189Z] [Logic] ⚠️ SIGNATURE KEY CHANGED DURING SESSION | {"timestamp":1764713527189,"signatureId":"k0","oldKey":"addMessageListener","newKey":"onSeek","timeSinceMount":4}
-[2025-12-02T22:12:07.189Z] [Logic] Signature k0 key set | {"key":"onSeek","sessionId":"session-1764713527185","isChange":true}
-[2025-12-02T22:12:07.189Z] Player signature found | {"id":"k0","key":"onSeek"}
-[2025-12-02T22:12:07.189Z] [Logic] Signature k1 key set | {"key":"onContentRestricted","sessionId":"session-1764713527185","isChange":true}
-[2025-12-02T22:12:07.189Z] Player signature found | {"id":"k1","key":"onContentRestricted"}
-[2025-12-02T22:12:07.189Z] [Logic] Signature k2 key set | {"key":"onContentRestricted","sessionId":"session-1764713527185","isChange":true}
-[2025-12-02T22:12:07.189Z] Player signature found | {"id":"k2","key":"onContentRestricted"}
-[2025-12-02T22:12:07.189Z] PlayerContext: Success | {"method":"keyword","key":"__reactFiber$c08lhr6lwbd"}
-[2025-12-02T22:12:07.189Z] [LIFECYCLE] Event: ACQUIRE - Success
-[2025-12-02T22:12:07.788Z] [LIFECYCLE] Event: ACQUIRE - Success
-[2025-12-02T22:12:08.132Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-12-02T22:12:08.256Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-12-02T22:12:08.626Z] Player unmounted
-[2025-12-02T22:12:08.626Z] [Logic] Player session ended | {"sessionId":"session-1764713527185","duration":1441,"finalKeys":{"k0":"onSeek","k1":"onContentRestricted","k2":"onContentRestricted"},"keyChanges":14}
-[2025-12-02T22:12:08.626Z] [Logic] ⚠️ ALERT: Signature keys changed during session | {"sessionId":"session-1764713527185","changes":[{"timestamp":1764713527188,"signatureId":"k0","oldKey":"ref","newKey":"shouldForwardProp","timeSinceMount":3},{"timestamp":1764713527188,"signatureId":"k0","oldKey":"shouldForwardProp","newKey":"elementType","timeSinceMount":3},{"timestamp":1764713527188,"signatureId":"k0","oldKey":"elementType","newKey":"ref","timeSinceMount":3},{"timestamp":1764713527188,"signatureId":"k0","oldKey":"ref","newKey":"elementType","timeSinceMount":3},{"timestamp":1764713527188,"signatureId":"k0","oldKey":"elementType","newKey":"onContainerRefDelegate","timeSinceMount":3},{"timestamp":1764713527188,"signatureId":"k0","oldKey":"onContainerRefDelegate","newKey":"elementType","timeSinceMount":3},{"timestamp":1764713527188,"signatureId":"k0","oldKey":"elementType","newKey":"ref","timeSinceMount":3},{"timestamp":1764713527188,"signatureId":"k0","oldKey":"ref","newKey":"type","timeSinceMount":3},{"timestamp":1764713527188,"signatureId":"k0","oldKey":"type","newKey":"ref","timeSinceMount":3},{"timestamp":1764713527189,"signatureId":"k0","oldKey":"ref","newKey":"0","timeSinceMount":4},{"timestamp":1764713527189,"signatureId":"k0","oldKey":"0","newKey":"elementType","timeSinceMount":4},{"timestamp":1764713527189,"signatureId":"k0","oldKey":"elementType","newKey":"type","timeSinceMount":4},{"timestamp":1764713527189,"signatureId":"k0","oldKey":"type","newKey":"addMessageListener","timeSinceMount":4},{"timestamp":1764713527189,"signatureId":"k0","oldKey":"addMessageListener","newKey":"onSeek","timeSinceMount":4}]}
-[2025-12-02T22:12:09.012Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-12-02T22:12:09.431Z] Console Error | {"args":["[GraphQL] One or more GraphQL errors were detected on request 01KBGHZ0XD0JAF6R4CWPQ174SP. PinnedChatSettings: unauthenticated","[object Object]"],"severity":"LOW","action":"LOG_ONLY"}
-[2025-12-02T22:12:10.172Z] Player mounted
-[2025-12-02T22:12:10.172Z] [Logic] New player session started | {"sessionId":"session-1764713530172"}
-[2025-12-02T22:12:10.177Z] [Logic] Signature k0 key set | {"key":"ref","sessionId":"session-1764713530172","isChange":true}
-[2025-12-02T22:12:10.177Z] Player signature found | {"id":"k0","key":"ref"}
-[2025-12-02T22:12:10.177Z] [Logic] ⚠️ SIGNATURE KEY CHANGED DURING SESSION | {"timestamp":1764713530177,"signatureId":"k0","oldKey":"ref","newKey":"shouldForwardProp","timeSinceMount":5}
-[2025-12-02T22:12:10.177Z] [Logic] Signature k0 key set | {"key":"shouldForwardProp","sessionId":"session-1764713530172","isChange":true}
-[2025-12-02T22:12:10.177Z] Player signature found | {"id":"k0","key":"shouldForwardProp"}
-[2025-12-02T22:12:10.177Z] [Logic] ⚠️ SIGNATURE KEY CHANGED DURING SESSION | {"timestamp":1764713530177,"signatureId":"k0","oldKey":"shouldForwardProp","newKey":"elementType","timeSinceMount":5}
-[2025-12-02T22:12:10.177Z] [Logic] Signature k0 key set | {"key":"elementType","sessionId":"session-1764713530172","isChange":true}
-[2025-12-02T22:12:10.177Z] Player signature found | {"id":"k0","key":"elementType"}
-[2025-12-02T22:12:10.177Z] [Logic] ⚠️ SIGNATURE KEY CHANGED DURING SESSION | {"timestamp":1764713530177,"signatureId":"k0","oldKey":"elementType","newKey":"ref","timeSinceMount":5}
-[2025-12-02T22:12:10.177Z] [Logic] Signature k0 key set | {"key":"ref","sessionId":"session-1764713530172","isChange":true}
-[2025-12-02T22:12:10.177Z] Player signature found | {"id":"k0","key":"ref"}
-[2025-12-02T22:12:10.177Z] [Logic] ⚠️ SIGNATURE KEY CHANGED DURING SESSION | {"timestamp":1764713530177,"signatureId":"k0","oldKey":"ref","newKey":"elementType","timeSinceMount":5}
-[2025-12-02T22:12:10.177Z] [Logic] Signature k0 key set | {"key":"elementType","sessionId":"session-1764713530172","isChange":true}
-[2025-12-02T22:12:10.177Z] Player signature found | {"id":"k0","key":"elementType"}
-[2025-12-02T22:12:10.177Z] [Logic] Signature k1 key set | {"key":"elementType","sessionId":"session-1764713530172","isChange":true}
-[2025-12-02T22:12:10.177Z] Player signature found | {"id":"k1","key":"elementType"}
-[2025-12-02T22:12:10.177Z] [Logic] Signature k2 key set | {"key":"elementType","sessionId":"session-1764713530172","isChange":true}
-[2025-12-02T22:12:10.177Z] Player signature found | {"id":"k2","key":"elementType"}
-[2025-12-02T22:12:10.177Z] PlayerContext: Success | {"method":"keyword","key":"__reactFiber$c08lhr6lwbd"}
-[2025-12-02T22:12:10.177Z] [LIFECYCLE] Event: ACQUIRE - Success
-[2025-12-02T22:12:10.657Z] [LIFECYCLE] Event: ACQUIRE - Success
-[2025-12-02T22:12:10.733Z] Console Error | {"args":["[GraphQL] One or more GraphQL errors were detected on request 01KBGHZ22RH44CPM3EB84HEDXX. PinnedChatSettings: unauthenticated","[object Object]"],"severity":"LOW","action":"LOG_ONLY"}
-[2025-12-02T22:12:11.190Z] Console Error | {"args":["[GraphQL] One or more GraphQL errors were detected on request 01KBGHZ2NE21E3QGKAC0KNGBDM. PinnedChatSettings: unauthenticated","[object Object]"],"severity":"LOW","action":"LOG_ONLY"}
-[2025-12-02T22:12:11.749Z] [NETWORK] Trigger pattern detected | Category: Availability Check | {"type":"XHR","url":"https://edge.ads.twitch.tv/2018-01-01/3p/ads?rt=vast3&dur=30&geoc=DE&dt=2&pid=5339782945051764713531748&cb=4235770&ws=1920x927&u=https%3A%2F%2Fwww.twitch.tv%2Fcaedrel&slots=%5B%7B%22id%22%3A%22twitch-player-ui%22%2C%22mt%22%3A%22v%22%2C%22kv%22%3A%7B%7D%2C%22s%22%3A%22640x480%22%7D%5D&pj=%7B%22game%22%3A%22league_of_legends%22%2C%22chan%22%3A%22caedrel%22%2C%22chanid%22%3A%2292038375%22%2C%22twitchcorrelator%22%3A%22MCwOQvthCBmrmqUicTQjY765t6N28AkS%22%2C%22ad_session_id%22%3A%22MCwOQvthCBmrmqUicTQjY765t6N28AkS%22%2C%22embed%22%3A%22false%22%2C%22platform%22%3A%22web%22%2C%22mature%22%3A%22false%22%2C%22pos%22%3A%221%22%2C%22timebreak%22%3A%2230%22%2C%22tag%22%3A%22%22%2C%22content_labels%22%3A%22%22%2C%22chantype%22%3A%22partner%22%2C%22delivery_type%22%3A%22csai%22%2C%22vb%22%3A%22null%22%2C%22adunit%22%3A%22web_csai%22%2C%22loggedin%22%3A%22false%22%2C%22v%22%3A%22ARCHIVE%22%2C%22vod_type%22%3A%22undefined%22%2C%22embed_url%22%3A%22null%22%2C%22game_id%22%3A%2221779%22%2C%22user_lang%22%3A%22en%22%7D&gdprl=%7B%22status%22%3A%22cmp%22%7D&pbid=twitch&bp=preroll&aid=MyJILP1jfuUz2VBuUB2ZPajiR0aXfrYe&ulang=en","isDelivery":false}
-[2025-12-02T22:12:11.749Z] Ad request blocked (XHR) | {}
-[2025-12-02T22:12:12.545Z] [NETWORK] Trigger pattern detected | Category: Availability Check | {"type":"XHR","url":"https://edge.ads.twitch.tv/2018-01-01/3p/ads?rt=vast3&dur=30&geoc=DE&dt=2&pid=3529147782251764713532544&cb=2718110&ws=1920x927&u=https%3A%2F%2Fwww.twitch.tv%2Fcaedrel&slots=%5B%7B%22id%22%3A%22twitch-player-ui%22%2C%22mt%22%3A%22v%22%2C%22kv%22%3A%7B%7D%2C%22s%22%3A%22640x480%22%7D%5D&pj=%7B%22game%22%3A%22league_of_legends%22%2C%22chan%22%3A%22caedrel%22%2C%22chanid%22%3A%2292038375%22%2C%22twitchcorrelator%22%3A%223xDoEVOwCqYrpLMQvYgdk4A7lhBl68Wk%22%2C%22ad_session_id%22%3A%223xDoEVOwCqYrpLMQvYgdk4A7lhBl68Wk%22%2C%22embed%22%3A%22false%22%2C%22platform%22%3A%22web%22%2C%22mature%22%3A%22false%22%2C%22pos%22%3A%221%22%2C%22timebreak%22%3A%2230%22%2C%22tag%22%3A%22%22%2C%22content_labels%22%3A%22%22%2C%22chantype%22%3A%22partner%22%2C%22delivery_type%22%3A%22csai%22%2C%22vb%22%3A%22null%22%2C%22adunit%22%3A%22web_csai%22%2C%22loggedin%22%3A%22false%22%2C%22v%22%3A%22ARCHIVE%22%2C%22vod_type%22%3A%22undefined%22%2C%22embed_url%22%3A%22null%22%2C%22game_id%22%3A%2221779%22%2C%22user_lang%22%3A%22en%22%7D&gdprl=%7B%22status%22%3A%22cmp%22%7D&pbid=twitch&bp=preroll&aid=MyJILP1jfuUz2VBuUB2ZPajiR0aXfrYe&ulang=en","isDelivery":false}
-[2025-12-02T22:12:12.546Z] Ad request blocked (XHR) | {}
-[2025-12-02T22:12:12.736Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-12-02T22:12:14.677Z] [HEALTH] A/V sync issue detected | {"discrepancy":"374.38ms","count":1}
-[2025-12-02T22:12:16.690Z] [HEALTH] A/V sync recovered | {"previousIssues":1}
-[2025-12-02T22:13:07.892Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-12-02T22:13:09.091Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-12-02T22:13:09.123Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-12-02T22:13:25.207Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-12-02T22:13:35.093Z] [HEALTH] A/V sync issue detected | {"discrepancy":"255.57ms","count":1}
-[2025-12-02T22:13:35.553Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-12-02T22:13:36.477Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-12-02T22:13:36.952Z] Console Error | {"args":["[GraphQL] One or more GraphQL errors were detected on request 01KBGJ1P5WRDX9Y1F146QWR1NE. PinnedChatSettings: unauthenticated","[object Object]"],"severity":"LOW","action":"LOG_ONLY"}
-[2025-12-02T22:13:37.394Z] A/V sync recovered | {"previousIssues":1}
-[2025-12-02T22:13:37.396Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-12-02T22:13:37.965Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-12-02T22:13:39.410Z] [HEALTH] A/V sync issue detected | {"discrepancy":"85982.39ms","count":1}
-[2025-12-02T22:13:39.414Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-12-02T22:13:41.411Z] [HEALTH] A/V sync recovered | {"previousIssues":1}
-[2025-12-02T22:14:11.907Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-12-02T22:16:53.217Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-12-02T22:17:09.921Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://assets.twitch.tv/config/manifest.json?v=1"}
-[2025-12-02T22:17:11.911Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-12-02T22:17:44.567Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-12-02T22:17:45.807Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-12-02T22:17:57.265Z] Playhead stalling warning detected (raw) | {"severity":"CRITICAL"}
-[2025-12-02T22:18:07.276Z] Critical warning: Playhead stalling (debounced)
-[2025-12-02T22:18:07.276Z] [EVENT] AD_DETECTED | Source: UNKNOWN
-[2025-12-02T22:18:07.276Z] [RECOVERY] Resilience execution started
-[2025-12-02T22:18:07.277Z] [DIAGNOSTICS] Insufficient data | {"readyState":2}
-[2025-12-02T22:18:07.277Z] [RECOVERY] Pre-recovery snapshot | {"readyState":2,"networkState":2,"currentTime":258.033999,"paused":true,"error":null,"bufferEnd":258.011666}
-[2025-12-02T22:18:07.277Z] Recovery strategy selection | {"initialStrategy":"Standard","bufferHealth":"healthy","bufferSize":29.977666,"forced":false}
-[2025-12-02T22:18:07.277Z] Executing standard recovery: seeking
-[2025-12-02T22:18:07.277Z] Standard recovery complete | {"seekTo":254.511666,"bufferEnd":258.011666,"telemetry":{"readyState":2,"networkState":2,"buffered":"[228.03, 258.01]"}}
-[2025-12-02T22:18:07.277Z] [RECOVERY] Post-recovery result | {"pre":{"readyState":2,"networkState":2,"currentTime":258.033999,"paused":true,"error":null,"bufferEnd":258.011666},"post":{"readyState":2,"networkState":2,"currentTime":254.511666,"paused":true,"error":null,"bufferEnd":258.011666},"changes":{"readyStateChanged":false,"networkStateChanged":false,"currentTimeChanged":true,"pausedStateChanged":false,"errorCleared":null,"errorAppeared":null,"bufferIncreased":false},"success":{"isValid":false,"issues":["No measurable improvement detected"],"hasImprovement":false}}
-[2025-12-02T22:18:07.277Z] [RECOVERY] Recovery validation detected issues | ["No measurable improvement detected"]
-[2025-12-02T22:18:07.277Z] [RECOVERY] Escalating to aggressive recovery due to validation failure
-[2025-12-02T22:18:07.277Z] Executing aggressive recovery: waiting for player to stabilize
-[2025-12-02T22:18:07.278Z] Aggressive recovery telemetry | {"strategy":"PASSIVE_WAIT","url":"blob:https://www.twitch.tv/b902cd53-f1ae-4872-b855-62da151710d4","isBlobUrl":true,"telemetry":{"readyState":2,"networkState":2,"currentTime":254.511666,"paused":true,"error":null,"bufferEnd":258.011666}}
-[2025-12-02T22:18:07.890Z] Recovery: readyState transition | {"from":1,"to":4,"elapsed_ms":"613"}
-[2025-12-02T22:18:07.890Z] Player stabilized successfully | {"duration_ms":"613","finalReadyState":4,"totalChecks":5}
-[2025-12-02T22:18:07.890Z] [RECOVERY] Aggressive recovery result | {"success":{"isValid":true,"issues":[],"hasImprovement":true}}
-[2025-12-02T22:18:07.890Z] [RECOVERY] Skipping play retry - recovery validation failed
-[2025-12-02T22:18:07.890Z] [RECOVERY] Resilience execution finished | {"total_duration_ms":614}
-[2025-12-02T22:18:07.890Z] [HEALTH] Recovery completed, resuming monitoring
-[2025-12-02T22:18:07.890Z] [HEALTH] Recovery completed, resuming monitoring
-[2025-12-02T22:18:08.286Z] Post-seek health check | {"currentTime":254.883745,"readyState":4,"networkState":2,"paused":false,"bufferGap":"-3.128"}
-[2025-12-02T22:18:08.657Z] [HEALTH] A/V sync issue detected | {"discrepancy":"14171.05ms","count":1}
-[2025-12-02T22:18:10.659Z] [HEALTH] A/V sync recovered | {"previousIssues":1}
-[2025-12-02T22:18:11.413Z] Playhead stalling warning detected (raw) | {"severity":"CRITICAL"}
-[2025-12-02T22:18:14.033Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-12-02T22:18:20.052Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-12-02T22:18:21.417Z] Critical warning: Playhead stalling (debounced)
-[2025-12-02T22:18:21.417Z] [EVENT] AD_DETECTED | Source: UNKNOWN
-[2025-12-02T22:18:21.417Z] [RECOVERY] Resilience execution started
-[2025-12-02T22:18:21.417Z] [Logic] ⚠️ ALERT: Signature session UNSTABLE | {"changesInLastHour":4,"threshold":3,"suggestion":"Twitch may have updated player - patterns may break soon"}
-[2025-12-02T22:18:21.417Z] [DIAGNOSTICS] Warning: Player signatures unstable
-[2025-12-02T22:18:21.417Z] [DIAGNOSTICS] Video state appears recoverable | {"readyState":4,"paused":true,"bufferHealth":"low"}
-[2025-12-02T22:18:21.417Z] [RECOVERY] Pre-recovery snapshot | {"readyState":4,"networkState":2,"currentTime":258.024014,"paused":true,"error":null,"bufferEnd":260.027666}
-[2025-12-02T22:18:21.417Z] Recovery strategy selection | {"initialStrategy":"Standard","bufferHealth":"low","bufferSize":5.994666000000024,"forced":false}
-[2025-12-02T22:18:21.417Z] Executing standard recovery: seeking
-[2025-12-02T22:18:21.417Z] Standard recovery complete | {"seekTo":256.527666,"bufferEnd":260.027666,"telemetry":{"readyState":4,"networkState":2,"buffered":"[254.03, 260.03]"}}
-[2025-12-02T22:18:21.417Z] [RECOVERY] Post-recovery result | {"pre":{"readyState":4,"networkState":2,"currentTime":258.024014,"paused":true,"error":null,"bufferEnd":260.027666},"post":{"readyState":4,"networkState":2,"currentTime":256.527666,"paused":true,"error":null,"bufferEnd":260.027666},"changes":{"readyStateChanged":false,"networkStateChanged":false,"currentTimeChanged":true,"pausedStateChanged":false,"errorCleared":null,"errorAppeared":null,"bufferIncreased":false},"success":{"isValid":false,"issues":["No measurable improvement detected"],"hasImprovement":false}}
-[2025-12-02T22:18:21.417Z] [RECOVERY] Recovery validation detected issues | ["No measurable improvement detected"]
-[2025-12-02T22:18:21.417Z] [RECOVERY] Escalating to aggressive recovery due to validation failure
-[2025-12-02T22:18:21.417Z] Executing aggressive recovery: waiting for player to stabilize
-[2025-12-02T22:18:21.418Z] Aggressive recovery telemetry | {"strategy":"PASSIVE_WAIT","url":"blob:https://www.twitch.tv/b902cd53-f1ae-4872-b855-62da151710d4","isBlobUrl":true,"telemetry":{"readyState":4,"networkState":2,"currentTime":256.527666,"paused":true,"error":null,"bufferEnd":260.027666}}
-[2025-12-02T22:18:22.132Z] Recovery: readyState transition | {"from":1,"to":4,"elapsed_ms":"715"}
-[2025-12-02T22:18:22.132Z] Player stabilized successfully | {"duration_ms":"715","finalReadyState":4,"totalChecks":5}
-[2025-12-02T22:18:22.132Z] [RECOVERY] Aggressive recovery result | {"success":{"isValid":true,"issues":[],"hasImprovement":true}}
-[2025-12-02T22:18:22.132Z] [RECOVERY] Resilience execution finished | {"total_duration_ms":716}
-[2025-12-02T22:18:22.132Z] [HEALTH] Recovery completed, resuming monitoring
-[2025-12-02T22:18:22.132Z] [HEALTH] Recovery completed, resuming monitoring
-[2025-12-02T22:18:22.273Z] [PATTERN DISCOVERY] Suspicious URL detected | {"url":"https://aax-eu.amazon-adsystem.com/s/iui3?d=forester-did&ex-fargs=%3Fi%3D-DMp4EvvsGa8QOK5UrooXg%26e%3DaudioAdsCreativeView%26a%3D588358115436997546%26c%3D586429498522465534%26s%3Dpda%26u%3D-DMp4EvvsGa8QOK5UrooXg&ex-fch=416719&cb=0.6869133894086641","pathname":"/s/iui3","hostname":"aax-eu.amazon-adsystem.com","keywords":["ad","ads"],"suggestion":"Review this URL - might be a new ad pattern"}
-[2025-12-02T22:18:22.434Z] Post-seek health check | {"currentTime":283.79334,"readyState":4,"networkState":2,"paused":false,"bufferGap":"-3.508"}
-[2025-12-02T22:18:22.706Z] [HEALTH] A/V sync issue detected | {"discrepancy":"14781.71ms","count":1}
-[2025-12-02T22:18:24.176Z] [PATTERN DISCOVERY] Suspicious URL detected | {"url":"https://aax-eu.amazon-adsystem.com/s/iui3?d=forester-did&ex-fargs=%3Fi%3D-DMp4EvvsGa8QOK5UrooXg%26e%3DaudioAdsView%26a%3D588358115436997546%26c%3D586429498522465534%26s%3Dpda%26u%3D-DMp4EvvsGa8QOK5UrooXg&ex-fch=416719&cb=0.6184986134398043","pathname":"/s/iui3","hostname":"aax-eu.amazon-adsystem.com","keywords":["ad","ads"],"suggestion":"Review this URL - might be a new ad pattern"}
-[2025-12-02T22:18:24.185Z] Unhandled Rejection | {"reason":"TypeError: NetworkError when attempting to fetch resource.","severity":"MEDIUM"}
-[2025-12-02T22:18:24.247Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-12-02T22:18:24.707Z] [HEALTH] A/V sync recovered | {"previousIssues":1}
-[2025-12-02T22:19:36.010Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-12-02T22:21:41.230Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-12-02T22:24:53.277Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-12-02T22:25:22.496Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-12-02T22:26:53.228Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-12-02T22:27:22.629Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-12-02T22:28:36.460Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-12-02T22:29:36.129Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-12-02T22:30:36.139Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-12-02T22:31:12.879Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-12-02T22:31:14.380Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-12-02T22:32:09.942Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://assets.twitch.tv/config/manifest.json?v=1"}
-[2025-12-02T22:32:11.917Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-12-02T22:33:36.971Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-12-02T22:34:11.917Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-12-02T22:34:22.836Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-12-02T22:34:36.147Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-12-02T22:36:11.913Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-12-02T22:36:36.142Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-12-02T22:37:09.949Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://assets.twitch.tv/config/manifest.json?v=1"}
-[2025-12-02T22:37:52.594Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-12-02T22:37:59.346Z] Playhead stalling warning detected (raw) | {"severity":"CRITICAL"}
-[2025-12-02T22:38:01.350Z] [HEALTH] A/V sync issue detected | {"discrepancy":"1960.10ms","count":1}
-[2025-12-02T22:38:03.351Z] [HEALTH] A/V sync issue detected | {"discrepancy":"2001.00ms","count":2}
-[2025-12-02T22:38:05.353Z] [HEALTH] A/V sync issue detected | {"discrepancy":"2002.00ms","count":3}
-[2025-12-02T22:38:05.353Z] [HEALTH] A/V sync threshold exceeded | {"syncIssueCount":3,"threshold":3,"discrepancy":"2002.00ms"}
-[2025-12-02T22:38:05.353Z] [HEALTH] Recovery trigger | Reason: Persistent A/V sync issue, Type: AV_SYNC | {"syncIssueCount":3,"discrepancy":2.002,"threshold":3}
-[2025-12-02T22:38:05.353Z] [HEALTH] Monitoring paused
-[2025-12-02T22:38:05.353Z] [EVENT] AD_DETECTED | Source: HEALTH | Trigger: AV_SYNC | Reason: Persistent A/V sync issue | {"syncIssueCount":3,"discrepancy":2.002,"threshold":3}
-[2025-12-02T22:38:05.353Z] [RECOVERY] Resilience execution started
-[2025-12-02T22:38:05.353Z] [DIAGNOSTICS] Insufficient data | {"readyState":2}
-[2025-12-02T22:38:05.353Z] [RECOVERY] Insufficient buffer but acceptable for recovery | {"bufferSize":"3.993"}
-[2025-12-02T22:38:05.353Z] [RECOVERY] Pre-recovery snapshot | {"readyState":2,"networkState":2,"currentTime":1460.722035,"paused":false,"error":null,"bufferEnd":1460.676999}
-[2025-12-02T22:38:05.353Z] Recovery strategy selection | {"initialStrategy":"Standard","bufferHealth":"critical","bufferSize":3.9929990000000544,"forced":false}
-[2025-12-02T22:38:05.353Z] Executing standard recovery: seeking
-[2025-12-02T22:38:05.353Z] Standard recovery complete | {"seekTo":1457.176999,"bufferEnd":1460.676999,"telemetry":{"readyState":2,"networkState":2,"buffered":"[1456.68, 1460.68]"}}
-[2025-12-02T22:38:05.353Z] [CORRELATION] Recovery triggered without recent ad detection | {"trigger":"AV_SYNC","reason":"Persistent A/V sync issue","timeSinceLastNetworkAd":"1764715085.4s","totalMissedCount":1,"suggestion":"Possible missed ad pattern or legitimate stuck state"}
-[2025-12-02T22:38:05.354Z] [RECOVERY] Post-recovery result | {"pre":{"readyState":2,"networkState":2,"currentTime":1460.722035,"paused":false,"error":null,"bufferEnd":1460.676999},"post":{"readyState":2,"networkState":2,"currentTime":1457.176999,"paused":false,"error":null,"bufferEnd":1460.676999},"changes":{"readyStateChanged":false,"networkStateChanged":false,"currentTimeChanged":true,"pausedStateChanged":false,"errorCleared":null,"errorAppeared":null,"bufferIncreased":false},"success":{"isValid":false,"issues":["No measurable improvement detected"],"hasImprovement":false}}
-[2025-12-02T22:38:05.354Z] [RECOVERY] Recovery validation detected issues | ["No measurable improvement detected"]
-[2025-12-02T22:38:05.354Z] [RECOVERY] Escalating to aggressive recovery due to validation failure
-[2025-12-02T22:38:05.354Z] Executing aggressive recovery: waiting for player to stabilize
-[2025-12-02T22:38:05.354Z] Aggressive recovery telemetry | {"strategy":"PASSIVE_WAIT","url":"blob:https://www.twitch.tv/b902cd53-f1ae-4872-b855-62da151710d4","isBlobUrl":true,"telemetry":{"readyState":2,"networkState":2,"currentTime":1457.176999,"paused":false,"error":null,"bufferEnd":1460.676999}}
-[2025-12-02T22:38:05.460Z] Player stabilized successfully | {"duration_ms":"106","finalReadyState":4,"totalChecks":1}
-[2025-12-02T22:38:05.460Z] [RECOVERY] Aggressive recovery result | {"success":{"isValid":true,"issues":[],"hasImprovement":true}}
-[2025-12-02T22:38:05.460Z] [RECOVERY] Skipping play retry - recovery validation failed
-[2025-12-02T22:38:05.460Z] [RECOVERY] Resilience execution finished | {"total_duration_ms":107}
-[2025-12-02T22:38:05.460Z] [HEALTH] Recovery completed, resuming monitoring
-[2025-12-02T22:38:05.460Z] [HEALTH] Monitoring resumed
-[2025-12-02T22:38:05.460Z] [HEALTH] Recovery completed, resuming monitoring
-[2025-12-02T22:38:06.354Z] Post-seek health check | {"currentTime":1457.176999,"readyState":4,"networkState":2,"paused":true,"bufferGap":"-3.500"}
-[2025-12-02T22:38:08.618Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-12-02T22:38:09.353Z] Critical warning: Playhead stalling (debounced)
-[2025-12-02T22:38:09.353Z] [EVENT] AD_DETECTED | Source: UNKNOWN
-[2025-12-02T22:38:09.353Z] [RECOVERY] Resilience execution started
-[2025-12-02T22:38:09.353Z] [DIAGNOSTICS] Critical buffer detected | {"needsAggressive":false,"bufferEnd":1460.676999,"bufferStart":1456.684,"currentTime":1457.176999,"bufferSize":3.9929990000000544,"bufferHealth":"critical"}
-[2025-12-02T22:38:09.353Z] [RECOVERY] Insufficient buffer but acceptable for recovery | {"bufferSize":"3.993"}
-[2025-12-02T22:38:09.353Z] [RECOVERY] Pre-recovery snapshot | {"readyState":4,"networkState":2,"currentTime":1457.176999,"paused":true,"error":null,"bufferEnd":1460.676999}
-[2025-12-02T22:38:09.354Z] Recovery strategy selection | {"initialStrategy":"Standard","bufferHealth":"critical","bufferSize":3.9929990000000544,"forced":false}
-[2025-12-02T22:38:09.354Z] Executing standard recovery: seeking
-[2025-12-02T22:38:09.354Z] Standard recovery complete | {"seekTo":1457.176999,"bufferEnd":1460.676999,"telemetry":{"readyState":4,"networkState":2,"buffered":"[1456.68, 1460.68]"}}
-[2025-12-02T22:38:09.354Z] [RECOVERY] Post-recovery result | {"pre":{"readyState":4,"networkState":2,"currentTime":1457.176999,"paused":true,"error":null,"bufferEnd":1460.676999},"post":{"readyState":4,"networkState":2,"currentTime":1457.176999,"paused":true,"error":null,"bufferEnd":1460.676999},"changes":{"readyStateChanged":false,"networkStateChanged":false,"currentTimeChanged":false,"pausedStateChanged":false,"errorCleared":null,"errorAppeared":null,"bufferIncreased":false},"success":{"isValid":false,"issues":["No measurable improvement detected"],"hasImprovement":false}}
-[2025-12-02T22:38:09.354Z] [RECOVERY] Recovery validation detected issues | ["No measurable improvement detected"]
-[2025-12-02T22:38:09.354Z] [RECOVERY] Escalating to aggressive recovery due to validation failure
-[2025-12-02T22:38:09.354Z] Executing aggressive recovery: waiting for player to stabilize
-[2025-12-02T22:38:09.354Z] Aggressive recovery telemetry | {"strategy":"PASSIVE_WAIT","url":"blob:https://www.twitch.tv/b902cd53-f1ae-4872-b855-62da151710d4","isBlobUrl":true,"telemetry":{"readyState":4,"networkState":2,"currentTime":1457.176999,"paused":true,"error":null,"bufferEnd":1460.676999}}
-[2025-12-02T22:38:09.674Z] Recovery: readyState transition | {"from":1,"to":4,"elapsed_ms":"319"}
-[2025-12-02T22:38:09.674Z] Player stabilized successfully | {"duration_ms":"319","finalReadyState":4,"totalChecks":3}
-[2025-12-02T22:38:09.674Z] [RECOVERY] Aggressive recovery result | {"success":{"isValid":false,"issues":["No measurable improvement detected"],"hasImprovement":false}}
-[2025-12-02T22:38:09.674Z] [RECOVERY] Skipping play retry - recovery validation failed
-[2025-12-02T22:38:09.674Z] [RECOVERY] Resilience execution finished | {"total_duration_ms":321}
-[2025-12-02T22:38:09.674Z] [HEALTH] Recovery completed, resuming monitoring
-[2025-12-02T22:38:09.674Z] [HEALTH] Recovery completed, resuming monitoring
-[2025-12-02T22:38:09.936Z] [PATTERN DISCOVERY] Suspicious URL detected | {"url":"https://aax-eu.amazon-adsystem.com/s/iui3?d=forester-did&ex-fargs=%3Fi%3D-DMp4EvvsGa8QOK5UrooXg%26e%3DaudioAdsResume%26a%3D588358115436997546%26c%3D586429498522465534%26s%3Dpda%26u%3D-DMp4EvvsGa8QOK5UrooXg&ex-fch=416719&cb=0.9194184109692187","pathname":"/s/iui3","hostname":"aax-eu.amazon-adsystem.com","keywords":["ad","ads"],"suggestion":"Review this URL - might be a new ad pattern"}
-[2025-12-02T22:38:09.937Z] [PATTERN DISCOVERY] Suspicious URL detected | {"url":"https://aax-events-cell01-cf.eu-west.ono.axp.amazon-adsystem.com/x/px/JPgzKeBL77BmvEDiuVK6KF4AAAGa4SS0XQMAAAKNAUFvbm9fdHhuX2JpZDIgICBvbm9fdHhuX2ltcDIgICCpVpFZ/%7B%22r%22%3A1%2C%22c%22%3A%22video%22%2C%22src%22%3A653%7D","pathname":"/x/px/JPgzKeBL77BmvEDiuVK6KF4AAAGa4SS0XQMAAAKNAUFvbm9fdHhuX2JpZDIgICBvbm9fdHhuX2ltcDIgICCpVpFZ/%7B%22r%22%3A1%2C%22c%22%3A%22video%22%2C%22src%22%3A653%7D","hostname":"aax-events-cell01-cf.eu-west.ono.axp.amazon-adsystem.com","keywords":["ad","ads"],"suggestion":"Review this URL - might be a new ad pattern"}
-[2025-12-02T22:38:09.937Z] [PATTERN DISCOVERY] Suspicious URL detected | {"url":"https://api.twitch.eu-west-1.prod.paets.advertising.amazon.dev/v1/ad-events/resume/01KBGJ9D3DNZVXTHN46TXBZ68N?publisherId=twitch","pathname":"/v1/ad-events/resume/01KBGJ9D3DNZVXTHN46TXBZ68N","hostname":"api.twitch.eu-west-1.prod.paets.advertising.amazon.dev","keywords":["ad"],"suggestion":"Review this URL - might be a new ad pattern"}
-[2025-12-02T22:38:10.367Z] Post-seek health check | {"currentTime":1457.5907,"readyState":4,"networkState":2,"paused":false,"bufferGap":"-3.074"}
-[2025-12-02T22:38:13.421Z] Playhead stalling warning detected (raw) | {"severity":"CRITICAL"}
-[2025-12-02T22:38:15.878Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-12-02T22:38:17.892Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-12-02T22:38:23.247Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-12-02T22:38:23.431Z] Critical warning: Playhead stalling (debounced)
-[2025-12-02T22:38:23.431Z] [EVENT] AD_DETECTED | Source: UNKNOWN
-[2025-12-02T22:38:23.431Z] [RECOVERY] Resilience execution started
-[2025-12-02T22:38:23.431Z] [Logic] ⚠️ ALERT: Signature session UNSTABLE | {"changesInLastHour":4,"threshold":3,"suggestion":"Twitch may have updated player - patterns may break soon"}
-[2025-12-02T22:38:23.431Z] [DIAGNOSTICS] Warning: Player signatures unstable
-[2025-12-02T22:38:23.431Z] [DIAGNOSTICS] Video state appears recoverable | {"readyState":4,"paused":true,"bufferHealth":"low"}
-[2025-12-02T22:38:23.431Z] [RECOVERY] Pre-recovery snapshot | {"readyState":4,"networkState":2,"currentTime":1460.684992,"paused":true,"error":null,"bufferEnd":1462.675999}
-[2025-12-02T22:38:23.431Z] Recovery strategy selection | {"initialStrategy":"Standard","bufferHealth":"low","bufferSize":5.976998999999978,"forced":false}
-[2025-12-02T22:38:23.431Z] Executing standard recovery: seeking
-[2025-12-02T22:38:23.431Z] Standard recovery complete | {"seekTo":1459.175999,"bufferEnd":1462.675999,"telemetry":{"readyState":4,"networkState":2,"buffered":"[1456.70, 1462.68]"}}
-[2025-12-02T22:38:23.431Z] [RECOVERY] Post-recovery result | {"pre":{"readyState":4,"networkState":2,"currentTime":1460.684992,"paused":true,"error":null,"bufferEnd":1462.675999},"post":{"readyState":4,"networkState":2,"currentTime":1459.175999,"paused":true,"error":null,"bufferEnd":1462.675999},"changes":{"readyStateChanged":false,"networkStateChanged":false,"currentTimeChanged":true,"pausedStateChanged":false,"errorCleared":null,"errorAppeared":null,"bufferIncreased":false},"success":{"isValid":false,"issues":["No measurable improvement detected"],"hasImprovement":false}}
-[2025-12-02T22:38:23.431Z] [RECOVERY] Recovery validation detected issues | ["No measurable improvement detected"]
-[2025-12-02T22:38:23.431Z] [RECOVERY] Escalating to aggressive recovery due to validation failure
-[2025-12-02T22:38:23.431Z] Executing aggressive recovery: waiting for player to stabilize
-[2025-12-02T22:38:23.431Z] Aggressive recovery telemetry | {"strategy":"PASSIVE_WAIT","url":"blob:https://www.twitch.tv/b902cd53-f1ae-4872-b855-62da151710d4","isBlobUrl":true,"telemetry":{"readyState":4,"networkState":2,"currentTime":1459.175999,"paused":true,"error":null,"bufferEnd":1462.675999}}
-[2025-12-02T22:38:24.199Z] Recovery: readyState transition | {"from":1,"to":4,"elapsed_ms":"768"}
-[2025-12-02T22:38:24.199Z] Player stabilized successfully | {"duration_ms":"768","finalReadyState":4,"totalChecks":7}
-[2025-12-02T22:38:24.199Z] [RECOVERY] Aggressive recovery result | {"success":{"isValid":false,"issues":["No measurable improvement detected"],"hasImprovement":false}}
-[2025-12-02T22:38:24.199Z] [RECOVERY] Skipping play retry - recovery validation failed
-[2025-12-02T22:38:24.199Z] [RECOVERY] Resilience execution finished | {"total_duration_ms":769}
-[2025-12-02T22:38:24.199Z] [HEALTH] Recovery completed, resuming monitoring
-[2025-12-02T22:38:24.199Z] [HEALTH] Recovery completed, resuming monitoring
-[2025-12-02T22:38:24.444Z] Post-seek health check | {"currentTime":1459.355346,"readyState":4,"networkState":2,"paused":false,"bufferGap":"-3.337"}
-[2025-12-02T22:38:25.429Z] [HEALTH] A/V sync issue detected | {"discrepancy":"12314.50ms","count":1}
-[2025-12-02T22:38:25.910Z] [PATTERN DISCOVERY] Suspicious URL detected | {"url":"https://aax-eu.amazon-adsystem.com/s/iui3?d=forester-did&ex-fargs=%3Fi%3DJup1JTm09LA1VFW9RX.JuQ%26e%3DaudioAdsResume%26a%3D588358115436997546%26c%3D586429498522465534%26s%3Dpda%26u%3DJup1JTm09LA1VFW9RX.JuQ&ex-fch=416719&cb=0.9494592949525262","pathname":"/s/iui3","hostname":"aax-eu.amazon-adsystem.com","keywords":["ad","ads"],"suggestion":"Review this URL - might be a new ad pattern"}
-[2025-12-02T22:38:25.911Z] [PATTERN DISCOVERY] Suspicious URL detected | {"url":"https://aax-events-cell01-cf.eu-west.ono.axp.amazon-adsystem.com/x/px/JCbqdSU5tPSwNVRVvUV_ybkAAAGa4TcLvwMAAAKNAUFvbm9fdHhuX2JpZDIgICBvbm9fdHhuX2ltcDIgICBSQl0Y/%7B%22r%22%3A1%2C%22c%22%3A%22video%22%2C%22src%22%3A653%7D","pathname":"/x/px/JCbqdSU5tPSwNVRVvUV_ybkAAAGa4TcLvwMAAAKNAUFvbm9fdHhuX2JpZDIgICBvbm9fdHhuX2ltcDIgICBSQl0Y/%7B%22r%22%3A1%2C%22c%22%3A%22video%22%2C%22src%22%3A653%7D","hostname":"aax-events-cell01-cf.eu-west.ono.axp.amazon-adsystem.com","keywords":["ad","ads"],"suggestion":"Review this URL - might be a new ad pattern"}
-[2025-12-02T22:38:25.912Z] [PATTERN DISCOVERY] Suspicious URL detected | {"url":"https://api.twitch.eu-west-1.prod.paets.advertising.amazon.dev/v1/ad-events/resume/01KBGKE2YH4Y919D2ERFNSSQDC?publisherId=twitch","pathname":"/v1/ad-events/resume/01KBGKE2YH4Y919D2ERFNSSQDC","hostname":"api.twitch.eu-west-1.prod.paets.advertising.amazon.dev","keywords":["ad"],"suggestion":"Review this URL - might be a new ad pattern"}
-[2025-12-02T22:38:27.438Z] [HEALTH] A/V sync recovered | {"previousIssues":1}
-[2025-12-02T22:38:28.288Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-12-02T22:38:33.250Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-12-02T22:38:39.613Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-12-02T22:38:51.533Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-12-02T22:39:11.920Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-12-02T22:39:22.382Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-12-02T22:39:52.426Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-12-02T22:40:47.392Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-12-02T22:41:11.916Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-12-02T22:41:36.206Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-12-02T22:42:22.989Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-12-02T22:43:37.391Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-12-02T22:43:38.824Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-12-02T22:44:22.880Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-12-02T22:44:36.193Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-12-02T22:45:11.906Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-12-02T22:45:23.093Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-12-02T22:45:33.116Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-12-02T22:45:36.222Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-12-02T22:45:52.497Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-12-02T22:46:53.149Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-12-02T22:47:09.954Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://assets.twitch.tv/config/manifest.json?v=1"}
-[2025-12-02T22:47:51.716Z] [HEALTH] A/V sync issue detected | {"discrepancy":"324.16ms","count":1}
-[2025-12-02T22:47:53.719Z] [HEALTH] A/V sync issue detected | {"discrepancy":"317.89ms","count":2}
-[2025-12-02T22:47:55.721Z] [HEALTH] A/V sync recovered | {"previousIssues":2}
-[2025-12-02T22:48:36.236Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-12-02T22:48:37.636Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-12-02T22:53:11.938Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-12-02T22:53:23.144Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-12-02T22:54:22.222Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-12-02T22:55:07.088Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-12-02T22:55:11.902Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-12-02T22:56:11.905Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-12-02T22:57:36.323Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-12-02T22:57:52.658Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-12-02T22:57:58.513Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-12-02T22:57:59.697Z] Playhead stalling warning detected (raw) | {"severity":"CRITICAL"}
-[2025-12-02T22:58:06.448Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-12-02T22:58:08.479Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-12-02T22:58:09.708Z] Critical warning: Playhead stalling (debounced)
-[2025-12-02T22:58:09.708Z] [EVENT] AD_DETECTED | Source: UNKNOWN
-[2025-12-02T22:58:09.708Z] [RECOVERY] Resilience execution started
-[2025-12-02T22:58:09.708Z] [DIAGNOSTICS] Critical buffer detected | {"needsAggressive":false,"bufferEnd":2634.681333,"bufferStart":2630.687333,"currentTime":2634.653599,"bufferSize":3.994000000000142,"bufferHealth":"critical"}
-[2025-12-02T22:58:09.708Z] [RECOVERY] Insufficient buffer but acceptable for recovery | {"bufferSize":"3.994"}
-[2025-12-02T22:58:09.708Z] [RECOVERY] Pre-recovery snapshot | {"readyState":3,"networkState":2,"currentTime":2634.653599,"paused":true,"error":null,"bufferEnd":2634.681333}
-[2025-12-02T22:58:09.708Z] Recovery strategy selection | {"initialStrategy":"Standard","bufferHealth":"critical","bufferSize":3.994000000000142,"forced":false}
-[2025-12-02T22:58:09.708Z] Executing standard recovery: seeking
-[2025-12-02T22:58:09.708Z] Standard recovery complete | {"seekTo":2631.181333,"bufferEnd":2634.681333,"telemetry":{"readyState":3,"networkState":2,"buffered":"[2630.69, 2634.68]"}}
-[2025-12-02T22:58:09.709Z] [RECOVERY] Post-recovery result | {"pre":{"readyState":3,"networkState":2,"currentTime":2634.653599,"paused":true,"error":null,"bufferEnd":2634.681333},"post":{"readyState":3,"networkState":2,"currentTime":2631.181333,"paused":true,"error":null,"bufferEnd":2634.681333},"changes":{"readyStateChanged":false,"networkStateChanged":false,"currentTimeChanged":true,"pausedStateChanged":false,"errorCleared":null,"errorAppeared":null,"bufferIncreased":false},"success":{"isValid":false,"issues":["No measurable improvement detected"],"hasImprovement":false}}
-[2025-12-02T22:58:09.709Z] [RECOVERY] Recovery validation detected issues | ["No measurable improvement detected"]
-[2025-12-02T22:58:09.709Z] [RECOVERY] Escalating to aggressive recovery due to validation failure
-[2025-12-02T22:58:09.709Z] Executing aggressive recovery: waiting for player to stabilize
-[2025-12-02T22:58:09.709Z] Aggressive recovery telemetry | {"strategy":"PASSIVE_WAIT","url":"blob:https://www.twitch.tv/b902cd53-f1ae-4872-b855-62da151710d4","isBlobUrl":true,"telemetry":{"readyState":3,"networkState":2,"currentTime":2631.181333,"paused":true,"error":null,"bufferEnd":2634.681333}}
-[2025-12-02T22:58:10.259Z] Recovery: readyState transition | {"from":1,"to":4,"elapsed_ms":"550"}
-[2025-12-02T22:58:10.259Z] Player stabilized successfully | {"duration_ms":"550","finalReadyState":4,"totalChecks":5}
-[2025-12-02T22:58:10.259Z] [RECOVERY] Aggressive recovery result | {"success":{"isValid":true,"issues":[],"hasImprovement":true}}
-[2025-12-02T22:58:10.259Z] [RECOVERY] Resilience execution finished | {"total_duration_ms":551}
-[2025-12-02T22:58:10.259Z] [HEALTH] Recovery completed, resuming monitoring
-[2025-12-02T22:58:10.259Z] [HEALTH] Recovery completed, resuming monitoring
-[2025-12-02T22:58:10.722Z] Post-seek health check | {"currentTime":2644.455471,"readyState":4,"networkState":2,"paused":false,"bufferGap":"-3.531"}
-[2025-12-02T22:58:11.860Z] [HEALTH] A/V sync issue detected | {"discrepancy":"1164.24ms","count":1}
-[2025-12-02T22:58:13.874Z] [HEALTH] A/V sync recovered | {"previousIssues":1}
-[2025-12-02T22:58:26.320Z] [PATTERN DISCOVERY] Suspicious URL detected | {"url":"https://aax-eu.amazon-adsystem.com/s/iui3?d=forester-did&ex-fargs=%3Fi%3DnbDmz-.Hqh.7ErKaaSo0iA%26e%3DaudioAdsResume%26a%3D588358115436997546%26c%3D586429498522465534%26s%3Dpda%26u%3DnbDmz-.Hqh.7ErKaaSo0iA&ex-fch=416719&cb=0.7908860473791697","pathname":"/s/iui3","hostname":"aax-eu.amazon-adsystem.com","keywords":["ad","ads"],"suggestion":"Review this URL - might be a new ad pattern"}
-[2025-12-02T22:58:26.321Z] [PATTERN DISCOVERY] Suspicious URL detected | {"url":"https://aax-events-cell01-cf.eu-west.ono.axp.amazon-adsystem.com/x/px/JJ2w5s_vx6of-xKymmkqNIgAAAGa4UlXVAMAAAKNAUFvbm9fdHhuX2JpZDEgICBvbm9fdHhuX2ltcDEgICCLha3Y/%7B%22r%22%3A1%2C%22c%22%3A%22video%22%2C%22src%22%3A653%7D","pathname":"/x/px/JJ2w5s_vx6of-xKymmkqNIgAAAGa4UlXVAMAAAKNAUFvbm9fdHhuX2JpZDEgICBvbm9fdHhuX2ltcDEgICCLha3Y/%7B%22r%22%3A1%2C%22c%22%3A%22video%22%2C%22src%22%3A653%7D","hostname":"aax-events-cell01-cf.eu-west.ono.axp.amazon-adsystem.com","keywords":["ad","ads"],"suggestion":"Review this URL - might be a new ad pattern"}
-[2025-12-02T22:58:26.322Z] [PATTERN DISCOVERY] Suspicious URL detected | {"url":"https://api.twitch.eu-west-1.prod.paets.advertising.amazon.dev/v1/ad-events/resume/01KBGMJNV6ZQFJ36R4NCNA5AF1?publisherId=twitch","pathname":"/v1/ad-events/resume/01KBGMJNV6ZQFJ36R4NCNA5AF1","hostname":"api.twitch.eu-west-1.prod.paets.advertising.amazon.dev","keywords":["ad"],"suggestion":"Review this URL - might be a new ad pattern"}
-[2025-12-02T22:58:26.322Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://api.twitch.eu-west-1.prod.paets.advertising.amazon.dev/v1/ad-events/resume/01KBGMJNV6ZQFJ36R4NCNA5AF1?publisherId=twitch"}
-[2025-12-02T22:58:28.682Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-12-02T22:58:33.033Z] [HEALTH] Frame drop detected | {"newDropped":131,"newTotal":174,"recentDropRate":"75.29%"}
-[2025-12-02T22:58:33.033Z] [HEALTH] Frame drops detected but video is playing normally - ignoring | {"dropped":131,"currentTime":2666.76571}
-[2025-12-02T22:59:52.235Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-12-02T23:00:22.785Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-12-02T23:00:52.830Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-12-02T23:02:09.985Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://assets.twitch.tv/config/manifest.json?v=1"}
-[2025-12-02T23:03:11.899Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
-[2025-12-02T23:03:20.221Z] [HEALTH] Frame drop detected | {"newDropped":15,"newTotal":58,"recentDropRate":"25.86%"}
+[2025-12-03T12:11:25.001Z] Core initialized
+[2025-12-03T12:11:25.305Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql"}
+[2025-12-03T12:11:26.051Z] Player mounted
+[2025-12-03T12:11:26.051Z] [Logic] New player session started | {"sessionId":"session-1764763886051"}
+[2025-12-03T12:11:26.053Z] [Logic] Signature key set | {"id":"k0","key":"ref","sessionId":"session-1764763886051","isChange":true}
+[2025-12-03T12:11:26.053Z] Player signature found | {"id":"k0","key":"ref"}
+[2025-12-03T12:11:26.054Z] [Logic] ⚠️ SIGNATURE KEY CHANGED DURING SESSION | {"timestamp":1764763886054,"signatureId":"k0","oldKey":"ref","newKey":"shouldForwardProp","timeSinceMount":3}
+[2025-12-03T12:11:26.054Z] [Logic] Signature key set | {"id":"k0","key":"shouldForwardProp","sessionId":"session-1764763886051","isChange":true}
+[2025-12-03T12:11:26.054Z] Player signature found | {"id":"k0","key":"shouldForwardProp"}
+[2025-12-03T12:11:26.054Z] [Logic] ⚠️ SIGNATURE KEY CHANGED DURING SESSION | {"timestamp":1764763886054,"signatureId":"k0","oldKey":"shouldForwardProp","newKey":"elementType","timeSinceMount":3}
+[2025-12-03T12:11:26.054Z] [Logic] Signature key set | {"id":"k0","key":"elementType","sessionId":"session-1764763886051","isChange":true}
+[2025-12-03T12:11:26.054Z] Player signature found | {"id":"k0","key":"elementType"}
+[2025-12-03T12:11:26.054Z] [Logic] ⚠️ SIGNATURE KEY CHANGED DURING SESSION | {"timestamp":1764763886054,"signatureId":"k0","oldKey":"elementType","newKey":"ref","timeSinceMount":3}
+[2025-12-03T12:11:26.054Z] [Logic] Signature key set | {"id":"k0","key":"ref","sessionId":"session-1764763886051","isChange":true}
+[2025-12-03T12:11:26.054Z] Player signature found | {"id":"k0","key":"ref"}
+[2025-12-03T12:11:26.054Z] [Logic] ⚠️ SIGNATURE KEY CHANGED DURING SESSION | {"timestamp":1764763886054,"signatureId":"k0","oldKey":"ref","newKey":"elementType","timeSinceMount":3}
+[2025-12-03T12:11:26.054Z] [Logic] Signature key set | {"id":"k0","key":"elementType","sessionId":"session-1764763886051","isChange":true}
+[2025-12-03T12:11:26.054Z] Player signature found | {"id":"k0","key":"elementType"}
+[2025-12-03T12:11:26.054Z] [Logic] ⚠️ SIGNATURE KEY CHANGED DURING SESSION | {"timestamp":1764763886054,"signatureId":"k0","oldKey":"elementType","newKey":"onContainerRefDelegate","timeSinceMount":3}
+[2025-12-03T12:11:26.054Z] [Logic] Signature key set | {"id":"k0","key":"onContainerRefDelegate","sessionId":"session-1764763886051","isChange":true}
+[2025-12-03T12:11:26.054Z] Player signature found | {"id":"k0","key":"onContainerRefDelegate"}
+[2025-12-03T12:11:26.054Z] [Logic] ⚠️ SIGNATURE KEY CHANGED DURING SESSION | {"timestamp":1764763886054,"signatureId":"k0","oldKey":"onContainerRefDelegate","newKey":"elementType","timeSinceMount":3}
+[2025-12-03T12:11:26.054Z] [Logic] Signature key set | {"id":"k0","key":"elementType","sessionId":"session-1764763886051","isChange":true}
+[2025-12-03T12:11:26.054Z] Player signature found | {"id":"k0","key":"elementType"}
+[2025-12-03T12:11:26.055Z] [Logic] ⚠️ SIGNATURE KEY CHANGED DURING SESSION | {"timestamp":1764763886055,"signatureId":"k0","oldKey":"elementType","newKey":"ref","timeSinceMount":4}
+[2025-12-03T12:11:26.055Z] [Logic] Signature key set | {"id":"k0","key":"ref","sessionId":"session-1764763886051","isChange":true}
+[2025-12-03T12:11:26.055Z] Player signature found | {"id":"k0","key":"ref"}
+[2025-12-03T12:11:26.055Z] [Logic] ⚠️ SIGNATURE KEY CHANGED DURING SESSION | {"timestamp":1764763886055,"signatureId":"k0","oldKey":"ref","newKey":"type","timeSinceMount":4}
+[2025-12-03T12:11:26.055Z] [Logic] Signature key set | {"id":"k0","key":"type","sessionId":"session-1764763886051","isChange":true}
+[2025-12-03T12:11:26.055Z] Player signature found | {"id":"k0","key":"type"}
+[2025-12-03T12:11:26.055Z] [Logic] ⚠️ SIGNATURE KEY CHANGED DURING SESSION | {"timestamp":1764763886055,"signatureId":"k0","oldKey":"type","newKey":"ref","timeSinceMount":4}
+[2025-12-03T12:11:26.055Z] [Logic] Signature key set | {"id":"k0","key":"ref","sessionId":"session-1764763886051","isChange":true}
+[2025-12-03T12:11:26.055Z] Player signature found | {"id":"k0","key":"ref"}
+[2025-12-03T12:11:26.055Z] [Logic] ⚠️ SIGNATURE KEY CHANGED DURING SESSION | {"timestamp":1764763886055,"signatureId":"k0","oldKey":"ref","newKey":"0","timeSinceMount":4}
+[2025-12-03T12:11:26.055Z] [Logic] Signature key set | {"id":"k0","key":"0","sessionId":"session-1764763886051","isChange":true}
+[2025-12-03T12:11:26.055Z] Player signature found | {"id":"k0","key":"0"}
+[2025-12-03T12:11:26.055Z] [Logic] ⚠️ SIGNATURE KEY CHANGED DURING SESSION | {"timestamp":1764763886055,"signatureId":"k0","oldKey":"0","newKey":"elementType","timeSinceMount":4}
+[2025-12-03T12:11:26.055Z] [Logic] Signature key set | {"id":"k0","key":"elementType","sessionId":"session-1764763886051","isChange":true}
+[2025-12-03T12:11:26.055Z] Player signature found | {"id":"k0","key":"elementType"}
+[2025-12-03T12:11:26.055Z] [Logic] ⚠️ SIGNATURE KEY CHANGED DURING SESSION | {"timestamp":1764763886055,"signatureId":"k0","oldKey":"elementType","newKey":"type","timeSinceMount":4}
+[2025-12-03T12:11:26.055Z] [Logic] Signature key set | {"id":"k0","key":"type","sessionId":"session-1764763886051","isChange":true}
+[2025-12-03T12:11:26.055Z] Player signature found | {"id":"k0","key":"type"}
+[2025-12-03T12:11:26.055Z] [Logic] ⚠️ SIGNATURE KEY CHANGED DURING SESSION | {"timestamp":1764763886055,"signatureId":"k0","oldKey":"type","newKey":"addMessageListener","timeSinceMount":4}
+[2025-12-03T12:11:26.055Z] [Logic] Signature key set | {"id":"k0","key":"addMessageListener","sessionId":"session-1764763886051","isChange":true}
+[2025-12-03T12:11:26.055Z] Player signature found | {"id":"k0","key":"addMessageListener"}
+[2025-12-03T12:11:26.055Z] [Logic] ⚠️ SIGNATURE KEY CHANGED DURING SESSION | {"timestamp":1764763886055,"signatureId":"k0","oldKey":"addMessageListener","newKey":"onSeek","timeSinceMount":4}
+[2025-12-03T12:11:26.055Z] [Logic] Signature key set | {"id":"k0","key":"onSeek","sessionId":"session-1764763886051","isChange":true}
+[2025-12-03T12:11:26.055Z] Player signature found | {"id":"k0","key":"onSeek"}
+[2025-12-03T12:11:26.055Z] [Logic] Signature key set | {"id":"k1","key":"onContentRestricted","sessionId":"session-1764763886051","isChange":true}
+[2025-12-03T12:11:26.055Z] Player signature found | {"id":"k1","key":"onContentRestricted"}
+[2025-12-03T12:11:26.055Z] [Logic] Signature key set | {"id":"k2","key":"onContentRestricted","sessionId":"session-1764763886051","isChange":true}
+[2025-12-03T12:11:26.055Z] Player signature found | {"id":"k2","key":"onContentRestricted"}
+[2025-12-03T12:11:26.055Z] PlayerContext: Success | {"method":"keyword","key":"__reactFiber$4bi0l5f22l4"}
+[2025-12-03T12:11:26.055Z] [LIFECYCLE] Event: ACQUIRE - Success
+[2025-12-03T12:11:26.693Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-12-03T12:11:26.703Z] [LIFECYCLE] Event: ACQUIRE - Success
+[2025-12-03T12:11:27.640Z] Player unmounted
+[2025-12-03T12:11:27.640Z] [Logic] Player session ended | {"sessionId":"session-1764763886051","duration":1589,"finalKeys":{"k0":"onSeek","k1":"onContentRestricted","k2":"onContentRestricted"},"keyChanges":14}
+[2025-12-03T12:11:27.640Z] [Logic] ⚠️ ALERT: Signature keys changed during session | {"sessionId":"session-1764763886051","changes":[{"timestamp":1764763886054,"signatureId":"k0","oldKey":"ref","newKey":"shouldForwardProp","timeSinceMount":3},{"timestamp":1764763886054,"signatureId":"k0","oldKey":"shouldForwardProp","newKey":"elementType","timeSinceMount":3},{"timestamp":1764763886054,"signatureId":"k0","oldKey":"elementType","newKey":"ref","timeSinceMount":3},{"timestamp":1764763886054,"signatureId":"k0","oldKey":"ref","newKey":"elementType","timeSinceMount":3},{"timestamp":1764763886054,"signatureId":"k0","oldKey":"elementType","newKey":"onContainerRefDelegate","timeSinceMount":3},{"timestamp":1764763886054,"signatureId":"k0","oldKey":"onContainerRefDelegate","newKey":"elementType","timeSinceMount":3},{"timestamp":1764763886055,"signatureId":"k0","oldKey":"elementType","newKey":"ref","timeSinceMount":4},{"timestamp":1764763886055,"signatureId":"k0","oldKey":"ref","newKey":"type","timeSinceMount":4},{"timestamp":1764763886055,"signatureId":"k0","oldKey":"type","newKey":"ref","timeSinceMount":4},{"timestamp":1764763886055,"signatureId":"k0","oldKey":"ref","newKey":"0","timeSinceMount":4},{"timestamp":1764763886055,"signatureId":"k0","oldKey":"0","newKey":"elementType","timeSinceMount":4},{"timestamp":1764763886055,"signatureId":"k0","oldKey":"elementType","newKey":"type","timeSinceMount":4},{"timestamp":1764763886055,"signatureId":"k0","oldKey":"type","newKey":"addMessageListener","timeSinceMount":4},{"timestamp":1764763886055,"signatureId":"k0","oldKey":"addMessageListener","newKey":"onSeek","timeSinceMount":4}]}
+[2025-12-03T12:11:28.874Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://assets.twitch.tv/config/manifest.json?v=1"}
+[2025-12-03T12:11:29.248Z] Player mounted
+[2025-12-03T12:11:29.248Z] [Logic] New player session started | {"sessionId":"session-1764763889248"}
+[2025-12-03T12:11:29.257Z] [Logic] Signature key set | {"id":"k0","key":"ref","sessionId":"session-1764763889248","isChange":true}
+[2025-12-03T12:11:29.257Z] Player signature found | {"id":"k0","key":"ref"}
+[2025-12-03T12:11:29.257Z] [Logic] ⚠️ SIGNATURE KEY CHANGED DURING SESSION | {"timestamp":1764763889257,"signatureId":"k0","oldKey":"ref","newKey":"shouldForwardProp","timeSinceMount":9}
+[2025-12-03T12:11:29.257Z] [Logic] Signature key set | {"id":"k0","key":"shouldForwardProp","sessionId":"session-1764763889248","isChange":true}
+[2025-12-03T12:11:29.257Z] Player signature found | {"id":"k0","key":"shouldForwardProp"}
+[2025-12-03T12:11:29.272Z] [Logic] ⚠️ SIGNATURE KEY CHANGED DURING SESSION | {"timestamp":1764763889272,"signatureId":"k0","oldKey":"shouldForwardProp","newKey":"elementType","timeSinceMount":24}
+[2025-12-03T12:11:29.272Z] [Logic] Signature key set | {"id":"k0","key":"elementType","sessionId":"session-1764763889248","isChange":true}
+[2025-12-03T12:11:29.272Z] Player signature found | {"id":"k0","key":"elementType"}
+[2025-12-03T12:11:29.272Z] [Logic] ⚠️ SIGNATURE KEY CHANGED DURING SESSION | {"timestamp":1764763889272,"signatureId":"k0","oldKey":"elementType","newKey":"ref","timeSinceMount":24}
+[2025-12-03T12:11:29.272Z] [Logic] Signature key set | {"id":"k0","key":"ref","sessionId":"session-1764763889248","isChange":true}
+[2025-12-03T12:11:29.272Z] Player signature found | {"id":"k0","key":"ref"}
+[2025-12-03T12:11:29.273Z] [Logic] ⚠️ SIGNATURE KEY CHANGED DURING SESSION | {"timestamp":1764763889273,"signatureId":"k0","oldKey":"ref","newKey":"elementType","timeSinceMount":25}
+[2025-12-03T12:11:29.273Z] [Logic] Signature key set | {"id":"k0","key":"elementType","sessionId":"session-1764763889248","isChange":true}
+[2025-12-03T12:11:29.273Z] Player signature found | {"id":"k0","key":"elementType"}
+[2025-12-03T12:11:29.273Z] [Logic] Signature key set | {"id":"k1","key":"elementType","sessionId":"session-1764763889248","isChange":true}
+[2025-12-03T12:11:29.273Z] Player signature found | {"id":"k1","key":"elementType"}
+[2025-12-03T12:11:29.273Z] [Logic] Signature key set | {"id":"k2","key":"elementType","sessionId":"session-1764763889248","isChange":true}
+[2025-12-03T12:11:29.273Z] Player signature found | {"id":"k2","key":"elementType"}
+[2025-12-03T12:11:29.273Z] PlayerContext: Success | {"method":"keyword","key":"__reactFiber$4bi0l5f22l4"}
+[2025-12-03T12:11:29.273Z] [LIFECYCLE] Event: ACQUIRE - Success
+[2025-12-03T12:11:29.588Z] [LIFECYCLE] Event: ACQUIRE - Success
+[2025-12-03T12:11:29.983Z] Console Error | {"args":["[GraphQL] One or more GraphQL errors were detected on request 01KBJ1ZTV3H5TP59F1NJF01XGK. PinnedChatSettings: unauthenticated","[object Object]"],"severity":"LOW","action":"LOG_ONLY"}
+[2025-12-03T12:11:30.896Z] Console Error | {"args":["[GraphQL] One or more GraphQL errors were detected on request 01KBJ1ZWKF7PJHHGQ164CGRXS4. PinnedChatSettings: unauthenticated","[object Object]"],"severity":"LOW","action":"LOG_ONLY"}
+[2025-12-03T12:11:33.448Z] Console Error | {"args":["[GraphQL] One or more GraphQL errors were detected on request 01KBJ1ZYCDETAR1W4YQ7HMJ5KZ. PinnedChatSettings: unauthenticated","[object Object]"],"severity":"LOW","action":"LOG_ONLY"}
+[2025-12-03T12:11:33.595Z] [NETWORK] Trigger pattern detected | Category: Availability Check | {"type":"XHR","url":"https://edge.ads.twitch.tv/2018-01-01/3p/ads?rt=vast3&dur=30&geoc=DE&dt=2&pid=1143290419891764763893595&cb=8329092&ws=1920x927&u=https%3A%2F%2Fwww.twitch.tv%2Fjankos&slots=%5B%7B%22id%22%3A%22twitch-player-ui%22%2C%22mt%22%3A%22v%22%2C%22kv%22%3A%7B%7D%2C%22s%22%3A%22640x480%22%7D%5D&pj=%7B%22game%22%3A%22league_of_legends%22%2C%22chan%22%3A%22caedrel%22%2C%22chanid%22%3A%2292038375%22%2C%22twitchcorrelator%22%3A%22xd76W8N6jXpyscCJhavODYnEdUWbwxm3%22%2C%22ad_session_id%22%3A%22xd76W8N6jXpyscCJhavODYnEdUWbwxm3%22%2C%22embed%22%3A%22false%22%2C%22platform%22%3A%22web%22%2C%22mature%22%3A%22false%22%2C%22pos%22%3A%221%22%2C%22timebreak%22%3A%2230%22%2C%22tag%22%3A%22%22%2C%22content_labels%22%3A%22%22%2C%22chantype%22%3A%22partner%22%2C%22delivery_type%22%3A%22csai%22%2C%22vb%22%3A%22null%22%2C%22adunit%22%3A%22web_csai%22%2C%22loggedin%22%3A%22false%22%2C%22v%22%3A%22ARCHIVE%22%2C%22vod_type%22%3A%22undefined%22%2C%22embed_url%22%3A%22null%22%2C%22game_id%22%3A%2221779%22%2C%22user_lang%22%3A%22en%22%7D&gdprl=%7B%22status%22%3A%22cmp%22%7D&pbid=twitch&bp=preroll&aid=MyJILP1jfuUz2VBuUB2ZPajiR0aXfrYe&ulang=en","isDelivery":false}
+[2025-12-03T12:11:33.596Z] Ad request blocked (XHR) | {}
+[2025-12-03T12:12:10.058Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-12-03T12:12:17.135Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-12-03T12:12:48.656Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-12-03T12:13:06.606Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-12-03T12:13:13.727Z] [HEALTH] Frame drop detected | {"newDropped":3,"newTotal":70,"recentDropRate":"4.29%"}
+[2025-12-03T12:13:19.876Z] [HEALTH] Frame drop detected | {"newDropped":3,"newTotal":125,"recentDropRate":"2.40%"}
+[2025-12-03T12:13:27.074Z] [HEALTH] Frame drop detected | {"newDropped":8,"newTotal":73,"recentDropRate":"10.96%"}
+[2025-12-03T12:13:33.117Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-12-03T12:13:48.217Z] [HEALTH] Frame drop detected | {"newDropped":2,"newTotal":61,"recentDropRate":"3.28%"}
+[2025-12-03T12:13:53.506Z] [HEALTH] Frame drop detected | {"newDropped":1,"newTotal":56,"recentDropRate":"1.79%"}
+[2025-12-03T12:13:55.546Z] [HEALTH] Frame drop detected | {"newDropped":16,"newTotal":131,"recentDropRate":"12.21%"}
+[2025-12-03T12:13:58.574Z] [HEALTH] Frame drop detected | {"newDropped":1,"newTotal":61,"recentDropRate":"1.64%"}
+[2025-12-03T12:14:29.550Z] [HEALTH] Frame drop detected | {"newDropped":3,"newTotal":60,"recentDropRate":"5.00%"}
+[2025-12-03T12:14:30.679Z] [HEALTH] Frame drop detected | {"newDropped":29,"newTotal":46,"recentDropRate":"63.04%"}
+[2025-12-03T12:14:31.681Z] [HEALTH] Frame drop detected | {"newDropped":22,"newTotal":83,"recentDropRate":"26.51%"}
+[2025-12-03T12:16:06.371Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-12-03T12:18:06.503Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-12-03T12:20:06.672Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-12-03T12:20:37.332Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-12-03T12:21:06.760Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-12-03T12:22:06.576Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-12-03T12:23:42.408Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-12-03T12:25:06.326Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-12-03T12:28:06.859Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-12-03T12:28:43.925Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-12-03T12:29:06.256Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-12-03T12:30:06.593Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-12-03T12:31:38.392Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-12-03T12:33:52.830Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-12-03T12:34:05.784Z] [HEALTH] Frame drop detected | {"newDropped":10,"newTotal":63,"recentDropRate":"15.87%"}
+[2025-12-03T12:34:06.784Z] [HEALTH] Frame drop detected | {"newDropped":2,"newTotal":59,"recentDropRate":"3.39%"}
+[2025-12-03T12:34:15.048Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-12-03T12:34:20.139Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-12-03T12:34:50.464Z] [HEALTH] Frame drop detected | {"newDropped":2,"newTotal":61,"recentDropRate":"3.28%"}
+[2025-12-03T12:34:55.521Z] [HEALTH] Frame drop detected | {"newDropped":1,"newTotal":60,"recentDropRate":"1.67%"}
+[2025-12-03T12:35:37.971Z] [HEALTH] Frame drop detected | {"newDropped":1,"newTotal":60,"recentDropRate":"1.67%"}
+[2025-12-03T12:35:42.677Z] [HEALTH] Frame drop detected | {"newDropped":4,"newTotal":58,"recentDropRate":"6.90%"}
+[2025-12-03T12:35:46.712Z] [HEALTH] Frame drop detected | {"newDropped":1,"newTotal":60,"recentDropRate":"1.67%"}
+[2025-12-03T12:35:49.766Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-12-03T12:36:21.156Z] [HEALTH] Frame drop detected | {"newDropped":11,"newTotal":121,"recentDropRate":"9.09%"}
+[2025-12-03T12:36:23.175Z] [HEALTH] Frame drop detected | {"newDropped":1,"newTotal":61,"recentDropRate":"1.64%"}
+[2025-12-03T12:36:40.322Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-12-03T12:37:18.738Z] [HEALTH] Frame drop detected | {"newDropped":1,"newTotal":60,"recentDropRate":"1.67%"}
+[2025-12-03T12:37:26.892Z] [HEALTH] Frame drop detected | {"newDropped":68,"newTotal":124,"recentDropRate":"54.84%"}
+[2025-12-03T12:37:29.244Z] [HEALTH] Frame drop detected | {"newDropped":101,"newTotal":144,"recentDropRate":"70.14%"}
+[2025-12-03T12:37:29.244Z] [HEALTH] Frame drops detected but video is playing normally - ignoring | {"dropped":101,"currentTime":1554.612576}
+[2025-12-03T12:37:31.269Z] [HEALTH] Frame drop detected | {"newDropped":8,"newTotal":61,"recentDropRate":"13.11%"}
+[2025-12-03T12:37:35.405Z] [HEALTH] Frame drop detected | {"newDropped":8,"newTotal":64,"recentDropRate":"12.50%"}
+[2025-12-03T12:37:36.411Z] [HEALTH] Frame drop detected | {"newDropped":14,"newTotal":30,"recentDropRate":"46.67%"}
+[2025-12-03T12:37:38.555Z] [HEALTH] Frame drop detected | {"newDropped":31,"newTotal":159,"recentDropRate":"19.50%"}
+[2025-12-03T12:38:18.229Z] [HEALTH] Frame drop detected | {"newDropped":1,"newTotal":58,"recentDropRate":"1.72%"}
+[2025-12-03T12:38:44.869Z] [HEALTH] Frame drop detected | {"newDropped":3,"newTotal":42,"recentDropRate":"7.14%"}
+[2025-12-03T12:38:45.900Z] [HEALTH] Frame drop detected | {"newDropped":26,"newTotal":82,"recentDropRate":"31.71%"}
+[2025-12-03T12:38:51.989Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-12-03T12:40:06.442Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-12-03T12:41:31.568Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://assets.twitch.tv/config/manifest.json?v=1"}
+[2025-12-03T12:41:38.638Z] [HEALTH] Frame drop detected | {"newDropped":5,"newTotal":61,"recentDropRate":"8.20%"}
+[2025-12-03T12:42:06.360Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-12-03T12:42:58.563Z] [HEALTH] Frame drop detected | {"newDropped":5,"newTotal":60,"recentDropRate":"8.33%"}
+[2025-12-03T12:43:41.185Z] [HEALTH] Frame drop detected | {"newDropped":10,"newTotal":60,"recentDropRate":"16.67%"}
+[2025-12-03T12:44:20.794Z] [HEALTH] Frame drop detected | {"newDropped":1,"newTotal":61,"recentDropRate":"1.64%"}
+[2025-12-03T12:44:41.660Z] [HEALTH] Frame drop detected | {"newDropped":6,"newTotal":68,"recentDropRate":"8.82%"}
+[2025-12-03T12:44:42.671Z] [HEALTH] Frame drop detected | {"newDropped":20,"newTotal":79,"recentDropRate":"25.32%"}
+[2025-12-03T12:44:54.256Z] [HEALTH] Frame drop detected | {"newDropped":11,"newTotal":85,"recentDropRate":"12.94%"}
+[2025-12-03T12:46:31.882Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://assets.twitch.tv/config/manifest.json?v=1"}
+[2025-12-03T12:46:42.971Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-12-03T12:46:58.458Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-12-03T12:47:02.490Z] [HEALTH] Frame drop detected | {"newDropped":3,"newTotal":60,"recentDropRate":"5.00%"}
+[2025-12-03T12:47:04.510Z] [HEALTH] Frame drop detected | {"newDropped":4,"newTotal":58,"recentDropRate":"6.90%"}
+[2025-12-03T12:47:06.559Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-12-03T12:47:07.575Z] [HEALTH] Frame drop detected | {"newDropped":1,"newTotal":124,"recentDropRate":"0.81%"}
+[2025-12-03T12:47:20.674Z] [HEALTH] Frame drop detected | {"newDropped":1,"newTotal":60,"recentDropRate":"1.67%"}
+[2025-12-03T12:47:34.810Z] [HEALTH] Frame drop detected | {"newDropped":2,"newTotal":61,"recentDropRate":"3.28%"}
+[2025-12-03T12:47:37.828Z] [HEALTH] Frame drop detected | {"newDropped":2,"newTotal":61,"recentDropRate":"3.28%"}
+[2025-12-03T12:47:43.932Z] [HEALTH] Frame drop detected | {"newDropped":2,"newTotal":65,"recentDropRate":"3.08%"}
+[2025-12-03T12:47:44.938Z] [HEALTH] Frame drop detected | {"newDropped":4,"newTotal":60,"recentDropRate":"6.67%"}
+[2025-12-03T12:47:55.021Z] [HEALTH] Frame drop detected | {"newDropped":2,"newTotal":60,"recentDropRate":"3.33%"}
+[2025-12-03T12:47:56.034Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-12-03T12:47:57.052Z] [HEALTH] Frame drop detected | {"newDropped":2,"newTotal":120,"recentDropRate":"1.67%"}
+[2025-12-03T12:48:01.318Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-12-03T12:48:25.640Z] [HEALTH] Frame drop detected | {"newDropped":4,"newTotal":63,"recentDropRate":"6.35%"}
+[2025-12-03T12:48:27.665Z] [HEALTH] Frame drop detected | {"newDropped":1,"newTotal":60,"recentDropRate":"1.67%"}
+[2025-12-03T12:48:31.687Z] [HEALTH] Frame drop detected | {"newDropped":1,"newTotal":60,"recentDropRate":"1.67%"}
+[2025-12-03T12:48:34.911Z] [HEALTH] Frame drop detected | {"newDropped":16,"newTotal":65,"recentDropRate":"24.62%"}
+[2025-12-03T12:48:37.037Z] [HEALTH] Frame drop detected | {"newDropped":12,"newTotal":55,"recentDropRate":"21.82%"}
+[2025-12-03T12:48:39.047Z] [HEALTH] Frame drop detected | {"newDropped":47,"newTotal":132,"recentDropRate":"35.61%"}
+[2025-12-03T12:49:03.432Z] [HEALTH] Frame drop detected | {"newDropped":3,"newTotal":61,"recentDropRate":"4.92%"}
+[2025-12-03T12:49:07.480Z] [HEALTH] Frame drop detected | {"newDropped":12,"newTotal":122,"recentDropRate":"9.84%"}
+[2025-12-03T12:49:13.867Z] [HEALTH] Frame drop detected | {"newDropped":54,"newTotal":125,"recentDropRate":"43.20%"}
+[2025-12-03T12:49:14.883Z] [HEALTH] Frame drop detected | {"newDropped":24,"newTotal":77,"recentDropRate":"31.17%"}
+[2025-12-03T12:49:20.949Z] [HEALTH] Frame drop detected | {"newDropped":9,"newTotal":61,"recentDropRate":"14.75%"}
+[2025-12-03T12:49:23.121Z] [HEALTH] Frame drop detected | {"newDropped":8,"newTotal":130,"recentDropRate":"6.15%"}
+[2025-12-03T12:49:33.449Z] [HEALTH] Frame drop detected | {"newDropped":3,"newTotal":61,"recentDropRate":"4.92%"}
+[2025-12-03T12:49:34.453Z] [HEALTH] Frame drop detected | {"newDropped":2,"newTotal":60,"recentDropRate":"3.33%"}
+[2025-12-03T12:49:36.684Z] [HEALTH] Frame drop detected | {"newDropped":108,"newTotal":114,"recentDropRate":"94.74%"}
+[2025-12-03T12:49:36.684Z] [HEALTH] Frame drops detected but video is playing normally - ignoring | {"dropped":108,"currentTime":2282.059363}
+[2025-12-03T12:49:39.713Z] [HEALTH] Frame drop detected | {"newDropped":13,"newTotal":61,"recentDropRate":"21.31%"}
+[2025-12-03T12:49:41.728Z] [HEALTH] Frame drop detected | {"newDropped":2,"newTotal":61,"recentDropRate":"3.28%"}
+[2025-12-03T12:49:45.750Z] [HEALTH] Frame drop detected | {"newDropped":1,"newTotal":60,"recentDropRate":"1.67%"}
+[2025-12-03T12:49:47.801Z] [HEALTH] Frame drop detected | {"newDropped":4,"newTotal":60,"recentDropRate":"6.67%"}
+[2025-12-03T12:49:50.418Z] [HEALTH] Frame drop detected | {"newDropped":67,"newTotal":157,"recentDropRate":"42.68%"}
+[2025-12-03T12:49:57.571Z] [HEALTH] Frame drop detected | {"newDropped":1,"newTotal":61,"recentDropRate":"1.64%"}
+[2025-12-03T12:49:58.583Z] [HEALTH] Frame drop detected | {"newDropped":4,"newTotal":60,"recentDropRate":"6.67%"}
+[2025-12-03T12:50:02.615Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-12-03T12:50:03.624Z] [HEALTH] Frame drop detected | {"newDropped":1,"newTotal":121,"recentDropRate":"0.83%"}
+[2025-12-03T12:51:32.411Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://assets.twitch.tv/config/manifest.json?v=1"}
+[2025-12-03T12:51:41.512Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-12-03T12:53:26.212Z] [HEALTH] Frame drop detected | {"newDropped":1,"newTotal":60,"recentDropRate":"1.67%"}
+[2025-12-03T12:54:53.346Z] [HEALTH] Frame drop detected | {"newDropped":1,"newTotal":61,"recentDropRate":"1.64%"}
+[2025-12-03T12:55:04.426Z] [HEALTH] Frame drop detected | {"newDropped":1,"newTotal":61,"recentDropRate":"1.64%"}
+[2025-12-03T12:55:09.453Z] [HEALTH] Frame drop detected | {"newDropped":1,"newTotal":60,"recentDropRate":"1.67%"}
+[2025-12-03T12:55:26.608Z] [HEALTH] Frame drop detected | {"newDropped":4,"newTotal":61,"recentDropRate":"6.56%"}
+[2025-12-03T12:55:27.617Z] [HEALTH] Frame drop detected | {"newDropped":1,"newTotal":63,"recentDropRate":"1.59%"}
+[2025-12-03T12:55:58.713Z] [HEALTH] A/V sync issue detected | {"discrepancy":"325.17ms","count":1}
+[2025-12-03T12:55:59.833Z] [HEALTH] Frame drop detected | {"newDropped":37,"newTotal":98,"recentDropRate":"37.76%"}
+[2025-12-03T12:56:00.723Z] [HEALTH] A/V sync issue detected | {"discrepancy":"526.20ms","count":2}
+[2025-12-03T12:56:02.724Z] [HEALTH] A/V sync recovered | {"previousIssues":2}
+[2025-12-03T12:56:27.998Z] [HEALTH] Frame drop detected | {"newDropped":2,"newTotal":60,"recentDropRate":"3.33%"}
+[2025-12-03T12:57:02.762Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-12-03T12:57:10.661Z] Playhead stalling warning detected (raw) | {"severity":"CRITICAL"}
+[2025-12-03T12:57:13.116Z] [HEALTH] A/V sync issue detected | {"discrepancy":"1076.00ms","count":1}
+[2025-12-03T12:57:15.115Z] [HEALTH] A/V sync recovered | {"previousIssues":1}
+[2025-12-03T12:57:20.660Z] Critical warning: Playhead stalling (debounced)
+[2025-12-03T12:57:20.660Z] [EVENT] AD_DETECTED | Source: UNKNOWN
+[2025-12-03T12:57:20.660Z] [Resilience] Video appears healthy, skipping recovery | {"reason":"unknown","readyState":4,"paused":false}
+[2025-12-03T12:58:51.662Z] [HEALTH] A/V sync issue detected | {"discrepancy":"258.33ms","count":1}
+[2025-12-03T12:58:53.670Z] [HEALTH] A/V sync issue detected | {"discrepancy":"263.10ms","count":2}
+[2025-12-03T12:58:55.670Z] [HEALTH] A/V sync recovered | {"previousIssues":2}
+[2025-12-03T12:59:21.898Z] [HEALTH] A/V sync issue detected | {"discrepancy":"347.68ms","count":1}
+[2025-12-03T12:59:23.905Z] [HEALTH] A/V sync issue detected | {"discrepancy":"347.92ms","count":2}
+[2025-12-03T12:59:25.908Z] [HEALTH] A/V sync recovered | {"previousIssues":2}
+[2025-12-03T13:00:00.428Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-12-03T13:00:06.117Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-12-03T13:00:27.858Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-12-03T13:01:45.007Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-12-03T13:03:04.725Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-12-03T13:03:06.111Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-12-03T13:03:28.303Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-12-03T13:03:37.755Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-12-03T13:03:47.687Z] Playhead stalling warning detected (raw) | {"severity":"CRITICAL"}
+[2025-12-03T13:03:48.709Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-12-03T13:03:57.527Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-12-03T13:03:57.692Z] Critical warning: Playhead stalling (debounced)
+[2025-12-03T13:03:57.692Z] [EVENT] AD_DETECTED | Source: UNKNOWN
+[2025-12-03T13:03:57.692Z] [Resilience] Starting recovery: unknown | {"preSnapshot":{"readyState":3,"networkState":2,"currentTime":3132.003102,"paused":true,"error":null,"bufferEnd":3132.020666}}
+[2025-12-03T13:03:57.692Z] [RecoveryStrategy] Invalid video element | {"video":"unknown"}
+[2025-12-03T13:03:57.692Z] [RecoveryStrategy] Defaulting to Standard - invalid video
+[2025-12-03T13:03:57.692Z] [Resilience] Selected strategy: undefined
+[2025-12-03T13:03:57.692Z] Executing standard recovery: seeking
+[2025-12-03T13:03:57.692Z] Standard recovery complete | {"seekTo":3128.520666,"bufferEnd":3132.020666,"telemetry":{"readyState":3,"networkState":2,"buffered":"[3102.03, 3132.02]"}}
+[2025-12-03T13:03:57.692Z] [Resilience] Recovery result | {"valid":false,"issues":["No measurable improvement detected"],"delta":{"readyStateChanged":false,"networkStateChanged":false,"currentTimeChanged":true,"pausedStateChanged":false,"errorCleared":null,"errorAppeared":null,"bufferIncreased":false}}
+[2025-12-03T13:03:57.692Z] [Resilience] Recovery ineffective, considering escalation...
+[2025-12-03T13:03:58.400Z] [HEALTH] A/V sync issue detected | {"discrepancy":"14129.80ms","count":1}
+[2025-12-03T13:03:58.705Z] Post-seek health check | {"currentTime":3128.893504,"readyState":4,"networkState":2,"paused":false,"bufferGap":"-3.127"}
+[2025-12-03T13:03:59.345Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-12-03T13:04:00.400Z] [HEALTH] A/V sync recovered | {"previousIssues":1}
+[2025-12-03T13:04:01.830Z] Playhead stalling warning detected (raw) | {"severity":"CRITICAL"}
+[2025-12-03T13:04:11.839Z] Critical warning: Playhead stalling (debounced)
+[2025-12-03T13:04:11.839Z] [EVENT] AD_DETECTED | Source: UNKNOWN
+[2025-12-03T13:04:11.840Z] [Resilience] Starting recovery: unknown | {"preSnapshot":{"readyState":2,"networkState":2,"currentTime":3132.031365,"paused":true,"error":null,"bufferEnd":3132.020666}}
+[2025-12-03T13:04:11.840Z] [RecoveryStrategy] Invalid video element | {"video":"unknown"}
+[2025-12-03T13:04:11.840Z] [RecoveryStrategy] Defaulting to Standard - invalid video
+[2025-12-03T13:04:11.840Z] [Resilience] Selected strategy: undefined
+[2025-12-03T13:04:11.840Z] Executing standard recovery: seeking
+[2025-12-03T13:04:11.840Z] Standard recovery complete | {"seekTo":3128.520666,"bufferEnd":3132.020666,"telemetry":{"readyState":2,"networkState":2,"buffered":"[3128.03, 3132.02]"}}
+[2025-12-03T13:04:11.840Z] [Resilience] Recovery result | {"valid":false,"issues":["No measurable improvement detected"],"delta":{"readyStateChanged":false,"networkStateChanged":false,"currentTimeChanged":true,"pausedStateChanged":false,"errorCleared":null,"errorAppeared":null,"bufferIncreased":false}}
+[2025-12-03T13:04:11.840Z] [Resilience] Recovery ineffective, considering escalation...
+[2025-12-03T13:04:12.518Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-12-03T13:04:12.846Z] Post-seek health check | {"currentTime":3128.520666,"readyState":4,"networkState":2,"paused":true,"bufferGap":"-3.500"}
+[2025-12-03T13:04:18.779Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-12-03T13:05:04.733Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-12-03T13:06:32.427Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://assets.twitch.tv/config/manifest.json?v=1"}
+[2025-12-03T13:06:45.254Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}
+[2025-12-03T13:07:04.754Z] Network Request (DIAGNOSTIC) | {"type":"FETCH","url":"https://gql.twitch.tv/gql#origin=twilight"}

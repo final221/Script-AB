@@ -30,8 +30,10 @@ const CONFIG = (() => {
             FRAME_DROP_SEVERE_THRESHOLD: 500,
             FRAME_DROP_MODERATE_THRESHOLD: 100,
             FRAME_DROP_RATE_THRESHOLD: 30,
-            AV_SYNC_THRESHOLD_MS: 250,
-            AV_SYNC_CHECK_INTERVAL_MS: 2000,
+            AV_SYNC_THRESHOLD_MS: 250, // Detection threshold - log all desyncs for visibility
+            AV_SYNC_CHECK_INTERVAL_MS: 3000, // Check every 3s (reduced frequency)
+            AV_SYNC_RECOVERY_THRESHOLD_MS: 2000, // Only trigger recovery for severe desync
+            AV_SYNC_CRITICAL_THRESHOLD_MS: 5000, // Only reload stream for critical desync
         },
         logging: {
             NETWORK_SAMPLE_RATE: 0.05,

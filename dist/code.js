@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       2.2.8
+// @version       2.2.9
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -43,8 +43,10 @@ const CONFIG = (() => {
             FRAME_DROP_SEVERE_THRESHOLD: 500,
             FRAME_DROP_MODERATE_THRESHOLD: 100,
             FRAME_DROP_RATE_THRESHOLD: 30,
-            AV_SYNC_THRESHOLD_MS: 250,
-            AV_SYNC_CHECK_INTERVAL_MS: 2000,
+            AV_SYNC_THRESHOLD_MS: 250, // Detection threshold - log all desyncs for visibility
+            AV_SYNC_CHECK_INTERVAL_MS: 3000, // Check every 3s (reduced frequency)
+            AV_SYNC_RECOVERY_THRESHOLD_MS: 2000, // Only trigger recovery for severe desync
+            AV_SYNC_CRITICAL_THRESHOLD_MS: 5000, // Only reload stream for critical desync
         },
         logging: {
             NETWORK_SAMPLE_RATE: 0.05,
@@ -1379,32 +1381,42 @@ const AVSyncDetector = (() => {
             const expectedTimeAdvancement = elapsedRealTime * video.playbackRate;
             const actualTimeAdvancement = video.currentTime - state.lastSyncVideoTime;
             const discrepancy = Math.abs(expectedTimeAdvancement - actualTimeAdvancement);
+            const discrepancyMs = discrepancy * 1000;
 
+            // Extensive logging: Log every sync check for visibility
             if (discrepancy > CONFIG.timing.AV_SYNC_THRESHOLD_MS / 1000 && expectedTimeAdvancement > 0.1) {
                 state.syncIssueCount++;
                 Logger.add('[HEALTH] A/V sync issue detected', {
-                    discrepancy: (discrepancy * 1000).toFixed(2) + 'ms',
+                    discrepancy: discrepancyMs.toFixed(2) + 'ms',
                     count: state.syncIssueCount,
+                    detectionThreshold: CONFIG.timing.AV_SYNC_THRESHOLD_MS + 'ms',
+                    recoveryThreshold: CONFIG.timing.AV_SYNC_RECOVERY_THRESHOLD_MS + 'ms',
+                    willTriggerRecovery: discrepancyMs >= CONFIG.timing.AV_SYNC_RECOVERY_THRESHOLD_MS
                 });
             } else if (discrepancy < CONFIG.timing.AV_SYNC_THRESHOLD_MS / 2000) {
                 if (state.syncIssueCount > 0) {
-                    Logger.add('[HEALTH] A/V sync recovered', { previousIssues: state.syncIssueCount });
+                    Logger.add('[HEALTH] A/V sync recovered', {
+                        previousIssues: state.syncIssueCount,
+                        currentDiscrepancy: discrepancyMs.toFixed(2) + 'ms'
+                    });
                     state.syncIssueCount = 0;
                 }
             }
 
-            if (state.syncIssueCount >= 3) {
-                const discrepancyMs = discrepancy * 1000;
+            // CHANGED: Only trigger recovery if discrepancy exceeds RECOVERY threshold (2000ms)
+            // Previously triggered after 3 consecutive detections regardless of severity
+            if (state.syncIssueCount >= 5 && discrepancyMs >= CONFIG.timing.AV_SYNC_RECOVERY_THRESHOLD_MS) {
                 let severity = 'minor';
                 if (discrepancyMs >= 10000) severity = 'critical';
                 else if (discrepancyMs >= 3000) severity = 'severe';
                 else if (discrepancyMs >= 1000) severity = 'moderate';
 
-                Logger.add('[HEALTH] A/V sync threshold exceeded', {
+                Logger.add('[HEALTH] A/V sync threshold exceeded - triggering recovery', {
                     syncIssueCount: state.syncIssueCount,
-                    threshold: 3,
+                    consecutiveThreshold: 5,
                     discrepancy: discrepancyMs.toFixed(2) + 'ms',
-                    severity
+                    severity,
+                    recoveryThreshold: CONFIG.timing.AV_SYNC_RECOVERY_THRESHOLD_MS + 'ms'
                 });
                 state.lastSyncCheckTime = now;
                 state.lastSyncVideoTime = video.currentTime;
@@ -1413,10 +1425,20 @@ const AVSyncDetector = (() => {
                     details: {
                         syncIssueCount: state.syncIssueCount,
                         discrepancy: discrepancyMs,
-                        threshold: 3,
+                        threshold: 5,
                         severity
                     }
                 };
+            } else if (state.syncIssueCount >= 5 && discrepancyMs < CONFIG.timing.AV_SYNC_RECOVERY_THRESHOLD_MS) {
+                // Extensive logging: Show when we detect issues but DON'T trigger recovery
+                Logger.add('[HEALTH] A/V sync issues detected but below recovery threshold - monitoring only', {
+                    syncIssueCount: state.syncIssueCount,
+                    discrepancy: discrepancyMs.toFixed(2) + 'ms',
+                    recoveryThreshold: CONFIG.timing.AV_SYNC_RECOVERY_THRESHOLD_MS + 'ms',
+                    reason: 'Trusting browser-native A/V sync for minor desyncs'
+                });
+                // Reset counter to avoid accumulation
+                state.syncIssueCount = 0;
             }
         }
         state.lastSyncCheckTime = now;
@@ -2656,36 +2678,83 @@ const AVSyncRecovery = (() => {
             Logger.add('[AV_SYNC] Recovery initiated', {
                 discrepancy: discrepancy.toFixed(2) + 'ms',
                 severity,
-                currentTime: video.currentTime
+                currentTime: video.currentTime,
+                criticalThreshold: CONFIG.timing.AV_SYNC_CRITICAL_THRESHOLD_MS + 'ms'
             });
 
             if (severity === SEVERITY.MINOR) {
-                Logger.add('[AV_SYNC] Level 1: Ignoring minor desync');
+                Logger.add('[AV_SYNC] Level 1: Ignoring minor desync', {
+                    reason: 'Below moderate threshold (1000ms)'
+                });
                 return;
             }
 
             let result;
+
+            // DISABLED: This 500ms pause delay was causing constant desync instead of fixing it
+            // The artificial delay disrupts browser-native A/V sync mechanisms
+            // Keeping code for potential reversion if needed
+            // if (severity === SEVERITY.MODERATE) {
+            //     Metrics.increment('av_sync_level2_attempts');
+            //     result = await level2_pauseResume(video, discrepancy);
+            // }
+
             if (severity === SEVERITY.MODERATE) {
-                Metrics.increment('av_sync_level2_attempts');
-                result = await level2_pauseResume(video, discrepancy);
-            } else if (severity === SEVERITY.SEVERE) {
-                Metrics.increment('av_sync_level3_attempts');
-                result = await level3_seek(video, discrepancy);
-            } else {
-                Metrics.increment('av_sync_level4_attempts');
-                result = await level4_reload(video, discrepancy);
+                // MONITORING ONLY - trust browser-native sync
+                Logger.add('[AV_SYNC] MONITORING ONLY - moderate desync detected', {
+                    severity,
+                    discrepancy: discrepancy.toFixed(2) + 'ms',
+                    reason: 'Disabled level2_pauseResume to prevent introducing delays',
+                    wouldHaveTriggered: 'level2_pauseResume (500ms pause)',
+                    action: 'Trusting browser-native A/V sync mechanisms'
+                });
+                Metrics.increment('av_sync_level2_skipped');
+                return;
             }
 
-            const duration = performance.now() - startTime;
-            Logger.add('[AV_SYNC] Recovery complete', {
-                level: result.level,
-                success: result.success,
-                duration: duration.toFixed(2) + 'ms',
-                remainingDesync: result.remainingDesync // Note: This is estimated, actual verification is next cycle
-            });
+            // DISABLED: Seeking disrupts playback unnecessarily for moderate desyncs
+            // Browser handles A/V sync better than manual intervention
+            // else if (severity === SEVERITY.SEVERE) {
+            //     Metrics.increment('av_sync_level3_attempts');
+            //     result = await level3_seek(video, discrepancy);
+            // }
 
-            if (!result.success) {
-                Logger.add('[AV_SYNC] Recovery failed, may escalate on next check');
+            else if (severity === SEVERITY.SEVERE && discrepancy < CONFIG.timing.AV_SYNC_CRITICAL_THRESHOLD_MS) {
+                // MONITORING ONLY - trust browser-native sync for severe but not critical
+                Logger.add('[AV_SYNC] MONITORING ONLY - severe desync detected', {
+                    severity,
+                    discrepancy: discrepancy.toFixed(2) + 'ms',
+                    reason: 'Disabled level3_seek to avoid disrupting playback',
+                    wouldHaveTriggered: 'level3_seek (position +0.1s)',
+                    action: 'Trusting browser-native A/V sync mechanisms',
+                    note: 'Will only reload if exceeds critical threshold (' + CONFIG.timing.AV_SYNC_CRITICAL_THRESHOLD_MS + 'ms)'
+                });
+                Metrics.increment('av_sync_level3_skipped');
+                return;
+            }
+
+            else if (severity === SEVERITY.CRITICAL || discrepancy >= CONFIG.timing.AV_SYNC_CRITICAL_THRESHOLD_MS) {
+                // ONLY reload for CRITICAL desync - indicates broken stream
+                Logger.add('[AV_SYNC] CRITICAL desync - performing stream reload', {
+                    severity,
+                    discrepancy: discrepancy.toFixed(2) + 'ms',
+                    criticalThreshold: CONFIG.timing.AV_SYNC_CRITICAL_THRESHOLD_MS + 'ms',
+                    reason: 'Desync severe enough to indicate stream failure'
+                });
+                Metrics.increment('av_sync_level4_attempts');
+                result = await level4_reload(video, discrepancy);
+
+                const duration = performance.now() - startTime;
+                Logger.add('[AV_SYNC] Recovery complete', {
+                    level: result.level,
+                    success: result.success,
+                    duration: duration.toFixed(2) + 'ms',
+                    remainingDesync: result.remainingDesync
+                });
+
+                if (!result.success) {
+                    Logger.add('[AV_SYNC] Recovery failed, may escalate on next check');
+                }
             }
         }
     };

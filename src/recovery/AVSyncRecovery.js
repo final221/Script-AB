@@ -73,36 +73,83 @@ const AVSyncRecovery = (() => {
             Logger.add('[AV_SYNC] Recovery initiated', {
                 discrepancy: discrepancy.toFixed(2) + 'ms',
                 severity,
-                currentTime: video.currentTime
+                currentTime: video.currentTime,
+                criticalThreshold: CONFIG.timing.AV_SYNC_CRITICAL_THRESHOLD_MS + 'ms'
             });
 
             if (severity === SEVERITY.MINOR) {
-                Logger.add('[AV_SYNC] Level 1: Ignoring minor desync');
+                Logger.add('[AV_SYNC] Level 1: Ignoring minor desync', {
+                    reason: 'Below moderate threshold (1000ms)'
+                });
                 return;
             }
 
             let result;
+
+            // DISABLED: This 500ms pause delay was causing constant desync instead of fixing it
+            // The artificial delay disrupts browser-native A/V sync mechanisms
+            // Keeping code for potential reversion if needed
+            // if (severity === SEVERITY.MODERATE) {
+            //     Metrics.increment('av_sync_level2_attempts');
+            //     result = await level2_pauseResume(video, discrepancy);
+            // }
+
             if (severity === SEVERITY.MODERATE) {
-                Metrics.increment('av_sync_level2_attempts');
-                result = await level2_pauseResume(video, discrepancy);
-            } else if (severity === SEVERITY.SEVERE) {
-                Metrics.increment('av_sync_level3_attempts');
-                result = await level3_seek(video, discrepancy);
-            } else {
-                Metrics.increment('av_sync_level4_attempts');
-                result = await level4_reload(video, discrepancy);
+                // MONITORING ONLY - trust browser-native sync
+                Logger.add('[AV_SYNC] MONITORING ONLY - moderate desync detected', {
+                    severity,
+                    discrepancy: discrepancy.toFixed(2) + 'ms',
+                    reason: 'Disabled level2_pauseResume to prevent introducing delays',
+                    wouldHaveTriggered: 'level2_pauseResume (500ms pause)',
+                    action: 'Trusting browser-native A/V sync mechanisms'
+                });
+                Metrics.increment('av_sync_level2_skipped');
+                return;
             }
 
-            const duration = performance.now() - startTime;
-            Logger.add('[AV_SYNC] Recovery complete', {
-                level: result.level,
-                success: result.success,
-                duration: duration.toFixed(2) + 'ms',
-                remainingDesync: result.remainingDesync // Note: This is estimated, actual verification is next cycle
-            });
+            // DISABLED: Seeking disrupts playback unnecessarily for moderate desyncs
+            // Browser handles A/V sync better than manual intervention
+            // else if (severity === SEVERITY.SEVERE) {
+            //     Metrics.increment('av_sync_level3_attempts');
+            //     result = await level3_seek(video, discrepancy);
+            // }
 
-            if (!result.success) {
-                Logger.add('[AV_SYNC] Recovery failed, may escalate on next check');
+            else if (severity === SEVERITY.SEVERE && discrepancy < CONFIG.timing.AV_SYNC_CRITICAL_THRESHOLD_MS) {
+                // MONITORING ONLY - trust browser-native sync for severe but not critical
+                Logger.add('[AV_SYNC] MONITORING ONLY - severe desync detected', {
+                    severity,
+                    discrepancy: discrepancy.toFixed(2) + 'ms',
+                    reason: 'Disabled level3_seek to avoid disrupting playback',
+                    wouldHaveTriggered: 'level3_seek (position +0.1s)',
+                    action: 'Trusting browser-native A/V sync mechanisms',
+                    note: 'Will only reload if exceeds critical threshold (' + CONFIG.timing.AV_SYNC_CRITICAL_THRESHOLD_MS + 'ms)'
+                });
+                Metrics.increment('av_sync_level3_skipped');
+                return;
+            }
+
+            else if (severity === SEVERITY.CRITICAL || discrepancy >= CONFIG.timing.AV_SYNC_CRITICAL_THRESHOLD_MS) {
+                // ONLY reload for CRITICAL desync - indicates broken stream
+                Logger.add('[AV_SYNC] CRITICAL desync - performing stream reload', {
+                    severity,
+                    discrepancy: discrepancy.toFixed(2) + 'ms',
+                    criticalThreshold: CONFIG.timing.AV_SYNC_CRITICAL_THRESHOLD_MS + 'ms',
+                    reason: 'Desync severe enough to indicate stream failure'
+                });
+                Metrics.increment('av_sync_level4_attempts');
+                result = await level4_reload(video, discrepancy);
+
+                const duration = performance.now() - startTime;
+                Logger.add('[AV_SYNC] Recovery complete', {
+                    level: result.level,
+                    success: result.success,
+                    duration: duration.toFixed(2) + 'ms',
+                    remainingDesync: result.remainingDesync
+                });
+
+                if (!result.success) {
+                    Logger.add('[AV_SYNC] Recovery failed, may escalate on next check');
+                }
             }
         }
     };
