@@ -5,7 +5,7 @@
 Using default Chrome path: C:\Program Files\Google\Chrome\Application\chrome.exe
 📁 Loading test file: file://F:\Fynn\Projects\Tw Adb\tests\runner.html
 
-Failed to load resource: net::ERR_FILE_NOT_FOUND
+❌ Page Error: Identifier 'PlayExecutor' has already been declared
 
 🧪 Running: RecoveryDiagnostics: Detects detached video
 ✅ PASS: RecoveryDiagnostics: Detects detached video
@@ -73,7 +73,7 @@ TEST SUMMARY
 Total:  20
 Passed: 20
 Failed: 0
-Time:   11442.10ms
+Time:   11454.90ms
 ========================================
 
 ✅ All tests passed!

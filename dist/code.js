@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       2.2.4
+// @version       2.2.7
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -182,6 +182,956 @@ const Adapters = {
     }
 };
 
+// --- URL Parser ---
+/**
+ * Safe URL parsing utilities with fallback handling.
+ */
+const UrlParser = (() => {
+    /**
+     * Safely parses a URL with fallback for relative URLs
+     * @param {string} url - URL to parse
+     * @returns {URL|null} Parsed URL or null if parsing fails
+     */
+    const parseUrl = (url) => {
+        try {
+            return new URL(url);
+        } catch (e) {
+            // Fallback for relative URLs (e.g. "/ad/v1/")
+            try {
+                return new URL(url, 'http://twitch.tv');
+            } catch (e2) {
+                // Fallback for truly malformed input
+                Logger.add('[Logic] URL parse failed, using string matching', { url, error: String(e2) });
+                return null;
+            }
+        }
+    };
+
+    /**
+     * Checks if pattern matches URL pathname (not query/hash)
+     * @param {string} url - URL to check
+     * @param {string} pattern - Pattern to match against pathname
+     * @returns {boolean} True if pathname contains pattern
+     */
+    const pathMatches = (url, pattern) => {
+        const parsed = parseUrl(url);
+        if (parsed) {
+            // Match against pathname only (ignore query and hash)
+            return parsed.pathname.includes(pattern);
+        }
+        // Fallback: use string matching on full URL
+        return url.includes(pattern);
+    };
+
+    return {
+        parseUrl,
+        pathMatches
+    };
+})();
+
+// --- Ad Detection ---
+/**
+ * Ad detection logic for network requests.
+ */
+const AdDetection = (() => {
+    /**
+     * Checks if URL matches ad blocking patterns
+     * @param {string} url - URL to check
+     * @returns {boolean} True if URL should be blocked as ad
+     */
+    const isAd = (url) => {
+        if (!url || typeof url !== 'string') return false;
+        return CONFIG.regex.AD_BLOCK.test(url);
+    };
+
+    /**
+     * Checks if URL matches ad trigger patterns
+     * @param {string} url - URL to check
+     * @returns {boolean} True if URL triggers ad detection
+     */
+    const isTrigger = (url) => {
+        if (!url || typeof url !== 'string') return false;
+        return CONFIG.regex.AD_TRIGGER.test(url);
+    };
+
+    /**
+     * Checks if URL is an ad delivery request (not just availability check)
+     * @param {string} url - URL to check
+     * @returns {boolean} True if URL is delivering ad content
+     */
+    const isDelivery = (url) => {
+        if (!url || typeof url !== 'string') return false;
+
+        // Check delivery patterns against pathname only
+        const hasDelivery = CONFIG.network.DELIVERY_PATTERNS.some(p =>
+            UrlParser.pathMatches(url, p)
+        );
+
+        // Ensure it's NOT just an availability check
+        const isAvailability = CONFIG.network.AVAILABILITY_PATTERNS.some(p => {
+            const parsed = UrlParser.parseUrl(url);
+            if (parsed) {
+                // For query param patterns (bp=preroll), check search params
+                if (p.includes('=')) {
+                    return parsed.search.includes(p);
+                }
+                // For path patterns, check pathname
+                return parsed.pathname.includes(p);
+            }
+            return url.includes(p);
+        });
+
+        return hasDelivery && !isAvailability;
+    };
+
+    /**
+     * Checks if URL is an ad availability check (not actual delivery)
+     * @param {string} url - URL to check
+     * @returns {boolean} True if URL is checking ad availability
+     */
+    const isAvailabilityCheck = (url) => {
+        if (!url || typeof url !== 'string') return false;
+
+        return CONFIG.network.AVAILABILITY_PATTERNS.some(p => {
+            const parsed = UrlParser.parseUrl(url);
+            if (parsed) {
+                // Query param patterns
+                if (p.includes('=')) {
+                    return parsed.search.includes(p);
+                }
+                // Path patterns
+                return parsed.pathname.includes(p);
+            }
+            return url.includes(p);
+        });
+    };
+
+    return {
+        isAd,
+        isTrigger,
+        isDelivery,
+        isAvailabilityCheck
+    };
+})();
+
+// --- Mock Generator ---
+/**
+ * Generates mock responses for intercepted ad requests.
+ */
+const MockGenerator = (() => {
+    /**
+     * Determines appropriate mock response based on URL
+     * @param {string} url - URL to generate mock for
+     * @returns {{body: string, type: string}} Mock response with body and MIME type
+     */
+    const getMock = (url) => {
+        if (!url || typeof url !== 'string') {
+            return { body: CONFIG.mock.JSON, type: 'application/json' };
+        }
+
+        const parsed = UrlParser.parseUrl(url);
+        const pathname = parsed ? parsed.pathname : url;
+
+        // Check file extension in pathname only (not query params)
+        if (pathname.endsWith('.m3u8')) {
+            return { body: CONFIG.mock.M3U8, type: 'application/vnd.apple.mpegurl' };
+        }
+        if (pathname.includes('vast') || pathname.endsWith('.xml')) {
+            return { body: CONFIG.mock.VAST, type: 'application/xml' };
+        }
+        return { body: CONFIG.mock.JSON, type: 'application/json' };
+    };
+
+    return {
+        getMock
+    };
+})();
+
+// --- Pattern Discovery ---
+/**
+ * Discovers new ad patterns for future blocking.
+ */
+const PatternDiscovery = (() => {
+    // Track unknown suspicious URLs
+    const _suspiciousUrls = new Set();
+    const _suspiciousKeywords = [
+        'ad', 'ads', 'advertisement', 'preroll', 'midroll',
+        'doubleclick', 'pubads', 'vast', 'tracking', 'analytics'
+    ];
+
+    /**
+     * Detects potentially new ad patterns
+     * Logs URLs that look like ads but don't match existing patterns
+     * @param {string} url - URL to analyze
+     */
+    const detectNewPatterns = (url) => {
+        if (!url || typeof url !== 'string') return;
+
+        // Skip if already matches known patterns
+        if (AdDetection.isAd(url)) return;
+        if (AdDetection.isTrigger(url)) return;
+
+        const urlLower = url.toLowerCase();
+        const parsed = UrlParser.parseUrl(url);
+
+        // Check if URL contains suspicious keywords
+        const hasSuspiciousKeyword = _suspiciousKeywords.some(keyword =>
+            urlLower.includes(keyword)
+        );
+
+        if (hasSuspiciousKeyword && !_suspiciousUrls.has(url)) {
+            _suspiciousUrls.add(url);
+
+            // ✅ This gets exported with exportTwitchAdLogs()
+            Logger.add('[PATTERN DISCOVERY] Suspicious URL detected', {
+                url,
+                pathname: parsed ? parsed.pathname : 'parse failed',
+                hostname: parsed ? parsed.hostname : 'parse failed',
+                keywords: _suspiciousKeywords.filter(k => urlLower.includes(k)),
+                suggestion: 'Review this URL - might be a new ad pattern'
+            });
+        }
+    };
+
+    /**
+     * Exports discovered patterns for review
+     * @returns {string[]} Array of discovered suspicious URLs
+     */
+    const getDiscoveredPatterns = () => Array.from(_suspiciousUrls);
+
+    return {
+        detectNewPatterns,
+        getDiscoveredPatterns
+    };
+})();
+
+// --- Signature Validator ---
+/**
+ * Player signature validation and tracking.
+ */
+const SignatureValidator = (() => {
+    // Session reference - shared across all signatures
+    const sessionRef = { current: null };
+
+    /**
+     * Creates a signature validator with session tracking
+     * @param {string} id - Signature ID (k0, k1, k2)
+     * @param {number} argsLength - Expected function argument count
+     * @returns {{id: string, check: Function}} Signature validator
+     */
+    const createSignature = (id, argsLength) => ({
+        id,
+        check: (o, k) => {
+            try {
+                const result = typeof o[k] === 'function' && o[k].length === argsLength;
+
+                if (result && sessionRef.current) {
+                    const session = sessionRef.current;
+
+                    // Check if key changed within this session
+                    if (session[id] && session[id] !== k) {
+                        const change = {
+                            timestamp: Date.now(),
+                            signatureId: id,
+                            oldKey: session[id],
+                            newKey: k,
+                            timeSinceMount: Date.now() - session.mountTime
+                        };
+
+                        session.keyHistory.push(change);
+                        Logger.add('[Logic] ⚠️ SIGNATURE KEY CHANGED DURING SESSION', change);
+                    }
+
+                    // Update session key
+                    if (!session[id] || session[id] !== k) {
+                        session[id] = k;
+                        Logger.add('[Logic] Signature key set', {
+                            id,
+                            key: k,
+                            sessionId: session.sessionId,
+                            isChange: session[id] !== null
+                        });
+                    }
+                }
+
+                return result;
+            } catch (e) {
+                return false;
+            }
+        }
+    });
+
+    /**
+     * Player function signatures
+     */
+    const signatures = [
+        createSignature('k0', 1),
+        createSignature('k1', 0),
+        createSignature('k2', 0)
+    ];
+
+    /**
+     * Validates an object property against a signature
+     * @param {Object} obj - Object to validate
+     * @param {string} key - Key to check
+     * @param {Object} sig - Signature definition
+     * @returns {boolean} True if valid
+     */
+    const validate = (obj, key, sig) =>
+        Fn.tryCatch(() => typeof obj[key] === 'function' && sig.check(obj, key), () => false)();
+
+    /**
+     * Sets the current session for signature tracking
+     * @param {Object} session - Session object
+     */
+    const setSession = (session) => {
+        sessionRef.current = session;
+    };
+
+    return {
+        signatures,
+        validate,
+        setSession
+    };
+})();
+
+// --- Session Manager ---
+/**
+ * Manages player session lifecycle and signature tracking.
+ */
+const SessionManager = (() => {
+    // Session state
+    let _sessionSignatures = {
+        sessionId: null,
+        mountTime: null,
+        k0: null,
+        k1: null,
+        k2: null,
+        keyHistory: []
+    };
+
+    /**
+     * Starts a new player session
+     */
+    const startSession = () => {
+        const sessionId = `session-${Date.now()}`;
+        _sessionSignatures = {
+            sessionId,
+            mountTime: Date.now(),
+            k0: null,
+            k1: null,
+            k2: null,
+            keyHistory: []
+        };
+
+        // Update signature validators with new session
+        SignatureValidator.setSession(_sessionSignatures);
+
+        Logger.add('[Logic] New player session started', { sessionId });
+    };
+
+    /**
+     * Ends the current session
+     */
+    const endSession = () => {
+        const session = _sessionSignatures;
+        if (!session.sessionId) return;
+
+        Logger.add('[Logic] Player session ended', {
+            sessionId: session.sessionId,
+            duration: Date.now() - session.mountTime,
+            finalKeys: {
+                k0: session.k0,
+                k1: session.k1,
+                k2: session.k2
+            },
+            keyChanges: session.keyHistory.length
+        });
+
+        if (session.keyHistory.length > 0) {
+            Logger.add('[Logic] ⚠️ ALERT: Signature keys changed during session', {
+                sessionId: session.sessionId,
+                changes: session.keyHistory
+            });
+        }
+
+        // Clear session reference
+        SignatureValidator.setSession(null);
+    };
+
+    /**
+     * Gets current session status
+     * @returns {Object} Session status
+     */
+    const getSessionStatus = () => {
+        const session = _sessionSignatures;
+        return {
+            sessionId: session.sessionId,
+            uptime: session.mountTime ? Date.now() - session.mountTime : 0,
+            currentKeys: {
+                k0: session.k0,
+                k1: session.k1,
+                k2: session.k2
+            },
+            totalChanges: session.keyHistory.length,
+            recentChanges: session.keyHistory.slice(-5),
+            allKeysSet: !!(session.k0 && session.k1 && session.k2)
+        };
+    };
+
+    /**
+     * Checks if session is unstable (too many key changes)
+     * @returns {boolean} True if unstable
+     */
+    const isSessionUnstable = () => {
+        const session = _sessionSignatures;
+
+        const hourAgo = Date.now() - 3600000;
+        const recentChanges = session.keyHistory.filter(c => c.timestamp > hourAgo);
+
+        const isUnstable = recentChanges.length > 3;
+
+        if (isUnstable) {
+            Logger.add('[Logic] ⚠️ ALERT: Signature session UNSTABLE', {
+                changesInLastHour: recentChanges.length,
+                threshold: 3,
+                suggestion: 'Twitch may have updated player - patterns may break soon'
+            });
+        }
+
+        return isUnstable;
+    };
+
+    /**
+     * Gets signature stats (alias for backward compatibility)
+     * @returns {Object} Session status
+     */
+    const getSignatureStats = () => getSessionStatus();
+
+    return {
+        startSession,
+        endSession,
+        getSessionStatus,
+        isSessionUnstable,
+        getSignatureStats
+    };
+})();
+
+// --- Signature Detector ---
+/**
+ * Detects player function signatures in objects.
+ */
+const SignatureDetector = (() => {
+    // Key map to cache found signature keys
+    const keyMap = { k0: null, k1: null, k2: null };
+
+    /**
+     * Detects player function signatures in an object.
+     * Attempts to match object properties against known player method signatures.
+     * @param {Object} obj - Object to scan for player signatures
+     * @returns {boolean} True if all required signatures were found
+     */
+    const detectPlayerSignatures = (obj) => {
+        for (const sig of Logic.Player.signatures) {
+            // If a key is already mapped and still valid, skip searching for it again.
+            if (keyMap[sig.id] && Logic.Player.validate(obj, keyMap[sig.id], sig)) {
+                continue;
+            }
+            const foundKey = Object.keys(obj).find(k => Logic.Player.validate(obj, k, sig));
+            if (foundKey) {
+                keyMap[sig.id] = foundKey;
+                Logger.add('Player signature found', { id: sig.id, key: foundKey });
+            }
+        }
+        return Object.values(keyMap).every(k => k !== null);
+    };
+
+    /**
+     * Resets the key map
+     */
+    const reset = () => {
+        keyMap.k0 = null;
+        keyMap.k1 = null;
+        keyMap.k2 = null;
+    };
+
+    /**
+     * Gets the current key map
+     * @returns {Object} Key map
+     */
+    const getKeyMap = () => keyMap;
+
+    return {
+        detectPlayerSignatures,
+        reset,
+        getKeyMap
+    };
+})();
+
+// --- Context Traverser ---
+/**
+ * Traverses object trees to find player context.
+ */
+const ContextTraverser = (() => {
+    const fallbackSelectors = ['.video-player__container', '.highwind-video-player', '[data-a-target="video-player"]'];
+
+    /**
+     * Recursively traverses object tree to find the player context using Breadth-First Search (BFS).
+     * Searches for React/Vue internal player component instance.
+     * @param {Object} rootObj - Object to traverse
+     * @returns {Object|null} Player context object if found, null otherwise
+     */
+    const traverseForPlayerContext = (rootObj) => {
+        const queue = [{ node: rootObj, depth: 0 }];
+        const visited = new WeakSet();
+
+        while (queue.length > 0) {
+            const { node, depth } = queue.shift();
+
+            if (depth > CONFIG.player.MAX_SEARCH_DEPTH) continue;
+            if (!node || typeof node !== 'object' || visited.has(node)) continue;
+
+            visited.add(node);
+
+            if (SignatureDetector.detectPlayerSignatures(node)) {
+                return node;
+            }
+
+            // Add children to queue
+            for (const key of Object.keys(node)) {
+                queue.push({ node: node[key], depth: depth + 1 });
+            }
+        }
+        return null;
+    };
+
+    /**
+     * Fallback strategy using DOM selectors
+     * @returns {{ctx: Object, element: HTMLElement}|null} Found context and element
+     */
+    const findContextFallback = () => {
+        for (const selector of fallbackSelectors) {
+            const el = document.querySelector(selector);
+            if (el) {
+                const key = Object.keys(el).find(k => k.startsWith('__reactInternalInstance') || k.startsWith('__reactFiber'));
+                if (key && el[key]) {
+                    const ctx = traverseForPlayerContext(el[key]);
+                    if (ctx) return { ctx, element: el };
+                }
+            }
+        }
+        return null;
+    };
+
+    return {
+        traverseForPlayerContext,
+        findContextFallback
+    };
+})();
+
+// --- Context Validator ---
+/**
+ * Validates player context cache and liveness.
+ */
+const ContextValidator = (() => {
+    /**
+     * Validates the cached context to ensure it's still usable.
+     * @param {Object} cachedContext - The context to validate
+     * @param {HTMLElement} cachedRootElement - The root element associated with the context
+     * @returns {boolean} True if cache is valid, false otherwise
+     */
+    const validateCache = (cachedContext, cachedRootElement) => {
+        if (!cachedContext) return false;
+
+        // 1. DOM Attachment Check
+        if (cachedRootElement && !cachedRootElement.isConnected) {
+            Logger.add('PlayerContext: Cache invalid - Root element detached from DOM');
+            return false;
+        }
+
+        // 2. Signature Function Check
+        const keyMap = SignatureDetector.getKeyMap();
+        const signaturesValid = Object.keys(keyMap).every(
+            (key) => keyMap[key] && typeof cachedContext[keyMap[key]] === 'function'
+        );
+
+        if (!signaturesValid) {
+            Logger.add('PlayerContext: Cache invalid - Signatures missing', { keyMap });
+            return false;
+        }
+
+        // 3. Liveness Check (safe property access)
+        try {
+            // Test that context is actually accessible
+            const testKey = keyMap.k0;
+            if (testKey && cachedContext[testKey]) {
+                // Context appears alive
+            }
+        } catch (e) {
+            Logger.add('PlayerContext: Cache invalid - Liveness check failed', { error: String(e) });
+            return false;
+        }
+
+        return true;
+    };
+
+    return {
+        validateCache
+    };
+})();
+
+// --- Video Snapshot Helper ---
+/**
+ * Utilities for capturing and comparing video state.
+ */
+const VideoSnapshotHelper = (() => {
+    /**
+     * Captures a snapshot of current video element state.
+     * @param {HTMLVideoElement} video - The video element to snapshot
+     * @returns {Object} Snapshot containing readyState, networkState, currentTime, etc.
+     */
+    const captureVideoSnapshot = (video) => {
+        return {
+            readyState: video.readyState,
+            networkState: video.networkState,
+            currentTime: video.currentTime,
+            paused: video.paused,
+            error: video.error ? video.error.code : null,
+            bufferEnd: video.buffered.length ? video.buffered.end(video.buffered.length - 1) : 0
+        };
+    };
+
+    /**
+     * Calculates the delta between pre and post recovery snapshots.
+     * @param {Object} preSnapshot - Snapshot before recovery
+     * @param {Object} postSnapshot - Snapshot after recovery
+     * @returns {Object} Delta object showing what changed
+     */
+    const calculateRecoveryDelta = (preSnapshot, postSnapshot) => {
+        return {
+            readyStateChanged: preSnapshot.readyState !== postSnapshot.readyState,
+            networkStateChanged: preSnapshot.networkState !== postSnapshot.networkState,
+            currentTimeChanged: preSnapshot.currentTime !== postSnapshot.currentTime,
+            pausedStateChanged: preSnapshot.paused !== postSnapshot.paused,
+            errorCleared: preSnapshot.error && !postSnapshot.error,
+            errorAppeared: !preSnapshot.error && postSnapshot.error,
+            bufferIncreased: postSnapshot.bufferEnd > preSnapshot.bufferEnd
+        };
+    };
+
+    return {
+        captureVideoSnapshot,
+        calculateRecoveryDelta
+    };
+})();
+
+// --- Recovery Validator ---
+/**
+ * Validates recovery outcomes and pre-conditions.
+ */
+const RecoveryValidator = (() => {
+    /**
+     * Validates if recovery actually improved the state.
+     * @param {Object} preSnapshot - Snapshot before recovery
+     * @param {Object} postSnapshot - Snapshot after recovery
+     * @param {Object} delta - Calculated changes
+     * @returns {{isValid: boolean, issues: string[], hasImprovement: boolean}}
+     */
+    const validateRecoverySuccess = (preSnapshot, postSnapshot, delta) => {
+        const issues = [];
+
+        // Check 1: Ready state should not decrease
+        if (delta.readyStateChanged && postSnapshot.readyState < preSnapshot.readyState) {
+            issues.push(`readyState decreased: ${preSnapshot.readyState} → ${postSnapshot.readyState}`);
+        }
+
+        // Check 2: Error should not appear
+        if (delta.errorAppeared) {
+            issues.push(`MediaError appeared: code ${postSnapshot.error}`);
+        }
+
+        // Check 3: Should have some positive change
+        const hasImprovement = (
+            delta.errorCleared ||  // Error was fixed
+            (delta.readyStateChanged && postSnapshot.readyState > preSnapshot.readyState) ||
+            (postSnapshot.bufferEnd > preSnapshot.bufferEnd + 0.1) // Buffer increased
+        );
+
+        if (!hasImprovement && !delta.pausedStateChanged) {
+            issues.push('No measurable improvement detected');
+        }
+
+        return {
+            isValid: issues.length === 0,
+            issues,
+            hasImprovement
+        };
+    };
+
+    /**
+     * Checks if the video is already healthy enough to skip recovery.
+     * @param {HTMLVideoElement} video - The video element
+     * @returns {boolean} True if healthy
+     */
+    const detectAlreadyHealthy = (video) => {
+        return (
+            !video.paused &&
+            video.readyState >= 3 &&
+            !video.error &&
+            video.networkState !== 3 // NETWORK_NO_SOURCE
+        );
+    };
+
+    return {
+        validateRecoverySuccess,
+        detectAlreadyHealthy
+    };
+})();
+
+// --- A/V Sync Router ---
+/**
+ * Routes A/V sync issues to specialized recovery.
+ */
+const AVSyncRouter = (() => {
+    /**
+     * Checks if the issue should be routed to A/V sync recovery.
+     * @param {string} reason - The reason for recovery
+     * @returns {boolean} True if it's an A/V sync issue
+     */
+    const shouldRouteToAVSync = (reason) => {
+        return reason === CONFIG.events.AV_SYNC_ISSUE;
+    };
+
+    /**
+     * Executes A/V sync recovery.
+     * @returns {Promise<boolean>} True if recovery was successful
+     */
+    const executeAVSyncRecovery = async () => {
+        Logger.add('[Resilience] Routing to AVSyncRecovery');
+        return await AVSyncRecovery.fix();
+    };
+
+    return {
+        shouldRouteToAVSync,
+        executeAVSyncRecovery
+    };
+})();
+
+// --- Play Validator ---
+/**
+ * Validates video state for playback.
+ */
+const PlayValidator = (() => {
+    /**
+     * Checks if the video is in a state that allows playback.
+     * @param {HTMLVideoElement} video - The video element
+     * @returns {boolean} True if playable
+     */
+    const validatePlayable = (video) => {
+        if (!video) return false;
+        if (video.error) return false;
+        if (video.readyState < 2) return false; // HAVE_CURRENT_DATA
+        return true;
+    };
+
+    /**
+     * Waits for the video to actually start playing.
+     * @param {HTMLVideoElement} video - The video element
+     * @param {number} timeoutMs - Max wait time
+     * @returns {Promise<boolean>} True if playing detected
+     */
+    const waitForPlaying = (video, timeoutMs = 2000) => {
+        return new Promise((resolve) => {
+            if (!video.paused && video.readyState >= 3) {
+                resolve(true);
+                return;
+            }
+
+            let resolved = false;
+            const cleanup = () => {
+                video.removeEventListener('playing', onPlaying);
+                video.removeEventListener('timeupdate', onTimeUpdate);
+            };
+
+            const onPlaying = () => {
+                if (!resolved) {
+                    resolved = true;
+                    cleanup();
+                    resolve(true);
+                }
+            };
+
+            const onTimeUpdate = () => {
+                if (!resolved && !video.paused) {
+                    resolved = true;
+                    cleanup();
+                    resolve(true);
+                }
+            };
+
+            video.addEventListener('playing', onPlaying, { once: true });
+            video.addEventListener('timeupdate', onTimeUpdate, { once: true });
+
+            setTimeout(() => {
+                if (!resolved) {
+                    resolved = true;
+                    cleanup();
+                    resolve(false);
+                }
+            }, timeoutMs);
+        });
+    };
+
+    return {
+        validatePlayable,
+        waitForPlaying
+    };
+})();
+
+// --- Micro Seek Strategy ---
+/**
+ * Implements intelligent seeking to unstick playback.
+ */
+const MicroSeekStrategy = (() => {
+    /**
+     * Determines if a micro-seek should be applied.
+     * @param {HTMLVideoElement} video - The video element
+     * @param {number} attempt - Current retry attempt number
+     * @returns {boolean} True if micro-seek is recommended
+     */
+    const shouldApplyMicroSeek = (video, attempt) => {
+        // Apply on later attempts or if buffer is stuck
+        return attempt > 1 || (video.readyState >= 2 && video.paused);
+    };
+
+    /**
+     * Calculates the optimal seek target.
+     * @param {HTMLVideoElement} video - The video element
+     * @returns {number} Target timestamp
+     */
+    const calculateSeekTarget = (video) => {
+        // Prefer seeking forward slightly to hit buffered content
+        if (video.buffered.length > 0) {
+            const end = video.buffered.end(video.buffered.length - 1);
+            if (end > video.currentTime + 0.1) {
+                return Math.min(video.currentTime + 0.05, end - 0.1);
+            }
+        }
+        // Fallback: tiny forward seek or stay in place
+        return video.currentTime + 0.001;
+    };
+
+    /**
+     * Executes a micro-seek operation.
+     * @param {HTMLVideoElement} video - The video element
+     */
+    const executeMicroSeek = (video) => {
+        const target = calculateSeekTarget(video);
+        video.currentTime = target;
+        Logger.add('[PlayRetry] Applied micro-seek', { target: target.toFixed(3) });
+    };
+
+    return {
+        shouldApplyMicroSeek,
+        calculateSeekTarget,
+        executeMicroSeek
+    };
+})();
+
+// --- Play Executor ---
+/**
+ * Executes play attempts and handles errors.
+ */
+const PlayExecutor = (() => {
+    /**
+     * Attempts to play the video once.
+     * @param {HTMLVideoElement} video - The video element
+     * @returns {Promise<void>} Resolves on success, rejects with error
+     */
+    const attemptPlay = async (video) => {
+        try {
+            await video.play();
+        } catch (error) {
+            throw error;
+        }
+    };
+
+    /**
+     * Categorizes a play error for logging and decision making.
+     * @param {Error} error - The error thrown by video.play()
+     * @returns {{name: string, isFatal: boolean, message: string}}
+     */
+    const categorizePlayError = (error) => {
+        const name = error.name || 'UnknownError';
+        const message = error.message || 'No message';
+
+        return {
+            name,
+            message,
+            isFatal: isFatalError(name)
+        };
+    };
+
+    /**
+     * Determines if an error is fatal (should stop retries).
+     * @param {string} errorName - The error name
+     * @returns {boolean} True if fatal
+     */
+    const isFatalError = (errorName) => {
+        return errorName === 'NotAllowedError' || errorName === 'NotSupportedError';
+    };
+
+    return {
+        attemptPlay,
+        categorizePlayError,
+        isFatalError
+    };
+})();
+
+// --- Network Logic Module ---
+/**
+ * Aggregates all network-related utilities.
+ */
+const _NetworkLogic = (() => {
+    return {
+        // UrlParser
+        _parseUrl: UrlParser.parseUrl,
+        _pathMatches: UrlParser.pathMatches,
+
+        // AdDetection
+        isAd: AdDetection.isAd,
+        isTrigger: AdDetection.isTrigger,
+        isDelivery: AdDetection.isDelivery,
+        isAvailabilityCheck: AdDetection.isAvailabilityCheck,
+
+        // MockGenerator
+        getMock: MockGenerator.getMock,
+
+        // PatternDiscovery
+        detectNewPatterns: PatternDiscovery.detectNewPatterns,
+        getDiscoveredPatterns: PatternDiscovery.getDiscoveredPatterns
+    };
+})();
+
+// --- Player Logic Module ---
+/**
+ * Aggregates all player-related utilities.
+ */
+const _PlayerLogic = (() => {
+    return {
+        // SignatureValidator
+        signatures: SignatureValidator.signatures,
+        validate: SignatureValidator.validate,
+
+        // SessionManager
+        startSession: SessionManager.startSession,
+        endSession: SessionManager.endSession,
+        getSessionStatus: SessionManager.getSessionStatus,
+        isSessionUnstable: SessionManager.isSessionUnstable,
+        getSignatureStats: SessionManager.getSignatureStats
+    };
+})();
+
 // ============================================================================
 // 4. LOGIC KERNELS
 // ============================================================================
@@ -191,356 +1141,8 @@ const Adapters = {
  */
 const Logic = (() => {
     return {
-        Network: {
-            // Helper: Safe URL parsing with fallback
-            _parseUrl: (url) => {
-                try {
-                    return new URL(url);
-                } catch (e) {
-                    // Fallback for relative URLs (e.g. "/ad/v1/")
-                    try {
-                        return new URL(url, 'http://twitch.tv');
-                    } catch (e2) {
-                        // Fallback for truly malformed input
-                        Logger.add('[Logic] URL parse failed, using string matching', { url, error: String(e2) });
-                        return null;
-                    }
-                }
-            },
-
-            // Helper: Check if pattern matches URL pathname (not query/hash)
-            _pathMatches: (url, pattern) => {
-                const parsed = Logic.Network._parseUrl(url);
-                if (parsed) {
-                    // Match against pathname only (ignore query and hash)
-                    return parsed.pathname.includes(pattern);
-                }
-                // Fallback: use string matching on full URL
-                return url.includes(pattern);
-            },
-
-            isAd: (url) => {
-                if (!url || typeof url !== 'string') return false;
-                return CONFIG.regex.AD_BLOCK.test(url);
-            },
-
-            isTrigger: (url) => {
-                if (!url || typeof url !== 'string') return false;
-                return CONFIG.regex.AD_TRIGGER.test(url);
-            },
-
-            isDelivery: (url) => {
-                if (!url || typeof url !== 'string') return false;
-
-                // Check delivery patterns against pathname only
-                const hasDelivery = CONFIG.network.DELIVERY_PATTERNS.some(p =>
-                    Logic.Network._pathMatches(url, p)
-                );
-
-                // Ensure it's NOT just an availability check
-                const isAvailability = CONFIG.network.AVAILABILITY_PATTERNS.some(p => {
-                    const parsed = Logic.Network._parseUrl(url);
-                    if (parsed) {
-                        // For query param patterns (bp=preroll), check search params
-                        if (p.includes('=')) {
-                            return parsed.search.includes(p);
-                        }
-                        // For path patterns, check pathname
-                        return parsed.pathname.includes(p);
-                    }
-                    return url.includes(p);
-                });
-
-                return hasDelivery && !isAvailability;
-            },
-
-            isAvailabilityCheck: (url) => {
-                if (!url || typeof url !== 'string') return false;
-
-                return CONFIG.network.AVAILABILITY_PATTERNS.some(p => {
-                    const parsed = Logic.Network._parseUrl(url);
-                    if (parsed) {
-                        // Query param patterns
-                        if (p.includes('=')) {
-                            return parsed.search.includes(p);
-                        }
-                        // Path patterns
-                        return parsed.pathname.includes(p);
-                    }
-                    return url.includes(p);
-                });
-            },
-
-            getMock: (url) => {
-                if (!url || typeof url !== 'string') {
-                    return { body: CONFIG.mock.JSON, type: 'application/json' };
-                }
-
-                const parsed = Logic.Network._parseUrl(url);
-                const pathname = parsed ? parsed.pathname : url;
-
-                // Check file extension in pathname only (not query params)
-                if (pathname.endsWith('.m3u8')) {
-                    return { body: CONFIG.mock.M3U8, type: 'application/vnd.apple.mpegurl' };
-                }
-                if (pathname.includes('vast') || pathname.endsWith('.xml')) {
-                    return { body: CONFIG.mock.VAST, type: 'application/xml' };
-                }
-                return { body: CONFIG.mock.JSON, type: 'application/json' };
-            },
-
-            // Track unknown suspicious URLs
-            _suspiciousUrls: new Set(),
-            _suspiciousKeywords: [
-                'ad', 'ads', 'advertisement', 'preroll', 'midroll',
-                'doubleclick', 'pubads', 'vast', 'tracking', 'analytics'
-            ],
-
-            /**
-             * Detect potentially new ad patterns
-             * Logs URLs that look like ads but don't match existing patterns
-             */
-            detectNewPatterns: (url) => {
-                if (!url || typeof url !== 'string') return;
-
-                // Skip if already matches known patterns
-                if (Logic.Network.isAd(url)) return;
-                if (Logic.Network.isTrigger(url)) return;
-
-                const urlLower = url.toLowerCase();
-                const parsed = Logic.Network._parseUrl(url);
-
-                // Check if URL contains suspicious keywords
-                const hasSuspiciousKeyword = Logic.Network._suspiciousKeywords.some(keyword =>
-                    urlLower.includes(keyword)
-                );
-
-                if (hasSuspiciousKeyword && !Logic.Network._suspiciousUrls.has(url)) {
-                    Logic.Network._suspiciousUrls.add(url);
-
-                    // ✅ This gets exported with exportTwitchAdLogs()
-                    Logger.add('[PATTERN DISCOVERY] Suspicious URL detected', {
-                        url,
-                        pathname: parsed ? parsed.pathname : 'parse failed',
-                        hostname: parsed ? parsed.hostname : 'parse failed',
-                        keywords: Logic.Network._suspiciousKeywords.filter(k => urlLower.includes(k)),
-                        suggestion: 'Review this URL - might be a new ad pattern'
-                    });
-                }
-            },
-
-            // Export discovered patterns for review
-            getDiscoveredPatterns: () => Array.from(Logic.Network._suspiciousUrls)
-        },
-        Player: {
-            // Session-based signature tracking
-            _sessionSignatures: {
-                sessionId: null,
-                mountTime: null,
-                k0: null,
-                k1: null,
-                k2: null,
-                keyHistory: []
-            },
-
-            // Initialize new session
-            startSession: () => {
-                const sessionId = `session-${Date.now()}`;
-                Logic.Player._sessionSignatures = {
-                    sessionId,
-                    mountTime: Date.now(),
-                    k0: null,
-                    k1: null,
-                    k2: null,
-                    keyHistory: []
-                };
-                Logger.add('[Logic] New player session started', { sessionId });
-            },
-
-            // End session
-            endSession: () => {
-                const session = Logic.Player._sessionSignatures;
-                if (!session.sessionId) return;
-
-                Logger.add('[Logic] Player session ended', {
-                    sessionId: session.sessionId,
-                    duration: Date.now() - session.mountTime,
-                    finalKeys: {
-                        k0: session.k0,
-                        k1: session.k1,
-                        k2: session.k2
-                    },
-                    keyChanges: session.keyHistory.length
-                });
-
-                if (session.keyHistory.length > 0) {
-                    Logger.add('[Logic] ⚠️ ALERT: Signature keys changed during session', {
-                        sessionId: session.sessionId,
-                        changes: session.keyHistory
-                    });
-                }
-            },
-
-            // Get current session status
-            getSessionStatus: () => {
-                const session = Logic.Player._sessionSignatures;
-                return {
-                    sessionId: session.sessionId,
-                    uptime: session.mountTime ? Date.now() - session.mountTime : 0,
-                    currentKeys: {
-                        k0: session.k0,
-                        k1: session.k1,
-                        k2: session.k2
-                    },
-                    totalChanges: session.keyHistory.length,
-                    recentChanges: session.keyHistory.slice(-5),
-                    allKeysSet: !!(session.k0 && session.k1 && session.k2)
-                };
-            },
-
-            // Check if session is unstable
-            isSessionUnstable: () => {
-                const session = Logic.Player._sessionSignatures;
-
-                const hourAgo = Date.now() - 3600000;
-                const recentChanges = session.keyHistory.filter(c => c.timestamp > hourAgo);
-
-                const isUnstable = recentChanges.length > 3;
-
-                if (isUnstable) {
-                    Logger.add('[Logic] ⚠️ ALERT: Signature session UNSTABLE', {
-                        changesInLastHour: recentChanges.length,
-                        threshold: 3,
-                        suggestion: 'Twitch may have updated player - patterns may break soon'
-                    });
-                }
-
-                return isUnstable;
-            },
-
-            signatures: [
-                {
-                    id: 'k0',
-                    check: (o, k) => {
-                        try {
-                            const result = typeof o[k] === 'function' && o[k].length === 1;
-
-                            if (result) {
-                                const session = Logic.Player._sessionSignatures;
-
-                                // Check if key changed within this session
-                                if (session.k0 && session.k0 !== k) {
-                                    const change = {
-                                        timestamp: Date.now(),
-                                        signatureId: 'k0',
-                                        oldKey: session.k0,
-                                        newKey: k,
-                                        timeSinceMount: Date.now() - session.mountTime
-                                    };
-
-                                    session.keyHistory.push(change);
-                                    Logger.add('[Logic] ⚠️ SIGNATURE KEY CHANGED DURING SESSION', change);
-                                }
-
-                                // Update session key
-                                if (!session.k0 || session.k0 !== k) {
-                                    session.k0 = k;
-                                    Logger.add('[Logic] Signature k0 key set', {
-                                        key: k,
-                                        sessionId: session.sessionId,
-                                        isChange: session.k0 !== null
-                                    });
-                                }
-                            }
-
-                            return result;
-                        } catch (e) {
-                            return false;
-                        }
-                    }
-                },
-                {
-                    id: 'k1',
-                    check: (o, k) => {
-                        try {
-                            const result = typeof o[k] === 'function' && o[k].length === 0;
-
-                            if (result) {
-                                const session = Logic.Player._sessionSignatures;
-
-                                if (session.k1 && session.k1 !== k) {
-                                    const change = {
-                                        timestamp: Date.now(),
-                                        signatureId: 'k1',
-                                        oldKey: session.k1,
-                                        newKey: k,
-                                        timeSinceMount: Date.now() - session.mountTime
-                                    };
-
-                                    session.keyHistory.push(change);
-                                    Logger.add('[Logic] ⚠️ SIGNATURE KEY CHANGED DURING SESSION', change);
-                                }
-
-                                if (!session.k1 || session.k1 !== k) {
-                                    session.k1 = k;
-                                    Logger.add('[Logic] Signature k1 key set', {
-                                        key: k,
-                                        sessionId: session.sessionId,
-                                        isChange: session.k1 !== null
-                                    });
-                                }
-                            }
-
-                            return result;
-                        } catch (e) {
-                            return false;
-                        }
-                    }
-                },
-                {
-                    id: 'k2',
-                    check: (o, k) => {
-                        try {
-                            const result = typeof o[k] === 'function' && o[k].length === 0;
-
-                            if (result) {
-                                const session = Logic.Player._sessionSignatures;
-
-                                if (session.k2 && session.k2 !== k) {
-                                    const change = {
-                                        timestamp: Date.now(),
-                                        signatureId: 'k2',
-                                        oldKey: session.k2,
-                                        newKey: k,
-                                        timeSinceMount: Date.now() - session.mountTime
-                                    };
-
-                                    session.keyHistory.push(change);
-                                    Logger.add('[Logic] ⚠️ SIGNATURE KEY CHANGED DURING SESSION', change);
-                                }
-
-                                if (!session.k2 || session.k2 !== k) {
-                                    session.k2 = k;
-                                    Logger.add('[Logic] Signature k2 key set', {
-                                        key: k,
-                                        sessionId: session.sessionId,
-                                        isChange: session.k2 !== null
-                                    });
-                                }
-                            }
-
-                            return result;
-                        } catch (e) {
-                            return false;
-                        }
-                    }
-                }
-            ],
-            validate: (obj, key, sig) => Fn.tryCatch(() => typeof obj[key] === 'function' && sig.check(obj, key), () => false)(),
-
-            // Export stats summary (for debugging - backward compatibility)
-            getSignatureStats: () => Logic.Player.getSessionStatus()
-        }
+        Network: _NetworkLogic,
+        Player: _PlayerLogic
     };
 })();
 
@@ -1775,179 +2377,73 @@ const NetworkManager = (() => {
 /**
  * React/Vue internal state scanner.
  * @responsibility Finds the internal React/Vue component instance associated with the DOM element.
- * @invariant This is a heuristic search; it may fail if Twitch changes their internal property names.
- * @volatile This module relies on obfuscated property names (k0, k1, k2). 
- *           If the script fails, CHECK THIS MODULE FIRST.
  */
 const PlayerContext = (() => {
     let cachedContext = null;
-    let cachedRootElement = null; // Track the DOM element for validation
-    let keyMap = { k0: null, k1: null, k2: null };
+    let cachedRootElement = null;
     const contextHintKeywords = ['react', 'vue', 'next', 'props', 'fiber', 'internal'];
-    const fallbackSelectors = ['.video-player__container', '.highwind-video-player', '[data-a-target="video-player"]'];
 
     /**
-     * Detects player function signatures in an object.
-     * Attempts to match object properties against known player method signatures.
-     * @param {Object} obj - Object to scan for player signatures
-     * @returns {boolean} True if all required signatures were found
+     * Resets the cache and signature detector
      */
-    const detectPlayerSignatures = (obj) => {
-        for (const sig of Logic.Player.signatures) {
-            // If a key is already mapped and still valid, skip searching for it again.
-            if (keyMap[sig.id] && Logic.Player.validate(obj, keyMap[sig.id], sig)) {
-                continue;
-            }
-            const foundKey = Object.keys(obj).find(k => Logic.Player.validate(obj, k, sig));
-            if (foundKey) {
-                keyMap[sig.id] = foundKey;
-                Logger.add('Player signature found', { id: sig.id, key: foundKey });
-            }
-        }
-        return Object.values(keyMap).every(k => k !== null);
+    const reset = () => {
+        cachedContext = null;
+        cachedRootElement = null;
+        SignatureDetector.reset();
     };
 
     /**
-     * Recursively traverses object tree to find the player context using Breadth-First Search (BFS).
-     * Searches for React/Vue internal player component instance.
-     * @param {Object} rootObj - Object to traverse
-     * @returns {Object|null} Player context object if found, null otherwise
+     * Get player context for a DOM element
+     * @param {HTMLElement} element - Player container element
+     * @returns {Object|null} Player context object, or null if not found
      */
-    const traverseForPlayerContext = (rootObj) => {
-        const queue = [{ node: rootObj, depth: 0 }];
-        const visited = new WeakSet();
-
-        while (queue.length > 0) {
-            const { node, depth } = queue.shift();
-
-            if (depth > CONFIG.player.MAX_SEARCH_DEPTH) continue;
-            if (!node || typeof node !== 'object' || visited.has(node)) continue;
-
-            visited.add(node);
-
-            if (detectPlayerSignatures(node)) {
-                return node;
-            }
-
-            // Add children to queue
-            for (const key of Object.keys(node)) {
-                queue.push({ node: node[key], depth: depth + 1 });
-            }
-        }
-        return null;
-    };
-
-    const findContextFallback = () => {
-        for (const selector of fallbackSelectors) {
-            const el = document.querySelector(selector);
-            if (el) {
-                const key = Object.keys(el).find(k => k.startsWith('__reactInternalInstance') || k.startsWith('__reactFiber'));
-                if (key && el[key]) {
-                    const ctx = traverseForPlayerContext(el[key]);
-                    if (ctx) return { ctx, element: el };
-                }
-            }
-        }
-        return null;
-    };
-
-    /**
-     * Validates the cached context to ensure it's still usable.
-     * @returns {boolean} True if cache is valid, false otherwise
-     */
-    const validateCache = () => {
-        if (!cachedContext) return false;
-
-        // 1. DOM Attachment Check
-        if (cachedRootElement && !cachedRootElement.isConnected) {
-            Logger.add('PlayerContext: Cache invalid - Root element detached from DOM');
-            PlayerContext.reset();
-            return false;
+    const get = (element) => {
+        // Check if element is different from cached root
+        if (element && cachedRootElement && element !== cachedRootElement) {
+            Logger.add('PlayerContext: New element provided, resetting cache');
+            reset();
         }
 
-        // 2. Signature Function Check
-        const signaturesValid = Object.keys(keyMap).every(
-            (key) => keyMap[key] && typeof cachedContext[keyMap[key]] === 'function'
-        );
-
-        if (!signaturesValid) {
-            Logger.add('PlayerContext: Cache invalid - Signatures missing', { keyMap });
-            PlayerContext.reset();
-            return false;
+        if (ContextValidator.validateCache(cachedContext, cachedRootElement)) {
+            return cachedContext;
         }
+        if (!element) return null;
 
-        // 3. Liveness Check (safe property access)
-        try {
-            // Test that context is actually accessible
-            const testKey = keyMap.k0;
-            if (testKey && cachedContext[testKey]) {
-                // Context appears alive
-            }
-        } catch (e) {
-            Logger.add('PlayerContext: Cache invalid - Liveness check failed', { error: String(e) });
-            PlayerContext.reset();
-            return false;
-        }
+        // 1. Primary Strategy: Keyword Search on Root Element
+        const keys = Reflect.ownKeys(element);
 
-        return true;
-    };
-
-    return {
-        /**
-         * Get player context for a DOM element
-         * @param {HTMLElement} element - Player container element
-         * @returns {Object|null} Player context object, or null if not found
-         * @important Calling code MUST check for null before using returned object
-         */
-        get: (element) => {
-            // Check if element is different from cached root
-            if (element && cachedRootElement && element !== cachedRootElement) {
-                Logger.add('PlayerContext: New element provided, resetting cache');
-                PlayerContext.reset();
-            }
-
-            if (validateCache()) {
-                return cachedContext;
-            }
-            if (!element) return null;
-
-            // 1. Primary Strategy: Keyword Search on Root Element
-            // Use Reflect.ownKeys to include Symbol properties, which React often uses.
-            const keys = Reflect.ownKeys(element);
-
-            for (const key of keys) {
-                const keyString = String(key).toLowerCase();
-                if (contextHintKeywords.some(hint => keyString.includes(hint))) {
-                    const potentialContext = element[key];
-                    if (potentialContext && typeof potentialContext === 'object') {
-                        const ctx = traverseForPlayerContext(potentialContext);
-                        if (ctx) {
-                            cachedContext = ctx;
-                            cachedRootElement = element;
-                            Logger.add('PlayerContext: Success', { method: 'keyword', key: String(key) });
-                            return ctx;
-                        }
+        for (const key of keys) {
+            const keyString = String(key).toLowerCase();
+            if (contextHintKeywords.some(hint => keyString.includes(hint))) {
+                const potentialContext = element[key];
+                if (potentialContext && typeof potentialContext === 'object') {
+                    const ctx = ContextTraverser.traverseForPlayerContext(potentialContext);
+                    if (ctx) {
+                        cachedContext = ctx;
+                        cachedRootElement = element;
+                        Logger.add('PlayerContext: Success', { method: 'keyword', key: String(key) });
+                        return ctx;
                     }
                 }
             }
+        }
 
-            // 2. Fallback Strategy: DOM Selectors
-            const fallbackResult = findContextFallback();
-            if (fallbackResult) {
-                cachedContext = fallbackResult.ctx;
-                cachedRootElement = fallbackResult.element;
-                Logger.add('PlayerContext: Success', { method: 'fallback', element: fallbackResult.element });
-                return fallbackResult.ctx;
-            }
+        // 2. Fallback Strategy: DOM Selectors
+        const fallbackResult = ContextTraverser.findContextFallback();
+        if (fallbackResult) {
+            cachedContext = fallbackResult.ctx;
+            cachedRootElement = fallbackResult.element;
+            Logger.add('PlayerContext: Success', { method: 'fallback', element: fallbackResult.element });
+            return fallbackResult.ctx;
+        }
 
-            Logger.add('PlayerContext: Scan failed - no context found');
-            return null;
-        },
-        reset: () => {
-            cachedContext = null;
-            cachedRootElement = null;
-            keyMap = { k0: null, k1: null, k2: null };
-        },
+        Logger.add('PlayerContext: Scan failed - no context found');
+        return null;
+    };
+
+    return {
+        get,
+        reset
     };
 })();
 
@@ -2320,230 +2816,122 @@ const ExperimentalRecovery = (() => {
     };
 })();
 
-// --- Play Retry Handler ---
+// --- Play Executor ---
 /**
- * Handles video.play() with retry logic and exponential backoff.
- * @responsibility Ensure reliable playback resumption after recovery.
+ * Executes play attempts and handles errors.
  */
-const PlayRetryHandler = (() => {
-    const MAX_RETRIES = 3;
-    const BASE_DELAY_MS = 300;
-    const PLAY_CONFIRMATION_TIMEOUT_MS = 2000; // Increased from dynamic
+const PlayExecutor = (() => {
+    /**
+     * Attempts to play the video once.
+     * @param {HTMLVideoElement} video - The video element
+     * @returns {Promise<void>} Resolves on success, rejects with error
+     */
+    const attemptPlay = async (video) => {
+        try {
+            await video.play();
+        } catch (error) {
+            throw error;
+        }
+    };
 
     /**
-     * Validates if the video is in a playable state before attempting play()
-     * @param {HTMLVideoElement} video
-     * @returns {{isValid: boolean, issues: string[]}}
+     * Categorizes a play error for logging and decision making.
+     * @param {Error} error - The error thrown by video.play()
+     * @returns {{name: string, isFatal: boolean, message: string}}
      */
-    const validatePlayable = (video) => {
-        const issues = [];
-
-        if (video.readyState < 3) {
-            issues.push(`readyState too low: ${video.readyState}`);
-        }
-        if (video.error) {
-            issues.push(`MediaError code: ${video.error.code}`);
-        }
-        if (!video.isConnected) {
-            issues.push('Video element detached from DOM');
-        }
-        if (video.seeking) {
-            issues.push('Already seeking');
-        }
+    const categorizePlayError = (error) => {
+        const name = error.name || 'UnknownError';
+        const message = error.message || 'No message';
 
         return {
-            isValid: issues.length === 0,
-            issues
+            name,
+            message,
+            isFatal: isFatalError(name)
         };
     };
 
     /**
-     * Waits for the video to actually start playing.
-     * @param {HTMLVideoElement} video
-     * @param {number} timeoutMs
-     * @returns {Promise<boolean>}
+     * Determines if an error is fatal (should stop retries).
+     * @param {string} errorName - The error name
+     * @returns {boolean} True if fatal
      */
-    const waitForPlaying = (video, timeoutMs = 1000) => {
-        return new Promise((resolve) => {
-            if (!video.paused && video.readyState >= 3) {
-                resolve(true);
-                return;
-            }
-
-            let resolved = false;
-            const cleanup = () => {
-                video.removeEventListener('playing', onPlaying);
-                video.removeEventListener('pause', onPause);
-            };
-
-            const onPlaying = () => {
-                if (!resolved) {
-                    resolved = true;
-                    cleanup();
-                    resolve(true);
-                }
-            };
-
-            const onPause = () => {
-                // If it pauses again immediately, we might fail this attempt,
-                // but we let the timeout or the next check handle the final verdict.
-            };
-
-            video.addEventListener('playing', onPlaying);
-            video.addEventListener('pause', onPause);
-
-            setTimeout(() => {
-                if (!resolved) {
-                    resolved = true;
-                    cleanup();
-                    resolve(false);
-                }
-            }, timeoutMs);
-        });
+    const isFatalError = (errorName) => {
+        return errorName === 'NotAllowedError' || errorName === 'NotSupportedError';
     };
 
     return {
-        retry: async (video, context = 'unknown') => {
-            for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
-                const playStartTime = performance.now();
+        attemptPlay,
+        categorizePlayError,
+        isFatalError
+    };
+})();
 
-                // Pre-flight validation
-                const validation = validatePlayable(video);
-                if (!validation.isValid) {
-                    Logger.add(`Play attempt ${attempt}/${MAX_RETRIES} blocked by validation`, {
-                        context,
-                        issues: validation.issues,
-                        videoState: {
-                            readyState: video.readyState,
-                            paused: video.paused,
-                            isConnected: video.isConnected
-                        }
+// --- Play Retry Handler ---
+/**
+ * Manages persistent play attempts with exponential backoff.
+ * @responsibility
+ * 1. Validate video state before playing.
+ * 2. Execute play attempts with backoff.
+ * 3. Apply micro-seeks if stuck.
+ * 4. Handle errors and decide when to give up.
+ */
+const PlayRetryHandler = (() => {
+    const MAX_RETRIES = 3;
+    const BASE_DELAY_MS = 150;
+
+    return {
+        /**
+         * Attempts to force the video to play with retries.
+         * @param {HTMLVideoElement} video - The video element
+         * @param {string} context - Context for logging (e.g., 'post-recovery')
+         * @returns {Promise<boolean>} True if successful
+         */
+        retry: async (video, context = 'general') => {
+            if (!PlayValidator.validatePlayable(video)) {
+                Logger.add('[PlayRetry] Video not ready for playback', {
+                    readyState: video.readyState,
+                    error: video.error ? video.error.code : null
+                });
+                return false;
+            }
+
+            for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+                try {
+                    // 1. Micro-seek Strategy
+                    if (MicroSeekStrategy.shouldApplyMicroSeek(video, attempt)) {
+                        MicroSeekStrategy.executeMicroSeek(video);
+                    }
+
+                    // 2. Play Execution
+                    await PlayExecutor.attemptPlay(video);
+
+                    // 3. Verification
+                    const isPlaying = await PlayValidator.waitForPlaying(video);
+                    if (isPlaying) {
+                        Logger.add(`[PlayRetry] Success (${context})`, { attempt });
+                        return true;
+                    } else {
+                        throw new Error('Playback verification failed');
+                    }
+
+                } catch (error) {
+                    const errorInfo = PlayExecutor.categorizePlayError(error);
+
+                    Logger.add(`[PlayRetry] Attempt ${attempt} failed`, {
+                        error: errorInfo.name,
+                        message: errorInfo.message,
+                        fatal: errorInfo.isFatal
                     });
+
+                    if (errorInfo.isFatal) return false;
 
                     if (attempt < MAX_RETRIES) {
                         await Fn.sleep(BASE_DELAY_MS * Math.pow(2, attempt - 1));
                     }
-                    continue;
-                }
-
-                // Intelligent micro-seek strategy
-                if (attempt > 1) {
-                    const shouldSeek = (
-                        video.readyState >= 3 &&
-                        !video.seeking &&
-                        video.buffered.length > 0
-                    );
-
-                    if (shouldSeek) {
-                        const bufferEnd = video.buffered.end(video.buffered.length - 1);
-                        const gap = bufferEnd - video.currentTime;
-
-                        if (gap > 1) {
-                            const target = Math.min(video.currentTime + 0.5, bufferEnd - 0.1);
-                            Logger.add(`[RECOVERY] Seeking to skip stuck point: ${target.toFixed(3)}`, {
-                                context,
-                                gap: gap.toFixed(3),
-                                rationale: 'Player has buffer but stuck at current position'
-                            });
-                            video.currentTime = target;
-                        } else {
-                            Logger.add(`[RECOVERY] Skipping seek - insufficient buffer gap: ${gap.toFixed(3)}`, {
-                                context
-                            });
-                        }
-                    } else {
-                        Logger.add('[RECOVERY] Skipping seek - conditions not met', {
-                            context,
-                            readyState: video.readyState,
-                            seeking: video.seeking,
-                            hasBuffer: video.buffered.length > 0
-                        });
-                    }
-                }
-
-                try {
-                    Logger.add(`Play attempt ${attempt}/${MAX_RETRIES} (${context})`, {
-                        before: {
-                            paused: video.paused,
-                            readyState: video.readyState,
-                            currentTime: video.currentTime,
-                            error: video.error ? video.error.code : null
-                        },
-                    });
-
-                    await video.play();
-
-                    // Wait for the 'playing' event to confirm success
-                    const isPlaying = await waitForPlaying(video, PLAY_CONFIRMATION_TIMEOUT_MS);
-                    await Fn.sleep(50); // Small buffer after event
-
-                    if (isPlaying && !video.paused) {
-                        Logger.add(`Play attempt ${attempt} SUCCESS`, {
-                            context,
-                            duration_ms: (performance.now() - playStartTime).toFixed(2)
-                        });
-                        return true;
-                    }
-
-                    Logger.add(`Play attempt ${attempt} FAILED: video still paused`, {
-                        context,
-                        duration_ms: (performance.now() - playStartTime).toFixed(2),
-                        currentState: {
-                            paused: video.paused,
-                            readyState: video.readyState,
-                            currentTime: video.currentTime
-                        }
-                    });
-                } catch (error) {
-                    Logger.add(`Play attempt ${attempt} threw error`, {
-                        context,
-                        errorName: error.name,
-                        errorMessage: error.message,
-                        errorCode: error.code || null,
-                        duration_ms: (performance.now() - playStartTime).toFixed(2),
-                        videoState: {
-                            readyState: video.readyState,
-                            paused: video.paused,
-                            networkState: video.networkState,
-                            error: video.error ? video.error.code : null
-                        }
-                    });
-
-                    // Categorize errors
-                    if (error.name === 'NotAllowedError') {
-                        Logger.add('[PLAYBACK] Browser blocked autoplay - cannot recover', { context });
-                        return false; // Fatal, cannot recover
-                    }
-                    if (error.name === 'NotSupportedError') {
-                        Logger.add('[PLAYBACK] Source not supported - cannot recover', { context });
-                        return false; // Fatal
-                    }
-                    if (error.name === 'AbortError') {
-                        Logger.add('[PLAYBACK] Play interrupted - possible DOM manipulation, retry allowed', { context });
-                        // Continue to next attempt
-                    }
-                }
-
-                if (attempt < MAX_RETRIES) {
-                    await Fn.sleep(BASE_DELAY_MS * Math.pow(2, attempt - 1));
                 }
             }
 
-            // Diagnostic summary
-            Logger.add('All play attempts exhausted - DIAGNOSTIC SUMMARY', {
-                context,
-                attempts: MAX_RETRIES,
-                finalState: {
-                    paused: video.paused,
-                    readyState: video.readyState,
-                    networkState: video.networkState,
-                    error: video.error ? video.error.code : null,
-                    currentTime: video.currentTime,
-                    bufferEnd: video.buffered.length ? video.buffered.end(video.buffered.length - 1) : 0
-                },
-                analysis: 'Player appears stuck - recommend aggressive recovery (stream refresh)'
-            });
-
+            Logger.add(`[PlayRetry] Failed after ${MAX_RETRIES} attempts`);
             return false;
         }
     };
@@ -2942,258 +3330,108 @@ const ResilienceOrchestrator = (() => {
     let recoveryStartTime = 0;
     const RECOVERY_TIMEOUT_MS = 10000;
 
-    /**
-     * Captures a snapshot of current video element state.
-     * @param {HTMLVideoElement} video - The video element to snapshot
-     * @returns {Object} Snapshot containing readyState, networkState, currentTime, etc.
-     */
-    const captureVideoSnapshot = (video) => {
-        return {
-            readyState: video.readyState,
-            networkState: video.networkState,
-            currentTime: video.currentTime,
-            paused: video.paused,
-            error: video.error ? video.error.code : null,
-            bufferEnd: video.buffered.length ? video.buffered.end(video.buffered.length - 1) : 0
-        };
-    };
-
-    /**
-     * Calculates the delta between pre and post recovery snapshots.
-     * @param {Object} preSnapshot - Snapshot before recovery
-     * @param {Object} postSnapshot - Snapshot after recovery
-     * @returns {Object} Delta object showing what changed
-     */
-    const calculateRecoveryDelta = (preSnapshot, postSnapshot) => {
-        return {
-            readyStateChanged: preSnapshot.readyState !== postSnapshot.readyState,
-            networkStateChanged: preSnapshot.networkState !== postSnapshot.networkState,
-            currentTimeChanged: preSnapshot.currentTime !== postSnapshot.currentTime,
-            pausedStateChanged: preSnapshot.paused !== postSnapshot.paused,
-            errorCleared: preSnapshot.error && !postSnapshot.error,
-            errorAppeared: !preSnapshot.error && postSnapshot.error,
-            bufferIncreased: postSnapshot.bufferEnd > preSnapshot.bufferEnd
-        };
-    };
-
-    /**
-     * Validates if recovery actually improved the state.
-     * @param {Object} preSnapshot - Snapshot before recovery
-     * @param {Object} postSnapshot - Snapshot after recovery
-     * @param {Object} delta - Calculated changes
-     * @returns {{isValid: boolean, issues: string[], hasImprovement: boolean}}
-     */
-    const validateRecoverySuccess = (preSnapshot, postSnapshot, delta) => {
-        const issues = [];
-
-        // Check 1: Ready state should not decrease
-        if (delta.readyStateChanged && postSnapshot.readyState < preSnapshot.readyState) {
-            issues.push(`readyState decreased: ${preSnapshot.readyState} → ${postSnapshot.readyState}`);
-        }
-
-        // Check 2: Error should not appear
-        if (delta.errorAppeared) {
-            issues.push(`MediaError appeared: code ${postSnapshot.error}`);
-        }
-
-        // Check 3: Should have some positive change
-        const hasImprovement = (
-            delta.errorCleared ||  // Error was fixed
-            (delta.readyStateChanged && postSnapshot.readyState > preSnapshot.readyState) ||
-            (postSnapshot.bufferEnd > preSnapshot.bufferEnd + 0.1) // Buffer increased
-        );
-
-        if (!hasImprovement && !delta.pausedStateChanged) {
-            issues.push('No measurable improvement detected');
-        }
-
-        return {
-            isValid: issues.length === 0,
-            issues,
-            hasImprovement
-        };
-    };
-
     return {
+        /**
+         * Main entry point for recovery.
+         * @param {HTMLElement} container - The player container (unused, but kept for API compatibility)
+         * @param {Object} payload - Event payload containing reason and flags
+         * @returns {Promise<boolean>} True if recovery was successful
+         */
         execute: async (container, payload = {}) => {
+            const reason = payload.reason || 'unknown';
+
+            // 1. Concurrency Guard
             if (isFixing) {
-                // Check for stale lock
                 if (Date.now() - recoveryStartTime > RECOVERY_TIMEOUT_MS) {
-                    Logger.add('[RECOVERY] WARNING: Stale lock detected (timeout exceeded), forcing release');
+                    Logger.add('[Resilience] Force-resetting stuck recovery lock');
                     isFixing = false;
                 } else {
-                    Logger.add('[RECOVERY] Resilience already in progress, skipping');
-                    return;
+                    Logger.add('[Resilience] Recovery already in progress, skipping');
+                    return false;
                 }
+            }
+
+            const video = Adapters.DOM.find('video');
+            if (!video) {
+                Logger.add('[Resilience] No video element found');
+                return false;
+            }
+
+            // 2. Check if already healthy (prevent unnecessary recovery)
+            // Skip check if forced
+            if (!payload.forceAggressive && !payload.forceExperimental && RecoveryValidator.detectAlreadyHealthy(video)) {
+                Logger.add('[Resilience] Video appears healthy, skipping recovery', {
+                    reason,
+                    readyState: video.readyState,
+                    paused: video.paused
+                });
+                return true;
+            }
+
+            // 3. A/V Sync Routing
+            if (AVSyncRouter.shouldRouteToAVSync(reason)) {
+                return await AVSyncRouter.executeAVSyncRecovery();
             }
 
             isFixing = true;
             recoveryStartTime = Date.now();
-            let timeoutId = null;
-
-            // Safety valve: Force unlock if execution takes too long
-            timeoutId = setTimeout(() => {
-                if (isFixing && Date.now() - recoveryStartTime >= RECOVERY_TIMEOUT_MS) {
-                    Logger.add('[RECOVERY] WARNING: Execution timed out, forcing lock release');
-                    isFixing = false;
-                }
-            }, RECOVERY_TIMEOUT_MS);
-
-            const startTime = performance.now();
 
             try {
-                Logger.add('[RECOVERY] Resilience execution started');
-                Metrics.increment('resilience_executions');
+                // 4. Pre-recovery Snapshot
+                const preSnapshot = VideoSnapshotHelper.captureVideoSnapshot(video);
 
-                const video = container.querySelector(CONFIG.selectors.VIDEO);
-                if (!video) {
-                    Logger.add('[RECOVERY] Resilience aborted: No video element found');
-                    return;
-                }
-
-                // Fatal error check (existing)
-                const { error } = video;
-                if (error && error.code === CONFIG.codes.MEDIA_ERROR_SRC) {
-                    Logger.add('[RECOVERY] Fatal error (code 4) - cannot recover, waiting for Twitch reload');
-                    return;
-                }
-
-                // NEW: Use RecoveryDiagnostics
-                const diagnosis = RecoveryDiagnostics.diagnose(video);
-                if (!diagnosis.canRecover) {
-                    Logger.add('[RECOVERY] Fatal blocker detected', diagnosis);
-                    return;
-                }
-
-                // MODIFIED: Intelligent buffer validation
-                const analysis = BufferAnalyzer.analyze(video);
-                if (!payload.forceAggressive && analysis.bufferHealth === 'critical') {
-                    // Critical buffer means standard recovery (seeking) will fail
-                    const bufferSize = analysis.bufferSize || 0;
-
-                    if (bufferSize < 2) {
-                        Logger.add('[RECOVERY] Critical buffer - forcing aggressive recovery', {
-                            bufferSize: bufferSize.toFixed(3),
-                            bufferHealth: 'critical',
-                            rationale: 'Standard recovery requires buffer > 2s, forcing stream refresh'
-                        });
-                        payload.forceAggressive = true; // Escalate to aggressive
-                    } else {
-                        Logger.add('[RECOVERY] Insufficient buffer but acceptable for recovery', {
-                            bufferSize: bufferSize.toFixed(3)
-                        });
-                    }
-                }
-
-                // Capture pre-recovery state
-                const preSnapshot = captureVideoSnapshot(video);
-                Logger.add('[RECOVERY] Pre-recovery snapshot', preSnapshot);
-
-                // NEW: Route A/V sync issues to specialized recovery
-                if (payload.trigger === 'AV_SYNC' || (payload.reason && payload.reason.includes('A/V sync'))) {
-                    const discrepancy = payload.details ? payload.details.discrepancy : 0;
-                    Logger.add('[RECOVERY] Routing to specialized A/V sync recovery', { discrepancy });
-
-                    await AVSyncRecovery.execute(video, discrepancy);
-
-                    // Validate post-recovery state
-                    const postSnapshot = captureVideoSnapshot(video);
-                    const delta = calculateRecoveryDelta(preSnapshot, postSnapshot);
-                    Logger.add('[RECOVERY] A/V sync recovery result', {
-                        pre: preSnapshot,
-                        post: postSnapshot,
-                        changes: delta
-                    });
-
-                    isFixing = false;
-                    return;
-                }
-
-                // Execute primary recovery strategy and handle escalation
-                let currentStrategy = RecoveryStrategy.select(video, payload);
-
-                while (currentStrategy) {
-                    // Check if lock was stolen/timed out during execution
-                    if (!isFixing) {
-                        Logger.add('[RECOVERY] Lock lost during execution, aborting');
-                        break;
-                    }
-
-                    await currentStrategy.execute(video);
-
-                    // Check if we need to escalate to a more aggressive strategy
-                    currentStrategy = RecoveryStrategy.getEscalation(video, currentStrategy);
-                }
-
-                // NEW: Validate recovery
-                const postSnapshot = captureVideoSnapshot(video);
-                const delta = calculateRecoveryDelta(preSnapshot, postSnapshot);
-                const recoverySuccess = validateRecoverySuccess(preSnapshot, postSnapshot, delta);
-
-                Logger.add('[RECOVERY] Post-recovery result', {
-                    pre: preSnapshot,
-                    post: postSnapshot,
-                    changes: delta,
-                    success: recoverySuccess
+                Logger.add(`[Resilience] Starting recovery: ${reason}`, {
+                    preSnapshot
                 });
 
-                // NEW: Conditional escalation and play retry
-                if (!recoverySuccess.isValid) {
-                    Logger.add('[RECOVERY] Recovery validation detected issues', recoverySuccess.issues);
+                // 5. Strategy Selection & Execution
+                // Note: BufferAnalyzer and RecoveryStrategy are assumed to be global modules
+                const bufferHealth = BufferAnalyzer.analyze(video);
 
-                    // NEW: Check if pre-state was already healthy
-                    const wasAlreadyHealthy = preSnapshot.readyState === 4 &&
-                        !preSnapshot.paused &&
-                        !preSnapshot.error &&
-                        analysis.bufferHealth !== 'critical';
-
-                    if (wasAlreadyHealthy) {
-                        Logger.add('[RECOVERY] Video was already healthy - recovery was unnecessary, canceling escalation');
-                        // Do not escalate
-                    } else if (!payload.forceAggressive) {
-                        Logger.add('[RECOVERY] Escalating to aggressive recovery due to validation failure');
-                        payload.forceAggressive = true;
-
-                        // Re-run recovery with aggressive strategy
-                        const aggressiveStrategy = RecoveryStrategy.select(video, payload);
-                        if (aggressiveStrategy) {
-                            await aggressiveStrategy.execute(video);
-
-                            // Re-validate after aggressive recovery
-                            const postSnapshot2 = captureVideoSnapshot(video);
-                            const delta2 = calculateRecoveryDelta(postSnapshot, postSnapshot2);
-                            const recoverySuccess2 = validateRecoverySuccess(postSnapshot, postSnapshot2, delta2);
-
-                            Logger.add('[RECOVERY] Aggressive recovery result', {
-                                success: recoverySuccess2
-                            });
-                        }
-                    }
-                } else {
-                    Logger.add('[RECOVERY] Recovery validated successfully');
+                // Legacy support: update payload if buffer is critical
+                if (bufferHealth && bufferHealth.bufferHealth === 'critical') {
+                    payload.forceAggressive = true;
                 }
 
-                // Resume playback if needed AND recovery was successful
-                if (video.paused) {
-                    if (recoverySuccess.isValid) {
-                        Logger.add('[RECOVERY] Recovery validated - attempting playback');
-                        await PlayRetryHandler.retry(video, 'post-recovery');
-                    } else {
-                        Logger.add('[RECOVERY] Skipping play retry - recovery validation failed');
-                    }
-                }
+                const strategy = RecoveryStrategy.select(reason, bufferHealth);
 
-                Adapters.EventBus.emit(CONFIG.events.REPORT, {
-                    status: recoverySuccess.isValid ? 'SUCCESS' : 'FAILED'
+                Logger.add(`[Resilience] Selected strategy: ${strategy.name}`);
+
+                await strategy.execute(video);
+
+                // 6. Post-recovery Snapshot & Validation
+                const postSnapshot = VideoSnapshotHelper.captureVideoSnapshot(video);
+                const delta = VideoSnapshotHelper.calculateRecoveryDelta(preSnapshot, postSnapshot);
+                const validation = RecoveryValidator.validateRecoverySuccess(preSnapshot, postSnapshot, delta);
+
+                Logger.add('[Resilience] Recovery result', {
+                    valid: validation.isValid,
+                    issues: validation.issues,
+                    delta
                 });
-            } catch (e) {
-                Logger.add('[RECOVERY] Resilience failed', { error: String(e) });
+
+                // 7. Escalation Handling
+                if (!validation.isValid && !validation.hasImprovement) {
+                    Logger.add('[Resilience] Recovery ineffective, considering escalation...');
+                    // Logic for escalation could go here or be delegated
+                }
+
+                // 8. Play Retry
+                // Ensure playback resumes if it was playing or if recovery implies playing
+                if (!video.paused || validation.hasImprovement) {
+                    await PlayRetryHandler.retry(video, 'post-recovery');
+                }
+
+                return validation.isValid;
+
+            } catch (error) {
+                Logger.add('[Resilience] Critical error during recovery', {
+                    message: error.message,
+                    stack: error.stack
+                });
+                return false;
             } finally {
-                if (timeoutId) clearTimeout(timeoutId);
                 isFixing = false;
-                Logger.add('[RECOVERY] Resilience execution finished', {
-                    total_duration_ms: performance.now() - startTime
-                });
             }
         }
     };
