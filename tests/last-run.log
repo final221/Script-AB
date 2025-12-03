@@ -1,11 +1,10 @@
 🧪 Starting automated test runner...
 ============================================================
 🔨 Generating test runner...
-✅ Generated tests/runner.html with 53 source files
+✅ Generated tests/runner.html with 52 source files
 Using default Chrome path: C:\Program Files\Google\Chrome\Application\chrome.exe
 📁 Loading test file: file://F:\Fynn\Projects\Tw Adb\tests\runner.html
 
-❌ Page Error: Identifier 'PlayExecutor' has already been declared
 
 🧪 Running: RecoveryDiagnostics: Detects detached video
 ✅ PASS: RecoveryDiagnostics: Detects detached video
@@ -73,7 +72,7 @@ TEST SUMMARY
 Total:  20
 Passed: 20
 Failed: 0
-Time:   11454.90ms
+Time:   11446.60ms
 ========================================
 
 ✅ All tests passed!
