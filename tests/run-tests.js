@@ -52,6 +52,10 @@ const generateTestRunner = async () => {
         // Player modules (must load before _PlayerLogic)
         'utils/player/SignatureValidator.js',
         'utils/player/SessionManager.js',
+        // Player Context modules (dependency order)
+        'player/context/SignatureDetector.js',
+        'player/context/ContextTraverser.js',
+        'player/context/ContextValidator.js',
         // Aggregators
         'utils/_NetworkLogic.js',
         'utils/_PlayerLogic.js',
