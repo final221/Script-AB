@@ -34,11 +34,32 @@ const MicroSeekStrategy = (() => {
     /**
      * Executes a micro-seek operation.
      * @param {HTMLVideoElement} video - The video element
+     * @returns {Promise<void>} Resolves when seek completes
      */
     const executeMicroSeek = (video) => {
-        const target = calculateSeekTarget(video);
-        video.currentTime = target;
-        Logger.add('[PlayRetry] Applied micro-seek', { target: target.toFixed(3) });
+        return new Promise((resolve) => {
+            const target = calculateSeekTarget(video);
+
+            const onSeeked = () => {
+                video.removeEventListener('seeked', onSeeked);
+                resolve();
+            };
+
+            // Safety timeout in case seeked never fires
+            const timeoutId = setTimeout(() => {
+                video.removeEventListener('seeked', onSeeked);
+                Logger.add('[PlayRetry] Micro-seek timeout');
+                resolve();
+            }, 1000);
+
+            video.addEventListener('seeked', () => {
+                clearTimeout(timeoutId);
+                onSeeked();
+            }, { once: true });
+
+            video.currentTime = target;
+            Logger.add('[PlayRetry] Applied micro-seek', { target: target.toFixed(3) });
+        });
     };
 
     return {

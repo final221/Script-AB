@@ -31,7 +31,7 @@ const PlayRetryHandler = (() => {
                 try {
                     // 1. Micro-seek Strategy
                     if (MicroSeekStrategy.shouldApplyMicroSeek(video, attempt)) {
-                        MicroSeekStrategy.executeMicroSeek(video);
+                        await MicroSeekStrategy.executeMicroSeek(video);
                     }
 
                     // 2. Play Execution
@@ -48,6 +48,15 @@ const PlayRetryHandler = (() => {
 
                 } catch (error) {
                     const errorInfo = PlayExecutor.categorizePlayError(error);
+
+                    // Special handling for AbortError (often temporary race condition)
+                    if (errorInfo.name === 'AbortError') {
+                        Logger.add(`[PlayRetry] AbortError detected, retrying immediately...`, { attempt });
+                        await Fn.sleep(50); // Tiny backoff
+                        attempt--; // Don't count this as a full attempt
+                        if (attempt < 0) attempt = 0; // Safety
+                        continue;
+                    }
 
                     Logger.add(`[PlayRetry] Attempt ${attempt} failed`, {
                         error: errorInfo.name,

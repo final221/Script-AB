@@ -1,0 +1,25 @@
+Content-Security-Policy: Die Einstellungen der Seite haben die Ausführung eines Inline-Skripts (script-src-elem) blockiert, da es gegen folgende Direktive verstößt: "script-src 'self' https://9zqhb3hba48m0c382uno7k2t74isfi.ext-twitch.tv https://extension-files.twitch.tv". Ziehen Sie die Verwendung eines Hashs ('sha256-m6iF7QwHNoyu9voELm2v9Fb162hzzCmXXT3y2LofRm8=') oder einer Nonce in Erwägung. content.js:71:183
+Content-Security-Policy: Die Einstellungen der Seite haben die Ausführung eines Inline-Skripts (script-src-elem) blockiert, da es gegen folgende Direktive verstößt: "script-src 'self' https://9zqhb3hba48m0c382uno7k2t74isfi.ext-twitch.tv https://extension-files.twitch.tv". Ziehen Sie die Verwendung eines Hashs ('sha256-pbJHliKX/oUsPAErDvGhQZ/ijYmuMB1+EnWiMndduq8=') oder einer Nonce in Erwägung. content.js:71:183
+20:19:58 - (playback-monitor) Config changed 
+Object {  }
+player-core-variant-b-f211f799f3cd2e8100a1.js:1:63061
+AVC finishFrame called without active frame amazon-ivs-wasmworker.min-96ae2717290f1bdba0b6.js:1:49765
+    _emscripten_log_js https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-96ae2717290f1bdba0b6.js:1
+    logMessage https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-96ae2717290f1bdba0b6.js:1
+    x https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-96ae2717290f1bdba0b6.js:1
+    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-822d371c32d3620af2e6.wasm:737037
+    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-822d371c32d3620af2e6.wasm:13372
+    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-822d371c32d3620af2e6.wasm:544510
+    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-822d371c32d3620af2e6.wasm:941545
+    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-822d371c32d3620af2e6.wasm:1058609
+    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-822d371c32d3620af2e6.wasm:675579
+    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-822d371c32d3620af2e6.wasm:1081573
+    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-822d371c32d3620af2e6.wasm:1060630
+    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-822d371c32d3620af2e6.wasm:1059295
+    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-822d371c32d3620af2e6.wasm:716815
+    <anonym> https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-822d371c32d3620af2e6.wasm:201257
+    Ie https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-96ae2717290f1bdba0b6.js:1
+    a https://assets.twitch.tv/assets/amazon-ivs-wasmworker.min-96ae2717290f1bdba0b6.js:1
+
+​
+

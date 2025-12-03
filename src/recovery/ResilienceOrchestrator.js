@@ -66,6 +66,26 @@ const ResilienceOrchestrator = (() => {
                     delta
                 });
 
+                // 6.5. Escalation (if recovery failed)
+                if (!validation.isValid) {
+                    Logger.add('[Resilience] Recovery ineffective, attempting escalation...');
+
+                    // Escalation: Jump to buffer end (live edge)
+                    if (video.buffered.length > 0) {
+                        try {
+                            const end = video.buffered.end(video.buffered.length - 1);
+                            // Jump to 2s from end to be safe, or 0.5s if buffer is small
+                            const target = Math.max(video.currentTime, end - 2);
+                            video.currentTime = target;
+                            Logger.add('[Resilience] Escalation: Jumped to buffer end', { target: target.toFixed(3) });
+
+                            // Re-validate? No, just let PlayRetry handle it
+                        } catch (e) {
+                            Logger.add('[Resilience] Escalation failed', { error: e.message });
+                        }
+                    }
+                }
+
                 // 7. Play Retry
                 if (!video.paused || validation.hasImprovement) {
                     await PlayRetryHandler.retry(video, 'post-recovery');

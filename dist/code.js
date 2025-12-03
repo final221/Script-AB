@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       2.2.14
+// @version       2.2.15
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -1222,11 +1222,32 @@ const MicroSeekStrategy = (() => {
     /**
      * Executes a micro-seek operation.
      * @param {HTMLVideoElement} video - The video element
+     * @returns {Promise<void>} Resolves when seek completes
      */
     const executeMicroSeek = (video) => {
-        const target = calculateSeekTarget(video);
-        video.currentTime = target;
-        Logger.add('[PlayRetry] Applied micro-seek', { target: target.toFixed(3) });
+        return new Promise((resolve) => {
+            const target = calculateSeekTarget(video);
+
+            const onSeeked = () => {
+                video.removeEventListener('seeked', onSeeked);
+                resolve();
+            };
+
+            // Safety timeout in case seeked never fires
+            const timeoutId = setTimeout(() => {
+                video.removeEventListener('seeked', onSeeked);
+                Logger.add('[PlayRetry] Micro-seek timeout');
+                resolve();
+            }, 1000);
+
+            video.addEventListener('seeked', () => {
+                clearTimeout(timeoutId);
+                onSeeked();
+            }, { once: true });
+
+            video.currentTime = target;
+            Logger.add('[PlayRetry] Applied micro-seek', { target: target.toFixed(3) });
+        });
     };
 
     return {
@@ -3070,7 +3091,7 @@ const PlayRetryHandler = (() => {
                 try {
                     // 1. Micro-seek Strategy
                     if (MicroSeekStrategy.shouldApplyMicroSeek(video, attempt)) {
-                        MicroSeekStrategy.executeMicroSeek(video);
+                        await MicroSeekStrategy.executeMicroSeek(video);
                     }
 
                     // 2. Play Execution
@@ -3087,6 +3108,15 @@ const PlayRetryHandler = (() => {
 
                 } catch (error) {
                     const errorInfo = PlayExecutor.categorizePlayError(error);
+
+                    // Special handling for AbortError (often temporary race condition)
+                    if (errorInfo.name === 'AbortError') {
+                        Logger.add(`[PlayRetry] AbortError detected, retrying immediately...`, { attempt });
+                        await Fn.sleep(50); // Tiny backoff
+                        attempt--; // Don't count this as a full attempt
+                        if (attempt < 0) attempt = 0; // Safety
+                        continue;
+                    }
 
                     Logger.add(`[PlayRetry] Attempt ${attempt} failed`, {
                         error: errorInfo.name,
@@ -3555,6 +3585,26 @@ const ResilienceOrchestrator = (() => {
                     issues: validation.issues,
                     delta
                 });
+
+                // 6.5. Escalation (if recovery failed)
+                if (!validation.isValid) {
+                    Logger.add('[Resilience] Recovery ineffective, attempting escalation...');
+
+                    // Escalation: Jump to buffer end (live edge)
+                    if (video.buffered.length > 0) {
+                        try {
+                            const end = video.buffered.end(video.buffered.length - 1);
+                            // Jump to 2s from end to be safe, or 0.5s if buffer is small
+                            const target = Math.max(video.currentTime, end - 2);
+                            video.currentTime = target;
+                            Logger.add('[Resilience] Escalation: Jumped to buffer end', { target: target.toFixed(3) });
+
+                            // Re-validate? No, just let PlayRetry handle it
+                        } catch (e) {
+                            Logger.add('[Resilience] Escalation failed', { error: e.message });
+                        }
+                    }
+                }
 
                 // 7. Play Retry
                 if (!video.paused || validation.hasImprovement) {
