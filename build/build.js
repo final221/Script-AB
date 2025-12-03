@@ -22,6 +22,10 @@ const CONFIG = {
         'player/context/SignatureDetector.js',
         'player/context/ContextTraverser.js',
         'player/context/ContextValidator.js',
+        // Resilience Orchestrator helpers
+        'recovery/helpers/VideoSnapshotHelper.js',
+        'recovery/helpers/RecoveryValidator.js',
+        'recovery/helpers/AVSyncRouter.js',
         // Aggregators
         'utils/_NetworkLogic.js',
         'utils/_PlayerLogic.js',
