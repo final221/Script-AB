@@ -6,7 +6,23 @@ const CONFIG = {
     OUT: path.join(__dirname, '..', 'dist', 'code.js'),
     HEADER: path.join(__dirname, 'header.js'),
     VERSION: path.join(__dirname, 'version.txt'),
-    PRIORITY: ['config/Config.js', 'utils/Utils.js', 'utils/Adapters.js', 'utils/Logic.js'],
+    PRIORITY: [
+        'config/Config.js',
+        'utils/Utils.js',
+        'utils/Adapters.js',
+        // Network modules (must load before _NetworkLogic)
+        'utils/network/UrlParser.js',
+        'utils/network/AdDetection.js',
+        'utils/network/MockGenerator.js',
+        'utils/network/PatternDiscovery.js',
+        // Player modules (must load before _PlayerLogic)
+        'utils/player/SignatureValidator.js',
+        'utils/player/SessionManager.js',
+        // Aggregators
+        'utils/_NetworkLogic.js',
+        'utils/_PlayerLogic.js',
+        'utils/Logic.js'
+    ],
     ENTRY: 'core/CoreOrchestrator.js'
 };
 

@@ -40,7 +40,23 @@ const generateTestRunner = async () => {
     const srcDir = path.join(baseDir, 'src');
 
     // Build configuration (mirrors build/build.js logic)
-    const PRIORITY = ['config/Config.js', 'utils/Utils.js', 'utils/Adapters.js', 'utils/Logic.js'];
+    const PRIORITY = [
+        'config/Config.js',
+        'utils/Utils.js',
+        'utils/Adapters.js',
+        // Network modules (must load before _NetworkLogic)
+        'utils/network/UrlParser.js',
+        'utils/network/AdDetection.js',
+        'utils/network/MockGenerator.js',
+        'utils/network/PatternDiscovery.js',
+        // Player modules (must load before _PlayerLogic)
+        'utils/player/SignatureValidator.js',
+        'utils/player/SessionManager.js',
+        // Aggregators
+        'utils/_NetworkLogic.js',
+        'utils/_PlayerLogic.js',
+        'utils/Logic.js'
+    ];
     const ENTRY = 'core/CoreOrchestrator.js';
 
     const allFiles = await getFiles(srcDir);
