@@ -63,13 +63,18 @@
     <script src="../src/recovery/StandardRecovery.js"></script>
     <script src="../src/core/CoreOrchestrator.js"></script>
 
-    <!-- Load test framework first -->
-    <script type="module" src="test-framework.js"></script>
+    <!-- Load and run tests -->
+    <script type="module">
+        // Import test runner functions
+        import { runHealthTests } from './health-tests.js';
+        import { runCoreTests } from './core-tests.js';
+        import { runRecoveryTests } from './recovery-tests.js';
 
-    <!-- Load test files -->
-    <script type="module" src="health-tests.js"></script>
-    <script type="module" src="core-tests.js"></script>
-    <script type="module" src="recovery-tests.js"></script>
+        // Run all tests in sequence and wait for completion
+        await runHealthTests();
+        await runCoreTests();
+        await runRecoveryTests();
+    </script>
 </body>
 
 </html>

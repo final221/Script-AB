@@ -6,7 +6,7 @@ Test.beforeEach(setupTest);
 Test.afterEach(teardownTest);
 
 // --- Recovery Tests ---
-(async () => {
+export const runRecoveryTests = async () => {
     // --- RecoveryDiagnostics Tests ---
 
     await Test.run('RecoveryDiagnostics: Detects detached video', () => {
@@ -98,4 +98,4 @@ Test.afterEach(teardownTest);
 
     // Display summary
     Test.summary();
-})();
+};

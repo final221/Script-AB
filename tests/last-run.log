@@ -16,6 +16,13 @@ Using default Chrome path: C:\Program Files\Google\Chrome\Application\chrome.exe
 ✅ PASS: StuckDetector: Ignores seeking state
 
 🧪 Running: HealthMonitor: Cooldown prevents spam
+✅ PASS: HealthMonitor: Cooldown prevents spam
+
+🧪 Running: HealthMonitor: Pause/Resume works
+✅ PASS: HealthMonitor: Pause/Resume works
+
+🧪 Running: FrameDropDetector: Ignores drops during normal playback
+✅ PASS: FrameDropDetector: Ignores drops during normal playback
 
 🧪 Running: Logger: Captures messages
 ✅ PASS: Logger: Captures messages
@@ -62,10 +69,10 @@ Using default Chrome path: C:\Program Files\Google\Chrome\Application\chrome.exe
 ========================================
 TEST SUMMARY
 ========================================
-Total:  17
-Passed: 17
+Total:  20
+Passed: 20
 Failed: 0
-Time:   12.10ms
+Time:   10342.60ms
 ========================================
 
 ✅ All tests passed!

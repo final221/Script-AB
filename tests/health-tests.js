@@ -6,7 +6,7 @@ Test.beforeEach(setupTest);
 Test.afterEach(teardownTest);
 
 // --- Health Monitoring Tests ---
-(async () => {
+export const runHealthTests = async () => {
     // --- Stuck Detector Tests ---
 
     await Test.run('StuckDetector: Ignores paused video', () => {
@@ -153,4 +153,4 @@ Test.afterEach(teardownTest);
         const result = FrameDropDetector.check(video);
         assertEquals(result, null, 'Should not trigger when video is progressing');
     });
-})();
+};

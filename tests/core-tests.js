@@ -6,7 +6,7 @@ Test.beforeEach(setupTest);
 Test.afterEach(teardownTest);
 
 // --- Core Module Tests ---
-(async () => {
+export const runCoreTests = async () => {
     // --- Logger Tests ---
 
     await Test.run('Logger: Captures messages', () => {
@@ -112,4 +112,4 @@ Test.afterEach(teardownTest);
         const result = PlayerContext.get(element);
         assert(true, 'Should not throw error');
     });
-})();
+};
