@@ -60,6 +60,10 @@ const generateTestRunner = async () => {
         'recovery/helpers/VideoSnapshotHelper.js',
         'recovery/helpers/RecoveryValidator.js',
         'recovery/helpers/AVSyncRouter.js',
+        // Play Retry helpers
+        'recovery/retry/PlayValidator.js',
+        'recovery/retry/MicroSeekStrategy.js',
+        'recovery/retry/PlayExecutor.js',
         // Aggregators
         'utils/_NetworkLogic.js',
         'utils/_PlayerLogic.js',
