@@ -2,20 +2,12 @@
 <html>
 
 <head>
-    <title>Recovery Tests</title>
-    <meta charset="UTF-8">
-</head>
-
-<!DOCTYPE html>
-<html>
-
-<head>
-    <title>Recovery Tests</title>
+    <title>Test Runner</title>
     <meta charset="UTF-8">
 </head>
 
 <body>
-    <h1>Recovery Tests</h1>
+    <h1>Test Runner</h1>
     <div id="test-output"></div>
 
         <script src="../src/config/Config.js"></script>
@@ -71,7 +63,12 @@
     <script src="../src/recovery/StandardRecovery.js"></script>
     <script src="../src/core/CoreOrchestrator.js"></script>
 
-    <!-- Load test file -->
+    <!-- Load test framework first -->
+    <script type="module" src="test-framework.js"></script>
+
+    <!-- Load test files -->
+    <script type="module" src="health-tests.js"></script>
+    <script type="module" src="core-tests.js"></script>
     <script type="module" src="recovery-tests.js"></script>
 </body>
 

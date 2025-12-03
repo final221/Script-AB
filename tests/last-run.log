@@ -6,15 +6,6 @@ Using default Chrome path: C:\Program Files\Google\Chrome\Application\chrome.exe
 📁 Loading test file: file://F:\Fynn\Projects\Tw Adb\tests\runner.html
 
 
-🧪 Running: RecoveryDiagnostics: Detects detached video
-✅ PASS: RecoveryDiagnostics: Detects detached video
-
-🧪 Running: RecoveryDiagnostics: Detects insufficient ready state
-✅ PASS: RecoveryDiagnostics: Detects insufficient ready state
-
-🧪 Running: RecoveryDiagnostics: Healthy video state
-✅ PASS: RecoveryDiagnostics: Healthy video state
-
 🧪 Running: StuckDetector: Ignores paused video
 ✅ PASS: StuckDetector: Ignores paused video
 
@@ -23,6 +14,8 @@ Using default Chrome path: C:\Program Files\Google\Chrome\Application\chrome.exe
 
 🧪 Running: StuckDetector: Ignores seeking state
 ✅ PASS: StuckDetector: Ignores seeking state
+
+🧪 Running: HealthMonitor: Cooldown prevents spam
 
 🧪 Running: Logger: Captures messages
 ✅ PASS: Logger: Captures messages
@@ -39,12 +32,6 @@ Using default Chrome path: C:\Program Files\Google\Chrome\Application\chrome.exe
 🧪 Running: Integration: Logger and Metrics work together
 ✅ PASS: Integration: Logger and Metrics work together
 
-🧪 Running: HealthMonitor: Cooldown prevents spam
-✅ PASS: HealthMonitor: Cooldown prevents spam
-
-🧪 Running: HealthMonitor: Pause/Resume works
-✅ PASS: HealthMonitor: Pause/Resume works
-
 🧪 Running: Logic: Session tracking detects key changes
 ✅ PASS: Logic: Session tracking detects key changes
 
@@ -57,22 +44,28 @@ Using default Chrome path: C:\Program Files\Google\Chrome\Application\chrome.exe
 🧪 Running: PlayerContext: Handles detached element gracefully
 ✅ PASS: PlayerContext: Handles detached element gracefully
 
+🧪 Running: RecoveryDiagnostics: Detects detached video
+✅ PASS: RecoveryDiagnostics: Detects detached video
+
+🧪 Running: RecoveryDiagnostics: Detects insufficient ready state
+✅ PASS: RecoveryDiagnostics: Detects insufficient ready state
+
+🧪 Running: RecoveryDiagnostics: Healthy video state
+✅ PASS: RecoveryDiagnostics: Healthy video state
+
 🧪 Running: ResilienceOrchestrator: Buffer validation forces aggressive
 ✅ PASS: ResilienceOrchestrator: Buffer validation forces aggressive
 
 🧪 Running: ResilienceOrchestrator: Recovery validation detects failures
 ✅ PASS: ResilienceOrchestrator: Recovery validation detects failures
 
-🧪 Running: FrameDropDetector: Ignores drops during normal playback
-✅ PASS: FrameDropDetector: Ignores drops during normal playback
-
 ========================================
 TEST SUMMARY
 ========================================
-Total:  20
-Passed: 20
+Total:  17
+Passed: 17
 Failed: 0
-Time:   11446.60ms
+Time:   12.10ms
 ========================================
 
 ✅ All tests passed!
