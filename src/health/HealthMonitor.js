@@ -13,13 +13,13 @@ const HealthMonitor = (() => {
     // State tracking
     let isPaused = false;
     let lastTriggerTime = 0;
-    const COOLDOWN_MS = 5000; // 5 seconds
+    // COOLDOWN_MS moved to CONFIG.timing.HEALTH_COOLDOWN_MS
     let pendingIssues = [];
 
     const triggerRecovery = (reason, details, triggerType) => {
         // Cooldown check
         const now = Date.now();
-        if (now - lastTriggerTime < COOLDOWN_MS) {
+        if (now - lastTriggerTime < CONFIG.timing.HEALTH_COOLDOWN_MS) {
             Logger.add('[HEALTH] Trigger skipped - cooldown active', {
                 timeSinceLast: (now - lastTriggerTime) / 1000
             });

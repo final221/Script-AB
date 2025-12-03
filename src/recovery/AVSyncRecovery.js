@@ -3,18 +3,11 @@
  * Implements a graduated approach to minimize user disruption while ensuring fix.
  */
 const AVSyncRecovery = (() => {
-    const SEVERITY = {
-        MINOR: 'minor',       // < 1000ms
-        MODERATE: 'moderate', // 1000-3000ms
-        SEVERE: 'severe',     // 3000-10000ms
-        CRITICAL: 'critical'  // > 10000ms
-    };
-
     const classifySeverity = (discrepancyMs) => {
-        if (discrepancyMs < 1000) return SEVERITY.MINOR;
-        if (discrepancyMs < 3000) return SEVERITY.MODERATE;
-        if (discrepancyMs < 10000) return SEVERITY.SEVERE;
-        return SEVERITY.CRITICAL;
+        if (discrepancyMs < 1000) return RecoveryConstants.SEVERITY.MINOR;
+        if (discrepancyMs < 3000) return RecoveryConstants.SEVERITY.MODERATE;
+        if (discrepancyMs < 10000) return RecoveryConstants.SEVERITY.SEVERE;
+        return RecoveryConstants.SEVERITY.CRITICAL;
     };
 
     const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
@@ -77,7 +70,7 @@ const AVSyncRecovery = (() => {
                 criticalThreshold: CONFIG.timing.AV_SYNC_CRITICAL_THRESHOLD_MS + 'ms'
             });
 
-            if (severity === SEVERITY.MINOR) {
+            if (severity === RecoveryConstants.SEVERITY.MINOR) {
                 Logger.add('[AV_SYNC] Level 1: Ignoring minor desync', {
                     reason: 'Below moderate threshold (1000ms)'
                 });
@@ -89,12 +82,12 @@ const AVSyncRecovery = (() => {
             // DISABLED: This 500ms pause delay was causing constant desync instead of fixing it
             // The artificial delay disrupts browser-native A/V sync mechanisms
             // Keeping code for potential reversion if needed
-            // if (severity === SEVERITY.MODERATE) {
+            // if (severity === RecoveryConstants.SEVERITY.MODERATE) {
             //     Metrics.increment('av_sync_level2_attempts');
             //     result = await level2_pauseResume(video, discrepancy);
             // }
 
-            if (severity === SEVERITY.MODERATE) {
+            if (severity === RecoveryConstants.SEVERITY.MODERATE) {
                 // MONITORING ONLY - trust browser-native sync
                 Logger.add('[AV_SYNC] MONITORING ONLY - moderate desync detected', {
                     severity,
@@ -109,12 +102,12 @@ const AVSyncRecovery = (() => {
 
             // DISABLED: Seeking disrupts playback unnecessarily for moderate desyncs
             // Browser handles A/V sync better than manual intervention
-            // else if (severity === SEVERITY.SEVERE) {
+            // else if (severity === RecoveryConstants.SEVERITY.SEVERE) {
             //     Metrics.increment('av_sync_level3_attempts');
             //     result = await level3_seek(video, discrepancy);
             // }
 
-            else if (severity === SEVERITY.SEVERE && discrepancy < CONFIG.timing.AV_SYNC_CRITICAL_THRESHOLD_MS) {
+            else if (severity === RecoveryConstants.SEVERITY.SEVERE && discrepancy < CONFIG.timing.AV_SYNC_CRITICAL_THRESHOLD_MS) {
                 // MONITORING ONLY - trust browser-native sync for severe but not critical
                 Logger.add('[AV_SYNC] MONITORING ONLY - severe desync detected', {
                     severity,
@@ -128,7 +121,7 @@ const AVSyncRecovery = (() => {
                 return;
             }
 
-            else if (severity === SEVERITY.CRITICAL || discrepancy >= CONFIG.timing.AV_SYNC_CRITICAL_THRESHOLD_MS) {
+            else if (severity === RecoveryConstants.SEVERITY.CRITICAL || discrepancy >= CONFIG.timing.AV_SYNC_CRITICAL_THRESHOLD_MS) {
                 // ONLY reload for CRITICAL desync - indicates broken stream
                 Logger.add('[AV_SYNC] CRITICAL desync - performing stream reload', {
                     severity,

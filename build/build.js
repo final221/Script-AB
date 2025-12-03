@@ -11,10 +11,12 @@ const CONFIG = {
         'utils/Utils.js',
         'utils/Adapters.js',
         // Network modules (must load before _NetworkLogic)
+        'network/PatternTester.js',
         'utils/network/UrlParser.js',
         'utils/network/AdDetection.js',
         'utils/network/MockGenerator.js',
         'utils/network/PatternDiscovery.js',
+        'monitoring/AdAnalytics.js',
         // Player modules (must load before _PlayerLogic)
         'utils/player/SignatureValidator.js',
         'utils/player/SessionManager.js',
@@ -23,6 +25,7 @@ const CONFIG = {
         'player/context/ContextTraverser.js',
         'player/context/ContextValidator.js',
         // Resilience Orchestrator helpers
+        'recovery/RecoveryConstants.js',
         'recovery/helpers/VideoSnapshotHelper.js',
         'recovery/helpers/RecoveryValidator.js',
         'recovery/helpers/AVSyncRouter.js',

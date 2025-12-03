@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       2.2.10
+// @version       2.2.11
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -34,6 +34,7 @@ const CONFIG = (() => {
             RETRY_MS: 1000,
             INJECTION_MS: 50,
             HEALTH_CHECK_MS: 1000,
+            HEALTH_COOLDOWN_MS: 5000,
             LOG_THROTTLE: 5,
             LOG_EXPIRY_MIN: 5,
             REVERSION_DELAY_MS: 100,
@@ -183,6 +184,68 @@ const Adapters = {
         }
     }
 };
+
+/**
+ * Handles validation of URL patterns against detection logic.
+ * @responsibility
+ * 1. Verify ad pattern matching logic.
+ * 2. Verify availability check pattern matching.
+ * 3. Provide test results for debugging.
+ */
+const PatternTester = (() => {
+    return {
+        test: () => {
+            const tests = [
+                // Query parameter injection
+                { url: 'https://twitch.tv/ad_state/?x=1', expected: { isDelivery: true }, name: 'Delivery with query param' },
+                { url: 'https://twitch.tv/api?url=/ad_state/', expected: { isDelivery: false }, name: 'Query param injection (should NOT match)' },
+                { url: 'https://twitch.tv/video#/ad_state/', expected: { isDelivery: false }, name: 'Hash fragment (should NOT match)' },
+
+                // File extension matching  
+                { url: 'https://cdn.com/stream.m3u8?v=2', expected: { mockType: 'application/vnd.apple.mpegurl' }, name: 'M3U8 in pathname' },
+                { url: 'https://cdn.com/api?file=test.m3u8', expected: { mockType: 'application/json' }, name: 'M3U8 in query param (should NOT match)' },
+
+                // Availability check patterns
+                { url: 'https://twitch.tv/api?bp=preroll&channel=test', expected: { isAvailability: true }, name: 'Availability query param' },
+                { url: 'https://twitch.tv/bp=preroll', expected: { isAvailability: false }, name: 'Availability in pathname (should NOT match)' }
+            ];
+
+            Logger.add('========== URL PATTERN VALIDATION STARTED ==========');
+            let passed = 0, failed = 0;
+
+            tests.forEach((test, index) => {
+                const results = {
+                    isDelivery: Logic.Network.isDelivery(test.url),
+                    isAvailability: Logic.Network.isAvailabilityCheck(test.url),
+                    mockType: Logic.Network.getMock(test.url).type
+                };
+
+                let testPassed = true;
+                const failures = [];
+
+                for (const [key, expected] of Object.entries(test.expected)) {
+                    if (results[key] !== expected) {
+                        testPassed = false;
+                        failures.push(`${key}: expected ${expected}, got ${results[key]}`);
+                    }
+                }
+
+                if (testPassed) {
+                    passed++;
+                    Logger.add(`[TEST ${index + 1}] ✓ PASSED: ${test.name}`, { url: test.url, results });
+                } else {
+                    failed++;
+                    Logger.add(`[TEST ${index + 1}] ✗ FAILED: ${test.name}`, { url: test.url, expected: test.expected, actual: results, failures });
+                }
+            });
+
+            const summary = `Tests Complete: ${passed} passed, ${failed} failed`;
+            Logger.add(`========== ${summary} ==========`);
+            console.log(summary);
+            return { passed, failed, total: tests.length };
+        }
+    };
+})();
 
 // --- URL Parser ---
 /**
@@ -404,6 +467,82 @@ const PatternDiscovery = (() => {
     return {
         detectNewPatterns,
         getDiscoveredPatterns
+    };
+})();
+
+// --- Ad Analytics ---
+/**
+ * Tracks and analyzes ad detection and recovery correlation.
+ * @responsibility
+ * 1. Track ad detection events.
+ * 2. Correlate health triggers with ad detections.
+ * 3. Generate statistical reports on detection accuracy.
+ */
+const AdAnalytics = (() => {
+    // Correlation tracking
+    let lastAdDetectionTime = 0;
+    let recoveryTriggersWithoutAds = 0;
+
+    const init = () => {
+        // 1. Listen for Health Triggers
+        Adapters.EventBus.on(CONFIG.events.AD_DETECTED, (payload) => {
+            if (payload.source === 'HEALTH') {
+                // Health monitor triggered recovery
+                const timeSinceLastAd = Date.now() - lastAdDetectionTime;
+
+                // If > 10 seconds since last network detection, could be a missed ad
+                if (timeSinceLastAd > 10000) {
+                    recoveryTriggersWithoutAds++;
+
+                    Logger.add('[CORRELATION] Recovery triggered without recent ad detection', {
+                        trigger: payload.trigger,
+                        reason: payload.reason,
+                        timeSinceLastNetworkAd: (timeSinceLastAd / 1000).toFixed(1) + 's',
+                        totalMissedCount: recoveryTriggersWithoutAds,
+                        suggestion: 'Possible missed ad pattern or legitimate stuck state'
+                    });
+                }
+            }
+        });
+
+        // 2. Listen for Log/Report Requests
+        Adapters.EventBus.on(CONFIG.events.LOG, () => {
+            generateCorrelationReport();
+        });
+    };
+
+    const trackDetection = () => {
+        lastAdDetectionTime = Date.now();
+    };
+
+    const generateCorrelationReport = () => {
+        const adsDetected = Metrics.get('ads_detected');
+        const healthTriggers = Metrics.get('health_triggers');
+
+        const report = {
+            ads_detected_network: adsDetected,
+            health_triggered_recoveries: healthTriggers,
+            recoveries_without_ads: recoveryTriggersWithoutAds,
+            detection_accuracy: healthTriggers > 0 ?
+                ((adsDetected / healthTriggers) * 100).toFixed(1) + '%' : 'N/A',
+            interpretation: healthTriggers > adsDetected * 1.5 ?
+                'ALERT: Health triggers significantly exceed ad detections - patterns may be incomplete' :
+                'Normal: Ad detection appears accurate'
+        };
+
+        Logger.add('[CORRELATION] Statistical report', report);
+        return report;
+    };
+
+    return {
+        init,
+        trackDetection,
+        getCorrelationStats: () => ({
+            lastAdDetectionTime,
+            recoveryTriggersWithoutAds,
+            ratio: recoveryTriggersWithoutAds > 0 ?
+                recoveryTriggersWithoutAds / (Metrics.get('ads_detected') || 1) : 0
+        })
     };
 })();
 
@@ -781,6 +920,18 @@ const ContextValidator = (() => {
         validateCache
     };
 })();
+
+/**
+ * Shared constants for recovery modules.
+ */
+const RecoveryConstants = {
+    SEVERITY: {
+        MINOR: 'minor',       // < 1000ms
+        MODERATE: 'moderate', // 1000-3000ms
+        SEVERE: 'severe',     // 3000-10000ms
+        CRITICAL: 'critical'  // > 10000ms
+    }
+};
 
 // --- Video Snapshot Helper ---
 /**
@@ -1591,13 +1742,13 @@ const HealthMonitor = (() => {
     // State tracking
     let isPaused = false;
     let lastTriggerTime = 0;
-    const COOLDOWN_MS = 5000; // 5 seconds
+    // COOLDOWN_MS moved to CONFIG.timing.HEALTH_COOLDOWN_MS
     let pendingIssues = [];
 
     const triggerRecovery = (reason, details, triggerType) => {
         // Cooldown check
         const now = Date.now();
-        if (now - lastTriggerTime < COOLDOWN_MS) {
+        if (now - lastTriggerTime < CONFIG.timing.HEALTH_COOLDOWN_MS) {
             Logger.add('[HEALTH] Trigger skipped - cooldown active', {
                 timeSinceLast: (now - lastTriggerTime) / 1000
             });
@@ -2135,8 +2286,7 @@ const Store = (() => {
  */
 const AdBlocker = (() => {
     // Correlation tracking
-    let lastAdDetectionTime = 0;
-    let recoveryTriggersWithoutAds = 0;
+    let lastAdDetectionTime = 0; // Kept for local fallback/legacy support
 
     const process = (url, type) => {
         // 1. Input Validation
@@ -2167,6 +2317,9 @@ const AdBlocker = (() => {
 
             // Only emit AD_DETECTED for actual ad delivery
             if (isDelivery) {
+                if (typeof AdAnalytics !== 'undefined') {
+                    AdAnalytics.trackDetection();
+                }
                 lastAdDetectionTime = Date.now();
 
                 Adapters.EventBus.emit(CONFIG.events.AD_DETECTED, {
@@ -2193,63 +2346,24 @@ const AdBlocker = (() => {
 
     // Listen for health-triggered recoveries to detect missed ads
     const initCorrelationTracking = () => {
-        // 1. Listen for Health Triggers
-        Adapters.EventBus.on(CONFIG.events.AD_DETECTED, (payload) => {
-            if (payload.source === 'HEALTH') {
-                // Health monitor triggered recovery
-                const timeSinceLastAd = Date.now() - lastAdDetectionTime;
-
-                // If > 10 seconds since last network detection, could be a missed ad
-                if (timeSinceLastAd > 10000) {
-                    recoveryTriggersWithoutAds++;
-
-                    Logger.add('[CORRELATION] Recovery triggered without recent ad detection', {
-                        trigger: payload.trigger,
-                        reason: payload.reason,
-                        timeSinceLastNetworkAd: (timeSinceLastAd / 1000).toFixed(1) + 's',
-                        totalMissedCount: recoveryTriggersWithoutAds,
-                        suggestion: 'Possible missed ad pattern or legitimate stuck state'
-                    });
-                }
-            }
-        });
-
-        // 2. Listen for Log/Report Requests
-        Adapters.EventBus.on(CONFIG.events.LOG, () => {
-            generateCorrelationReport();
-        });
-    };
-
-    const generateCorrelationReport = () => {
-        const adsDetected = Metrics.get('ads_detected');
-        const healthTriggers = Metrics.get('health_triggers');
-
-        const report = {
-            ads_detected_network: adsDetected,
-            health_triggered_recoveries: healthTriggers,
-            recoveries_without_ads: recoveryTriggersWithoutAds,
-            detection_accuracy: healthTriggers > 0 ?
-                ((adsDetected / healthTriggers) * 100).toFixed(1) + '%' : 'N/A',
-            interpretation: healthTriggers > adsDetected * 1.5 ?
-                'ALERT: Health triggers significantly exceed ad detections - patterns may be incomplete' :
-                'Normal: Ad detection appears accurate'
-        };
-
-        Logger.add('[CORRELATION] Statistical report', report);
-        return report;
+        if (typeof AdAnalytics !== 'undefined') {
+            AdAnalytics.init();
+        } else {
+            Logger.debug('[NETWORK] AdAnalytics module not loaded, skipping correlation tracking');
+        }
     };
 
     return {
         process,
         init: initCorrelationTracking,
 
-        // Get correlation stats
-        getCorrelationStats: () => ({
-            lastAdDetectionTime,
-            recoveryTriggersWithoutAds,
-            ratio: recoveryTriggersWithoutAds > 0 ?
-                recoveryTriggersWithoutAds / (Metrics.get('ads_detected') || 1) : 0
-        })
+        // Delegate stats to AdAnalytics if available
+        getCorrelationStats: () => {
+            if (typeof AdAnalytics !== 'undefined') {
+                return AdAnalytics.getCorrelationStats();
+            }
+            return { error: 'AdAnalytics not loaded' };
+        }
     };
 })();
 
@@ -2608,18 +2722,11 @@ const AggressiveRecovery = (() => {
  * Implements a graduated approach to minimize user disruption while ensuring fix.
  */
 const AVSyncRecovery = (() => {
-    const SEVERITY = {
-        MINOR: 'minor',       // < 1000ms
-        MODERATE: 'moderate', // 1000-3000ms
-        SEVERE: 'severe',     // 3000-10000ms
-        CRITICAL: 'critical'  // > 10000ms
-    };
-
     const classifySeverity = (discrepancyMs) => {
-        if (discrepancyMs < 1000) return SEVERITY.MINOR;
-        if (discrepancyMs < 3000) return SEVERITY.MODERATE;
-        if (discrepancyMs < 10000) return SEVERITY.SEVERE;
-        return SEVERITY.CRITICAL;
+        if (discrepancyMs < 1000) return RecoveryConstants.SEVERITY.MINOR;
+        if (discrepancyMs < 3000) return RecoveryConstants.SEVERITY.MODERATE;
+        if (discrepancyMs < 10000) return RecoveryConstants.SEVERITY.SEVERE;
+        return RecoveryConstants.SEVERITY.CRITICAL;
     };
 
     const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
@@ -2682,7 +2789,7 @@ const AVSyncRecovery = (() => {
                 criticalThreshold: CONFIG.timing.AV_SYNC_CRITICAL_THRESHOLD_MS + 'ms'
             });
 
-            if (severity === SEVERITY.MINOR) {
+            if (severity === RecoveryConstants.SEVERITY.MINOR) {
                 Logger.add('[AV_SYNC] Level 1: Ignoring minor desync', {
                     reason: 'Below moderate threshold (1000ms)'
                 });
@@ -2694,12 +2801,12 @@ const AVSyncRecovery = (() => {
             // DISABLED: This 500ms pause delay was causing constant desync instead of fixing it
             // The artificial delay disrupts browser-native A/V sync mechanisms
             // Keeping code for potential reversion if needed
-            // if (severity === SEVERITY.MODERATE) {
+            // if (severity === RecoveryConstants.SEVERITY.MODERATE) {
             //     Metrics.increment('av_sync_level2_attempts');
             //     result = await level2_pauseResume(video, discrepancy);
             // }
 
-            if (severity === SEVERITY.MODERATE) {
+            if (severity === RecoveryConstants.SEVERITY.MODERATE) {
                 // MONITORING ONLY - trust browser-native sync
                 Logger.add('[AV_SYNC] MONITORING ONLY - moderate desync detected', {
                     severity,
@@ -2714,12 +2821,12 @@ const AVSyncRecovery = (() => {
 
             // DISABLED: Seeking disrupts playback unnecessarily for moderate desyncs
             // Browser handles A/V sync better than manual intervention
-            // else if (severity === SEVERITY.SEVERE) {
+            // else if (severity === RecoveryConstants.SEVERITY.SEVERE) {
             //     Metrics.increment('av_sync_level3_attempts');
             //     result = await level3_seek(video, discrepancy);
             // }
 
-            else if (severity === SEVERITY.SEVERE && discrepancy < CONFIG.timing.AV_SYNC_CRITICAL_THRESHOLD_MS) {
+            else if (severity === RecoveryConstants.SEVERITY.SEVERE && discrepancy < CONFIG.timing.AV_SYNC_CRITICAL_THRESHOLD_MS) {
                 // MONITORING ONLY - trust browser-native sync for severe but not critical
                 Logger.add('[AV_SYNC] MONITORING ONLY - severe desync detected', {
                     severity,
@@ -2733,7 +2840,7 @@ const AVSyncRecovery = (() => {
                 return;
             }
 
-            else if (severity === SEVERITY.CRITICAL || discrepancy >= CONFIG.timing.AV_SYNC_CRITICAL_THRESHOLD_MS) {
+            else if (severity === RecoveryConstants.SEVERITY.CRITICAL || discrepancy >= CONFIG.timing.AV_SYNC_CRITICAL_THRESHOLD_MS) {
                 // ONLY reload for CRITICAL desync - indicates broken stream
                 Logger.add('[AV_SYNC] CRITICAL desync - performing stream reload', {
                     severity,
@@ -3581,54 +3688,12 @@ const CoreOrchestrator = (() => {
             };
 
             window.testTwitchAdPatterns = () => {
-                const tests = [
-                    // Query parameter injection
-                    { url: 'https://twitch.tv/ad_state/?x=1', expected: { isDelivery: true }, name: 'Delivery with query param' },
-                    { url: 'https://twitch.tv/api?url=/ad_state/', expected: { isDelivery: false }, name: 'Query param injection (should NOT match)' },
-                    { url: 'https://twitch.tv/video#/ad_state/', expected: { isDelivery: false }, name: 'Hash fragment (should NOT match)' },
-
-                    // File extension matching  
-                    { url: 'https://cdn.com/stream.m3u8?v=2', expected: { mockType: 'application/vnd.apple.mpegurl' }, name: 'M3U8 in pathname' },
-                    { url: 'https://cdn.com/api?file=test.m3u8', expected: { mockType: 'application/json' }, name: 'M3U8 in query param (should NOT match)' },
-
-                    // Availability check patterns
-                    { url: 'https://twitch.tv/api?bp=preroll&channel=test', expected: { isAvailability: true }, name: 'Availability query param' },
-                    { url: 'https://twitch.tv/bp=preroll', expected: { isAvailability: false }, name: 'Availability in pathname (should NOT match)' }
-                ];
-
-                Logger.add('========== URL PATTERN VALIDATION STARTED ==========');
-                let passed = 0, failed = 0;
-
-                tests.forEach((test, index) => {
-                    const results = {
-                        isDelivery: Logic.Network.isDelivery(test.url),
-                        isAvailability: Logic.Network.isAvailabilityCheck(test.url),
-                        mockType: Logic.Network.getMock(test.url).type
-                    };
-
-                    let testPassed = true;
-                    const failures = [];
-
-                    for (const [key, expected] of Object.entries(test.expected)) {
-                        if (results[key] !== expected) {
-                            testPassed = false;
-                            failures.push(`${key}: expected ${expected}, got ${results[key]}`);
-                        }
-                    }
-
-                    if (testPassed) {
-                        passed++;
-                        Logger.add(`[TEST ${index + 1}] ✓ PASSED: ${test.name}`, { url: test.url, results });
-                    } else {
-                        failed++;
-                        Logger.add(`[TEST ${index + 1}] ✗ FAILED: ${test.name}`, { url: test.url, expected: test.expected, actual: results, failures });
-                    }
-                });
-
-                const summary = `Tests Complete: ${passed} passed, ${failed} failed`;
-                Logger.add(`========== ${summary} ==========`);
-                console.log(summary);
-                return { passed, failed, total: tests.length };
+                if (typeof PatternTester !== 'undefined') {
+                    return PatternTester.test();
+                } else {
+                    console.error('PatternTester module not loaded');
+                    return { error: 'Module not loaded' };
+                }
             };
         }
     };

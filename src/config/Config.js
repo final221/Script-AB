@@ -21,6 +21,7 @@ const CONFIG = (() => {
             RETRY_MS: 1000,
             INJECTION_MS: 50,
             HEALTH_CHECK_MS: 1000,
+            HEALTH_COOLDOWN_MS: 5000,
             LOG_THROTTLE: 5,
             LOG_EXPIRY_MIN: 5,
             REVERSION_DELAY_MS: 100,
