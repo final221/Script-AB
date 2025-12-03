@@ -74,7 +74,7 @@ const ResilienceOrchestrator = (() => {
                     payload.forceAggressive = true;
                 }
 
-                const strategy = RecoveryStrategy.select(reason, bufferHealth);
+                const strategy = RecoveryStrategy.select(video, payload);
 
                 Logger.add(`[Resilience] Selected strategy: ${strategy.name}`);
 
