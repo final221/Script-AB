@@ -1,138 +1,32 @@
-# Recovery Tests - Setup Instructions
+# Twitch AdBlocker Tests
 
-## Files Created
+This project uses **Vitest** with **JSDOM** for unit testing.
 
-✅ **package.json** - NPM configuration with build and test scripts
-✅ **tests/test-runner.html** - HTML file that loads all source modules
-✅ **tests/run-tests.js** - Puppeteer automation script
-✅ **tests/recovery-tests.js** - Test suites (currently with placeholders + basic tests)
+## Running Tests
 
----
+- **Run all tests**: `npm test`
+- **Watch mode**: `npm run test:watch`
 
-## Installation
+## Structure
 
-Due to PowerShell execution policy, run npm install using cmd instead:
+- `tests/unit/`: Contains unit tests for core modules.
+- `tests/setup.js`: Global setup script that loads source files into the test environment.
+- `vitest.config.js`: Configuration for Vitest.
 
-```bash
-# Open Command Prompt (cmd.exe) in the project directory
-cd "F:\Fynn\Projects\Tw Adb"
+## Writing Tests
 
-# Install dependencies
-npm install
-```
+Tests are written using the standard Vitest API (`describe`, `it`, `expect`).
 
-**Alternative**: Enable PowerShell scripts (run as Administrator):
-```powershell
-Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
-```
+Global modules (e.g., `Logger`, `AdBlocker`) are available on `window` or `global` (or directly as variables) because `tests/setup.js` loads them from `src/`.
 
-Then you can run:
-```bash
-npm install
-```
+Example:
+```javascript
+import { describe, it, expect } from 'vitest';
 
----
-
-## Usage
-
-After installation:
-
-```bash
-# Run tests
-npm test
-
-# Run build (with automatic tests)
-npm run build
-
-# Run build without tests
-npm run build --no-test
-
-# Watch mode (auto-rerun tests on file changes)
-npm run test:watch
-```
-
----
-
-## Current Test Status
-
-The test file (`tests/recovery-tests.js`) currently includes:
-
-✅ **Working tests**:
-- Logger message capture
-- Metrics counter increment
-- StuckDetector paused state handling
-- Integration test (Logger + Metrics)
-
-⏳ **Placeholder tests** (will be implemented with refactored modules):
-- RecoveryDiagnostics tests (module not yet created)
-- PlayRetryHandler tests (module not yet refactored)
-
----
-
-## Next Steps
-
-1. ✅ Install dependencies (`npm install`)
-2. ✅ Run tests to verify setup (`npm test`)
-3. 🔄 Implement RecoveryDiagnostics.js and add real tests
-4. 🔄 Refactor PlayRetryHandler.js and add real tests
-5. 🔄 Continue with other module refactors
-
----
-
-## Expected Output
-
-After running `npm test`, you should see:
-
-```
-🧪 Starting automated test runner...
-============================================================
-
-📁 Loading test file: file:///F:/Fynn/Projects/Tw Adb/tests/test-runner.html
-
-🧪 Running: RecoveryDiagnostics: Placeholder test
-✅ PASS: RecoveryDiagnostics: Placeholder test
-
-🧪 Running: Logger: Captures messages
-  └─ [TEST] Test message | {"data":"test"}
-✅ PASS: Logger: Captures messages
-
-...
-
-============================================================
-📊 Test Summary: 6 passed, 0 failed
-============================================================
-
-⏱️  Duration: 1.23s
-📊 Tests: 6 total
-📝 Logger messages: 3
-
-✅ All tests passed!
-```
-
----
-
-## Troubleshooting
-
-**Issue**: `npm` command not found
-- **Fix**: Install Node.js from https://nodejs.org/
-
-**Issue**: PowerShell execution policy error
-- **Fix**: Use cmd.exe instead of PowerShell, or enable scripts (see above)
-
-**Issue**: Puppeteer download fails
-- **Fix**: Set environment variable: `set PUPPETEER_SKIP_DOWNLOAD=true` and use system Chrome
-
----
-
-## File Structure
-
-```
-Tw Adb/
-├── tests/
-│   ├── recovery-tests.js      # Test suites
-│   ├── test-runner.html       # HTML test loader
-│   └── run-tests.js           # Puppeteer automation
-├── src/                       # Source modules (unchanged)
-├── package.json               # NPM configuration (NEW)
-└── node_modules/              # Dependencies (after npm install)
+describe('MyModule', () => {
+    it('does something', () => {
+        const MyModule = window.MyModule;
+        expect(MyModule.doSomething()).toBe(true);
+    });
+});
 ```

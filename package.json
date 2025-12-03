@@ -7,12 +7,13 @@
     "build": "node build/build.js",
     "build:minor": "node build/build.js --minor",
     "build:major": "node build/build.js --major",
-    "test": "node tests/run-tests.js",
-    "test:watch": "nodemon --watch src --watch tests --exec npm test",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "prebuild": "npm test"
   },
   "devDependencies": {
-    "puppeteer-core": "^24.0.0",
-    "nodemon": "^3.0.0"
+    "jsdom": "^27.2.0",
+    "nodemon": "^3.0.0",
+    "vitest": "^4.0.15"
   }
 }
