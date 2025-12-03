@@ -1,4 +1,4 @@
-import { Test, assert, assertEquals } from './test-framework.js';
+import { Test, assert, assertEquals, assertDeepEquals } from './test-framework.js';
 import { mocks, setupTest, teardownTest } from './test-helpers.js';
 
 // Setup/Teardown

@@ -27,6 +27,7 @@ const CONFIG = {
         // Resilience Orchestrator helpers
         'recovery/RecoveryConstants.js',
         'recovery/helpers/VideoSnapshotHelper.js',
+        'recovery/helpers/RecoveryLock.js',
         'recovery/helpers/RecoveryValidator.js',
         'recovery/helpers/AVSyncRouter.js',
         // Play Retry helpers

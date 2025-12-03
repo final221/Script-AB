@@ -3,6 +3,7 @@ node_modules/
 .DS_Store
 
 # Logs
-*.log
-tests/last-run.log
+# *.log
+# tests/last-run.log
+# Commented out to allow AI agent to verify test results
 tests/test-runner.html

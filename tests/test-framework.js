@@ -134,6 +134,27 @@ export const assertEquals = (actual, expected, message) => {
     }
 };
 
+export const assertDeepEquals = (actual, expected, message) => {
+    const actualStr = JSON.stringify(actual);
+    const expectedStr = JSON.stringify(expected);
+    if (actualStr !== expectedStr) {
+        throw new AssertionError(message || `Expected deep equality`, {
+            expected,
+            actual
+        });
+    }
+};
+
+export const assertReject = async (fn, message) => {
+    try {
+        await fn();
+        throw new AssertionError(message || 'Expected async function to reject but it resolved');
+    } catch (e) {
+        if (e instanceof AssertionError) throw e;
+        // Success: it rejected
+    }
+};
+
 export const assertThrows = async (fn, message) => {
     try {
         await fn();
