@@ -5,15 +5,15 @@
 
 export const Test = {
     results: [],
-    _beforeEach: null,
-    _afterEach: null,
+    _beforeEach: [],
+    _afterEach: [],
 
     beforeEach(fn) {
-        this._beforeEach = fn;
+        this._beforeEach.push(fn);
     },
 
     afterEach(fn) {
-        this._afterEach = fn;
+        this._afterEach.push(fn);
     },
 
     async run(name, fn) {
@@ -23,7 +23,9 @@ export const Test = {
         console.log(`\n🧪 Running: ${name}`);
 
         try {
-            if (this._beforeEach) await this._beforeEach();
+            for (const hook of this._beforeEach) {
+                await hook();
+            }
             await fn();
             result.success = true;
             console.log(`✅ PASS: ${name}`);
@@ -33,9 +35,10 @@ export const Test = {
             console.error(e.message);
             if (e.details) console.error('Details:', e.details);
         } finally {
-            if (this._afterEach) {
+            // Run afterEach in reverse order
+            for (let i = this._afterEach.length - 1; i >= 0; i--) {
                 try {
-                    await this._afterEach();
+                    await this._afterEach[i]();
                 } catch (cleanupError) {
                     console.error('⚠️ Cleanup failed:', cleanupError);
                 }
@@ -114,12 +117,16 @@ export const assert = (condition, message, details = {}) => {
     }
 };
 
+export const assertTrue = (condition, message) => assert(condition === true, message || 'Expected true', { actual: condition });
+export const assertFalse = (condition, message) => assert(condition === false, message || 'Expected false', { actual: condition });
+
 export const assertEquals = (actual, expected, message) => {
-    // Simple equality check (can be expanded to deep equal if needed)
     if (actual !== expected) {
-        // Handle object comparison for better logging
         if (typeof actual === 'object' && actual !== null && typeof expected === 'object' && expected !== null) {
-            if (JSON.stringify(actual) !== JSON.stringify(expected)) {
+            // Fallback to deep equals for objects if they are not strictly equal
+            try {
+                assertDeepEquals(actual, expected, message);
+            } catch (e) {
                 throw new AssertionError(message || `Expected ${JSON.stringify(expected)} but got ${JSON.stringify(actual)}`, {
                     expected,
                     actual
@@ -134,14 +141,37 @@ export const assertEquals = (actual, expected, message) => {
     }
 };
 
+export const assertNotEquals = (actual, expected, message) => {
+    if (actual === expected) {
+        throw new AssertionError(message || `Expected ${actual} to not equal ${expected}`);
+    }
+};
+
 export const assertDeepEquals = (actual, expected, message) => {
-    const actualStr = JSON.stringify(actual);
-    const expectedStr = JSON.stringify(expected);
-    if (actualStr !== expectedStr) {
-        throw new AssertionError(message || `Expected deep equality`, {
-            expected,
-            actual
+    const isObject = (obj) => obj !== null && typeof obj === 'object';
+
+    if (!isObject(actual) || !isObject(expected)) {
+        if (actual !== expected) {
+            throw new AssertionError(message || `Expected ${actual} to equal ${expected}`, { expected, actual });
+        }
+        return;
+    }
+
+    const actualKeys = Object.keys(actual);
+    const expectedKeys = Object.keys(expected);
+
+    if (actualKeys.length !== expectedKeys.length) {
+        throw new AssertionError(message || `Expected ${expectedKeys.length} keys but got ${actualKeys.length}`, {
+            expectedKeys,
+            actualKeys
         });
+    }
+
+    for (const key of expectedKeys) {
+        if (!actualKeys.includes(key)) {
+            throw new AssertionError(message || `Missing key: ${key}`);
+        }
+        assertDeepEquals(actual[key], expected[key], `${message ? message + ': ' : ''}Mismatch at key ${key}`);
     }
 };
 

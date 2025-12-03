@@ -29,6 +29,9 @@ Using default Chrome path: C:\Program Files\Google\Chrome\Application\chrome.exe
 🧪 Running: Logger: Captures messages
 ✅ PASS: Logger: Captures messages
 
+🧪 Running: Integration: Logger and Metrics work together
+✅ PASS: Integration: Logger and Metrics work together
+
 🧪 Running: Metrics: Increments counters
 ✅ PASS: Metrics: Increments counters
 
@@ -37,9 +40,6 @@ Using default Chrome path: C:\Program Files\Google\Chrome\Application\chrome.exe
 
 🧪 Running: AdBlocker: Correlation detects missed ads
 ✅ PASS: AdBlocker: Correlation detects missed ads
-
-🧪 Running: Integration: Logger and Metrics work together
-✅ PASS: Integration: Logger and Metrics work together
 
 🧪 Running: Logic: Session tracking detects key changes
 ✅ PASS: Logic: Session tracking detects key changes
@@ -74,7 +74,7 @@ TEST SUMMARY
 Total:  20
 Passed: 20
 Failed: 0
-Time:   10356.10ms
+Time:   10345.10ms
 ========================================
 
 ✅ All tests passed!

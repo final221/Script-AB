@@ -69,15 +69,46 @@
 
     <!-- Load and run tests -->
     <script type="module">
+        // Import test framework for summary
+        import { Test } from './test-framework.js';
+
         // Import test runner functions
         import { runHealthTests } from './health-tests.js';
-        import { runCoreTests } from './core-tests.js';
-        import { runRecoveryTests } from './recovery-tests.js';
+
+        // Monitoring
+        import { runLoggerTests } from './monitoring/logger-tests.js';
+        import { runMetricsTests } from './monitoring/metrics-tests.js';
+
+        // Network
+        import { runAdBlockerTests } from './network/adblocker-tests.js';
+
+        // Utils
+        import { runLogicTests } from './utils/logic-tests.js';
+
+        // Player
+        import { runPlayerContextTests } from './player/player-context-tests.js';
+
+        // Recovery
+        import { runRecoveryDiagnosticsTests } from './recovery/recovery-diagnostics-tests.js';
+        import { runResilienceTests } from './recovery/resilience-tests.js';
 
         // Run all tests in sequence and wait for completion
         await runHealthTests();
-        await runCoreTests();
-        await runRecoveryTests();
+
+        await runLoggerTests();
+        await runMetricsTests();
+
+        await runAdBlockerTests();
+
+        await runLogicTests();
+
+        await runPlayerContextTests();
+
+        await runRecoveryDiagnosticsTests();
+        await runResilienceTests();
+
+        // Signal completion
+        Test.summary();
     </script>
 </body>
 
