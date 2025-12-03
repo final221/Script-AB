@@ -58,12 +58,10 @@ Using default Chrome path: C:\Program Files\Google\Chrome\Application\chrome.exe
 ✅ PASS: PlayerContext: Handles detached element gracefully
 
 🧪 Running: ResilienceOrchestrator: Buffer validation forces aggressive
-❌ FAIL: ResilienceOrchestrator: Buffer validation forces aggressive
-DOMObserver.getVideo is not a function
+✅ PASS: ResilienceOrchestrator: Buffer validation forces aggressive
 
 🧪 Running: ResilienceOrchestrator: Recovery validation detects failures
-❌ FAIL: ResilienceOrchestrator: Recovery validation detects failures
-DOMObserver.getVideo is not a function
+✅ PASS: ResilienceOrchestrator: Recovery validation detects failures
 
 🧪 Running: FrameDropDetector: Ignores drops during normal playback
 ✅ PASS: FrameDropDetector: Ignores drops during normal playback
@@ -72,16 +70,12 @@ DOMObserver.getVideo is not a function
 TEST SUMMARY
 ========================================
 Total:  20
-Passed: 18
-Failed: 2
-Time:   11449.20ms
+Passed: 20
+Failed: 0
+Time:   11451.50ms
 ========================================
 
-FAILED TESTS:
-- ResilienceOrchestrator: Buffer validation forces aggressive: DOMObserver.getVideo is not a function
-- ResilienceOrchestrator: Recovery validation detects failures: DOMObserver.getVideo is not a function
-
-❌ 2 test(s) failed
+✅ All tests passed!
 
 📄 Full log saved to: F:\Fynn\Projects\Tw Adb\tests\last-run.log
 🔒 Browser closed

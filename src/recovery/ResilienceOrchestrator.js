@@ -14,10 +14,13 @@ const ResilienceOrchestrator = (() => {
     return {
         /**
          * Main entry point for recovery.
-         * @param {string} reason - The reason for triggering recovery
+         * @param {HTMLElement} container - The player container (unused, but kept for API compatibility)
+         * @param {Object} payload - Event payload containing reason and flags
          * @returns {Promise<boolean>} True if recovery was successful
          */
-        execute: async (reason = 'unknown') => {
+        execute: async (container, payload = {}) => {
+            const reason = payload.reason || 'unknown';
+
             // 1. Concurrency Guard
             if (isFixing) {
                 if (Date.now() - recoveryStartTime > RECOVERY_TIMEOUT_MS) {
@@ -36,7 +39,8 @@ const ResilienceOrchestrator = (() => {
             }
 
             // 2. Check if already healthy (prevent unnecessary recovery)
-            if (RecoveryValidator.detectAlreadyHealthy(video)) {
+            // Skip check if forced
+            if (!payload.forceAggressive && !payload.forceExperimental && RecoveryValidator.detectAlreadyHealthy(video)) {
                 Logger.add('[Resilience] Video appears healthy, skipping recovery', {
                     reason,
                     readyState: video.readyState,
@@ -64,6 +68,12 @@ const ResilienceOrchestrator = (() => {
                 // 5. Strategy Selection & Execution
                 // Note: BufferAnalyzer and RecoveryStrategy are assumed to be global modules
                 const bufferHealth = BufferAnalyzer.analyze(video);
+
+                // Legacy support: update payload if buffer is critical
+                if (bufferHealth && bufferHealth.bufferHealth === 'critical') {
+                    payload.forceAggressive = true;
+                }
+
                 const strategy = RecoveryStrategy.select(reason, bufferHealth);
 
                 Logger.add(`[Resilience] Selected strategy: ${strategy.name}`);
