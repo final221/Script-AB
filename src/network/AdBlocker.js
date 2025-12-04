@@ -61,6 +61,11 @@ const AdBlocker = (() => {
         // 5. Unified Metrics
         if (isAd) {
             Metrics.increment('ads_detected');
+
+            // NEW: Record for correlation tracking
+            if (typeof AdCorrelation !== 'undefined') {
+                AdCorrelation.recordBlock(url, type);
+            }
         }
 
         return isAd;

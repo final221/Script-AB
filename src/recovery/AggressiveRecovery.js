@@ -121,6 +121,67 @@ const AggressiveRecovery = (() => {
             Logger.add('[Aggressive] Strategy 3: Quality toggle attempt');
             attemptQualityToggle(video);
 
+            await Fn.sleep(500);
+            if (!video.paused && video.readyState >= 3) {
+                Logger.add('[Aggressive] Quality toggle successful');
+            } else {
+                // STRATEGY 4: Force source reload (last resort)
+                Logger.add('[Aggressive] Strategy 4: Source reload attempt');
+                try {
+                    const currentSrc = video.src;
+                    const isBlobSrc = currentSrc && currentSrc.startsWith('blob:');
+
+                    Logger.add('[Aggressive] Source reload state', {
+                        hasSrc: !!currentSrc,
+                        isBlobSrc,
+                        readyState: video.readyState,
+                        networkState: video.networkState
+                    });
+
+                    if (currentSrc && !isBlobSrc) {
+                        // For non-blob sources, reload directly
+                        video.src = '';
+                        await Fn.sleep(100);
+                        video.src = currentSrc;
+                        video.load();
+                        Logger.add('[Aggressive] Source reloaded directly');
+                        await Fn.sleep(500);
+                        await video.play().catch(e =>
+                            Logger.add('[Aggressive] Play after reload failed', { error: e.message })
+                        );
+                    } else {
+                        // For blob sources, trigger Twitch player refresh via keyboard
+                        const container = video.closest('.video-player');
+                        if (container) {
+                            // Simulate 'r' key which refreshes stream in Twitch
+                            container.dispatchEvent(new KeyboardEvent('keydown', {
+                                key: 'r',
+                                code: 'KeyR',
+                                bubbles: true
+                            }));
+                            Logger.add('[Aggressive] Triggered keyboard refresh (R key)');
+                            await Fn.sleep(1000);
+                        }
+                    }
+
+                    // Check if reload worked
+                    const postReloadState = {
+                        paused: video.paused,
+                        readyState: video.readyState,
+                        networkState: video.networkState
+                    };
+                    Logger.add('[Aggressive] Post-reload state', postReloadState);
+
+                    if (!video.paused && video.readyState >= 3) {
+                        Logger.add('[Aggressive] Source reload SUCCESSFUL');
+                    } else {
+                        Logger.add('[Aggressive] Source reload FAILED - player still unhealthy');
+                    }
+                } catch (e) {
+                    Logger.add('[Aggressive] Source reload error', { error: e.message });
+                }
+            }
+
             // Wait for stream to stabilize
             await RecoveryUtils.waitForStability(video, {
                 startTime: recoveryStartTime,
@@ -142,6 +203,12 @@ const AggressiveRecovery = (() => {
                 duration: duration.toFixed(0) + 'ms',
                 finalState: RecoveryUtils.captureVideoState(video)
             });
+
+            // Export correlation stats on recovery completion
+            if (typeof AdCorrelation !== 'undefined') {
+                Logger.add('[Aggressive] Ad correlation stats', AdCorrelation.getStats());
+            }
         }
     };
 })();
+

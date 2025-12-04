@@ -45,6 +45,15 @@ const CONFIG = (() => {
             AD_PATTERNS: ['/ad/v1/', '/usher/v1/ad/', '/api/v5/ads/', 'pubads.g.doubleclick.net', 'supervisor.ext-twitch.tv', '/3p/ads'],
             TRIGGER_PATTERNS: ['/ad_state/', 'vod_ad_manifest'],
 
+            // NEW: Fuzzy patterns to catch ad URL variations
+            AD_PATTERN_REGEX: [
+                /\/ad[s]?\//i,           // /ad/, /ads/, /Ad/, etc.
+                /\/advertis/i,           // /advertisement/, /advertising/
+                /preroll|midroll/i,      // Common ad types in path/query
+                /doubleclick/i,          // Google ads
+                /\.ad\./i,               // *.ad.* domains
+            ],
+
             // Structured patterns with type info
             DELIVERY_PATTERNS_TYPED: [
                 { pattern: '/ad_state/', type: 'path' },

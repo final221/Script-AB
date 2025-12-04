@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       2.2.18
+// @version       2.2.19
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -57,6 +57,15 @@ const CONFIG = (() => {
         network: {
             AD_PATTERNS: ['/ad/v1/', '/usher/v1/ad/', '/api/v5/ads/', 'pubads.g.doubleclick.net', 'supervisor.ext-twitch.tv', '/3p/ads'],
             TRIGGER_PATTERNS: ['/ad_state/', 'vod_ad_manifest'],
+
+            // NEW: Fuzzy patterns to catch ad URL variations
+            AD_PATTERN_REGEX: [
+                /\/ad[s]?\//i,           // /ad/, /ads/, /Ad/, etc.
+                /\/advertis/i,           // /advertisement/, /advertising/
+                /preroll|midroll/i,      // Common ad types in path/query
+                /doubleclick/i,          // Google ads
+                /\.ad\./i,               // *.ad.* domains
+            ],
 
             // Structured patterns with type info
             DELIVERY_PATTERNS_TYPED: [
@@ -305,7 +314,27 @@ const AdDetection = (() => {
      */
     const isAd = (url) => {
         if (!url || typeof url !== 'string') return false;
-        return CONFIG.regex.AD_BLOCK.test(url);
+
+        // Exact pattern match
+        if (CONFIG.regex.AD_BLOCK.test(url)) {
+            return true;
+        }
+
+        // NEW: Fuzzy regex patterns for variations
+        const fuzzyPatterns = CONFIG.network.AD_PATTERN_REGEX;
+        if (fuzzyPatterns && Array.isArray(fuzzyPatterns)) {
+            for (const regex of fuzzyPatterns) {
+                if (regex.test(url)) {
+                    Logger.add('[AdDetection] Fuzzy pattern match detected', {
+                        url: url.substring(0, 150), // Truncate for readability
+                        matchedPattern: regex.toString()
+                    });
+                    return true;
+                }
+            }
+        }
+
+        return false;
     };
 
     /**
@@ -377,6 +406,7 @@ const AdDetection = (() => {
         isAvailabilityCheck
     };
 })();
+
 
 // --- Mock Generator ---
 /**
@@ -1110,8 +1140,10 @@ const RecoveryValidator = (() => {
     // Time progression tracking for health detection
     let lastHealthCheckTime = 0;
     let lastHealthCheckVideoTime = 0;
+    let lastFrameCount = 0; // NEW: Frame-based tracking
     const MIN_PROGRESSION_S = 0.3; // Video must advance at least 0.3s between checks
     const CHECK_WINDOW_MS = 2000; // Time window for progression check
+    const MIN_FRAME_ADVANCEMENT = 5; // Minimum frames that should advance
 
     /**
      * Validates if recovery actually improved the state.
@@ -1144,6 +1176,14 @@ const RecoveryValidator = (() => {
             issues.push('No measurable improvement detected');
         }
 
+        // Log validation result
+        Logger.add('[RecoveryValidator] Validation complete', {
+            isValid: issues.length === 0,
+            hasImprovement,
+            issueCount: issues.length,
+            issues: issues.length > 0 ? issues : undefined
+        });
+
         return {
             isValid: issues.length === 0,
             issues,
@@ -1153,13 +1193,22 @@ const RecoveryValidator = (() => {
 
     /**
      * Checks if the video is already healthy enough to skip recovery.
-     * Now includes time progression check to avoid false positives.
+     * Now includes frame progression check for more reliable detection.
      * @param {HTMLVideoElement} video - The video element
-     * @returns {boolean} True if healthy (with verified time progression)
+     * @returns {boolean} True if healthy (with verified time/frame progression)
      */
     const detectAlreadyHealthy = (video) => {
         const now = Date.now();
         const currentVideoTime = video.currentTime;
+
+        // Capture initial state for logging
+        const state = {
+            paused: video.paused,
+            readyState: video.readyState,
+            networkState: video.networkState,
+            error: video.error?.code || null,
+            currentTime: currentVideoTime.toFixed(3)
+        };
 
         // Basic checks first
         const basicHealthy = (
@@ -1170,37 +1219,62 @@ const RecoveryValidator = (() => {
         );
 
         if (!basicHealthy) {
-            // Not healthy - reset tracking for next recovery attempt
+            Logger.add('[RecoveryValidator] Basic health check FAILED', {
+                ...state,
+                reason: video.paused ? 'paused' :
+                    video.readyState < 3 ? 'readyState<3' :
+                        video.error ? 'error' : 'networkState=NO_SOURCE'
+            });
             lastHealthCheckTime = now;
             lastHealthCheckVideoTime = currentVideoTime;
+            lastFrameCount = 0;
             return false;
         }
 
-        // Time progression check: verify video is actually advancing
+        // NEW: Frame progression check (more reliable than time)
+        let frameAdvancement = 0;
+        const quality = video.getVideoPlaybackQuality?.();
+        if (quality) {
+            const currentFrames = quality.totalVideoFrames;
+            frameAdvancement = currentFrames - lastFrameCount;
+
+            if (lastFrameCount > 0 && frameAdvancement < MIN_FRAME_ADVANCEMENT) {
+                Logger.add('[RecoveryValidator] Frame progression FAILED', {
+                    ...state,
+                    frameAdvancement,
+                    currentFrames,
+                    lastFrameCount,
+                    minRequired: MIN_FRAME_ADVANCEMENT
+                });
+                lastFrameCount = currentFrames;
+                return false; // Frames stuck = actually not healthy
+            }
+            lastFrameCount = currentFrames;
+        }
+
+        // Time progression check as fallback
         const timeSinceLastCheck = now - lastHealthCheckTime;
         const videoTimeAdvancement = currentVideoTime - lastHealthCheckVideoTime;
 
-        // Update tracking state
         lastHealthCheckTime = now;
         lastHealthCheckVideoTime = currentVideoTime;
 
-        // Only skip if we have a recent check AND video time is advancing
         if (timeSinceLastCheck > 0 && timeSinceLastCheck < CHECK_WINDOW_MS) {
             if (videoTimeAdvancement < MIN_PROGRESSION_S) {
-                Logger.add('[Resilience] Video appears healthy BUT time not advancing', {
+                Logger.add('[RecoveryValidator] Time progression FAILED', {
+                    ...state,
                     videoTimeAdvancement: videoTimeAdvancement.toFixed(3),
                     minRequired: MIN_PROGRESSION_S,
-                    readyState: video.readyState,
-                    paused: video.paused
+                    timeSinceLastCheck
                 });
-                return false; // Video looks healthy but is actually stuck
+                return false;
             }
         }
 
-        Logger.add('[Resilience] Video confirmed healthy - time is progressing', {
+        Logger.add('[RecoveryValidator] Health check PASSED', {
+            ...state,
             videoTimeAdvancement: videoTimeAdvancement.toFixed(3),
-            readyState: video.readyState,
-            paused: video.paused
+            frameAdvancement: frameAdvancement || 'N/A (no quality API)'
         });
         return true;
     };
@@ -1210,6 +1284,7 @@ const RecoveryValidator = (() => {
         detectAlreadyHealthy
     };
 })();
+
 
 // --- A/V Sync Router ---
 /**
@@ -1978,6 +2053,12 @@ const HealthMonitor = (() => {
             pendingIssues.push({ type: 'FRAME_DROP', priority: 2, ...frameDropResult });
         }
 
+        // NEW: Update AdCorrelation with health state
+        const isHealthy = pendingIssues.length === 0;
+        if (typeof AdCorrelation !== 'undefined') {
+            AdCorrelation.updatePlayerState(isHealthy);
+        }
+
         // Process issues if any found
         if (pendingIssues.length > 0) {
             // Sort by priority (highest first)
@@ -2532,6 +2613,11 @@ const AdBlocker = (() => {
         // 5. Unified Metrics
         if (isAd) {
             Metrics.increment('ads_detected');
+
+            // NEW: Record for correlation tracking
+            if (typeof AdCorrelation !== 'undefined') {
+                AdCorrelation.recordBlock(url, type);
+            }
         }
 
         return isAd;
@@ -2557,6 +2643,112 @@ const AdBlocker = (() => {
             }
             return { error: 'AdAnalytics not loaded' };
         }
+    };
+})();
+
+// --- Ad Correlation ---
+/**
+ * Tracks correlation between blocked ad requests and player health.
+ * Helps measure effectiveness of ad blocking.
+ */
+const AdCorrelation = (() => {
+    const recentBlocks = [];
+    const MAX_HISTORY = 50;
+    const CORRELATION_WINDOW_MS = 10000; // 10 seconds
+
+    /**
+     * Records a blocked ad request
+     * @param {string} url - The blocked URL
+     * @param {string} type - Request type (XHR/FETCH)
+     */
+    const recordBlock = (url, type) => {
+        const record = {
+            url: url.substring(0, 100), // Truncate for memory
+            type,
+            timestamp: Date.now(),
+            playerHealthy: null // Will be updated by health checks
+        };
+
+        recentBlocks.push(record);
+
+        // Trim old entries
+        while (recentBlocks.length > MAX_HISTORY) {
+            recentBlocks.shift();
+        }
+
+        Logger.add('[AdCorrelation] Block recorded', {
+            type,
+            urlPreview: url.substring(0, 80),
+            totalBlocked: recentBlocks.length
+        });
+    };
+
+    /**
+     * Updates player health state for recent blocks
+     * @param {boolean} isHealthy - Current player health state
+     */
+    const updatePlayerState = (isHealthy) => {
+        const now = Date.now();
+        let updated = 0;
+
+        recentBlocks.forEach(block => {
+            if (now - block.timestamp < CORRELATION_WINDOW_MS && block.playerHealthy === null) {
+                block.playerHealthy = isHealthy;
+                updated++;
+            }
+        });
+
+        if (updated > 0) {
+            Logger.add('[AdCorrelation] Player state updated for recent blocks', {
+                isHealthy,
+                blocksUpdated: updated
+            });
+        }
+    };
+
+    /**
+     * Gets correlation statistics
+     * @returns {Object} Stats about blocking effectiveness
+     */
+    const getStats = () => {
+        const total = recentBlocks.length;
+        const healthy = recentBlocks.filter(b => b.playerHealthy === true).length;
+        const unhealthy = recentBlocks.filter(b => b.playerHealthy === false).length;
+        const pending = recentBlocks.filter(b => b.playerHealthy === null).length;
+
+        const stats = {
+            totalBlocked: total,
+            playerRemainedHealthy: healthy,
+            playerBecameUnhealthy: unhealthy,
+            pendingCorrelation: pending,
+            effectivenessRate: total > 0 && (healthy + unhealthy) > 0
+                ? ((healthy / (healthy + unhealthy)) * 100).toFixed(1) + '%'
+                : 'N/A'
+        };
+
+        return stats;
+    };
+
+    /**
+     * Exports full correlation data for analysis
+     */
+    const exportData = () => {
+        const stats = getStats();
+        Logger.add('[AdCorrelation] Correlation Export', {
+            ...stats,
+            recentBlocks: recentBlocks.slice(-10) // Last 10 for log
+        });
+        return {
+            stats,
+            blocks: [...recentBlocks]
+        };
+    };
+
+    return {
+        recordBlock,
+        updatePlayerState,
+        getStats,
+        exportData
     };
 })();
 
@@ -2977,6 +3169,67 @@ const AggressiveRecovery = (() => {
             Logger.add('[Aggressive] Strategy 3: Quality toggle attempt');
             attemptQualityToggle(video);
 
+            await Fn.sleep(500);
+            if (!video.paused && video.readyState >= 3) {
+                Logger.add('[Aggressive] Quality toggle successful');
+            } else {
+                // STRATEGY 4: Force source reload (last resort)
+                Logger.add('[Aggressive] Strategy 4: Source reload attempt');
+                try {
+                    const currentSrc = video.src;
+                    const isBlobSrc = currentSrc && currentSrc.startsWith('blob:');
+
+                    Logger.add('[Aggressive] Source reload state', {
+                        hasSrc: !!currentSrc,
+                        isBlobSrc,
+                        readyState: video.readyState,
+                        networkState: video.networkState
+                    });
+
+                    if (currentSrc && !isBlobSrc) {
+                        // For non-blob sources, reload directly
+                        video.src = '';
+                        await Fn.sleep(100);
+                        video.src = currentSrc;
+                        video.load();
+                        Logger.add('[Aggressive] Source reloaded directly');
+                        await Fn.sleep(500);
+                        await video.play().catch(e =>
+                            Logger.add('[Aggressive] Play after reload failed', { error: e.message })
+                        );
+                    } else {
+                        // For blob sources, trigger Twitch player refresh via keyboard
+                        const container = video.closest('.video-player');
+                        if (container) {
+                            // Simulate 'r' key which refreshes stream in Twitch
+                            container.dispatchEvent(new KeyboardEvent('keydown', {
+                                key: 'r',
+                                code: 'KeyR',
+                                bubbles: true
+                            }));
+                            Logger.add('[Aggressive] Triggered keyboard refresh (R key)');
+                            await Fn.sleep(1000);
+                        }
+                    }
+
+                    // Check if reload worked
+                    const postReloadState = {
+                        paused: video.paused,
+                        readyState: video.readyState,
+                        networkState: video.networkState
+                    };
+                    Logger.add('[Aggressive] Post-reload state', postReloadState);
+
+                    if (!video.paused && video.readyState >= 3) {
+                        Logger.add('[Aggressive] Source reload SUCCESSFUL');
+                    } else {
+                        Logger.add('[Aggressive] Source reload FAILED - player still unhealthy');
+                    }
+                } catch (e) {
+                    Logger.add('[Aggressive] Source reload error', { error: e.message });
+                }
+            }
+
             // Wait for stream to stabilize
             await RecoveryUtils.waitForStability(video, {
                 startTime: recoveryStartTime,
@@ -2998,9 +3251,15 @@ const AggressiveRecovery = (() => {
                 duration: duration.toFixed(0) + 'ms',
                 finalState: RecoveryUtils.captureVideoState(video)
             });
+
+            // Export correlation stats on recovery completion
+            if (typeof AdCorrelation !== 'undefined') {
+                Logger.add('[Aggressive] Ad correlation stats', AdCorrelation.getStats());
+            }
         }
     };
 })();
+
 
 /**
  * Specialized recovery strategy for A/V synchronization issues.

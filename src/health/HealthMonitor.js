@@ -56,6 +56,12 @@ const HealthMonitor = (() => {
             pendingIssues.push({ type: 'FRAME_DROP', priority: 2, ...frameDropResult });
         }
 
+        // NEW: Update AdCorrelation with health state
+        const isHealthy = pendingIssues.length === 0;
+        if (typeof AdCorrelation !== 'undefined') {
+            AdCorrelation.updatePlayerState(isHealthy);
+        }
+
         // Process issues if any found
         if (pendingIssues.length > 0) {
             // Sort by priority (highest first)

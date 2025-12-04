@@ -6,8 +6,10 @@ const RecoveryValidator = (() => {
     // Time progression tracking for health detection
     let lastHealthCheckTime = 0;
     let lastHealthCheckVideoTime = 0;
+    let lastFrameCount = 0; // NEW: Frame-based tracking
     const MIN_PROGRESSION_S = 0.3; // Video must advance at least 0.3s between checks
     const CHECK_WINDOW_MS = 2000; // Time window for progression check
+    const MIN_FRAME_ADVANCEMENT = 5; // Minimum frames that should advance
 
     /**
      * Validates if recovery actually improved the state.
@@ -40,6 +42,14 @@ const RecoveryValidator = (() => {
             issues.push('No measurable improvement detected');
         }
 
+        // Log validation result
+        Logger.add('[RecoveryValidator] Validation complete', {
+            isValid: issues.length === 0,
+            hasImprovement,
+            issueCount: issues.length,
+            issues: issues.length > 0 ? issues : undefined
+        });
+
         return {
             isValid: issues.length === 0,
             issues,
@@ -49,13 +59,22 @@ const RecoveryValidator = (() => {
 
     /**
      * Checks if the video is already healthy enough to skip recovery.
-     * Now includes time progression check to avoid false positives.
+     * Now includes frame progression check for more reliable detection.
      * @param {HTMLVideoElement} video - The video element
-     * @returns {boolean} True if healthy (with verified time progression)
+     * @returns {boolean} True if healthy (with verified time/frame progression)
      */
     const detectAlreadyHealthy = (video) => {
         const now = Date.now();
         const currentVideoTime = video.currentTime;
+
+        // Capture initial state for logging
+        const state = {
+            paused: video.paused,
+            readyState: video.readyState,
+            networkState: video.networkState,
+            error: video.error?.code || null,
+            currentTime: currentVideoTime.toFixed(3)
+        };
 
         // Basic checks first
         const basicHealthy = (
@@ -66,37 +85,62 @@ const RecoveryValidator = (() => {
         );
 
         if (!basicHealthy) {
-            // Not healthy - reset tracking for next recovery attempt
+            Logger.add('[RecoveryValidator] Basic health check FAILED', {
+                ...state,
+                reason: video.paused ? 'paused' :
+                    video.readyState < 3 ? 'readyState<3' :
+                        video.error ? 'error' : 'networkState=NO_SOURCE'
+            });
             lastHealthCheckTime = now;
             lastHealthCheckVideoTime = currentVideoTime;
+            lastFrameCount = 0;
             return false;
         }
 
-        // Time progression check: verify video is actually advancing
+        // NEW: Frame progression check (more reliable than time)
+        let frameAdvancement = 0;
+        const quality = video.getVideoPlaybackQuality?.();
+        if (quality) {
+            const currentFrames = quality.totalVideoFrames;
+            frameAdvancement = currentFrames - lastFrameCount;
+
+            if (lastFrameCount > 0 && frameAdvancement < MIN_FRAME_ADVANCEMENT) {
+                Logger.add('[RecoveryValidator] Frame progression FAILED', {
+                    ...state,
+                    frameAdvancement,
+                    currentFrames,
+                    lastFrameCount,
+                    minRequired: MIN_FRAME_ADVANCEMENT
+                });
+                lastFrameCount = currentFrames;
+                return false; // Frames stuck = actually not healthy
+            }
+            lastFrameCount = currentFrames;
+        }
+
+        // Time progression check as fallback
         const timeSinceLastCheck = now - lastHealthCheckTime;
         const videoTimeAdvancement = currentVideoTime - lastHealthCheckVideoTime;
 
-        // Update tracking state
         lastHealthCheckTime = now;
         lastHealthCheckVideoTime = currentVideoTime;
 
-        // Only skip if we have a recent check AND video time is advancing
         if (timeSinceLastCheck > 0 && timeSinceLastCheck < CHECK_WINDOW_MS) {
             if (videoTimeAdvancement < MIN_PROGRESSION_S) {
-                Logger.add('[Resilience] Video appears healthy BUT time not advancing', {
+                Logger.add('[RecoveryValidator] Time progression FAILED', {
+                    ...state,
                     videoTimeAdvancement: videoTimeAdvancement.toFixed(3),
                     minRequired: MIN_PROGRESSION_S,
-                    readyState: video.readyState,
-                    paused: video.paused
+                    timeSinceLastCheck
                 });
-                return false; // Video looks healthy but is actually stuck
+                return false;
             }
         }
 
-        Logger.add('[Resilience] Video confirmed healthy - time is progressing', {
+        Logger.add('[RecoveryValidator] Health check PASSED', {
+            ...state,
             videoTimeAdvancement: videoTimeAdvancement.toFixed(3),
-            readyState: video.readyState,
-            paused: video.paused
+            frameAdvancement: frameAdvancement || 'N/A (no quality API)'
         });
         return true;
     };
@@ -106,3 +150,4 @@ const RecoveryValidator = (() => {
         detectAlreadyHealthy
     };
 })();
+

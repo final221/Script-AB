@@ -10,7 +10,27 @@ const AdDetection = (() => {
      */
     const isAd = (url) => {
         if (!url || typeof url !== 'string') return false;
-        return CONFIG.regex.AD_BLOCK.test(url);
+
+        // Exact pattern match
+        if (CONFIG.regex.AD_BLOCK.test(url)) {
+            return true;
+        }
+
+        // NEW: Fuzzy regex patterns for variations
+        const fuzzyPatterns = CONFIG.network.AD_PATTERN_REGEX;
+        if (fuzzyPatterns && Array.isArray(fuzzyPatterns)) {
+            for (const regex of fuzzyPatterns) {
+                if (regex.test(url)) {
+                    Logger.add('[AdDetection] Fuzzy pattern match detected', {
+                        url: url.substring(0, 150), // Truncate for readability
+                        matchedPattern: regex.toString()
+                    });
+                    return true;
+                }
+            }
+        }
+
+        return false;
     };
 
     /**
@@ -82,3 +102,4 @@ const AdDetection = (() => {
         isAvailabilityCheck
     };
 })();
+
