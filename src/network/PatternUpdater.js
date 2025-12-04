@@ -4,15 +4,28 @@
  * Works ALONGSIDE existing static patterns - additive, not replacement.
  */
 const PatternUpdater = (() => {
-    // Community pattern sources (configurable)
+    // Community pattern sources (add your own GitHub gist, raw URL, etc.)
     const PATTERN_SOURCES = [
-        // Add your pattern source URLs here
-        // 'https://raw.githubusercontent.com/<community>/twitch-patterns/main/patterns.json'
+        // Example: 'https://raw.githubusercontent.com/user/repo/main/patterns.json'
+        // Example: 'https://gist.githubusercontent.com/user/id/raw/patterns.json'
+    ];
+
+    // EMBEDDED FALLBACK PATTERNS - always available even without remote source
+    const EMBEDDED_PATTERNS = [
+        { type: 'string', value: '/api/ads/' },
+        { type: 'string', value: 'amazon-adsystem.com' },
+        { type: 'string', value: 'imasdk.googleapis.com' },
+        { type: 'regex', value: '\\/ad[s]?\\/v\\d+\\/', flags: 'i' },
+        { type: 'regex', value: 'preroll|midroll|postroll', flags: 'i' },
+        { type: 'string', value: 'video-ad-' },
+        { type: 'string', value: '/commercial/' },
+        { type: 'string', value: 'adserver.' },
+        { type: 'regex', value: '\\.ads?\\.', flags: 'i' },
     ];
 
     const REFRESH_INTERVAL_MS = 6 * 60 * 60 * 1000; // Refresh every 6 hours
     let lastUpdate = 0;
-    let dynamicPatterns = [];
+    let dynamicPatterns = [...EMBEDDED_PATTERNS]; // Start with embedded patterns
     let isInitialized = false;
     let fetchInProgress = false;
 
@@ -143,13 +156,16 @@ const PatternUpdater = (() => {
         isInitialized = true;
 
         Logger.add('[PatternUpdater] Initializing', {
-            sourceCount: PATTERN_SOURCES.length,
+            embeddedPatterns: EMBEDDED_PATTERNS.length,
+            remoteSourceCount: PATTERN_SOURCES.length,
             refreshIntervalHours: REFRESH_INTERVAL_MS / (60 * 60 * 1000)
         });
 
-        // IMMEDIATE fetch on script load
+        // Fetch from remote sources if configured (embedded patterns already loaded)
         if (PATTERN_SOURCES.length > 0) {
             fetchPatterns();
+        } else {
+            Logger.add('[PatternUpdater] Using embedded patterns only (no remote sources)');
         }
 
         // Periodic refresh check

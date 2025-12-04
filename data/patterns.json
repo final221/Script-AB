@@ -1,0 +1,44 @@
+{
+    "version": "1.0.0",
+    "lastUpdated": "2025-12-04",
+    "description": "Community-maintained Twitch ad patterns",
+    "patterns": [
+        {
+            "type": "string",
+            "value": "/api/ads/",
+            "category": "delivery"
+        },
+        {
+            "type": "string",
+            "value": "amazon-adsystem.com",
+            "category": "third-party"
+        },
+        {
+            "type": "string",
+            "value": "imasdk.googleapis.com",
+            "category": "google-ima"
+        },
+        {
+            "type": "regex",
+            "value": "\\/ad[s]?\\/v\\d+\\/",
+            "flags": "i",
+            "category": "versioned-api"
+        },
+        {
+            "type": "regex",
+            "value": "preroll|midroll|postroll",
+            "flags": "i",
+            "category": "roll-type"
+        },
+        {
+            "type": "string",
+            "value": "video-ad-",
+            "category": "video-ad"
+        },
+        {
+            "type": "string",
+            "value": "/commercial/",
+            "category": "commercial"
+        }
+    ]
+}
