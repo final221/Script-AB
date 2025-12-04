@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       2.2.17
+// @version       2.2.18
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -501,13 +501,14 @@ const PatternDiscovery = (() => {
 
     /**
      * Exports ALL captured Twitch URLs for comprehensive analysis
+     * Also logs summary to be visible in exportTwitchAdLogs()
      * @returns {{suspicious: string[], allTwitch: string[], stats: Object}}
      */
     const exportCapturedUrls = () => {
         const suspicious = Array.from(_suspiciousUrls);
         const allTwitch = Array.from(_allTwitchUrls);
 
-        return {
+        const result = {
             suspicious,
             allTwitch,
             stats: {
@@ -517,6 +518,17 @@ const PatternDiscovery = (() => {
                 atLimit: allTwitch.length >= MAX_CAPTURED_URLS
             }
         };
+
+        // Log summary to make it visible in exportTwitchAdLogs()
+        Logger.add('[PATTERN DISCOVERY] URL Capture Export', {
+            suspiciousCount: result.stats.suspiciousCount,
+            totalCaptured: result.stats.totalCaptured,
+            atLimit: result.stats.atLimit,
+            suspiciousSample: suspicious.slice(0, 10), // First 10 for log brevity
+            hint: 'Full data returned in console'
+        });
+
+        return result;
     };
 
     /**
