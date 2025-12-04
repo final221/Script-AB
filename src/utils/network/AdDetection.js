@@ -11,23 +11,31 @@ const AdDetection = (() => {
     const isAd = (url) => {
         if (!url || typeof url !== 'string') return false;
 
-        // Exact pattern match
+        // 1. Static pattern match (fastest)
         if (CONFIG.regex.AD_BLOCK.test(url)) {
             return true;
         }
 
-        // NEW: Fuzzy regex patterns for variations
+        // 2. Fuzzy regex patterns for variations (Plan A)
         const fuzzyPatterns = CONFIG.network.AD_PATTERN_REGEX;
         if (fuzzyPatterns && Array.isArray(fuzzyPatterns)) {
             for (const regex of fuzzyPatterns) {
                 if (regex.test(url)) {
                     Logger.add('[AdDetection] Fuzzy pattern match detected', {
-                        url: url.substring(0, 150), // Truncate for readability
+                        url: url.substring(0, 150),
                         matchedPattern: regex.toString()
                     });
                     return true;
                 }
             }
+        }
+
+        // 3. Dynamic patterns from external sources (Plan B)
+        if (CONFIG.experimental?.ENABLE_LIVE_PATTERNS &&
+            typeof PatternUpdater !== 'undefined' &&
+            PatternUpdater.matchesDynamic(url)) {
+            // Already logged inside matchesDynamic
+            return true;
         }
 
         return false;

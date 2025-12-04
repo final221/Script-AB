@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       2.2.20
+// @version       2.2.21
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -100,6 +100,11 @@ const CONFIG = (() => {
             STANDARD_SEEK_BACK_S: 3.5,
             BLOB_SEEK_BACK_S: 3,
             BUFFER_HEALTH_S: 5,
+        },
+        // Plan B: Experimental features
+        experimental: {
+            ENABLE_LIVE_PATTERNS: true,     // Fetch patterns from external sources
+            ENABLE_PLAYER_PATCHING: false,  // Hook into player internals (risky)
         },
         codes: {
             MEDIA_ERROR_SRC: 4,
@@ -315,23 +320,31 @@ const AdDetection = (() => {
     const isAd = (url) => {
         if (!url || typeof url !== 'string') return false;
 
-        // Exact pattern match
+        // 1. Static pattern match (fastest)
         if (CONFIG.regex.AD_BLOCK.test(url)) {
             return true;
         }
 
-        // NEW: Fuzzy regex patterns for variations
+        // 2. Fuzzy regex patterns for variations (Plan A)
         const fuzzyPatterns = CONFIG.network.AD_PATTERN_REGEX;
         if (fuzzyPatterns && Array.isArray(fuzzyPatterns)) {
             for (const regex of fuzzyPatterns) {
                 if (regex.test(url)) {
                     Logger.add('[AdDetection] Fuzzy pattern match detected', {
-                        url: url.substring(0, 150), // Truncate for readability
+                        url: url.substring(0, 150),
                         matchedPattern: regex.toString()
                     });
                     return true;
                 }
             }
+        }
+
+        // 3. Dynamic patterns from external sources (Plan B)
+        if (CONFIG.experimental?.ENABLE_LIVE_PATTERNS &&
+            typeof PatternUpdater !== 'undefined' &&
+            PatternUpdater.matchesDynamic(url)) {
+            // Already logged inside matchesDynamic
+            return true;
         }
 
         return false;
@@ -1624,9 +1637,16 @@ const EventCoordinator = (() => {
             Adapters.EventBus.on(CONFIG.events.ACQUIRE, (payload) => {
                 const container = PlayerLifecycle.getActiveContainer();
                 if (container) {
-                    if (PlayerContext.get(container)) {
+                    const playerContext = PlayerContext.get(container);
+                    if (playerContext) {
                         Logger.add('[LIFECYCLE] Event: ACQUIRE - Success', payload);
                         HealthMonitor.start(container);
+
+                        // Plan B: Apply player patches if enabled
+                        if (CONFIG.experimental?.ENABLE_PLAYER_PATCHING &&
+                            typeof PlayerPatcher !== 'undefined') {
+                            PlayerPatcher.apply(playerContext);
+                        }
                     } else {
                         Logger.add('[LIFECYCLE] Event: ACQUIRE - Failed', payload);
                     }
@@ -2894,6 +2914,195 @@ const NetworkManager = (() => {
     };
 })();
 
+// --- Pattern Updater ---
+/**
+ * Fetches and manages dynamic ad patterns from external sources.
+ * Works ALONGSIDE existing static patterns - additive, not replacement.
+ */
+const PatternUpdater = (() => {
+    // Community pattern sources (configurable)
+    const PATTERN_SOURCES = [
+        // Add your pattern source URLs here
+        // 'https://raw.githubusercontent.com/<community>/twitch-patterns/main/patterns.json'
+    ];
+
+    const REFRESH_INTERVAL_MS = 6 * 60 * 60 * 1000; // Refresh every 6 hours
+    let lastUpdate = 0;
+    let dynamicPatterns = [];
+    let isInitialized = false;
+    let fetchInProgress = false;
+
+    /**
+     * Fetches patterns from configured sources
+     * @returns {Promise<boolean>} True if successful
+     */
+    const fetchPatterns = async () => {
+        if (fetchInProgress) {
+            Logger.add('[PatternUpdater] Fetch already in progress, skipping');
+            return false;
+        }
+
+        if (PATTERN_SOURCES.length === 0) {
+            Logger.add('[PatternUpdater] No pattern sources configured');
+            return false;
+        }
+
+        fetchInProgress = true;
+        Logger.add('[PatternUpdater] Fetching patterns...', {
+            sourceCount: PATTERN_SOURCES.length,
+            lastUpdate: lastUpdate ? new Date(lastUpdate).toISOString() : 'never'
+        });
+
+        for (const source of PATTERN_SOURCES) {
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+                const response = await fetch(source, {
+                    cache: 'no-cache',
+                    signal: controller.signal
+                });
+
+                clearTimeout(timeoutId);
+
+                if (!response.ok) {
+                    Logger.add('[PatternUpdater] Source returned non-OK', {
+                        source: source.substring(0, 50),
+                        status: response.status
+                    });
+                    continue;
+                }
+
+                const data = await response.json();
+
+                if (data.patterns && Array.isArray(data.patterns)) {
+                    const oldCount = dynamicPatterns.length;
+                    dynamicPatterns = data.patterns;
+                    lastUpdate = Date.now();
+
+                    Logger.add('[PatternUpdater] Patterns updated successfully', {
+                        newCount: dynamicPatterns.length,
+                        previousCount: oldCount,
+                        version: data.version || 'unknown',
+                        source: source.substring(0, 50)
+                    });
+
+                    fetchInProgress = false;
+                    return true;
+                } else {
+                    Logger.add('[PatternUpdater] Invalid pattern format', {
+                        source: source.substring(0, 50),
+                        hasPatterns: !!data.patterns,
+                        isArray: Array.isArray(data.patterns)
+                    });
+                }
+            } catch (e) {
+                Logger.add('[PatternUpdater] Fetch failed', {
+                    source: source.substring(0, 50),
+                    error: e.name,
+                    message: e.message
+                });
+            }
+        }
+
+        Logger.add('[PatternUpdater] All sources failed or returned invalid data');
+        fetchInProgress = false;
+        return false;
+    };
+
+    /**
+     * Checks if URL matches any dynamic pattern
+     * @param {string} url - URL to check
+     * @returns {boolean} True if matches
+     */
+    const matchesDynamic = (url) => {
+        if (!url || dynamicPatterns.length === 0) return false;
+
+        for (const pattern of dynamicPatterns) {
+            let matched = false;
+
+            try {
+                if (pattern.type === 'regex') {
+                    matched = new RegExp(pattern.value, pattern.flags || 'i').test(url);
+                } else {
+                    // Default to string match
+                    matched = url.includes(pattern.value);
+                }
+            } catch (e) {
+                Logger.add('[PatternUpdater] Pattern match error', {
+                    pattern: pattern.value,
+                    error: e.message
+                });
+                continue;
+            }
+
+            if (matched) {
+                Logger.add('[PatternUpdater] Dynamic pattern matched', {
+                    url: url.substring(0, 100),
+                    patternValue: pattern.value,
+                    patternType: pattern.type || 'string'
+                });
+                return true;
+            }
+        }
+        return false;
+    };
+
+    /**
+     * Initialize - fetches patterns immediately on load
+     */
+    const init = () => {
+        if (isInitialized) {
+            Logger.add('[PatternUpdater] Already initialized');
+            return;
+        }
+        isInitialized = true;
+
+        Logger.add('[PatternUpdater] Initializing', {
+            sourceCount: PATTERN_SOURCES.length,
+            refreshIntervalHours: REFRESH_INTERVAL_MS / (60 * 60 * 1000)
+        });
+
+        // IMMEDIATE fetch on script load
+        if (PATTERN_SOURCES.length > 0) {
+            fetchPatterns();
+        }
+
+        // Periodic refresh check
+        setInterval(() => {
+            if (Date.now() - lastUpdate > REFRESH_INTERVAL_MS) {
+                Logger.add('[PatternUpdater] Periodic refresh triggered');
+                fetchPatterns();
+            }
+        }, 60000); // Check every minute if refresh needed
+    };
+
+    /**
+     * Adds a pattern source URL
+     * @param {string} url - Source URL to add
+     */
+    const addSource = (url) => {
+        if (url && !PATTERN_SOURCES.includes(url)) {
+            PATTERN_SOURCES.push(url);
+            Logger.add('[PatternUpdater] Source added', { url: url.substring(0, 50) });
+        }
+    };
+
+    return {
+        init,
+        matchesDynamic,
+        addSource,
+        forceUpdate: fetchPatterns,
+        getPatterns: () => [...dynamicPatterns],
+        getStats: () => ({
+            patternCount: dynamicPatterns.length,
+            lastUpdate: lastUpdate ? new Date(lastUpdate).toISOString() : 'never',
+            isInitialized,
+            sourceCount: PATTERN_SOURCES.length
+        })
+    };
+})();
+
 // --- Player Context ---
 /**
  * React/Vue internal state scanner.
@@ -2965,6 +3174,236 @@ const PlayerContext = (() => {
     return {
         get,
         reset
+    };
+})();
+
+// --- Player Patcher ---
+/**
+ * Experimental: Hooks into Twitch player internals to intercept ad methods.
+ * DISABLED by default - enable via CONFIG.experimental.ENABLE_PLAYER_PATCHING
+ * 
+ * @warning This is intrusive and could be detected by Twitch.
+ */
+const PlayerPatcher = (() => {
+    let enabled = false;
+    let patchApplied = false;
+    let patchedMethods = [];
+    let interceptedCalls = 0;
+
+    // Fuzzy patterns for ad-related method names
+    const AD_METHOD_PATTERNS = [
+        /^(play|show|display|start|trigger|fire|load|queue)ad/i,
+        /ad(play|start|begin|load|queue|show)$/i,
+        /^on(ad|commercial|preroll|midroll)/i,
+        /(ad|commercial|sponsor)(handler|manager|controller)/i,
+        /^(preroll|midroll|postroll)/i,
+        /commercial(break|start|end)/i
+    ];
+
+    /**
+     * Check if a method name looks like an ad handler
+     * @param {string} name - Method name to check
+     * @returns {boolean} True if matches ad patterns
+     */
+    const looksLikeAdMethod = (name) => {
+        if (!name || typeof name !== 'string') return false;
+        return AD_METHOD_PATTERNS.some(pattern => pattern.test(name));
+    };
+
+    /**
+     * Recursively scan object for ad-like methods
+     * @param {Object} obj - Object to scan
+     * @param {number} depth - Current recursion depth
+     * @param {string} path - Current path for logging
+     * @returns {Array} Found ad methods
+     */
+    const findAdMethods = (obj, depth = 0, path = '') => {
+        if (!obj || typeof obj !== 'object' || depth > 3) return [];
+
+        const found = [];
+
+        try {
+            const keys = Object.keys(obj);
+
+            for (const key of keys) {
+                const fullPath = path ? `${path}.${key}` : key;
+
+                try {
+                    const value = obj[key];
+
+                    if (typeof value === 'function' && looksLikeAdMethod(key)) {
+                        found.push({ name: key, path: fullPath, obj, fn: value });
+                        Logger.add('[PlayerPatcher] Found potential ad method', {
+                            method: key,
+                            path: fullPath,
+                            depth
+                        });
+                    }
+
+                    // Recurse into nested objects (but not functions/DOM/etc)
+                    if (typeof value === 'object' &&
+                        value !== null &&
+                        !(value instanceof HTMLElement) &&
+                        !(value instanceof Window)) {
+                        found.push(...findAdMethods(value, depth + 1, fullPath));
+                    }
+                } catch (e) {
+                    // Skip inaccessible properties
+                }
+            }
+        } catch (e) {
+            Logger.add('[PlayerPatcher] Scan error', { path, error: e.message });
+        }
+
+        return found;
+    };
+
+    /**
+     * Apply patches to intercept ad methods
+     * @param {Object} playerContext - Player context from PlayerContext.get()
+     */
+    const applyPatch = (playerContext) => {
+        if (!enabled) {
+            Logger.add('[PlayerPatcher] Not enabled, skipping patch');
+            return;
+        }
+
+        if (patchApplied) {
+            Logger.add('[PlayerPatcher] Patch already applied');
+            return;
+        }
+
+        if (!playerContext) {
+            Logger.add('[PlayerPatcher] No player context provided');
+            return;
+        }
+
+        Logger.add('[PlayerPatcher] Starting scan for ad methods...', {
+            contextKeys: Object.keys(playerContext).length
+        });
+
+        try {
+            const player = playerContext.player || playerContext;
+            const adMethods = findAdMethods(player);
+
+            Logger.add('[PlayerPatcher] Scan complete', {
+                methodsFound: adMethods.length,
+                methods: adMethods.map(m => m.path)
+            });
+
+            if (adMethods.length === 0) {
+                Logger.add('[PlayerPatcher] No ad methods found to patch');
+                return;
+            }
+
+            for (const { name, path, obj, fn } of adMethods) {
+                try {
+                    const original = fn.bind(obj);
+
+                    obj[name] = function (...args) {
+                        interceptedCalls++;
+                        Logger.add('[PlayerPatcher] INTERCEPTED ad method call', {
+                            method: name,
+                            path,
+                            callNumber: interceptedCalls,
+                            argCount: args.length
+                        });
+
+                        // Return a resolved promise to satisfy any await
+                        return Promise.resolve({
+                            skipped: true,
+                            method: name,
+                            interceptedBy: 'PlayerPatcher'
+                        });
+                    };
+
+                    patchedMethods.push({ name, path });
+                    Logger.add('[PlayerPatcher] Patched method successfully', {
+                        method: name,
+                        path
+                    });
+                } catch (e) {
+                    Logger.add('[PlayerPatcher] Failed to patch method', {
+                        method: name,
+                        path,
+                        error: e.message
+                    });
+                }
+            }
+
+            // Intercept addEventListener for ad events
+            if (typeof player.addEventListener === 'function') {
+                const originalAddEventListener = player.addEventListener.bind(player);
+
+                player.addEventListener = function (event, handler, options) {
+                    if (/ad|commercial|preroll|midroll|sponsor/i.test(event)) {
+                        Logger.add('[PlayerPatcher] Blocked ad event listener', {
+                            event,
+                            blocked: true
+                        });
+                        return; // Don't add ad-related listeners
+                    }
+                    return originalAddEventListener(event, handler, options);
+                };
+
+                Logger.add('[PlayerPatcher] Patched addEventListener');
+                patchedMethods.push({ name: 'addEventListener', path: 'player.addEventListener' });
+            }
+
+            patchApplied = true;
+            Logger.add('[PlayerPatcher] Patch complete', {
+                totalPatched: patchedMethods.length,
+                methods: patchedMethods.map(m => m.name)
+            });
+
+        } catch (e) {
+            Logger.add('[PlayerPatcher] Patch failed with error', {
+                error: e.name,
+                message: e.message,
+                stack: e.stack?.substring(0, 200)
+            });
+        }
+    };
+
+    /**
+     * Enable the patcher
+     */
+    const enable = () => {
+        enabled = true;
+        Logger.add('[PlayerPatcher] Enabled');
+    };
+
+    /**
+     * Disable the patcher
+     */
+    const disable = () => {
+        enabled = false;
+        Logger.add('[PlayerPatcher] Disabled');
+    };
+
+    /**
+     * Reset patch state (for re-patching after player remount)
+     */
+    const reset = () => {
+        patchApplied = false;
+        patchedMethods = [];
+        interceptedCalls = 0;
+        Logger.add('[PlayerPatcher] Reset');
+    };
+
+    return {
+        enable,
+        disable,
+        isEnabled: () => enabled,
+        apply: applyPatch,
+        reset,
+        getStats: () => ({
+            enabled,
+            patchApplied,
+            patchedMethodCount: patchedMethods.length,
+            patchedMethods: patchedMethods.map(m => m.name),
+            interceptedCalls
+        })
     };
 })();
 
@@ -4260,6 +4699,13 @@ const CoreOrchestrator = (() => {
             ScriptBlocker.init();
             AdBlocker.init();
 
+            // Plan B: Initialize live pattern updates
+            if (CONFIG.experimental?.ENABLE_LIVE_PATTERNS &&
+                typeof PatternUpdater !== 'undefined') {
+                PatternUpdater.init();
+                Logger.add('[Core] PatternUpdater initialized');
+            }
+
             // Wait for DOM if needed
             if (document.body) {
                 DOMObserver.init();
@@ -4313,10 +4759,68 @@ const CoreOrchestrator = (() => {
                     return { error: 'Module not loaded' };
                 }
             };
+
+            // Plan B: PatternUpdater controls
+            window.updateTwitchAdPatterns = () => {
+                if (typeof PatternUpdater !== 'undefined') {
+                    Logger.add('Manual pattern update triggered');
+                    return PatternUpdater.forceUpdate();
+                }
+                return { error: 'PatternUpdater not loaded' };
+            };
+
+            window.getTwitchPatternStats = () => {
+                if (typeof PatternUpdater !== 'undefined') {
+                    return PatternUpdater.getStats();
+                }
+                return { error: 'PatternUpdater not loaded' };
+            };
+
+            window.addTwitchPatternSource = (url) => {
+                if (typeof PatternUpdater !== 'undefined') {
+                    PatternUpdater.addSource(url);
+                    return PatternUpdater.forceUpdate();
+                }
+                return { error: 'PatternUpdater not loaded' };
+            };
+
+            // Plan B: PlayerPatcher controls (experimental)
+            window.enableTwitchPlayerPatcher = () => {
+                if (typeof PlayerPatcher !== 'undefined') {
+                    PlayerPatcher.enable();
+                    Logger.add('[Core] PlayerPatcher enabled via console');
+                    return PlayerPatcher.getStats();
+                }
+                return { error: 'PlayerPatcher not loaded' };
+            };
+
+            window.disableTwitchPlayerPatcher = () => {
+                if (typeof PlayerPatcher !== 'undefined') {
+                    PlayerPatcher.disable();
+                    return { disabled: true };
+                }
+                return { error: 'PlayerPatcher not loaded' };
+            };
+
+            window.getTwitchPlayerPatcherStats = () => {
+                if (typeof PlayerPatcher !== 'undefined') {
+                    return PlayerPatcher.getStats();
+                }
+                return { error: 'PlayerPatcher not loaded' };
+            };
+
+            // Expose AdCorrelation stats
+            window.getTwitchAdCorrelationStats = () => {
+                if (typeof AdCorrelation !== 'undefined') {
+                    return AdCorrelation.exportData();
+                }
+                return { error: 'AdCorrelation not loaded' };
+            };
         }
     };
 })();
 
 CoreOrchestrator.init();
+
 
 })();

@@ -30,6 +30,13 @@ const CoreOrchestrator = (() => {
             ScriptBlocker.init();
             AdBlocker.init();
 
+            // Plan B: Initialize live pattern updates
+            if (CONFIG.experimental?.ENABLE_LIVE_PATTERNS &&
+                typeof PatternUpdater !== 'undefined') {
+                PatternUpdater.init();
+                Logger.add('[Core] PatternUpdater initialized');
+            }
+
             // Wait for DOM if needed
             if (document.body) {
                 DOMObserver.init();
@@ -83,8 +90,66 @@ const CoreOrchestrator = (() => {
                     return { error: 'Module not loaded' };
                 }
             };
+
+            // Plan B: PatternUpdater controls
+            window.updateTwitchAdPatterns = () => {
+                if (typeof PatternUpdater !== 'undefined') {
+                    Logger.add('Manual pattern update triggered');
+                    return PatternUpdater.forceUpdate();
+                }
+                return { error: 'PatternUpdater not loaded' };
+            };
+
+            window.getTwitchPatternStats = () => {
+                if (typeof PatternUpdater !== 'undefined') {
+                    return PatternUpdater.getStats();
+                }
+                return { error: 'PatternUpdater not loaded' };
+            };
+
+            window.addTwitchPatternSource = (url) => {
+                if (typeof PatternUpdater !== 'undefined') {
+                    PatternUpdater.addSource(url);
+                    return PatternUpdater.forceUpdate();
+                }
+                return { error: 'PatternUpdater not loaded' };
+            };
+
+            // Plan B: PlayerPatcher controls (experimental)
+            window.enableTwitchPlayerPatcher = () => {
+                if (typeof PlayerPatcher !== 'undefined') {
+                    PlayerPatcher.enable();
+                    Logger.add('[Core] PlayerPatcher enabled via console');
+                    return PlayerPatcher.getStats();
+                }
+                return { error: 'PlayerPatcher not loaded' };
+            };
+
+            window.disableTwitchPlayerPatcher = () => {
+                if (typeof PlayerPatcher !== 'undefined') {
+                    PlayerPatcher.disable();
+                    return { disabled: true };
+                }
+                return { error: 'PlayerPatcher not loaded' };
+            };
+
+            window.getTwitchPlayerPatcherStats = () => {
+                if (typeof PlayerPatcher !== 'undefined') {
+                    return PlayerPatcher.getStats();
+                }
+                return { error: 'PlayerPatcher not loaded' };
+            };
+
+            // Expose AdCorrelation stats
+            window.getTwitchAdCorrelationStats = () => {
+                if (typeof AdCorrelation !== 'undefined') {
+                    return AdCorrelation.exportData();
+                }
+                return { error: 'AdCorrelation not loaded' };
+            };
         }
     };
 })();
 
 CoreOrchestrator.init();
+

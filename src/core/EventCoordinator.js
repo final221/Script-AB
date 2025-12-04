@@ -9,9 +9,16 @@ const EventCoordinator = (() => {
             Adapters.EventBus.on(CONFIG.events.ACQUIRE, (payload) => {
                 const container = PlayerLifecycle.getActiveContainer();
                 if (container) {
-                    if (PlayerContext.get(container)) {
+                    const playerContext = PlayerContext.get(container);
+                    if (playerContext) {
                         Logger.add('[LIFECYCLE] Event: ACQUIRE - Success', payload);
                         HealthMonitor.start(container);
+
+                        // Plan B: Apply player patches if enabled
+                        if (CONFIG.experimental?.ENABLE_PLAYER_PATCHING &&
+                            typeof PlayerPatcher !== 'undefined') {
+                            PlayerPatcher.apply(playerContext);
+                        }
                     } else {
                         Logger.add('[LIFECYCLE] Event: ACQUIRE - Failed', payload);
                     }

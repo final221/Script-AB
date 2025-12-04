@@ -88,6 +88,11 @@ const CONFIG = (() => {
             BLOB_SEEK_BACK_S: 3,
             BUFFER_HEALTH_S: 5,
         },
+        // Plan B: Experimental features
+        experimental: {
+            ENABLE_LIVE_PATTERNS: true,     // Fetch patterns from external sources
+            ENABLE_PLAYER_PATCHING: false,  // Hook into player internals (risky)
+        },
         codes: {
             MEDIA_ERROR_SRC: 4,
         },
