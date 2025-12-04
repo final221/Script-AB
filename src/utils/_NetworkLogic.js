@@ -19,6 +19,8 @@ const _NetworkLogic = (() => {
 
         // PatternDiscovery
         detectNewPatterns: PatternDiscovery.detectNewPatterns,
-        getDiscoveredPatterns: PatternDiscovery.getDiscoveredPatterns
+        getDiscoveredPatterns: PatternDiscovery.getDiscoveredPatterns,
+        exportCapturedUrls: PatternDiscovery.exportCapturedUrls,
+        clearCaptured: PatternDiscovery.clearCaptured
     };
 })();

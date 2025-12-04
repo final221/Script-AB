@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       2.2.16
+// @version       2.2.17
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -414,14 +414,40 @@ const MockGenerator = (() => {
 // --- Pattern Discovery ---
 /**
  * Discovers new ad patterns for future blocking.
+ * Enhanced to capture more Twitch-specific URLs for pattern updates.
  */
 const PatternDiscovery = (() => {
     // Track unknown suspicious URLs
     const _suspiciousUrls = new Set();
+    const _allTwitchUrls = new Set(); // Track ALL Twitch-related URLs for analysis
+    const MAX_CAPTURED_URLS = 500; // Limit memory usage
+
+    // Keywords that might indicate ad-related content
     const _suspiciousKeywords = [
         'ad', 'ads', 'advertisement', 'preroll', 'midroll',
-        'doubleclick', 'pubads', 'vast', 'tracking', 'analytics'
+        'doubleclick', 'pubads', 'vast', 'tracking', 'analytics',
+        'sponsor', 'commercial', 'promo'
     ];
+
+    // Twitch-specific patterns to always capture for analysis
+    const _twitchCapturePatterns = [
+        'usher', 'ttvnw', 'video-weaver', 'video-edge',
+        '.m3u8', 'segment', 'chunked'
+    ];
+
+    /**
+     * Classifies URL type for better analysis
+     * @param {string} url - URL to classify
+     * @returns {string} URL category
+     */
+    const classifyUrl = (url) => {
+        const urlLower = url.toLowerCase();
+        if (urlLower.includes('.m3u8') || urlLower.includes('segment')) return 'video';
+        if (urlLower.includes('tracking') || urlLower.includes('analytics')) return 'tracking';
+        if (_suspiciousKeywords.some(k => urlLower.includes(k))) return 'ads';
+        if (urlLower.includes('gql') || urlLower.includes('graphql')) return 'graphql';
+        return 'other';
+    };
 
     /**
      * Detects potentially new ad patterns
@@ -438,6 +464,14 @@ const PatternDiscovery = (() => {
         const urlLower = url.toLowerCase();
         const parsed = UrlParser.parseUrl(url);
 
+        // Capture ALL Twitch-related URLs when below limit
+        const isTwitchRelated = urlLower.includes('twitch') || urlLower.includes('ttvnw');
+        const hasCapturePattern = _twitchCapturePatterns.some(p => urlLower.includes(p));
+
+        if ((isTwitchRelated || hasCapturePattern) && _allTwitchUrls.size < MAX_CAPTURED_URLS) {
+            _allTwitchUrls.add(url);
+        }
+
         // Check if URL contains suspicious keywords
         const hasSuspiciousKeyword = _suspiciousKeywords.some(keyword =>
             urlLower.includes(keyword)
@@ -445,10 +479,12 @@ const PatternDiscovery = (() => {
 
         if (hasSuspiciousKeyword && !_suspiciousUrls.has(url)) {
             _suspiciousUrls.add(url);
+            const category = classifyUrl(url);
 
             // ✅ This gets exported with exportTwitchAdLogs()
             Logger.add('[PATTERN DISCOVERY] Suspicious URL detected', {
                 url,
+                category,
                 pathname: parsed ? parsed.pathname : 'parse failed',
                 hostname: parsed ? parsed.hostname : 'parse failed',
                 keywords: _suspiciousKeywords.filter(k => urlLower.includes(k)),
@@ -463,9 +499,40 @@ const PatternDiscovery = (() => {
      */
     const getDiscoveredPatterns = () => Array.from(_suspiciousUrls);
 
+    /**
+     * Exports ALL captured Twitch URLs for comprehensive analysis
+     * @returns {{suspicious: string[], allTwitch: string[], stats: Object}}
+     */
+    const exportCapturedUrls = () => {
+        const suspicious = Array.from(_suspiciousUrls);
+        const allTwitch = Array.from(_allTwitchUrls);
+
+        return {
+            suspicious,
+            allTwitch,
+            stats: {
+                suspiciousCount: suspicious.length,
+                totalCaptured: allTwitch.length,
+                maxCapture: MAX_CAPTURED_URLS,
+                atLimit: allTwitch.length >= MAX_CAPTURED_URLS
+            }
+        };
+    };
+
+    /**
+     * Clears captured URLs (useful for fresh capture sessions)
+     */
+    const clearCaptured = () => {
+        _suspiciousUrls.clear();
+        _allTwitchUrls.clear();
+        Logger.add('[PATTERN DISCOVERY] Cleared captured URLs for fresh session');
+    };
+
     return {
         detectNewPatterns,
-        getDiscoveredPatterns
+        getDiscoveredPatterns,
+        exportCapturedUrls,
+        clearCaptured
     };
 })();
 
@@ -1028,6 +1095,12 @@ const RecoveryLock = (() => {
  * Validates recovery outcomes and pre-conditions.
  */
 const RecoveryValidator = (() => {
+    // Time progression tracking for health detection
+    let lastHealthCheckTime = 0;
+    let lastHealthCheckVideoTime = 0;
+    const MIN_PROGRESSION_S = 0.3; // Video must advance at least 0.3s between checks
+    const CHECK_WINDOW_MS = 2000; // Time window for progression check
+
     /**
      * Validates if recovery actually improved the state.
      * @param {Object} preSnapshot - Snapshot before recovery
@@ -1068,16 +1141,56 @@ const RecoveryValidator = (() => {
 
     /**
      * Checks if the video is already healthy enough to skip recovery.
+     * Now includes time progression check to avoid false positives.
      * @param {HTMLVideoElement} video - The video element
-     * @returns {boolean} True if healthy
+     * @returns {boolean} True if healthy (with verified time progression)
      */
     const detectAlreadyHealthy = (video) => {
-        return (
+        const now = Date.now();
+        const currentVideoTime = video.currentTime;
+
+        // Basic checks first
+        const basicHealthy = (
             !video.paused &&
             video.readyState >= 3 &&
             !video.error &&
             video.networkState !== 3 // NETWORK_NO_SOURCE
         );
+
+        if (!basicHealthy) {
+            // Not healthy - reset tracking for next recovery attempt
+            lastHealthCheckTime = now;
+            lastHealthCheckVideoTime = currentVideoTime;
+            return false;
+        }
+
+        // Time progression check: verify video is actually advancing
+        const timeSinceLastCheck = now - lastHealthCheckTime;
+        const videoTimeAdvancement = currentVideoTime - lastHealthCheckVideoTime;
+
+        // Update tracking state
+        lastHealthCheckTime = now;
+        lastHealthCheckVideoTime = currentVideoTime;
+
+        // Only skip if we have a recent check AND video time is advancing
+        if (timeSinceLastCheck > 0 && timeSinceLastCheck < CHECK_WINDOW_MS) {
+            if (videoTimeAdvancement < MIN_PROGRESSION_S) {
+                Logger.add('[Resilience] Video appears healthy BUT time not advancing', {
+                    videoTimeAdvancement: videoTimeAdvancement.toFixed(3),
+                    minRequired: MIN_PROGRESSION_S,
+                    readyState: video.readyState,
+                    paused: video.paused
+                });
+                return false; // Video looks healthy but is actually stuck
+            }
+        }
+
+        Logger.add('[Resilience] Video confirmed healthy - time is progressing', {
+            videoTimeAdvancement: videoTimeAdvancement.toFixed(3),
+            readyState: video.readyState,
+            paused: video.paused
+        });
+        return true;
     };
 
     return {
@@ -1328,7 +1441,9 @@ const _NetworkLogic = (() => {
 
         // PatternDiscovery
         detectNewPatterns: PatternDiscovery.detectNewPatterns,
-        getDiscoveredPatterns: PatternDiscovery.getDiscoveredPatterns
+        getDiscoveredPatterns: PatternDiscovery.getDiscoveredPatterns,
+        exportCapturedUrls: PatternDiscovery.exportCapturedUrls,
+        clearCaptured: PatternDiscovery.clearCaptured
     };
 })();
 
@@ -2729,16 +2844,54 @@ const VideoListenerManager = (() => {
 
 // --- Aggressive Recovery ---
 /**
- * Stream refresh recovery strategy via src clearing.
- * @responsibility Force stream refresh when stuck at buffer end.
+ * Stream refresh recovery strategy with escalating interventions.
+ * @responsibility Force stream refresh when standard recovery fails.
  */
 const AggressiveRecovery = (() => {
     const READY_CHECK_INTERVAL_MS = 100;
 
+    /**
+     * Attempts to toggle quality to force stream refresh
+     * @param {HTMLVideoElement} video - The video element
+     * @returns {boolean} True if quality toggle was attempted
+     */
+    const attemptQualityToggle = (video) => {
+        try {
+            // Find Twitch's React player instance
+            const container = video.closest('.video-player');
+            if (!container) return false;
+
+            // Look for quality selector button
+            const settingsBtn = container.querySelector('[data-a-target="player-settings-button"]');
+            if (settingsBtn) {
+                // Click settings to open menu
+                settingsBtn.click();
+
+                // Short delay then look for quality option
+                setTimeout(() => {
+                    const qualityBtn = container.querySelector('[data-a-target="player-settings-menu-item-quality"]');
+                    if (qualityBtn) {
+                        qualityBtn.click();
+                        Logger.add('[Aggressive] Quality menu opened - user can select quality to refresh');
+                    }
+                    // Close menu after a moment
+                    setTimeout(() => settingsBtn.click(), 500);
+                }, 100);
+
+                return true;
+            }
+        } catch (e) {
+            Logger.add('[Aggressive] Quality toggle failed', { error: e.message });
+        }
+        return false;
+    };
+
     return {
+        name: 'AggressiveRecovery',
+
         execute: async (video) => {
             Metrics.increment('aggressive_recoveries');
-            Logger.add('Executing aggressive recovery: waiting for player to stabilize');
+            Logger.add('Executing aggressive recovery: escalating interventions');
             const recoveryStartTime = performance.now();
 
             // Log initial telemetry
@@ -2747,7 +2900,7 @@ const AggressiveRecovery = (() => {
             const isBlobUrl = originalSrc && originalSrc.startsWith('blob:');
 
             Logger.add('Aggressive recovery telemetry', {
-                strategy: 'PASSIVE_WAIT',
+                strategy: 'ESCALATING',
                 url: originalSrc,
                 isBlobUrl,
                 telemetry: initialState
@@ -2758,13 +2911,61 @@ const AggressiveRecovery = (() => {
             const volume = video.volume;
             const muted = video.muted;
 
-            // CRITICAL: DO NOT seek, DO NOT reload, DO NOT touch the src!
-            // Analysis of logs showed that ANY manipulation (seeking to infinity, bufferEnd+5s, etc.)
-            // causes massive A/V desync (100+ seconds) or AbortErrors.
-            // The player is smart enough to recover on its own. Our job is to just wait.
-            // This is the approach from the early version that worked reliably.
+            // STRATEGY 1: Pause/Resume cycle (can reset internal player state)
+            Logger.add('[Aggressive] Strategy 1: Pause/Resume cycle');
+            try {
+                video.pause();
+                await Fn.sleep(100);
+                await video.play();
+                await Fn.sleep(300);
 
-            // Wait for stream to be ready (with forensic logging)
+                if (!video.paused && video.readyState >= 3) {
+                    Logger.add('[Aggressive] Pause/Resume successful');
+                    return;
+                }
+            } catch (e) {
+                Logger.add('[Aggressive] Pause/Resume failed', { error: e.message });
+            }
+
+            // STRATEGY 2: Jump to buffer end (live edge)
+            Logger.add('[Aggressive] Strategy 2: Jump to live edge');
+            if (video.buffered.length > 0) {
+                try {
+                    const bufferEnd = video.buffered.end(video.buffered.length - 1);
+                    // Jump to 0.5s before buffer end for safety margin
+                    const target = Math.max(video.currentTime, bufferEnd - 0.5);
+
+                    await new Promise((resolve) => {
+                        const onSeeked = () => {
+                            video.removeEventListener('seeked', onSeeked);
+                            resolve();
+                        };
+                        const timeout = setTimeout(() => {
+                            video.removeEventListener('seeked', onSeeked);
+                            resolve();
+                        }, 1000);
+                        video.addEventListener('seeked', () => {
+                            clearTimeout(timeout);
+                            onSeeked();
+                        }, { once: true });
+                        video.currentTime = target;
+                    });
+
+                    await Fn.sleep(200);
+                    if (!video.paused && video.readyState >= 3) {
+                        Logger.add('[Aggressive] Jump to live edge successful', { target: target.toFixed(3) });
+                        return;
+                    }
+                } catch (e) {
+                    Logger.add('[Aggressive] Jump to live edge failed', { error: e.message });
+                }
+            }
+
+            // STRATEGY 3: Attempt quality toggle (forces stream refresh)
+            Logger.add('[Aggressive] Strategy 3: Quality toggle attempt');
+            attemptQualityToggle(video);
+
+            // Wait for stream to stabilize
             await RecoveryUtils.waitForStability(video, {
                 startTime: recoveryStartTime,
                 timeoutMs: CONFIG.timing.PLAYBACK_TIMEOUT_MS,
@@ -2779,6 +2980,12 @@ const AggressiveRecovery = (() => {
             } catch (e) {
                 Logger.add('Failed to restore video state', { error: e.message });
             }
+
+            const duration = performance.now() - recoveryStartTime;
+            Logger.add('[Aggressive] Recovery complete', {
+                duration: duration.toFixed(0) + 'ms',
+                finalState: RecoveryUtils.captureVideoState(video)
+            });
         }
     };
 })();
