@@ -195,12 +195,36 @@ const AggressiveRecovery = (() => {
                 video.volume = volume;
                 video.muted = muted;
             } catch (e) {
-                Logger.add('Failed to restore video state', { error: e.message });
+                Logger.add('[Aggressive] Failed to restore video state', { error: e.message });
+            }
+
+            // FINAL PLAY ATTEMPT - Safety net if still paused
+            if (video.paused) {
+                Logger.add('[Aggressive] Final play attempt - video still paused after all strategies', {
+                    readyState: video.readyState,
+                    networkState: video.networkState,
+                    currentTime: video.currentTime.toFixed(3)
+                });
+                try {
+                    await video.play();
+                    await Fn.sleep(200);
+                    Logger.add('[Aggressive] Final play result', {
+                        success: !video.paused,
+                        paused: video.paused,
+                        readyState: video.readyState
+                    });
+                } catch (e) {
+                    Logger.add('[Aggressive] Final play failed', {
+                        error: e.name,
+                        message: e.message
+                    });
+                }
             }
 
             const duration = performance.now() - recoveryStartTime;
             Logger.add('[Aggressive] Recovery complete', {
                 duration: duration.toFixed(0) + 'ms',
+                finalPaused: video.paused,
                 finalState: RecoveryUtils.captureVideoState(video)
             });
 

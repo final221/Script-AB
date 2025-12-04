@@ -86,9 +86,30 @@ const ResilienceOrchestrator = (() => {
                     }
                 }
 
-                // 7. Play Retry
-                if (!video.paused || validation.hasImprovement) {
-                    await PlayRetryHandler.retry(video, 'post-recovery');
+                // 7. Play Retry - ALWAYS attempt if video is paused or had improvement
+                const shouldRetryPlay = video.paused || validation.hasImprovement;
+
+                Logger.add('[Resilience] Play retry decision', {
+                    videoPaused: video.paused,
+                    hasImprovement: validation.hasImprovement,
+                    willRetry: shouldRetryPlay,
+                    readyState: video.readyState
+                });
+
+                if (shouldRetryPlay) {
+                    Logger.add('[Resilience] Initiating PlayRetryHandler');
+                    const playSuccess = await PlayRetryHandler.retry(video, 'post-recovery');
+
+                    Logger.add('[Resilience] PlayRetryHandler result', {
+                        success: playSuccess,
+                        finalPaused: video.paused,
+                        finalReadyState: video.readyState
+                    });
+                } else {
+                    Logger.add('[Resilience] Skipping PlayRetry - video already playing', {
+                        paused: video.paused,
+                        currentTime: video.currentTime.toFixed(3)
+                    });
                 }
 
                 return validation.isValid;
