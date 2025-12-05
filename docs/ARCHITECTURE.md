@@ -1,6 +1,6 @@
 # Architecture
 
-## System Overview
+## System Overview (v3.0)
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -22,7 +22,7 @@
 CoreOrchestrator
 ├─> NetworkManager
 │   ├─> AdBlocker (ad detection & event emission)
-│   ├─> Diagnostics (network logging)
+│   ├─> Diagnostics (network logging, video segment tracking)
 │   └─> Mocking (response mocking)
 │
 ├─> EventCoordinator (EventBus setup)
@@ -34,16 +34,15 @@ CoreOrchestrator
     └─> PlayerLifecycle
         ├─> VideoListenerManager (video event handling)
         ├─> HealthMonitor
-        │   ├─> StuckDetector
-        │   ├─> FrameDropDetector
-        │   └─> AVSyncDetector
+        │   └─> StuckDetector (high tolerance: 0.5s/5 checks)
         └─> PlayerContext (React/Vue scanning)
 
-ResilienceOrchestrator
+ResilienceOrchestrator (v3.0 - Simplified)
 ├─> BufferAnalyzer (buffer health analysis)
-├─> RecoveryStrategy (strategy selection)
-│   ├─> StandardRecovery (seek-based)
-│   └─> AggressiveRecovery (stream refresh)
+├─> RecoveryStrategy (ALWAYS returns StandardRecovery)
+│   └─> StandardRecovery (play first, gentle seek fallback)
+│   └─> [DISABLED] AggressiveRecovery
+│   └─> [DISABLED] ExperimentalRecovery
 └─> PlayRetryHandler (play retry logic)
 ```
 
@@ -55,44 +54,51 @@ User Request → NetworkManager → AdBlocker
                                     │
                   ┌─────────────────┼─────────────────┐
                   ▼                 ▼                 ▼
-            [Trigger?]         [Ad URL?]      [Diagnostic Log]
-                  │                 │
-                  ▼                 ▼
-          AD_DETECTED event    Mock Response
+            [Trigger?]         [Ad URL?]      [Video Request?]
+                  │                 │                 │
+                  ▼                 ▼                 ▼
+          AD_DETECTED event    Mock Response   Log to Timeline
 ```
 
-### 2. Event Bus Flow
+### 2. Event Bus Flow (v3.0)
 ```
-[NetworkManager] ──AD_DETECTED──┐
+[Instrumentation] ──AD_DETECTED──┐  (30s debounce, checks if recovered)
                                  │
 [HealthMonitor]  ──AD_DETECTED──┼──> [EventCoordinator]
                                  │         │
-[PlayerLifecycle] ──ACQUIRE─────┘         ▼
-                              [ResilienceOrchestrator]
-                                         │
-                                         ▼
-                              ┌──────────┴──────────┐
-                              ▼                     ▼
-                     StandardRecovery    AggressiveRecovery
+                                 │         ▼
+                                 │   [ResilienceOrchestrator]
+                                 │         │
+                                 ▼         ▼
+                          StandardRecovery ONLY
+                          (try play → gentle seek)
+                          
+                    [DISABLED: Aggressive/Experimental/Page Reload]
 ```
 
-### 3. Player Lifecycle
+### 3. Logging Timeline (v3.0 NEW)
 ```
-DOM Change → DOMObserver → PlayerLifecycle
-                               │
-          ┌────────────────────┼────────────────────┐
-          ▼                    ▼                    ▼
-   handleMount()         PlayerContext      VideoListenerManager
-          │                    │                    │
-          ▼                    ▼                    ▼
-   ACQUIRE event      Player signature      Error handling
-                        scanning              & cleanup
+Console.log/warn/error ─────┐
+                            │
+Script Logger.add() ────────┼──> Logger.getMergedTimeline()
+                            │         │
+                            ▼         ▼
+                      Sorted by timestamp
+                            │
+                            ▼
+                   exportTwitchAdLogs()
+                            │
+                            ▼
+                   📁 twitch_ad_logs_*.txt
+                   (🔧 Script | 📋 Log | ⚠️ Warn | ❌ Error)
 ```
 
 ## Layer Responsibilities
 
 ### Configuration Layer
 - **Config.js** - Central configuration, frozen object
+  - `STUCK_THRESHOLD_S: 0.5` (was 0.1)
+  - `STUCK_COUNT_LIMIT: 5` (was 2)
 
 ### Utility Layer
 - **Utils.js (Fn)** - Pure utility functions (compose, debounce, sleep)
@@ -101,7 +107,7 @@ DOM Change → DOMObserver → PlayerLifecycle
 
 ### Network Layer
 - **AdBlocker.js** - Ad pattern detection, event emission
-- **Diagnostics.js** - Network request logging & sampling
+- **Diagnostics.js** - Network request logging, video segment tracking
 - **Mocking.js** - Mock response generation
 - **NetworkManager.js** - XHR/Fetch hooking orchestration
 
@@ -110,24 +116,25 @@ DOM Change → DOMObserver → PlayerLifecycle
 - **VideoListenerManager.js** - Video element event management
 
 ### Health Layer
-- **StuckDetector.js** - Playback stuck detection
+- **StuckDetector.js** - Playback stuck detection (high tolerance)
 - **FrameDropDetector.js** - Frame drop monitoring
 - **AVSyncDetector.js** - Audio/video sync monitoring
 - **HealthMonitor.js** - Health check orchestration
 
-### Recovery Layer
+### Recovery Layer (v3.0 - Simplified)
 - **BufferAnalyzer.js** - Buffer health analysis
 - **PlayRetryHandler.js** - Play retry with exponential backoff
-- **StandardRecovery.js** - Seek-based recovery
-- **AggressiveRecovery.js** - Stream refresh recovery
-- **RecoveryStrategy.js** - Strategy selector
-- **ResilienceOrchestrator.js** - Recovery coordinator
+- **StandardRecovery.js** - Gentle recovery (play first, seek fallback)
+- **AggressiveRecovery.js** - [DISABLED] Stream refresh recovery
+- **ExperimentalRecovery.js** - [DISABLED]
+- **RecoveryStrategy.js** - Always returns StandardRecovery
+- **ResilienceOrchestrator.js** - Gentle recovery coordinator (no page reload)
 
-### Monitoring Layer
-- **Instrumentation.js** - Global error & console interception
-- **Logger.js** - Log collection & export
+### Monitoring Layer (v3.0 - Enhanced)
+- **Instrumentation.js** - Console capture, stall detection (30s debounce)
+- **Logger.js** - Log collection, console capture, merged timeline
 - **Metrics.js** - Metrics tracking
-- **ReportGenerator.js** - Report generation
+- **ReportGenerator.js** - Report generation with emoji indicators
 - **Store.js** - Persistent state via localStorage
 
 ### Core Layer
@@ -137,74 +144,75 @@ DOM Change → DOMObserver → PlayerLifecycle
 - **DOMObserver.js** - Root DOM observation
 - **CoreOrchestrator.js** - Application initialization
 
-## Design Patterns
+## v3.0 Recovery Philosophy
 
-### Strategy Pattern (Recovery)
-```javascript
-RecoveryStrategy.select(video) 
-  → StandardRecovery or AggressiveRecovery
+### Before (v2.x)
+```
+Problem detected → Standard → Experimental → Aggressive → PAGE RELOAD
+                    (cascade of increasingly destructive interventions)
 ```
 
-### Orchestrator Pattern
-- `CoreOrchestrator` - App initialization
-- `NetworkManager` - Network operations
-- `HealthMonitor` - Health checks
-- `ResilienceOrchestrator` - Recovery execution
-
-### Observer Pattern
-- EventBus (custom implementation in Adapters)
-- MutationObserver (ScriptBlocker, DOMObserver, PlayerLifecycle)
-
-### Facade Pattern
-- Adapters (DOM, Storage, EventBus abstractions)
-
-## Communication
-
-### EventBus Events
-- **AD_DETECTED** - Triggered by network layer or health monitor
-- **ACQUIRE** - Triggered to acquire player context
-- **REPORT** - Triggered after recovery completion
-- **LOG** - Triggered for log export
-
-### Module Interfaces
-All modules expose a minimal public API:
-```javascript
-const Module = (() => {
-    // Private state & functions
-    
-    return {
-        // Public API
-        init: () => { },
-        method: () => { }
-    };
-})();
+### After (v3.0)
+```
+Problem detected → Check if already recovered → Standard (play/seek) → LOG
+                    (passive, let player self-heal, comprehensive logging)
 ```
 
-## Error Handling
+### Why This Change?
+Log analysis showed:
+1. Aggressive recovery was **destroying** functional players
+2. Page reload was triggered when stream source was already dead
+3. Recovery cascade made things worse, not better
+4. The player often self-healed if given time
+
+## Log Prefixes (v3.0)
+
+| Prefix | Source | Description |
+|--------|--------|-------------|
+| `[RECOVERY:*]` | ResilienceOrchestrator | Recovery lifecycle |
+| `[STRATEGY:*]` | RecoveryStrategy | Strategy selection |
+| `[STANDARD:*]` | StandardRecovery | Recovery steps |
+| `[INSTRUMENT:*]` | Instrumentation | Stall/error detection |
+| `[NETWORK:*]` | Diagnostics | M3U8/segment requests |
+
+## Error Handling (v3.0)
 
 ### Instrumentation Layer
-- Intercepts global errors (`window.addEventListener('error')`)
-- Intercepts console.error / console.warn
-- Classifies errors by type (MediaError, TypeError, etc.)
-- Assigns severity levels (CRITICAL, MEDIUM, LOW)
+- Captures `console.log`, `console.warn`, `console.error` with timestamps
+- 30-second debounce on "playhead stalling" (was 10s)
+- Checks if player recovered before triggering recovery
+- All console output merged into export timeline
 
 ### Recovery Triggers
-1. **Network-based**: Ad URL detected → AD_DETECTED
-2. **Health-based**: Stuck playback → AD_DETECTED
-3. **Error-based**: MediaError code 4 → Recovery (via Instrumentation)
+1. **Stall-based**: Playhead stalling for 30+ seconds → Check if recovered → AD_DETECTED
+2. **Health-based**: 5+ consecutive stuck checks → AD_DETECTED
+3. **Error-based**: MediaError → LOG (no automatic recovery)
+
+### What's Disabled
+- AggressiveRecovery (quality toggle, source reload)
+- ExperimentalRecovery
+- Page reload fallback
+- Automatic escalation
 
 ## State Management
 
-### Store (localStorage)
+### Logger (v3.0)
 ```javascript
 {
-    lastAttempt: timestamp,
-    errorCount: number,
-    logs: array
+    logs: [],           // Script internal logs (max 5000)
+    consoleLogs: [],    // Captured console output (max 2000)
 }
 ```
 
-### PlayerContext Cache
-- WeakSet for visited nodes
-- Cached player reference
-- Cache invalidation on player unmount
+### Metrics
+```javascript
+{
+    ads_detected: number,
+    ads_blocked: number,
+    resilience_executions: number,
+    aggressive_recoveries: number,  // Should always be 0 in v3.0
+    health_triggers: number,
+    errors: number
+}
+```
+
