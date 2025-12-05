@@ -1,155 +1,91 @@
 // ============================================================================
-// 6. CORE ORCHESTRATOR
+// 6. CORE ORCHESTRATOR (Stream Healer Edition)
 // ============================================================================
 /**
  * Main entry point - orchestrates module initialization.
- * @responsibility Initialize all modules in the correct order.
+ * STREAMLINED: Focus on stream healing, not ad blocking (uBO handles that).
  */
 const CoreOrchestrator = (() => {
     return {
         init: () => {
-            Logger.add('Core initialized');
+            Logger.add('[CORE] Initializing Stream Healer');
 
             // Don't run in iframes
             if (window.self !== window.top) return;
 
-            // Check throttling
-            const { lastAttempt, errorCount } = Store.get();
-            if (errorCount >= CONFIG.timing.LOG_THROTTLE &&
-                Date.now() - lastAttempt < CONFIG.timing.REATTEMPT_DELAY_MS) {
-                if (CONFIG.debug) {
-                    console.warn('[MAD-3000] Core throttled.');
-                }
-                return;
-            }
+            // Initialize essential modules only
+            Instrumentation.init();  // Console capture for debugging
 
-            // Initialize modules in order
-            NetworkManager.init();
-            Instrumentation.init();
-            EventCoordinator.init();
-            ScriptBlocker.init();
-            AdBlocker.init();
+            // Wait for DOM then start monitoring
+            const startMonitoring = () => {
+                // Find video element and start StreamHealer
+                const findAndMonitorVideo = () => {
+                    const video = document.querySelector('video');
+                    if (video) {
+                        Logger.add('[CORE] Video element found, starting StreamHealer');
+                        StreamHealer.monitor(video);
+                    }
+                };
 
-            // Plan B: Initialize live pattern updates
-            if (CONFIG.experimental?.ENABLE_LIVE_PATTERNS &&
-                typeof PatternUpdater !== 'undefined') {
-                PatternUpdater.init();
-                Logger.add('[Core] PatternUpdater initialized');
-            }
+                // Try immediately
+                findAndMonitorVideo();
 
-            // Wait for DOM if needed
-            if (document.body) {
-                DOMObserver.init();
-            } else {
-                document.addEventListener('DOMContentLoaded', () => {
-                    DOMObserver.init();
-                }, { once: true });
-            }
-
-            // Expose debug triggers
-            window.forceTwitchAdRecovery = () => {
-                Logger.add('Manual recovery triggered via console');
-                Adapters.EventBus.emit(CONFIG.events.AD_DETECTED, { source: 'MANUAL_TRIGGER' });
-            };
-
-            window.forceTwitchAggressiveRecovery = () => {
-                Logger.add('Manual AGGRESSIVE recovery triggered via console');
-                Adapters.EventBus.emit(CONFIG.events.AD_DETECTED, {
-                    source: 'MANUAL_TRIGGER',
-                    forceAggressive: true
+                // Also observe for new videos
+                const observer = new MutationObserver((mutations) => {
+                    for (const mutation of mutations) {
+                        for (const node of mutation.addedNodes) {
+                            if (node.nodeName === 'VIDEO' ||
+                                (node.querySelector && node.querySelector('video'))) {
+                                Logger.add('[CORE] New video detected in DOM');
+                                findAndMonitorVideo();
+                            }
+                        }
+                    }
                 });
+
+                observer.observe(document.body, {
+                    childList: true,
+                    subtree: true
+                });
+
+                Logger.add('[CORE] DOM observer started');
             };
 
-            // Experimental recovery controls
-            window.toggleExperimentalRecovery = (enable) => {
-                ExperimentalRecovery.setEnabled(enable);
-            };
+            if (document.body) {
+                startMonitoring();
+            } else {
+                document.addEventListener('DOMContentLoaded', startMonitoring, { once: true });
+            }
 
-            window.testExperimentalStrategy = (strategyName) => {
+            // Expose debug functions
+            window.forceTwitchHeal = () => {
                 const video = document.querySelector('video');
                 if (video) {
-                    ExperimentalRecovery.testStrategy(video, strategyName);
+                    Logger.add('[CORE] Manual heal triggered');
+                    StreamHealer.onStallDetected(video, { trigger: 'MANUAL' });
                 } else {
                     console.log('No video element found');
                 }
             };
 
-            window.forceTwitchExperimentalRecovery = () => {
-                Logger.add('Manual EXPERIMENTAL recovery triggered via console');
-                Adapters.EventBus.emit(CONFIG.events.AD_DETECTED, {
-                    source: 'MANUAL_TRIGGER',
-                    forceExperimental: true
-                });
+            window.getTwitchHealerStats = () => {
+                return {
+                    healer: StreamHealer.getStats(),
+                    metrics: Metrics.getSummary()
+                };
             };
 
-            window.testTwitchAdPatterns = () => {
-                if (typeof PatternTester !== 'undefined') {
-                    return PatternTester.test();
-                } else {
-                    console.error('PatternTester module not loaded');
-                    return { error: 'Module not loaded' };
+            Logger.add('[CORE] Stream Healer ready', {
+                config: {
+                    detectionInterval: CONFIG.stall.DETECTION_INTERVAL_MS + 'ms',
+                    stuckTrigger: CONFIG.stall.STUCK_COUNT_TRIGGER + ' checks',
+                    healTimeout: CONFIG.stall.HEAL_TIMEOUT_S + 's'
                 }
-            };
-
-            // Plan B: PatternUpdater controls
-            window.updateTwitchAdPatterns = () => {
-                if (typeof PatternUpdater !== 'undefined') {
-                    Logger.add('Manual pattern update triggered');
-                    return PatternUpdater.forceUpdate();
-                }
-                return { error: 'PatternUpdater not loaded' };
-            };
-
-            window.getTwitchPatternStats = () => {
-                if (typeof PatternUpdater !== 'undefined') {
-                    return PatternUpdater.getStats();
-                }
-                return { error: 'PatternUpdater not loaded' };
-            };
-
-            window.addTwitchPatternSource = (url) => {
-                if (typeof PatternUpdater !== 'undefined') {
-                    PatternUpdater.addSource(url);
-                    return PatternUpdater.forceUpdate();
-                }
-                return { error: 'PatternUpdater not loaded' };
-            };
-
-            // Plan B: PlayerPatcher controls (experimental)
-            window.enableTwitchPlayerPatcher = () => {
-                if (typeof PlayerPatcher !== 'undefined') {
-                    PlayerPatcher.enable();
-                    Logger.add('[Core] PlayerPatcher enabled via console');
-                    return PlayerPatcher.getStats();
-                }
-                return { error: 'PlayerPatcher not loaded' };
-            };
-
-            window.disableTwitchPlayerPatcher = () => {
-                if (typeof PlayerPatcher !== 'undefined') {
-                    PlayerPatcher.disable();
-                    return { disabled: true };
-                }
-                return { error: 'PlayerPatcher not loaded' };
-            };
-
-            window.getTwitchPlayerPatcherStats = () => {
-                if (typeof PlayerPatcher !== 'undefined') {
-                    return PlayerPatcher.getStats();
-                }
-                return { error: 'PlayerPatcher not loaded' };
-            };
-
-            // Expose AdCorrelation stats
-            window.getTwitchAdCorrelationStats = () => {
-                if (typeof AdCorrelation !== 'undefined') {
-                    return AdCorrelation.exportData();
-                }
-                return { error: 'AdCorrelation not loaded' };
-            };
+            });
         }
     };
 })();
 
 CoreOrchestrator.init();
+
 

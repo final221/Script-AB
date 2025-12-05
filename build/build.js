@@ -30,6 +30,9 @@ const CONFIG = {
         'recovery/helpers/RecoveryLock.js',
         'recovery/helpers/RecoveryValidator.js',
         'recovery/helpers/AVSyncRouter.js',
+        // StreamHealer modules (new - must come before other recovery)
+        'recovery/BufferGapFinder.js',
+        'recovery/LiveEdgeSeeker.js',
         // Play Retry helpers
         'recovery/retry/PlayValidator.js',
         'recovery/retry/MicroSeekStrategy.js',

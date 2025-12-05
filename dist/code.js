@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       3.0.4
+// @version       4.0.1
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -107,6 +107,13 @@ const CONFIG = (() => {
         experimental: {
             ENABLE_LIVE_PATTERNS: true,     // Fetch patterns from external sources
             ENABLE_PLAYER_PATCHING: false,  // Hook into player internals (risky)
+        },
+        // StreamHealer configuration
+        stall: {
+            DETECTION_INTERVAL_MS: 500,     // How often to check for stalls
+            STUCK_COUNT_TRIGGER: 4,         // Consecutive stuck checks before triggering (4 * 500ms = 2s)
+            HEAL_POLL_INTERVAL_MS: 200,     // How often to poll for heal point
+            HEAL_TIMEOUT_S: 15,             // Give up after this many seconds
         },
         codes: {
             MEDIA_ERROR_SRC: 4,
@@ -1385,6 +1392,281 @@ const AVSyncRouter = (() => {
     };
 })();
 
+// --- BufferGapFinder ---
+/**
+ * Finds "heal points" in the video buffer after a stall.
+ * When uBO blocks ad segments, new content arrives in a separate buffer range.
+ * This module finds that new range so we can seek to it.
+ */
+const BufferGapFinder = (() => {
+    /**
+     * Get all buffer ranges as an array of {start, end} objects
+     */
+    const getBufferRanges = (video) => {
+        const ranges = [];
+        if (!video?.buffered) return ranges;
+
+        for (let i = 0; i < video.buffered.length; i++) {
+            ranges.push({
+                start: video.buffered.start(i),
+                end: video.buffered.end(i)
+            });
+        }
+        return ranges;
+    };
+
+    /**
+     * Format buffer ranges for logging
+     */
+    const formatRanges = (ranges) => {
+        return ranges.map(r => `[${r.start.toFixed(2)}-${r.end.toFixed(2)}]`).join(', ');
+    };
+
+    /**
+     * Find a heal point - a buffer range that starts AFTER currentTime
+     * This is where new content is buffering after a gap
+     * 
+     * @param {HTMLVideoElement} video
+     * @returns {{ start: number, end: number } | null}
+     */
+    const findHealPoint = (video) => {
+        if (!video) {
+            Logger.add('[HEALER:ERROR] No video element');
+            return null;
+        }
+
+        const currentTime = video.currentTime;
+        const ranges = getBufferRanges(video);
+
+        Logger.add('[HEALER:SCAN] Scanning for heal point', {
+            currentTime: currentTime.toFixed(3),
+            bufferRanges: formatRanges(ranges),
+            rangeCount: ranges.length
+        });
+
+        // Look for a buffer range that starts ahead of current position
+        for (let i = 0; i < ranges.length; i++) {
+            const range = ranges[i];
+
+            // Found a range starting after current position (with small gap tolerance)
+            if (range.start > currentTime + 0.5) {
+                const healPoint = {
+                    start: range.start,
+                    end: range.end,
+                    gapSize: range.start - currentTime
+                };
+
+                Logger.add('[HEALER:FOUND] Heal point identified', {
+                    healPoint: `${range.start.toFixed(3)}-${range.end.toFixed(3)}`,
+                    gapSize: healPoint.gapSize.toFixed(2) + 's',
+                    bufferSize: (range.end - range.start).toFixed(2) + 's'
+                });
+
+                return healPoint;
+            }
+        }
+
+        Logger.add('[HEALER:NONE] No heal point found yet', {
+            currentTime: currentTime.toFixed(3),
+            ranges: formatRanges(ranges)
+        });
+
+        return null;
+    };
+
+    /**
+     * Check if we're at buffer exhaustion (stalled because buffer ran out)
+     */
+    const isBufferExhausted = (video) => {
+        if (!video?.buffered || video.buffered.length === 0) {
+            return true; // No buffer at all
+        }
+
+        const currentTime = video.currentTime;
+
+        // Find which buffer range contains currentTime
+        for (let i = 0; i < video.buffered.length; i++) {
+            const start = video.buffered.start(i);
+            const end = video.buffered.end(i);
+
+            if (currentTime >= start && currentTime <= end) {
+                // We're in this range - check if we're at the edge
+                const bufferRemaining = end - currentTime;
+                const exhausted = bufferRemaining < 0.5; // Less than 0.5s remaining
+
+                if (exhausted) {
+                    Logger.add('[HEALER:EXHAUSTED] Buffer exhausted', {
+                        currentTime: currentTime.toFixed(3),
+                        bufferEnd: end.toFixed(3),
+                        remaining: bufferRemaining.toFixed(3) + 's'
+                    });
+                }
+
+                return exhausted;
+            }
+        }
+
+        // Not in any buffer range - we've fallen off
+        Logger.add('[HEALER:GAP] Current time not in any buffer range', {
+            currentTime: currentTime.toFixed(3)
+        });
+        return true;
+    };
+
+    return {
+        findHealPoint,
+        isBufferExhausted,
+        getBufferRanges,
+        formatRanges
+    };
+})();
+
+// --- LiveEdgeSeeker ---
+/**
+ * Seeks to a heal point and resumes playback.
+ * CRITICAL: Validates seek target is within buffer bounds to avoid Infinity duration.
+ */
+const LiveEdgeSeeker = (() => {
+    /**
+     * Validate that a seek target is safe (within buffer bounds)
+     */
+    const validateSeekTarget = (video, target) => {
+        if (!video?.buffered || video.buffered.length === 0) {
+            return { valid: false, reason: 'No buffer' };
+        }
+
+        // Check if target is within any buffer range
+        for (let i = 0; i < video.buffered.length; i++) {
+            const start = video.buffered.start(i);
+            const end = video.buffered.end(i);
+
+            if (target >= start && target < end) {
+                return {
+                    valid: true,
+                    bufferRange: { start, end },
+                    headroom: end - target
+                };
+            }
+        }
+
+        return { valid: false, reason: 'Target not in buffer' };
+    };
+
+    /**
+     * Calculate safe seek target within a heal point range
+     * Seeks to just after start, but never beyond end
+     */
+    const calculateSafeTarget = (healPoint) => {
+        const { start, end } = healPoint;
+        const bufferSize = end - start;
+
+        // Seek to 0.1s after start, or middle of tiny buffers
+        if (bufferSize < 1) {
+            return start + (bufferSize * 0.5); // Middle of small buffer
+        }
+
+        // For larger buffers, seek to 0.5s in (but ensure at least 1s headroom)
+        const offset = Math.min(0.5, bufferSize - 1);
+        return start + offset;
+    };
+
+    /**
+     * Seek to heal point and attempt to resume playback
+     * 
+     * @param {HTMLVideoElement} video
+     * @param {{ start: number, end: number }} healPoint
+     * @returns {Promise<{ success: boolean, error?: string }>}
+     */
+    const seekAndPlay = async (video, healPoint) => {
+        const startTime = performance.now();
+        const fromTime = video.currentTime;
+
+        // Calculate safe target
+        const target = calculateSafeTarget(healPoint);
+
+        // Validate before seeking
+        const validation = validateSeekTarget(video, target);
+
+        Logger.add('[HEALER:SEEK] Attempting seek', {
+            from: fromTime.toFixed(3),
+            to: target.toFixed(3),
+            healRange: `${healPoint.start.toFixed(2)}-${healPoint.end.toFixed(2)}`,
+            valid: validation.valid,
+            headroom: validation.headroom?.toFixed(2)
+        });
+
+        if (!validation.valid) {
+            Logger.add('[HEALER:SEEK_ABORT] Invalid seek target', {
+                target: target.toFixed(3),
+                reason: validation.reason
+            });
+            return { success: false, error: validation.reason };
+        }
+
+        // Perform seek
+        try {
+            video.currentTime = target;
+
+            // Brief wait for seek to settle
+            await Fn.sleep(100);
+
+            Logger.add('[HEALER:SEEKED] Seek completed', {
+                newTime: video.currentTime.toFixed(3),
+                readyState: video.readyState
+            });
+        } catch (e) {
+            Logger.add('[HEALER:SEEK_ERROR] Seek failed', {
+                error: e.name,
+                message: e.message
+            });
+            return { success: false, error: e.message };
+        }
+
+        // Attempt playback
+        if (video.paused) {
+            Logger.add('[HEALER:PLAY] Attempting play');
+            try {
+                await video.play();
+
+                // Verify playback started
+                await Fn.sleep(200);
+
+                if (!video.paused && video.readyState >= 3) {
+                    const duration = (performance.now() - startTime).toFixed(0);
+                    Logger.add('[HEALER:SUCCESS] Playback resumed', {
+                        duration: duration + 'ms',
+                        currentTime: video.currentTime.toFixed(3),
+                        readyState: video.readyState
+                    });
+                    return { success: true };
+                } else {
+                    Logger.add('[HEALER:PLAY_STUCK] Play returned but not playing', {
+                        paused: video.paused,
+                        readyState: video.readyState
+                    });
+                    return { success: false, error: 'Play did not resume' };
+                }
+            } catch (e) {
+                Logger.add('[HEALER:PLAY_ERROR] Play failed', {
+                    error: e.name,
+                    message: e.message
+                });
+                return { success: false, error: e.message };
+            }
+        } else {
+            // Video already playing
+            Logger.add('[HEALER:ALREADY_PLAYING] Video resumed on its own');
+            return { success: true };
+        }
+    };
+
+    return {
+        seekAndPlay,
+        validateSeekTarget,
+        calculateSafeTarget
+    };
+})();
+
 // --- Play Validator ---
 /**
  * Validates video state for playback.
@@ -1840,6 +2122,225 @@ const ScriptBlocker = (() => {
                 subtree: true
             });
         }
+    };
+})();
+
+// --- StreamHealer ---
+/**
+ * Main orchestrator for stream healing.
+ * Detects stalls and coordinates the heal point finding and seeking.
+ */
+const StreamHealer = (() => {
+    let isHealing = false;
+    let healAttempts = 0;
+    let lastStallTime = 0;
+
+    /**
+     * Get current video state for logging
+     */
+    const getVideoState = (video) => {
+        if (!video) return { error: 'NO_VIDEO' };
+        return {
+            currentTime: video.currentTime?.toFixed(3),
+            paused: video.paused,
+            readyState: video.readyState,
+            networkState: video.networkState,
+            buffered: BufferGapFinder.formatRanges(BufferGapFinder.getBufferRanges(video))
+        };
+    };
+
+    /**
+     * Check if video is currently stalled (not progressing)
+     */
+    const isStalled = (video) => {
+        if (!video) return false;
+
+        // Must be paused or not making progress
+        if (!video.paused && video.readyState >= 3) {
+            return false; // Playing fine
+        }
+
+        // Check if buffer is exhausted
+        return BufferGapFinder.isBufferExhausted(video);
+    };
+
+    /**
+     * Poll for a heal point with timeout
+     */
+    const pollForHealPoint = async (video, timeoutMs) => {
+        const startTime = Date.now();
+        let pollCount = 0;
+
+        Logger.add('[HEALER:POLL_START] Polling for heal point', {
+            timeout: timeoutMs + 'ms',
+            videoState: getVideoState(video)
+        });
+
+        while (Date.now() - startTime < timeoutMs) {
+            pollCount++;
+
+            const healPoint = BufferGapFinder.findHealPoint(video);
+
+            if (healPoint) {
+                Logger.add('[HEALER:POLL_SUCCESS] Heal point found', {
+                    attempts: pollCount,
+                    elapsed: (Date.now() - startTime) + 'ms',
+                    healPoint: `${healPoint.start.toFixed(2)}-${healPoint.end.toFixed(2)}`
+                });
+                return healPoint;
+            }
+
+            // Log progress every 10 polls
+            if (pollCount % 10 === 0) {
+                Logger.add('[HEALER:POLLING]', {
+                    attempt: pollCount,
+                    elapsed: (Date.now() - startTime) + 'ms',
+                    buffers: BufferGapFinder.formatRanges(BufferGapFinder.getBufferRanges(video))
+                });
+            }
+
+            await Fn.sleep(CONFIG.stall.HEAL_POLL_INTERVAL_MS);
+        }
+
+        Logger.add('[HEALER:POLL_TIMEOUT] No heal point found within timeout', {
+            attempts: pollCount,
+            elapsed: (Date.now() - startTime) + 'ms',
+            finalState: getVideoState(video)
+        });
+
+        return null;
+    };
+
+    /**
+     * Main heal attempt
+     */
+    const attemptHeal = async (video) => {
+        if (isHealing) {
+            Logger.add('[HEALER:BLOCKED] Already healing');
+            return;
+        }
+
+        isHealing = true;
+        healAttempts++;
+        const healStartTime = performance.now();
+
+        Logger.add('[HEALER:START] Beginning heal attempt', {
+            attempt: healAttempts,
+            videoState: getVideoState(video)
+        });
+
+        try {
+            // Step 1: Poll for heal point
+            const healPoint = await pollForHealPoint(video, CONFIG.stall.HEAL_TIMEOUT_S * 1000);
+
+            if (!healPoint) {
+                Logger.add('[HEALER:NO_HEAL_POINT] Could not find heal point', {
+                    duration: (performance.now() - healStartTime).toFixed(0) + 'ms',
+                    suggestion: 'User may need to refresh page',
+                    finalState: getVideoState(video)
+                });
+                return;
+            }
+
+            // Step 2: Seek to heal point and play
+            const result = await LiveEdgeSeeker.seekAndPlay(video, healPoint);
+
+            const duration = (performance.now() - healStartTime).toFixed(0);
+
+            if (result.success) {
+                Logger.add('[HEALER:COMPLETE] Stream healed successfully', {
+                    duration: duration + 'ms',
+                    healAttempts,
+                    finalState: getVideoState(video)
+                });
+                Metrics.increment('heals_successful');
+            } else {
+                Logger.add('[HEALER:FAILED] Heal attempt failed', {
+                    duration: duration + 'ms',
+                    error: result.error,
+                    finalState: getVideoState(video)
+                });
+                Metrics.increment('heals_failed');
+            }
+        } catch (e) {
+            Logger.add('[HEALER:ERROR] Unexpected error during heal', {
+                error: e.name,
+                message: e.message,
+                stack: e.stack?.split('\n')[0]
+            });
+        } finally {
+            isHealing = false;
+        }
+    };
+
+    /**
+     * Handle stall detection event
+     */
+    const onStallDetected = (video, details = {}) => {
+        const now = Date.now();
+
+        // Debounce rapid stall events
+        if (now - lastStallTime < 5000) {
+            Logger.add('[HEALER:DEBOUNCE] Ignoring rapid stall event');
+            return;
+        }
+        lastStallTime = now;
+
+        Logger.add('[STALL:DETECTED] Stall detected, initiating heal', {
+            ...details,
+            videoState: getVideoState(video)
+        });
+
+        Metrics.increment('stalls_detected');
+        attemptHeal(video);
+    };
+
+    /**
+     * Start monitoring a video element
+     */
+    const monitor = (video) => {
+        if (!video) return;
+
+        let lastTime = video.currentTime;
+        let stuckCount = 0;
+
+        const checkInterval = setInterval(() => {
+            if (!document.contains(video)) {
+                Logger.add('[HEALER:CLEANUP] Video removed from DOM');
+                clearInterval(checkInterval);
+                return;
+            }
+
+            const currentTime = video.currentTime;
+            const moved = Math.abs(currentTime - lastTime) > 0.1;
+
+            if (!video.paused && !moved && video.readyState < 4) {
+                stuckCount++;
+
+                if (stuckCount >= CONFIG.stall.STUCK_COUNT_TRIGGER) {
+                    onStallDetected(video, {
+                        stuckCount,
+                        trigger: 'STUCK_MONITOR'
+                    });
+                    stuckCount = 0; // Reset after triggering
+                }
+            } else {
+                stuckCount = 0;
+            }
+
+            lastTime = currentTime;
+        }, CONFIG.stall.DETECTION_INTERVAL_MS);
+
+        Logger.add('[HEALER:MONITOR] Started monitoring video', {
+            checkInterval: CONFIG.stall.DETECTION_INTERVAL_MS + 'ms'
+        });
+    };
+
+    return {
+        monitor,
+        onStallDetected,
+        attemptHeal,
+        getStats: () => ({ healAttempts, isHealing })
     };
 })();
 
@@ -5155,159 +5656,95 @@ const StandardRecovery = (() => {
 
 
 // ============================================================================
-// 6. CORE ORCHESTRATOR
+// 6. CORE ORCHESTRATOR (Stream Healer Edition)
 // ============================================================================
 /**
  * Main entry point - orchestrates module initialization.
- * @responsibility Initialize all modules in the correct order.
+ * STREAMLINED: Focus on stream healing, not ad blocking (uBO handles that).
  */
 const CoreOrchestrator = (() => {
     return {
         init: () => {
-            Logger.add('Core initialized');
+            Logger.add('[CORE] Initializing Stream Healer');
 
             // Don't run in iframes
             if (window.self !== window.top) return;
 
-            // Check throttling
-            const { lastAttempt, errorCount } = Store.get();
-            if (errorCount >= CONFIG.timing.LOG_THROTTLE &&
-                Date.now() - lastAttempt < CONFIG.timing.REATTEMPT_DELAY_MS) {
-                if (CONFIG.debug) {
-                    console.warn('[MAD-3000] Core throttled.');
-                }
-                return;
-            }
+            // Initialize essential modules only
+            Instrumentation.init();  // Console capture for debugging
 
-            // Initialize modules in order
-            NetworkManager.init();
-            Instrumentation.init();
-            EventCoordinator.init();
-            ScriptBlocker.init();
-            AdBlocker.init();
+            // Wait for DOM then start monitoring
+            const startMonitoring = () => {
+                // Find video element and start StreamHealer
+                const findAndMonitorVideo = () => {
+                    const video = document.querySelector('video');
+                    if (video) {
+                        Logger.add('[CORE] Video element found, starting StreamHealer');
+                        StreamHealer.monitor(video);
+                    }
+                };
 
-            // Plan B: Initialize live pattern updates
-            if (CONFIG.experimental?.ENABLE_LIVE_PATTERNS &&
-                typeof PatternUpdater !== 'undefined') {
-                PatternUpdater.init();
-                Logger.add('[Core] PatternUpdater initialized');
-            }
+                // Try immediately
+                findAndMonitorVideo();
 
-            // Wait for DOM if needed
-            if (document.body) {
-                DOMObserver.init();
-            } else {
-                document.addEventListener('DOMContentLoaded', () => {
-                    DOMObserver.init();
-                }, { once: true });
-            }
-
-            // Expose debug triggers
-            window.forceTwitchAdRecovery = () => {
-                Logger.add('Manual recovery triggered via console');
-                Adapters.EventBus.emit(CONFIG.events.AD_DETECTED, { source: 'MANUAL_TRIGGER' });
-            };
-
-            window.forceTwitchAggressiveRecovery = () => {
-                Logger.add('Manual AGGRESSIVE recovery triggered via console');
-                Adapters.EventBus.emit(CONFIG.events.AD_DETECTED, {
-                    source: 'MANUAL_TRIGGER',
-                    forceAggressive: true
+                // Also observe for new videos
+                const observer = new MutationObserver((mutations) => {
+                    for (const mutation of mutations) {
+                        for (const node of mutation.addedNodes) {
+                            if (node.nodeName === 'VIDEO' ||
+                                (node.querySelector && node.querySelector('video'))) {
+                                Logger.add('[CORE] New video detected in DOM');
+                                findAndMonitorVideo();
+                            }
+                        }
+                    }
                 });
+
+                observer.observe(document.body, {
+                    childList: true,
+                    subtree: true
+                });
+
+                Logger.add('[CORE] DOM observer started');
             };
 
-            // Experimental recovery controls
-            window.toggleExperimentalRecovery = (enable) => {
-                ExperimentalRecovery.setEnabled(enable);
-            };
+            if (document.body) {
+                startMonitoring();
+            } else {
+                document.addEventListener('DOMContentLoaded', startMonitoring, { once: true });
+            }
 
-            window.testExperimentalStrategy = (strategyName) => {
+            // Expose debug functions
+            window.forceTwitchHeal = () => {
                 const video = document.querySelector('video');
                 if (video) {
-                    ExperimentalRecovery.testStrategy(video, strategyName);
+                    Logger.add('[CORE] Manual heal triggered');
+                    StreamHealer.onStallDetected(video, { trigger: 'MANUAL' });
                 } else {
                     console.log('No video element found');
                 }
             };
 
-            window.forceTwitchExperimentalRecovery = () => {
-                Logger.add('Manual EXPERIMENTAL recovery triggered via console');
-                Adapters.EventBus.emit(CONFIG.events.AD_DETECTED, {
-                    source: 'MANUAL_TRIGGER',
-                    forceExperimental: true
-                });
+            window.getTwitchHealerStats = () => {
+                return {
+                    healer: StreamHealer.getStats(),
+                    metrics: Metrics.getSummary()
+                };
             };
 
-            window.testTwitchAdPatterns = () => {
-                if (typeof PatternTester !== 'undefined') {
-                    return PatternTester.test();
-                } else {
-                    console.error('PatternTester module not loaded');
-                    return { error: 'Module not loaded' };
+            Logger.add('[CORE] Stream Healer ready', {
+                config: {
+                    detectionInterval: CONFIG.stall.DETECTION_INTERVAL_MS + 'ms',
+                    stuckTrigger: CONFIG.stall.STUCK_COUNT_TRIGGER + ' checks',
+                    healTimeout: CONFIG.stall.HEAL_TIMEOUT_S + 's'
                 }
-            };
-
-            // Plan B: PatternUpdater controls
-            window.updateTwitchAdPatterns = () => {
-                if (typeof PatternUpdater !== 'undefined') {
-                    Logger.add('Manual pattern update triggered');
-                    return PatternUpdater.forceUpdate();
-                }
-                return { error: 'PatternUpdater not loaded' };
-            };
-
-            window.getTwitchPatternStats = () => {
-                if (typeof PatternUpdater !== 'undefined') {
-                    return PatternUpdater.getStats();
-                }
-                return { error: 'PatternUpdater not loaded' };
-            };
-
-            window.addTwitchPatternSource = (url) => {
-                if (typeof PatternUpdater !== 'undefined') {
-                    PatternUpdater.addSource(url);
-                    return PatternUpdater.forceUpdate();
-                }
-                return { error: 'PatternUpdater not loaded' };
-            };
-
-            // Plan B: PlayerPatcher controls (experimental)
-            window.enableTwitchPlayerPatcher = () => {
-                if (typeof PlayerPatcher !== 'undefined') {
-                    PlayerPatcher.enable();
-                    Logger.add('[Core] PlayerPatcher enabled via console');
-                    return PlayerPatcher.getStats();
-                }
-                return { error: 'PlayerPatcher not loaded' };
-            };
-
-            window.disableTwitchPlayerPatcher = () => {
-                if (typeof PlayerPatcher !== 'undefined') {
-                    PlayerPatcher.disable();
-                    return { disabled: true };
-                }
-                return { error: 'PlayerPatcher not loaded' };
-            };
-
-            window.getTwitchPlayerPatcherStats = () => {
-                if (typeof PlayerPatcher !== 'undefined') {
-                    return PlayerPatcher.getStats();
-                }
-                return { error: 'PlayerPatcher not loaded' };
-            };
-
-            // Expose AdCorrelation stats
-            window.getTwitchAdCorrelationStats = () => {
-                if (typeof AdCorrelation !== 'undefined') {
-                    return AdCorrelation.exportData();
-                }
-                return { error: 'AdCorrelation not loaded' };
-            };
+            });
         }
     };
 })();
 
 CoreOrchestrator.init();
+
 
 
 })();

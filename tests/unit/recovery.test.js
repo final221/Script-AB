@@ -58,7 +58,7 @@ describe('Recovery System', () => {
             restoreMocks = [];
         });
 
-        it('forces aggressive recovery when buffer is critical', async () => {
+        it('does NOT force aggressive recovery (disabled in v4.0)', async () => {
             const ResilienceOrchestrator = window.ResilienceOrchestrator;
             const container = document.createElement('div');
             const video = document.createElement('video');
@@ -67,7 +67,7 @@ describe('Recovery System', () => {
 
             // Mock Dependencies
             restoreMocks.push(mockGlobal('BufferAnalyzer', {
-                analyze: () => ({ bufferHealth: 'critical', bufferSize: 1.5 })
+                analyze: () => ({ bufferHealth: 'critical', bufferSize: 1.5, needsAggressive: true })
             }));
 
             restoreMocks.push(mockGlobal('RecoveryDiagnostics', {
@@ -75,7 +75,8 @@ describe('Recovery System', () => {
             }));
 
             restoreMocks.push(mockGlobal('RecoveryStrategy', {
-                select: () => ({ execute: async () => { }, name: 'mock-strategy' })
+                select: () => ({ execute: async () => { }, name: 'StandardRecovery' }),
+                getEscalation: () => null  // v4.0: No escalation
             }));
 
             // Mock other dependencies used by ResilienceOrchestrator
@@ -111,7 +112,8 @@ describe('Recovery System', () => {
             const payload = {};
             await ResilienceOrchestrator.execute(container, payload);
 
-            expect(payload.forceAggressive).toBe(true);
+            // v4.0: Aggressive recovery is DISABLED, payload should NOT have forceAggressive
+            expect(payload.forceAggressive).toBeUndefined();
         });
 
         it('detects recovery failures', async () => {
