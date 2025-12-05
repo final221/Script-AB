@@ -1,24 +1,72 @@
 // --- Diagnostics ---
 /**
  * Handles network traffic logging and diagnostics.
- * @responsibility
- * 1. Log network requests based on sampling/relevance.
+ * ENHANCED: Always logs video-related requests for debugging stream issues.
  */
 const Diagnostics = (() => {
+    // Track video request activity
+    let lastVideoRequestTime = 0;
+    let videoRequestCount = 0;
+    let m3u8RequestCount = 0;
+
     const logNetworkRequest = (url, type, isAd) => {
-        if (isAd) return;
-
-        // --- START OF DIAGNOSTIC CHANGE ---
-        // Temporarily increase logging to find new ad patterns.
-        const isRelevant = url.includes('twitch') || url.includes('ttvnw') || url.includes('.m3u8');
-
-        if (isRelevant && Math.random() < 0.25) { // Log 25% of relevant requests
-            Logger.add('Network Request (DIAGNOSTIC)', { type, url });
+        if (isAd) {
+            // Always log blocked ads
+            Logger.add('[NETWORK:BLOCKED] Ad request blocked', { type, url: url.substring(0, 100) });
+            return;
         }
-        // --- END OF DIAGNOSTIC CHANGE ---
+
+        const urlLower = url.toLowerCase();
+
+        // ALWAYS log video-related requests (m3u8, video segments)
+        const isM3U8 = urlLower.includes('.m3u8');
+        const isVideoSegment = urlLower.includes('video-weaver') ||
+            urlLower.includes('video-edge') ||
+            urlLower.includes('.ts') ||
+            urlLower.includes('segment');
+
+        if (isM3U8) {
+            m3u8RequestCount++;
+            lastVideoRequestTime = Date.now();
+            Logger.add('[NETWORK:M3U8] Manifest request', {
+                type,
+                url: url.substring(0, 150),
+                totalM3U8: m3u8RequestCount
+            });
+            return;
+        }
+
+        if (isVideoSegment) {
+            videoRequestCount++;
+            lastVideoRequestTime = Date.now();
+            // Log every 10th segment to avoid spam, but always log first few
+            if (videoRequestCount <= 5 || videoRequestCount % 10 === 0) {
+                Logger.add('[NETWORK:SEGMENT] Video segment request', {
+                    type,
+                    url: url.substring(0, 100),
+                    segmentCount: videoRequestCount
+                });
+            }
+            return;
+        }
+
+        // Sample other Twitch/ttvnw requests at 10%
+        const isRelevant = urlLower.includes('twitch') || urlLower.includes('ttvnw');
+        if (isRelevant && Math.random() < 0.10) {
+            Logger.add('[NETWORK:OTHER] Request', { type, url: url.substring(0, 100) });
+        }
     };
+
+    // Helper to check video stream health
+    const getVideoStreamStats = () => ({
+        lastVideoRequestMs: lastVideoRequestTime ? Date.now() - lastVideoRequestTime : null,
+        videoSegments: videoRequestCount,
+        manifests: m3u8RequestCount
+    });
 
     return {
-        logNetworkRequest
+        logNetworkRequest,
+        getVideoStreamStats
     };
 })();
+
