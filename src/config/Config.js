@@ -82,8 +82,10 @@ const CONFIG = (() => {
         },
         player: {
             MAX_SEARCH_DEPTH: 15,
-            STUCK_THRESHOLD_S: 0.1,
-            STUCK_COUNT_LIMIT: 2,
+            // INCREASED: More tolerant stuck detection (was 0.1s / 2 checks)
+            // Now: 0.5s movement threshold, 5 consecutive checks = 5+ seconds stuck
+            STUCK_THRESHOLD_S: 0.5,    // Was 0.1 - now 5x more tolerant
+            STUCK_COUNT_LIMIT: 5,      // Was 2 - needs 5 consecutive failed checks
             STANDARD_SEEK_BACK_S: 3.5,
             BLOB_SEEK_BACK_S: 3,
             BUFFER_HEALTH_S: 5,

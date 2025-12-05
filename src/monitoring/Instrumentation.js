@@ -1,23 +1,37 @@
 // --- Instrumentation ---
 /**
  * Hooks into global events and console methods to monitor application behavior.
- * Uses structured error classification instead of string pattern matching.
- * @responsibility Observes system-wide events, classifies errors by type and severity.
+ * REFACTORED: Enhanced logging, longer debounce, smarter recovery triggering.
  */
 const Instrumentation = (() => {
     const classifyError = ErrorClassifier.classify;
+
+    // Helper to capture video state for logging
+    const getVideoState = () => {
+        const video = document.querySelector('video');
+        if (!video) return { error: 'NO_VIDEO_ELEMENT' };
+        return {
+            currentTime: video.currentTime?.toFixed(2),
+            paused: video.paused,
+            readyState: video.readyState,
+            networkState: video.networkState,
+            buffered: video.buffered.length > 0 ?
+                `${video.buffered.end(video.buffered.length - 1).toFixed(2)}` : 'empty',
+            error: video.error?.code
+        };
+    };
 
     const setupGlobalErrorHandlers = () => {
         window.addEventListener('error', (event) => {
             const classification = classifyError(event.error, event.message || '');
 
-            Logger.add('Global Error', {
+            Logger.add('[INSTRUMENT:ERROR] Global error caught', {
                 message: event.message,
-                filename: event.filename,
+                filename: event.filename?.split('/').pop(), // Just filename, not full path
                 lineno: event.lineno,
-                colno: event.colno,
                 severity: classification.severity,
-                action: classification.action
+                action: classification.action,
+                videoState: getVideoState()
             });
 
             if (classification.action !== 'LOG_ONLY') {
@@ -25,15 +39,23 @@ const Instrumentation = (() => {
             }
 
             if (classification.action === 'TRIGGER_RECOVERY') {
-                Logger.add('Critical error detected, triggering recovery');
-                setTimeout(() => Adapters.EventBus.emit(CONFIG.events.AD_DETECTED), 300);
+                Logger.add('[INSTRUMENT:TRIGGER] Error triggering recovery', {
+                    errorType: event.error?.name || 'unknown',
+                    source: 'GLOBAL_ERROR'
+                });
+                setTimeout(() => Adapters.EventBus.emit(CONFIG.events.AD_DETECTED, {
+                    source: 'INSTRUMENTATION',
+                    trigger: 'GLOBAL_ERROR',
+                    reason: event.message
+                }), 300);
             }
         });
 
         window.addEventListener('unhandledrejection', (event) => {
-            Logger.add('Unhandled Rejection', {
-                reason: event.reason ? event.reason.toString() : 'Unknown',
-                severity: 'MEDIUM'
+            Logger.add('[INSTRUMENT:REJECTION] Unhandled promise rejection', {
+                reason: event.reason ? String(event.reason).substring(0, 200) : 'Unknown',
+                severity: 'MEDIUM',
+                videoState: getVideoState()
             });
             Metrics.increment('errors');
         });
@@ -48,8 +70,8 @@ const Instrumentation = (() => {
                 const msg = args.map(String).join(' ');
                 const classification = classifyError(null, msg);
 
-                Logger.add('Console Error', {
-                    args: args.map(String),
+                Logger.add('[INSTRUMENT:CONSOLE_ERROR] Console error intercepted', {
+                    message: msg.substring(0, 300), // Truncate long messages
                     severity: classification.severity,
                     action: classification.action
                 });
@@ -65,10 +87,43 @@ const Instrumentation = (() => {
 
     const interceptConsoleWarn = () => {
         const originalWarn = console.warn;
+
+        // Track stalling detection
+        let lastStallDetection = 0;
+        let stallCount = 0;
+
+        // INCREASED: 30 second debounce (was 10s) - give player time to self-recover
         const stallingDebounced = Fn.debounce(() => {
-            Logger.add('Critical warning: Playhead stalling (debounced)');
-            Adapters.EventBus.emit(CONFIG.events.AD_DETECTED);
-        }, 10000);
+            const video = document.querySelector('video');
+            const videoState = getVideoState();
+
+            // NEW: Check if player already recovered before triggering
+            if (video && !video.paused && video.readyState >= 3) {
+                Logger.add('[INSTRUMENT:STALL_RECOVERED] Player recovered before debounce fired', {
+                    stallCount,
+                    videoState,
+                    action: 'SKIPPING_RECOVERY'
+                });
+                stallCount = 0; // Reset
+                return; // Don't trigger recovery - already fixed
+            }
+
+            Logger.add('[INSTRUMENT:STALL_TRIGGER] Playhead stalling - triggering recovery', {
+                stallCount,
+                debounceMs: 30000,
+                videoState,
+                action: 'EMITTING_AD_DETECTED'
+            });
+
+            Adapters.EventBus.emit(CONFIG.events.AD_DETECTED, {
+                source: 'INSTRUMENTATION',
+                trigger: 'PLAYHEAD_STALLING',
+                reason: 'Playhead stalled for 30+ seconds',
+                details: { stallCount, videoState }
+            });
+
+            stallCount = 0; // Reset after trigger
+        }, 30000); // INCREASED from 10000
 
         console.warn = (...args) => {
             originalWarn.apply(console, args);
@@ -77,12 +132,28 @@ const Instrumentation = (() => {
 
                 // Critical playback warning
                 if (msg.toLowerCase().includes('playhead stalling')) {
-                    Logger.add('Playhead stalling warning detected (raw)', { severity: 'CRITICAL' });
+                    stallCount++;
+                    const now = Date.now();
+                    const timeSinceLast = lastStallDetection ? (now - lastStallDetection) / 1000 : 0;
+                    lastStallDetection = now;
+
+                    Logger.add('[INSTRUMENT:STALL_DETECTED] Playhead stalling warning', {
+                        stallCount,
+                        timeSinceLastStall: timeSinceLast.toFixed(1) + 's',
+                        videoState: getVideoState(),
+                        debounceActive: true,
+                        debounceMs: 30000,
+                        originalMessage: msg.substring(0, 100)
+                    });
+
                     stallingDebounced();
                 }
                 // CSP warnings (informational)
                 else if (CONFIG.logging.LOG_CSP_WARNINGS && msg.includes('Content-Security-Policy')) {
-                    Logger.add('CSP Warning', { args: args.map(String), severity: 'LOW' });
+                    Logger.add('[INSTRUMENT:CSP] CSP warning', {
+                        message: msg.substring(0, 200),
+                        severity: 'LOW'
+                    });
                 }
             } catch (e) {
                 // Avoid recursion if logging fails
@@ -92,10 +163,15 @@ const Instrumentation = (() => {
 
     return {
         init: () => {
+            Logger.add('[INSTRUMENT:INIT] Instrumentation initialized', {
+                features: ['globalErrors', 'consoleErrors', 'consoleWarns', 'stallDetection'],
+                stallDebounceMs: 30000
+            });
             setupGlobalErrorHandlers();
             interceptConsoleError();
             interceptConsoleWarn();
         },
     };
 })();
+
 

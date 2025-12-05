@@ -1,17 +1,20 @@
 // --- Recovery Strategy ---
 /**
  * Selects appropriate recovery strategy based on buffer analysis.
- * @responsibility Implement strategy pattern for recovery selection.
+ * REFACTORED: Aggressive/Experimental escalation DISABLED.
+ * - These strategies were causing player destruction
+ * - Now always uses StandardRecovery with comprehensive logging
  */
 const RecoveryStrategy = (() => {
     /**
      * Validates video element
-     * @param {HTMLVideoElement} video - Video element to validate
-     * @returns {boolean} True if valid
      */
     const validateVideo = (video) => {
         if (!video || !(video instanceof HTMLVideoElement)) {
-            Logger.add('[RecoveryStrategy] Invalid video element', { video });
+            Logger.add('[STRATEGY:VALIDATE] Invalid video element', {
+                type: typeof video,
+                isElement: video instanceof HTMLElement
+            });
             return false;
         }
         return true;
@@ -19,88 +22,91 @@ const RecoveryStrategy = (() => {
 
     return {
         select: (video, options = {}) => {
-            // Manual overrides for testing only
+            // Log what was requested
+            Logger.add('[STRATEGY:SELECT] Strategy selection requested', {
+                forceExperimental: !!options.forceExperimental,
+                forceAggressive: !!options.forceAggressive,
+                forceStandard: !!options.forceStandard
+            });
+
+            // DISABLED: Aggressive/Experimental - these destroy the player
             if (options.forceExperimental) {
-                return ExperimentalRecovery;
+                Logger.add('[STRATEGY:BLOCKED] ExperimentalRecovery requested but DISABLED', {
+                    reason: 'Experimental recovery causes player destruction',
+                    action: 'Using StandardRecovery instead'
+                });
+                // return ExperimentalRecovery; // DISABLED
+                return StandardRecovery;
             }
+
             if (options.forceAggressive) {
-                return AggressiveRecovery;
-            }
-            if (options.forceStandard) {
+                Logger.add('[STRATEGY:BLOCKED] AggressiveRecovery requested but DISABLED', {
+                    reason: 'Aggressive recovery causes player destruction',
+                    action: 'Using StandardRecovery instead'
+                });
+                // return AggressiveRecovery; // DISABLED
                 return StandardRecovery;
             }
 
-            // Normal automatic flow - always start with Standard
-            // Cascade to experimental/aggressive handled by ResilienceOrchestrator
             if (!validateVideo(video)) {
-                Logger.add('[RecoveryStrategy] Defaulting to Standard - invalid video');
+                Logger.add('[STRATEGY:FALLBACK] Invalid video, using StandardRecovery');
                 return StandardRecovery;
             }
 
+            // Buffer analysis for logging purposes
             let analysis;
             try {
                 analysis = BufferAnalyzer.analyze(video);
             } catch (error) {
-                Logger.add('[RecoveryStrategy] BufferAnalyzer failed, defaulting to Standard', { error: String(error) });
+                Logger.add('[STRATEGY:ERROR] BufferAnalyzer failed', {
+                    error: String(error),
+                    action: 'Using StandardRecovery'
+                });
                 return StandardRecovery;
             }
-            Logger.add('Recovery strategy selection', {
-                initialStrategy: 'Standard',
-                bufferHealth: analysis.bufferHealth,
-                bufferSize: analysis.bufferSize,
-                forced: false
+
+            Logger.add('[STRATEGY:SELECTED] StandardRecovery', {
+                bufferHealth: analysis?.bufferHealth,
+                bufferSize: analysis?.bufferSize?.toFixed(2),
+                wouldHaveEscalated: analysis?.needsAggressive,
+                reason: 'Aggressive strategies disabled'
             });
 
             return StandardRecovery;
         },
 
         /**
-         * Determines the next strategy to try if the current one failed or was insufficient.
-         * @param {HTMLVideoElement} video - The video element
-         * @param {Object} lastStrategy - The strategy that was just executed
-         * @returns {Object|null} The next strategy to try, or null if no further escalation
+         * DISABLED: Escalation causes cascading failures
+         * Now always returns null (no escalation)
          */
         getEscalation: (video, lastStrategy) => {
-            if (!validateVideo(video)) {
-                return null; // No escalation if video invalid
-            }
+            // Log what would have happened
+            let wouldEscalate = null;
+            let reason = 'unknown';
 
-            let analysis;
-            try {
-                analysis = BufferAnalyzer.analyze(video);
-            } catch (error) {
-                Logger.add('[RecoveryStrategy] BufferAnalyzer failed during escalation', { error: String(error) });
-                return null; // No escalation on error
-            }
-
-            // Validate analysis object
-            if (!analysis || typeof analysis.needsAggressive !== 'boolean') {
-                Logger.add('[RecoveryStrategy] Invalid analysis object', { analysis });
-                return null;
-            }
-
-            // If we just ran StandardRecovery and buffer is still critical
             if (lastStrategy === StandardRecovery) {
-                if (analysis.needsAggressive) {
-                    if (ExperimentalRecovery.isEnabled() && ExperimentalRecovery.hasStrategies()) {
-                        Logger.add('[RECOVERY] Standard insufficient, escalating to Experimental');
-                        return ExperimentalRecovery;
-                    } else {
-                        Logger.add('[RECOVERY] Standard insufficient, escalating to Aggressive');
-                        return AggressiveRecovery;
+                try {
+                    const analysis = BufferAnalyzer.analyze(video);
+                    if (analysis?.needsAggressive) {
+                        wouldEscalate = 'AggressiveRecovery';
+                        reason = 'Critical buffer state';
                     }
+                } catch (e) {
+                    reason = 'BufferAnalyzer error';
                 }
             }
 
-            // If we just ran ExperimentalRecovery and buffer is still critical
-            if (lastStrategy === ExperimentalRecovery) {
-                if (analysis.needsAggressive) {
-                    Logger.add('[RECOVERY] Experimental insufficient, escalating to Aggressive');
-                    return AggressiveRecovery;
-                }
-            }
+            Logger.add('[STRATEGY:ESCALATION] Escalation check (DISABLED)', {
+                lastStrategy: lastStrategy?.name || 'unknown',
+                wouldHaveEscalatedTo: wouldEscalate,
+                reason: wouldEscalate ? reason : 'No escalation needed',
+                action: 'BLOCKED - escalation causes player destruction',
+                result: null
+            });
 
+            // DISABLED: Return null to prevent any escalation
             return null;
         }
     };
 })();
+

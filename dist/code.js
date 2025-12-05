@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       2.2.24
+// @version       3.0.1
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -95,8 +95,10 @@ const CONFIG = (() => {
         },
         player: {
             MAX_SEARCH_DEPTH: 15,
-            STUCK_THRESHOLD_S: 0.1,
-            STUCK_COUNT_LIMIT: 2,
+            // INCREASED: More tolerant stuck detection (was 0.1s / 2 checks)
+            // Now: 0.5s movement threshold, 5 consecutive checks = 5+ seconds stuck
+            STUCK_THRESHOLD_S: 0.5,    // Was 0.1 - now 5x more tolerant
+            STUCK_COUNT_LIMIT: 5,      // Was 2 - needs 5 consecutive failed checks
             STANDARD_SEEK_BACK_S: 3.5,
             BLOB_SEEK_BACK_S: 3,
             BUFFER_HEALTH_S: 5,
@@ -2373,23 +2375,37 @@ const ErrorClassifier = (() => {
 // --- Instrumentation ---
 /**
  * Hooks into global events and console methods to monitor application behavior.
- * Uses structured error classification instead of string pattern matching.
- * @responsibility Observes system-wide events, classifies errors by type and severity.
+ * REFACTORED: Enhanced logging, longer debounce, smarter recovery triggering.
  */
 const Instrumentation = (() => {
     const classifyError = ErrorClassifier.classify;
+
+    // Helper to capture video state for logging
+    const getVideoState = () => {
+        const video = document.querySelector('video');
+        if (!video) return { error: 'NO_VIDEO_ELEMENT' };
+        return {
+            currentTime: video.currentTime?.toFixed(2),
+            paused: video.paused,
+            readyState: video.readyState,
+            networkState: video.networkState,
+            buffered: video.buffered.length > 0 ?
+                `${video.buffered.end(video.buffered.length - 1).toFixed(2)}` : 'empty',
+            error: video.error?.code
+        };
+    };
 
     const setupGlobalErrorHandlers = () => {
         window.addEventListener('error', (event) => {
             const classification = classifyError(event.error, event.message || '');
 
-            Logger.add('Global Error', {
+            Logger.add('[INSTRUMENT:ERROR] Global error caught', {
                 message: event.message,
-                filename: event.filename,
+                filename: event.filename?.split('/').pop(), // Just filename, not full path
                 lineno: event.lineno,
-                colno: event.colno,
                 severity: classification.severity,
-                action: classification.action
+                action: classification.action,
+                videoState: getVideoState()
             });
 
             if (classification.action !== 'LOG_ONLY') {
@@ -2397,15 +2413,23 @@ const Instrumentation = (() => {
             }
 
             if (classification.action === 'TRIGGER_RECOVERY') {
-                Logger.add('Critical error detected, triggering recovery');
-                setTimeout(() => Adapters.EventBus.emit(CONFIG.events.AD_DETECTED), 300);
+                Logger.add('[INSTRUMENT:TRIGGER] Error triggering recovery', {
+                    errorType: event.error?.name || 'unknown',
+                    source: 'GLOBAL_ERROR'
+                });
+                setTimeout(() => Adapters.EventBus.emit(CONFIG.events.AD_DETECTED, {
+                    source: 'INSTRUMENTATION',
+                    trigger: 'GLOBAL_ERROR',
+                    reason: event.message
+                }), 300);
             }
         });
 
         window.addEventListener('unhandledrejection', (event) => {
-            Logger.add('Unhandled Rejection', {
-                reason: event.reason ? event.reason.toString() : 'Unknown',
-                severity: 'MEDIUM'
+            Logger.add('[INSTRUMENT:REJECTION] Unhandled promise rejection', {
+                reason: event.reason ? String(event.reason).substring(0, 200) : 'Unknown',
+                severity: 'MEDIUM',
+                videoState: getVideoState()
             });
             Metrics.increment('errors');
         });
@@ -2420,8 +2444,8 @@ const Instrumentation = (() => {
                 const msg = args.map(String).join(' ');
                 const classification = classifyError(null, msg);
 
-                Logger.add('Console Error', {
-                    args: args.map(String),
+                Logger.add('[INSTRUMENT:CONSOLE_ERROR] Console error intercepted', {
+                    message: msg.substring(0, 300), // Truncate long messages
                     severity: classification.severity,
                     action: classification.action
                 });
@@ -2437,10 +2461,43 @@ const Instrumentation = (() => {
 
     const interceptConsoleWarn = () => {
         const originalWarn = console.warn;
+
+        // Track stalling detection
+        let lastStallDetection = 0;
+        let stallCount = 0;
+
+        // INCREASED: 30 second debounce (was 10s) - give player time to self-recover
         const stallingDebounced = Fn.debounce(() => {
-            Logger.add('Critical warning: Playhead stalling (debounced)');
-            Adapters.EventBus.emit(CONFIG.events.AD_DETECTED);
-        }, 10000);
+            const video = document.querySelector('video');
+            const videoState = getVideoState();
+
+            // NEW: Check if player already recovered before triggering
+            if (video && !video.paused && video.readyState >= 3) {
+                Logger.add('[INSTRUMENT:STALL_RECOVERED] Player recovered before debounce fired', {
+                    stallCount,
+                    videoState,
+                    action: 'SKIPPING_RECOVERY'
+                });
+                stallCount = 0; // Reset
+                return; // Don't trigger recovery - already fixed
+            }
+
+            Logger.add('[INSTRUMENT:STALL_TRIGGER] Playhead stalling - triggering recovery', {
+                stallCount,
+                debounceMs: 30000,
+                videoState,
+                action: 'EMITTING_AD_DETECTED'
+            });
+
+            Adapters.EventBus.emit(CONFIG.events.AD_DETECTED, {
+                source: 'INSTRUMENTATION',
+                trigger: 'PLAYHEAD_STALLING',
+                reason: 'Playhead stalled for 30+ seconds',
+                details: { stallCount, videoState }
+            });
+
+            stallCount = 0; // Reset after trigger
+        }, 30000); // INCREASED from 10000
 
         console.warn = (...args) => {
             originalWarn.apply(console, args);
@@ -2449,12 +2506,28 @@ const Instrumentation = (() => {
 
                 // Critical playback warning
                 if (msg.toLowerCase().includes('playhead stalling')) {
-                    Logger.add('Playhead stalling warning detected (raw)', { severity: 'CRITICAL' });
+                    stallCount++;
+                    const now = Date.now();
+                    const timeSinceLast = lastStallDetection ? (now - lastStallDetection) / 1000 : 0;
+                    lastStallDetection = now;
+
+                    Logger.add('[INSTRUMENT:STALL_DETECTED] Playhead stalling warning', {
+                        stallCount,
+                        timeSinceLastStall: timeSinceLast.toFixed(1) + 's',
+                        videoState: getVideoState(),
+                        debounceActive: true,
+                        debounceMs: 30000,
+                        originalMessage: msg.substring(0, 100)
+                    });
+
                     stallingDebounced();
                 }
                 // CSP warnings (informational)
                 else if (CONFIG.logging.LOG_CSP_WARNINGS && msg.includes('Content-Security-Policy')) {
-                    Logger.add('CSP Warning', { args: args.map(String), severity: 'LOW' });
+                    Logger.add('[INSTRUMENT:CSP] CSP warning', {
+                        message: msg.substring(0, 200),
+                        severity: 'LOW'
+                    });
                 }
             } catch (e) {
                 // Avoid recursion if logging fails
@@ -2464,12 +2537,17 @@ const Instrumentation = (() => {
 
     return {
         init: () => {
+            Logger.add('[INSTRUMENT:INIT] Instrumentation initialized', {
+                features: ['globalErrors', 'consoleErrors', 'consoleWarns', 'stallDetection'],
+                stallDebounceMs: 30000
+            });
             setupGlobalErrorHandlers();
             interceptConsoleError();
             interceptConsoleWarn();
         },
     };
 })();
+
 
 
 // --- Logger ---
@@ -4313,17 +4391,20 @@ const RecoveryDiagnostics = (() => {
 // --- Recovery Strategy ---
 /**
  * Selects appropriate recovery strategy based on buffer analysis.
- * @responsibility Implement strategy pattern for recovery selection.
+ * REFACTORED: Aggressive/Experimental escalation DISABLED.
+ * - These strategies were causing player destruction
+ * - Now always uses StandardRecovery with comprehensive logging
  */
 const RecoveryStrategy = (() => {
     /**
      * Validates video element
-     * @param {HTMLVideoElement} video - Video element to validate
-     * @returns {boolean} True if valid
      */
     const validateVideo = (video) => {
         if (!video || !(video instanceof HTMLVideoElement)) {
-            Logger.add('[RecoveryStrategy] Invalid video element', { video });
+            Logger.add('[STRATEGY:VALIDATE] Invalid video element', {
+                type: typeof video,
+                isElement: video instanceof HTMLElement
+            });
             return false;
         }
         return true;
@@ -4331,91 +4412,94 @@ const RecoveryStrategy = (() => {
 
     return {
         select: (video, options = {}) => {
-            // Manual overrides for testing only
+            // Log what was requested
+            Logger.add('[STRATEGY:SELECT] Strategy selection requested', {
+                forceExperimental: !!options.forceExperimental,
+                forceAggressive: !!options.forceAggressive,
+                forceStandard: !!options.forceStandard
+            });
+
+            // DISABLED: Aggressive/Experimental - these destroy the player
             if (options.forceExperimental) {
-                return ExperimentalRecovery;
+                Logger.add('[STRATEGY:BLOCKED] ExperimentalRecovery requested but DISABLED', {
+                    reason: 'Experimental recovery causes player destruction',
+                    action: 'Using StandardRecovery instead'
+                });
+                // return ExperimentalRecovery; // DISABLED
+                return StandardRecovery;
             }
+
             if (options.forceAggressive) {
-                return AggressiveRecovery;
-            }
-            if (options.forceStandard) {
+                Logger.add('[STRATEGY:BLOCKED] AggressiveRecovery requested but DISABLED', {
+                    reason: 'Aggressive recovery causes player destruction',
+                    action: 'Using StandardRecovery instead'
+                });
+                // return AggressiveRecovery; // DISABLED
                 return StandardRecovery;
             }
 
-            // Normal automatic flow - always start with Standard
-            // Cascade to experimental/aggressive handled by ResilienceOrchestrator
             if (!validateVideo(video)) {
-                Logger.add('[RecoveryStrategy] Defaulting to Standard - invalid video');
+                Logger.add('[STRATEGY:FALLBACK] Invalid video, using StandardRecovery');
                 return StandardRecovery;
             }
 
+            // Buffer analysis for logging purposes
             let analysis;
             try {
                 analysis = BufferAnalyzer.analyze(video);
             } catch (error) {
-                Logger.add('[RecoveryStrategy] BufferAnalyzer failed, defaulting to Standard', { error: String(error) });
+                Logger.add('[STRATEGY:ERROR] BufferAnalyzer failed', {
+                    error: String(error),
+                    action: 'Using StandardRecovery'
+                });
                 return StandardRecovery;
             }
-            Logger.add('Recovery strategy selection', {
-                initialStrategy: 'Standard',
-                bufferHealth: analysis.bufferHealth,
-                bufferSize: analysis.bufferSize,
-                forced: false
+
+            Logger.add('[STRATEGY:SELECTED] StandardRecovery', {
+                bufferHealth: analysis?.bufferHealth,
+                bufferSize: analysis?.bufferSize?.toFixed(2),
+                wouldHaveEscalated: analysis?.needsAggressive,
+                reason: 'Aggressive strategies disabled'
             });
 
             return StandardRecovery;
         },
 
         /**
-         * Determines the next strategy to try if the current one failed or was insufficient.
-         * @param {HTMLVideoElement} video - The video element
-         * @param {Object} lastStrategy - The strategy that was just executed
-         * @returns {Object|null} The next strategy to try, or null if no further escalation
+         * DISABLED: Escalation causes cascading failures
+         * Now always returns null (no escalation)
          */
         getEscalation: (video, lastStrategy) => {
-            if (!validateVideo(video)) {
-                return null; // No escalation if video invalid
-            }
+            // Log what would have happened
+            let wouldEscalate = null;
+            let reason = 'unknown';
 
-            let analysis;
-            try {
-                analysis = BufferAnalyzer.analyze(video);
-            } catch (error) {
-                Logger.add('[RecoveryStrategy] BufferAnalyzer failed during escalation', { error: String(error) });
-                return null; // No escalation on error
-            }
-
-            // Validate analysis object
-            if (!analysis || typeof analysis.needsAggressive !== 'boolean') {
-                Logger.add('[RecoveryStrategy] Invalid analysis object', { analysis });
-                return null;
-            }
-
-            // If we just ran StandardRecovery and buffer is still critical
             if (lastStrategy === StandardRecovery) {
-                if (analysis.needsAggressive) {
-                    if (ExperimentalRecovery.isEnabled() && ExperimentalRecovery.hasStrategies()) {
-                        Logger.add('[RECOVERY] Standard insufficient, escalating to Experimental');
-                        return ExperimentalRecovery;
-                    } else {
-                        Logger.add('[RECOVERY] Standard insufficient, escalating to Aggressive');
-                        return AggressiveRecovery;
+                try {
+                    const analysis = BufferAnalyzer.analyze(video);
+                    if (analysis?.needsAggressive) {
+                        wouldEscalate = 'AggressiveRecovery';
+                        reason = 'Critical buffer state';
                     }
+                } catch (e) {
+                    reason = 'BufferAnalyzer error';
                 }
             }
 
-            // If we just ran ExperimentalRecovery and buffer is still critical
-            if (lastStrategy === ExperimentalRecovery) {
-                if (analysis.needsAggressive) {
-                    Logger.add('[RECOVERY] Experimental insufficient, escalating to Aggressive');
-                    return AggressiveRecovery;
-                }
-            }
+            Logger.add('[STRATEGY:ESCALATION] Escalation check (DISABLED)', {
+                lastStrategy: lastStrategy?.name || 'unknown',
+                wouldHaveEscalatedTo: wouldEscalate,
+                reason: wouldEscalate ? reason : 'No escalation needed',
+                action: 'BLOCKED - escalation causes player destruction',
+                result: null
+            });
 
+            // DISABLED: Return null to prevent any escalation
             return null;
         }
     };
 })();
+
 
 // --- Recovery Utilities ---
 /**
@@ -4542,234 +4626,369 @@ const RecoveryUtils = (() => {
 // --- Resilience Orchestrator ---
 /**
  * Orchestrates recovery execution.
- * @responsibility
- * 1. Guard against concurrent recovery attempts.
- * 2. Coordinate buffer analysis, strategy selection, and execution.
- * 3. Handle play retry after recovery.
+ * REFACTORED: Simplified recovery with comprehensive logging.
+ * - Removed page reload fallback (was destroying player)
+ * - Added detailed state logging at every decision point
+ * - Passive approach: log, try gentle recovery, let player self-heal
  */
 const ResilienceOrchestrator = (() => {
+    // Helper to capture complete video state for logging
+    const captureVideoState = (video) => {
+        if (!video) return { error: 'NO_VIDEO_ELEMENT' };
+
+        let bufferedRanges = [];
+        try {
+            for (let i = 0; i < video.buffered.length; i++) {
+                bufferedRanges.push({
+                    start: video.buffered.start(i).toFixed(2),
+                    end: video.buffered.end(i).toFixed(2)
+                });
+            }
+        } catch (e) {
+            bufferedRanges = ['error reading buffer'];
+        }
+
+        return {
+            currentTime: video.currentTime?.toFixed(3),
+            duration: video.duration?.toFixed(3) || 'unknown',
+            paused: video.paused,
+            ended: video.ended,
+            readyState: video.readyState,
+            networkState: video.networkState,
+            error: video.error ? { code: video.error.code, message: video.error.message } : null,
+            buffered: bufferedRanges,
+            playbackRate: video.playbackRate,
+            muted: video.muted,
+            volume: video.volume?.toFixed(2),
+            srcType: video.src ? (video.src.startsWith('blob:') ? 'blob' : 'url') : 'none'
+        };
+    };
+
     return {
         /**
          * Main entry point for recovery.
-         * @param {HTMLElement} container - The player container (unused, but kept for API compatibility)
+         * @param {HTMLElement} container - The player container
          * @param {Object} payload - Event payload containing reason and flags
          * @returns {Promise<boolean>} True if recovery was successful
          */
         execute: async (container, payload = {}) => {
+            const startTime = performance.now();
             const reason = payload.reason || 'unknown';
+            const source = payload.source || 'UNKNOWN';
+
+            // ========== ENTRY LOGGING ==========
+            const video = Adapters.DOM.find('video');
+            Logger.add('[RECOVERY:ENTER] Recovery triggered', {
+                source,
+                trigger: payload.trigger,
+                reason,
+                forceAggressive: !!payload.forceAggressive,
+                forceExperimental: !!payload.forceExperimental,
+                videoState: captureVideoState(video)
+            });
 
             // 1. Concurrency Guard
             if (!RecoveryLock.acquire()) {
-                Logger.add('[Resilience] Recovery already in progress, skipping');
+                Logger.add('[RECOVERY:BLOCKED] Already in progress', {
+                    reason: 'concurrent_recovery',
+                    source
+                });
                 return false;
             }
 
             try {
-                const video = Adapters.DOM.find('video');
                 if (!video) {
-                    Logger.add('[Resilience] No video element found');
+                    Logger.add('[RECOVERY:ABORT] No video element', { source });
                     return false;
                 }
 
-                // 2. Check if already healthy (prevent unnecessary recovery)
-                if (!payload.forceAggressive && !payload.forceExperimental && RecoveryValidator.detectAlreadyHealthy(video)) {
-                    Logger.add('[Resilience] Video appears healthy, skipping recovery', { reason });
+                // 2. Check if already healthy
+                const alreadyHealthy = !payload.forceAggressive &&
+                    !payload.forceExperimental &&
+                    RecoveryValidator.detectAlreadyHealthy(video);
+
+                if (alreadyHealthy) {
+                    Logger.add('[RECOVERY:SKIP] Video already healthy', {
+                        reason,
+                        state: captureVideoState(video)
+                    });
                     return true;
                 }
 
                 // 3. A/V Sync Routing
                 if (AVSyncRouter.shouldRouteToAVSync(reason)) {
-                    return await AVSyncRouter.executeAVSyncRecovery();
+                    Logger.add('[RECOVERY:ROUTE] Routing to AVSync recovery', { reason });
+                    const result = await AVSyncRouter.executeAVSyncRecovery();
+                    Logger.add('[RECOVERY:ROUTE_RESULT] AVSync recovery completed', {
+                        success: result,
+                        finalState: captureVideoState(video)
+                    });
+                    return result;
                 }
 
                 // 4. Pre-recovery Snapshot
                 const preSnapshot = VideoSnapshotHelper.captureVideoSnapshot(video);
-                Logger.add(`[Resilience] Starting recovery: ${reason}`, { preSnapshot });
+                Logger.add('[RECOVERY:PRE_STATE] Before recovery', { preSnapshot });
 
-                // 5. Strategy Selection & Execution
+                // 5. Buffer Analysis
                 const bufferHealth = BufferAnalyzer.analyze(video);
+                Logger.add('[RECOVERY:BUFFER] Buffer analysis', {
+                    bufferHealth: bufferHealth?.bufferHealth,
+                    bufferSize: bufferHealth?.bufferSize?.toFixed(2),
+                    needsAggressive: bufferHealth?.needsAggressive
+                });
+
+                // 5.5 Strategy Selection (DISABLED aggressive escalation)
+                // Previously: if critical buffer, force aggressive
+                // NOW: Log but don't escalate - aggressive recovery destroys player
                 if (bufferHealth && bufferHealth.bufferHealth === 'critical') {
-                    payload.forceAggressive = true;
+                    Logger.add('[RECOVERY:DECISION] Critical buffer detected - would have escalated', {
+                        action: 'SKIPPED_ESCALATION',
+                        reason: 'Aggressive recovery disabled - causes player destruction'
+                    });
+                    // payload.forceAggressive = true; // DISABLED
                 }
 
                 const strategy = RecoveryStrategy.select(video, payload);
-                Logger.add(`[Resilience] Selected strategy: ${strategy.name}`);
+                Logger.add('[RECOVERY:STRATEGY] Strategy selected', {
+                    name: strategy?.name || 'unknown',
+                    wasForced: payload.forceAggressive || payload.forceExperimental
+                });
+
+                // 6. Execute Strategy
                 await strategy.execute(video);
 
-                // 6. Post-recovery Snapshot & Validation
+                // 7. Post-recovery Analysis
                 const postSnapshot = VideoSnapshotHelper.captureVideoSnapshot(video);
                 const delta = VideoSnapshotHelper.calculateRecoveryDelta(preSnapshot, postSnapshot);
                 const validation = RecoveryValidator.validateRecoverySuccess(preSnapshot, postSnapshot, delta);
 
-                Logger.add('[Resilience] Recovery result', {
+                Logger.add('[RECOVERY:POST_STATE] After recovery', {
                     valid: validation.isValid,
+                    hasImprovement: validation.hasImprovement,
                     issues: validation.issues,
-                    delta
+                    delta,
+                    postSnapshot
                 });
 
-                // 6.5. Escalation (if recovery failed)
+                // 8. Escalation Decision (DISABLED destructive escalation)
                 if (!validation.isValid) {
-                    Logger.add('[Resilience] Recovery ineffective, attempting escalation...');
+                    Logger.add('[RECOVERY:ESCALATION] Recovery ineffective', {
+                        action: 'GENTLE_BUFFER_SEEK',
+                        reason: 'Aggressive escalation disabled'
+                    });
 
-                    // Escalation: Jump to buffer end (live edge)
+                    // Only try gentle buffer seek - no aggressive recovery
                     if (video.buffered.length > 0) {
                         try {
                             const end = video.buffered.end(video.buffered.length - 1);
-                            // Jump to 2s from end to be safe, or 0.5s if buffer is small
                             const target = Math.max(video.currentTime, end - 2);
                             video.currentTime = target;
-                            Logger.add('[Resilience] Escalation: Jumped to buffer end', { target: target.toFixed(3) });
-
-                            // Re-validate? No, just let PlayRetry handle it
+                            Logger.add('[RECOVERY:SEEK] Jumped to buffer end', {
+                                from: preSnapshot.currentTime?.toFixed(2),
+                                to: target.toFixed(2),
+                                bufferEnd: end.toFixed(2)
+                            });
                         } catch (e) {
-                            Logger.add('[Resilience] Escalation failed', { error: e.message });
+                            Logger.add('[RECOVERY:SEEK_FAILED] Buffer seek failed', { error: e.message });
                         }
                     }
                 }
 
-                // 7. Play Retry - ALWAYS attempt if video is paused or had improvement
+                // 9. Play Retry Decision
                 const shouldRetryPlay = video.paused || validation.hasImprovement;
-
-                Logger.add('[Resilience] Play retry decision', {
+                Logger.add('[RECOVERY:PLAY_DECISION] Play retry evaluation', {
+                    shouldRetry: shouldRetryPlay,
                     videoPaused: video.paused,
                     hasImprovement: validation.hasImprovement,
-                    willRetry: shouldRetryPlay,
                     readyState: video.readyState
                 });
 
+                let playSuccess = false;
                 if (shouldRetryPlay) {
-                    Logger.add('[Resilience] Initiating PlayRetryHandler');
-                    const playSuccess = await PlayRetryHandler.retry(video, 'post-recovery');
-
-                    Logger.add('[Resilience] PlayRetryHandler result', {
+                    playSuccess = await PlayRetryHandler.retry(video, 'post-recovery');
+                    Logger.add('[RECOVERY:PLAY_RESULT] Play retry completed', {
                         success: playSuccess,
                         finalPaused: video.paused,
                         finalReadyState: video.readyState
                     });
+                }
 
-                    // 8. Nuclear Fallback - If everything failed and video still broken
-                    if (!playSuccess && !validation.isValid && video.paused && video.readyState <= 1) {
-                        Logger.add('[Resilience] All recovery strategies exhausted, triggering page reload', {
-                            readyState: video.readyState,
-                            paused: video.paused
-                        });
+                // 10. Final State (REMOVED page reload - was destroying player)
+                const duration = (performance.now() - startTime).toFixed(0);
+                const finalState = captureVideoState(video);
 
-                        // Attempt page reload as last resort
-                        try {
-                            // Notify via event bus first (if UI available)
-                            if (typeof Adapters.EventBus !== 'undefined') {
-                                Adapters.EventBus.emit('recovery:fatal', {
-                                    reason: 'All recovery strategies failed',
-                                    action: 'page_reload'
-                                });
-                            }
-
-                            // Delay slightly to allow any logging/state save
-                            await Fn.sleep(500);
-                            window.location.reload();
-                        } catch (e) {
-                            Logger.add('[Resilience] Page reload failed', { error: e.message });
-                        }
-                    }
+                if (!playSuccess && !validation.isValid && video.paused) {
+                    // Previously: window.location.reload()
+                    // NOW: Just log and let player potentially self-recover
+                    Logger.add('[RECOVERY:INCOMPLETE] Recovery did not fully succeed', {
+                        duration: duration + 'ms',
+                        action: 'LETTING_PLAYER_SELF_HEAL',
+                        reason: 'Page reload disabled - was destroying player',
+                        suggestion: 'User may need to manually refresh if stream stuck',
+                        finalState
+                    });
                 } else {
-                    Logger.add('[Resilience] Skipping PlayRetry - video already playing', {
-                        paused: video.paused,
-                        currentTime: video.currentTime.toFixed(3)
+                    Logger.add('[RECOVERY:EXIT] Recovery completed', {
+                        duration: duration + 'ms',
+                        success: validation.isValid,
+                        playSuccess,
+                        finalState
                     });
                 }
 
                 return validation.isValid;
 
             } catch (error) {
-                Logger.add('[Resilience] Critical error during recovery', {
+                Logger.add('[RECOVERY:ERROR] Critical error during recovery', {
                     message: error.message,
-                    stack: error.stack
+                    stack: error.stack?.split('\n').slice(0, 5),
+                    videoState: captureVideoState(video)
                 });
                 return false;
             } finally {
                 RecoveryLock.release();
+                Logger.add('[RECOVERY:LOCK] Lock released');
             }
         }
     };
 })();
 
+
 // --- Standard Recovery ---
 /**
- * Simple seek-based recovery strategy.
- * @responsibility Seek to live edge and attempt to play.
+ * Simple recovery strategy - GENTLER than before.
+ * REFACTORED: Try play() first, only seek as fallback.
+ * - Previous approach (seek + play) was too aggressive
+ * - Now: try play → if stuck, gentle seek → try play again
  */
 const StandardRecovery = (() => {
+    const name = 'StandardRecovery';
+
+    // Helper to capture state for logging
+    const getState = (video) => ({
+        currentTime: video.currentTime?.toFixed(3),
+        paused: video.paused,
+        readyState: video.readyState,
+        networkState: video.networkState,
+        buffered: video.buffered?.length > 0
+            ? `[${video.buffered.start(0).toFixed(2)}, ${video.buffered.end(video.buffered.length - 1).toFixed(2)}]`
+            : 'empty'
+    });
+
     return {
+        name,
+
         execute: async (video) => {
-            Logger.add('[Standard] Starting recovery', {
-                currentTime: video.currentTime.toFixed(3),
-                paused: video.paused,
-                readyState: video.readyState
+            const startTime = performance.now();
+
+            Logger.add('[STANDARD:ENTER] Starting gentle recovery', {
+                state: getState(video)
             });
 
-            if (!video || !video.buffered || video.buffered.length === 0) {
-                Logger.add('[Standard] Recovery aborted: no buffer');
+            if (!video) {
+                Logger.add('[STANDARD:ABORT] No video element');
+                return;
+            }
+
+            // STEP 1: If video is paused, just try to play
+            if (video.paused) {
+                Logger.add('[STANDARD:STEP1] Video paused, attempting play()');
+                try {
+                    await video.play();
+                    await Fn.sleep(200); // Brief wait to check if it worked
+
+                    if (!video.paused) {
+                        Logger.add('[STANDARD:SUCCESS] Play succeeded on first attempt', {
+                            duration: (performance.now() - startTime).toFixed(0) + 'ms',
+                            state: getState(video)
+                        });
+                        return; // Success! No need to seek
+                    }
+                    Logger.add('[STANDARD:STEP1_FAIL] Play returned but video still paused');
+                } catch (e) {
+                    Logger.add('[STANDARD:STEP1_ERROR] Play failed', {
+                        error: e.name,
+                        message: e.message
+                    });
+                }
+            } else {
+                Logger.add('[STANDARD:STEP1_SKIP] Video already playing', {
+                    readyState: video.readyState
+                });
+                // Check if it's actually progressing
+                const timeBefore = video.currentTime;
+                await Fn.sleep(500);
+                const timeAfter = video.currentTime;
+
+                if (Math.abs(timeAfter - timeBefore) > 0.1) {
+                    Logger.add('[STANDARD:SUCCESS] Video is playing and progressing', {
+                        progress: (timeAfter - timeBefore).toFixed(3) + 's',
+                        state: getState(video)
+                    });
+                    return; // Actually playing fine
+                }
+                Logger.add('[STANDARD:STUCK] Video not paused but not progressing', {
+                    timeBefore: timeBefore.toFixed(3),
+                    timeAfter: timeAfter.toFixed(3)
+                });
+            }
+
+            // STEP 2: If play didn't work, try gentle seek (only if we have buffer)
+            if (!video.buffered || video.buffered.length === 0) {
+                Logger.add('[STANDARD:ABORT] No buffer available for seek');
                 return;
             }
 
             const bufferEnd = video.buffered.end(video.buffered.length - 1);
-            const seekTarget = Math.max(0, bufferEnd - CONFIG.player.STANDARD_SEEK_BACK_S);
+            const seekTarget = Math.max(0, bufferEnd - 2); // Just 2 seconds back (was 3.5)
 
-            Logger.add('[Standard] Seeking to target', {
-                seekTarget: seekTarget.toFixed(3),
-                bufferEnd: bufferEnd.toFixed(3),
-                seekBack: CONFIG.player.STANDARD_SEEK_BACK_S
+            Logger.add('[STANDARD:STEP2] Attempting gentle seek', {
+                from: video.currentTime.toFixed(3),
+                to: seekTarget.toFixed(3),
+                bufferEnd: bufferEnd.toFixed(3)
             });
 
-            video.currentTime = seekTarget;
+            try {
+                video.currentTime = seekTarget;
+                await Fn.sleep(200);
+            } catch (e) {
+                Logger.add('[STANDARD:SEEK_ERROR] Seek failed', { error: e.message });
+            }
 
-            // Wait for seek to complete
-            await Fn.sleep(100);
-
-            // Attempt to play if paused
+            // STEP 3: Try play again after seek
             if (video.paused) {
-                Logger.add('[Standard] Video paused after seek, attempting play');
+                Logger.add('[STANDARD:STEP3] Post-seek play attempt');
                 try {
                     await video.play();
-                    Logger.add('[Standard] Play initiated successfully', {
-                        paused: video.paused,
-                        readyState: video.readyState
-                    });
                 } catch (e) {
-                    Logger.add('[Standard] Play failed', {
+                    Logger.add('[STANDARD:STEP3_ERROR] Post-seek play failed', {
                         error: e.name,
                         message: e.message
                     });
-                    // Don't throw - PlayRetryHandler will handle retry
+                    // Don't throw - let ResilienceOrchestrator handle it
                 }
             }
 
-            Logger.add('[Standard] Recovery complete', {
-                seekTo: seekTarget.toFixed(3),
-                bufferEnd: bufferEnd.toFixed(3),
-                paused: video.paused,
-                readyState: video.readyState,
-                telemetry: {
-                    networkState: video.networkState,
-                    buffered: video.buffered.length > 0 ?
-                        `[${video.buffered.start(0).toFixed(2)}, ${video.buffered.end(0).toFixed(2)}]` : 'none'
-                }
+            // Log final state
+            const duration = (performance.now() - startTime).toFixed(0);
+            Logger.add('[STANDARD:EXIT] Recovery attempt complete', {
+                duration: duration + 'ms',
+                success: !video.paused && video.readyState >= 3,
+                state: getState(video)
             });
 
-            // Post-Seek Health Check (delayed)
+            // Delayed health check
             setTimeout(() => {
-                Logger.add('[Standard] Post-seek health check', {
-                    currentTime: video.currentTime.toFixed(3),
-                    readyState: video.readyState,
-                    networkState: video.networkState,
-                    paused: video.paused,
-                    bufferGap: video.buffered.length > 0 ?
-                        (video.currentTime - video.buffered.end(video.buffered.length - 1)).toFixed(3) : 'unknown'
+                Logger.add('[STANDARD:DELAYED_CHECK] Post-recovery health', {
+                    state: getState(video),
+                    isPlaying: !video.paused && video.readyState >= 3
                 });
-            }, 1000);
+            }, 1500);
         }
     };
 })();
+
 
 
 // ============================================================================

@@ -1,153 +1,231 @@
 // --- Resilience Orchestrator ---
 /**
  * Orchestrates recovery execution.
- * @responsibility
- * 1. Guard against concurrent recovery attempts.
- * 2. Coordinate buffer analysis, strategy selection, and execution.
- * 3. Handle play retry after recovery.
+ * REFACTORED: Simplified recovery with comprehensive logging.
+ * - Removed page reload fallback (was destroying player)
+ * - Added detailed state logging at every decision point
+ * - Passive approach: log, try gentle recovery, let player self-heal
  */
 const ResilienceOrchestrator = (() => {
+    // Helper to capture complete video state for logging
+    const captureVideoState = (video) => {
+        if (!video) return { error: 'NO_VIDEO_ELEMENT' };
+
+        let bufferedRanges = [];
+        try {
+            for (let i = 0; i < video.buffered.length; i++) {
+                bufferedRanges.push({
+                    start: video.buffered.start(i).toFixed(2),
+                    end: video.buffered.end(i).toFixed(2)
+                });
+            }
+        } catch (e) {
+            bufferedRanges = ['error reading buffer'];
+        }
+
+        return {
+            currentTime: video.currentTime?.toFixed(3),
+            duration: video.duration?.toFixed(3) || 'unknown',
+            paused: video.paused,
+            ended: video.ended,
+            readyState: video.readyState,
+            networkState: video.networkState,
+            error: video.error ? { code: video.error.code, message: video.error.message } : null,
+            buffered: bufferedRanges,
+            playbackRate: video.playbackRate,
+            muted: video.muted,
+            volume: video.volume?.toFixed(2),
+            srcType: video.src ? (video.src.startsWith('blob:') ? 'blob' : 'url') : 'none'
+        };
+    };
+
     return {
         /**
          * Main entry point for recovery.
-         * @param {HTMLElement} container - The player container (unused, but kept for API compatibility)
+         * @param {HTMLElement} container - The player container
          * @param {Object} payload - Event payload containing reason and flags
          * @returns {Promise<boolean>} True if recovery was successful
          */
         execute: async (container, payload = {}) => {
+            const startTime = performance.now();
             const reason = payload.reason || 'unknown';
+            const source = payload.source || 'UNKNOWN';
+
+            // ========== ENTRY LOGGING ==========
+            const video = Adapters.DOM.find('video');
+            Logger.add('[RECOVERY:ENTER] Recovery triggered', {
+                source,
+                trigger: payload.trigger,
+                reason,
+                forceAggressive: !!payload.forceAggressive,
+                forceExperimental: !!payload.forceExperimental,
+                videoState: captureVideoState(video)
+            });
 
             // 1. Concurrency Guard
             if (!RecoveryLock.acquire()) {
-                Logger.add('[Resilience] Recovery already in progress, skipping');
+                Logger.add('[RECOVERY:BLOCKED] Already in progress', {
+                    reason: 'concurrent_recovery',
+                    source
+                });
                 return false;
             }
 
             try {
-                const video = Adapters.DOM.find('video');
                 if (!video) {
-                    Logger.add('[Resilience] No video element found');
+                    Logger.add('[RECOVERY:ABORT] No video element', { source });
                     return false;
                 }
 
-                // 2. Check if already healthy (prevent unnecessary recovery)
-                if (!payload.forceAggressive && !payload.forceExperimental && RecoveryValidator.detectAlreadyHealthy(video)) {
-                    Logger.add('[Resilience] Video appears healthy, skipping recovery', { reason });
+                // 2. Check if already healthy
+                const alreadyHealthy = !payload.forceAggressive &&
+                    !payload.forceExperimental &&
+                    RecoveryValidator.detectAlreadyHealthy(video);
+
+                if (alreadyHealthy) {
+                    Logger.add('[RECOVERY:SKIP] Video already healthy', {
+                        reason,
+                        state: captureVideoState(video)
+                    });
                     return true;
                 }
 
                 // 3. A/V Sync Routing
                 if (AVSyncRouter.shouldRouteToAVSync(reason)) {
-                    return await AVSyncRouter.executeAVSyncRecovery();
+                    Logger.add('[RECOVERY:ROUTE] Routing to AVSync recovery', { reason });
+                    const result = await AVSyncRouter.executeAVSyncRecovery();
+                    Logger.add('[RECOVERY:ROUTE_RESULT] AVSync recovery completed', {
+                        success: result,
+                        finalState: captureVideoState(video)
+                    });
+                    return result;
                 }
 
                 // 4. Pre-recovery Snapshot
                 const preSnapshot = VideoSnapshotHelper.captureVideoSnapshot(video);
-                Logger.add(`[Resilience] Starting recovery: ${reason}`, { preSnapshot });
+                Logger.add('[RECOVERY:PRE_STATE] Before recovery', { preSnapshot });
 
-                // 5. Strategy Selection & Execution
+                // 5. Buffer Analysis
                 const bufferHealth = BufferAnalyzer.analyze(video);
+                Logger.add('[RECOVERY:BUFFER] Buffer analysis', {
+                    bufferHealth: bufferHealth?.bufferHealth,
+                    bufferSize: bufferHealth?.bufferSize?.toFixed(2),
+                    needsAggressive: bufferHealth?.needsAggressive
+                });
+
+                // 5.5 Strategy Selection (DISABLED aggressive escalation)
+                // Previously: if critical buffer, force aggressive
+                // NOW: Log but don't escalate - aggressive recovery destroys player
                 if (bufferHealth && bufferHealth.bufferHealth === 'critical') {
-                    payload.forceAggressive = true;
+                    Logger.add('[RECOVERY:DECISION] Critical buffer detected - would have escalated', {
+                        action: 'SKIPPED_ESCALATION',
+                        reason: 'Aggressive recovery disabled - causes player destruction'
+                    });
+                    // payload.forceAggressive = true; // DISABLED
                 }
 
                 const strategy = RecoveryStrategy.select(video, payload);
-                Logger.add(`[Resilience] Selected strategy: ${strategy.name}`);
+                Logger.add('[RECOVERY:STRATEGY] Strategy selected', {
+                    name: strategy?.name || 'unknown',
+                    wasForced: payload.forceAggressive || payload.forceExperimental
+                });
+
+                // 6. Execute Strategy
                 await strategy.execute(video);
 
-                // 6. Post-recovery Snapshot & Validation
+                // 7. Post-recovery Analysis
                 const postSnapshot = VideoSnapshotHelper.captureVideoSnapshot(video);
                 const delta = VideoSnapshotHelper.calculateRecoveryDelta(preSnapshot, postSnapshot);
                 const validation = RecoveryValidator.validateRecoverySuccess(preSnapshot, postSnapshot, delta);
 
-                Logger.add('[Resilience] Recovery result', {
+                Logger.add('[RECOVERY:POST_STATE] After recovery', {
                     valid: validation.isValid,
+                    hasImprovement: validation.hasImprovement,
                     issues: validation.issues,
-                    delta
+                    delta,
+                    postSnapshot
                 });
 
-                // 6.5. Escalation (if recovery failed)
+                // 8. Escalation Decision (DISABLED destructive escalation)
                 if (!validation.isValid) {
-                    Logger.add('[Resilience] Recovery ineffective, attempting escalation...');
+                    Logger.add('[RECOVERY:ESCALATION] Recovery ineffective', {
+                        action: 'GENTLE_BUFFER_SEEK',
+                        reason: 'Aggressive escalation disabled'
+                    });
 
-                    // Escalation: Jump to buffer end (live edge)
+                    // Only try gentle buffer seek - no aggressive recovery
                     if (video.buffered.length > 0) {
                         try {
                             const end = video.buffered.end(video.buffered.length - 1);
-                            // Jump to 2s from end to be safe, or 0.5s if buffer is small
                             const target = Math.max(video.currentTime, end - 2);
                             video.currentTime = target;
-                            Logger.add('[Resilience] Escalation: Jumped to buffer end', { target: target.toFixed(3) });
-
-                            // Re-validate? No, just let PlayRetry handle it
+                            Logger.add('[RECOVERY:SEEK] Jumped to buffer end', {
+                                from: preSnapshot.currentTime?.toFixed(2),
+                                to: target.toFixed(2),
+                                bufferEnd: end.toFixed(2)
+                            });
                         } catch (e) {
-                            Logger.add('[Resilience] Escalation failed', { error: e.message });
+                            Logger.add('[RECOVERY:SEEK_FAILED] Buffer seek failed', { error: e.message });
                         }
                     }
                 }
 
-                // 7. Play Retry - ALWAYS attempt if video is paused or had improvement
+                // 9. Play Retry Decision
                 const shouldRetryPlay = video.paused || validation.hasImprovement;
-
-                Logger.add('[Resilience] Play retry decision', {
+                Logger.add('[RECOVERY:PLAY_DECISION] Play retry evaluation', {
+                    shouldRetry: shouldRetryPlay,
                     videoPaused: video.paused,
                     hasImprovement: validation.hasImprovement,
-                    willRetry: shouldRetryPlay,
                     readyState: video.readyState
                 });
 
+                let playSuccess = false;
                 if (shouldRetryPlay) {
-                    Logger.add('[Resilience] Initiating PlayRetryHandler');
-                    const playSuccess = await PlayRetryHandler.retry(video, 'post-recovery');
-
-                    Logger.add('[Resilience] PlayRetryHandler result', {
+                    playSuccess = await PlayRetryHandler.retry(video, 'post-recovery');
+                    Logger.add('[RECOVERY:PLAY_RESULT] Play retry completed', {
                         success: playSuccess,
                         finalPaused: video.paused,
                         finalReadyState: video.readyState
                     });
+                }
 
-                    // 8. Nuclear Fallback - If everything failed and video still broken
-                    if (!playSuccess && !validation.isValid && video.paused && video.readyState <= 1) {
-                        Logger.add('[Resilience] All recovery strategies exhausted, triggering page reload', {
-                            readyState: video.readyState,
-                            paused: video.paused
-                        });
+                // 10. Final State (REMOVED page reload - was destroying player)
+                const duration = (performance.now() - startTime).toFixed(0);
+                const finalState = captureVideoState(video);
 
-                        // Attempt page reload as last resort
-                        try {
-                            // Notify via event bus first (if UI available)
-                            if (typeof Adapters.EventBus !== 'undefined') {
-                                Adapters.EventBus.emit('recovery:fatal', {
-                                    reason: 'All recovery strategies failed',
-                                    action: 'page_reload'
-                                });
-                            }
-
-                            // Delay slightly to allow any logging/state save
-                            await Fn.sleep(500);
-                            window.location.reload();
-                        } catch (e) {
-                            Logger.add('[Resilience] Page reload failed', { error: e.message });
-                        }
-                    }
+                if (!playSuccess && !validation.isValid && video.paused) {
+                    // Previously: window.location.reload()
+                    // NOW: Just log and let player potentially self-recover
+                    Logger.add('[RECOVERY:INCOMPLETE] Recovery did not fully succeed', {
+                        duration: duration + 'ms',
+                        action: 'LETTING_PLAYER_SELF_HEAL',
+                        reason: 'Page reload disabled - was destroying player',
+                        suggestion: 'User may need to manually refresh if stream stuck',
+                        finalState
+                    });
                 } else {
-                    Logger.add('[Resilience] Skipping PlayRetry - video already playing', {
-                        paused: video.paused,
-                        currentTime: video.currentTime.toFixed(3)
+                    Logger.add('[RECOVERY:EXIT] Recovery completed', {
+                        duration: duration + 'ms',
+                        success: validation.isValid,
+                        playSuccess,
+                        finalState
                     });
                 }
 
                 return validation.isValid;
 
             } catch (error) {
-                Logger.add('[Resilience] Critical error during recovery', {
+                Logger.add('[RECOVERY:ERROR] Critical error during recovery', {
                     message: error.message,
-                    stack: error.stack
+                    stack: error.stack?.split('\n').slice(0, 5),
+                    videoState: captureVideoState(video)
                 });
                 return false;
             } finally {
                 RecoveryLock.release();
+                Logger.add('[RECOVERY:LOCK] Lock released');
             }
         }
     };
 })();
+
