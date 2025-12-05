@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       2.2.23
+// @version       2.2.24
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -744,8 +744,9 @@ const SignatureValidator = (() => {
                 if (result && sessionRef.current) {
                     const session = sessionRef.current;
 
-                    // Check if key changed within this session
-                    if (session[id] && session[id] !== k) {
+                    // Only log key changes after initial discovery period (500ms grace period)
+                    const isInitialDiscovery = Date.now() - session.mountTime < 500;
+                    if (session[id] && session[id] !== k && !isInitialDiscovery) {
                         const change = {
                             timestamp: Date.now(),
                             signatureId: id,
@@ -3138,13 +3139,15 @@ const PatternUpdater = (() => {
             Logger.add('[PatternUpdater] Using embedded patterns only (no remote sources)');
         }
 
-        // Periodic refresh check
-        setInterval(() => {
-            if (Date.now() - lastUpdate > REFRESH_INTERVAL_MS) {
-                Logger.add('[PatternUpdater] Periodic refresh triggered');
-                fetchPatterns();
-            }
-        }, 60000); // Check every minute if refresh needed
+        // Periodic refresh check - only if sources exist
+        if (PATTERN_SOURCES.length > 0) {
+            setInterval(() => {
+                if (Date.now() - lastUpdate > REFRESH_INTERVAL_MS) {
+                    Logger.add('[PatternUpdater] Periodic refresh triggered');
+                    fetchPatterns();
+                }
+            }, 60000); // Check every minute if refresh needed
+        }
     };
 
     /**
@@ -4090,12 +4093,19 @@ const PlayRetryHandler = (() => {
          * @returns {Promise<boolean>} True if successful
          */
         retry: async (video, context = 'general') => {
-            if (!PlayValidator.validatePlayable(video)) {
-                Logger.add('[PlayRetry] Video not ready for playback', {
-                    readyState: video.readyState,
-                    error: video.error ? video.error.code : null
-                });
-                return false;
+            // Wait for video to become ready with timeout
+            const READY_WAIT_MS = 5000;
+            const startWait = Date.now();
+            while (!PlayValidator.validatePlayable(video)) {
+                if (Date.now() - startWait > READY_WAIT_MS) {
+                    Logger.add('[PlayRetry] Video not ready after wait', {
+                        readyState: video.readyState,
+                        error: video.error ? video.error.code : null,
+                        waitedMs: Date.now() - startWait
+                    });
+                    return false;
+                }
+                await Fn.sleep(200);
             }
 
             for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
@@ -4636,6 +4646,31 @@ const ResilienceOrchestrator = (() => {
                         finalPaused: video.paused,
                         finalReadyState: video.readyState
                     });
+
+                    // 8. Nuclear Fallback - If everything failed and video still broken
+                    if (!playSuccess && !validation.isValid && video.paused && video.readyState <= 1) {
+                        Logger.add('[Resilience] All recovery strategies exhausted, triggering page reload', {
+                            readyState: video.readyState,
+                            paused: video.paused
+                        });
+
+                        // Attempt page reload as last resort
+                        try {
+                            // Notify via event bus first (if UI available)
+                            if (typeof Adapters.EventBus !== 'undefined') {
+                                Adapters.EventBus.emit('recovery:fatal', {
+                                    reason: 'All recovery strategies failed',
+                                    action: 'page_reload'
+                                });
+                            }
+
+                            // Delay slightly to allow any logging/state save
+                            await Fn.sleep(500);
+                            window.location.reload();
+                        } catch (e) {
+                            Logger.add('[Resilience] Page reload failed', { error: e.message });
+                        }
+                    }
                 } else {
                     Logger.add('[Resilience] Skipping PlayRetry - video already playing', {
                         paused: video.paused,

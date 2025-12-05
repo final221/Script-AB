@@ -19,12 +19,19 @@ const PlayRetryHandler = (() => {
          * @returns {Promise<boolean>} True if successful
          */
         retry: async (video, context = 'general') => {
-            if (!PlayValidator.validatePlayable(video)) {
-                Logger.add('[PlayRetry] Video not ready for playback', {
-                    readyState: video.readyState,
-                    error: video.error ? video.error.code : null
-                });
-                return false;
+            // Wait for video to become ready with timeout
+            const READY_WAIT_MS = 5000;
+            const startWait = Date.now();
+            while (!PlayValidator.validatePlayable(video)) {
+                if (Date.now() - startWait > READY_WAIT_MS) {
+                    Logger.add('[PlayRetry] Video not ready after wait', {
+                        readyState: video.readyState,
+                        error: video.error ? video.error.code : null,
+                        waitedMs: Date.now() - startWait
+                    });
+                    return false;
+                }
+                await Fn.sleep(200);
             }
 
             for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {

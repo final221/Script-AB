@@ -168,13 +168,15 @@ const PatternUpdater = (() => {
             Logger.add('[PatternUpdater] Using embedded patterns only (no remote sources)');
         }
 
-        // Periodic refresh check
-        setInterval(() => {
-            if (Date.now() - lastUpdate > REFRESH_INTERVAL_MS) {
-                Logger.add('[PatternUpdater] Periodic refresh triggered');
-                fetchPatterns();
-            }
-        }, 60000); // Check every minute if refresh needed
+        // Periodic refresh check - only if sources exist
+        if (PATTERN_SOURCES.length > 0) {
+            setInterval(() => {
+                if (Date.now() - lastUpdate > REFRESH_INTERVAL_MS) {
+                    Logger.add('[PatternUpdater] Periodic refresh triggered');
+                    fetchPatterns();
+                }
+            }, 60000); // Check every minute if refresh needed
+        }
     };
 
     /**

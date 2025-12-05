@@ -21,8 +21,9 @@ const SignatureValidator = (() => {
                 if (result && sessionRef.current) {
                     const session = sessionRef.current;
 
-                    // Check if key changed within this session
-                    if (session[id] && session[id] !== k) {
+                    // Only log key changes after initial discovery period (500ms grace period)
+                    const isInitialDiscovery = Date.now() - session.mountTime < 500;
+                    if (session[id] && session[id] !== k && !isInitialDiscovery) {
                         const change = {
                             timestamp: Date.now(),
                             signatureId: id,

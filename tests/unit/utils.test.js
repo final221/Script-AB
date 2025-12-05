@@ -3,6 +3,14 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 describe('Utils Modules', () => {
 
     describe('Logic', () => {
+        beforeEach(() => {
+            vi.useFakeTimers();
+        });
+
+        afterEach(() => {
+            vi.useRealTimers();
+        });
+
         it('session tracking detects key changes', () => {
             const Logic = window.Logic;
             Logic.Player.startSession();
@@ -15,7 +23,10 @@ describe('Utils Modules', () => {
             expect(status1.currentKeys.k0).toBe('ref');
             expect(status1.totalChanges).toBe(0);
 
-            // Key change during session
+            // Advance time past 500ms grace period
+            vi.advanceTimersByTime(600);
+
+            // Key change during session (after grace period)
             const obj2 = { foo: (x) => { } };
             Logic.Player.signatures[0].check(obj2, 'foo');
 
@@ -31,6 +42,9 @@ describe('Utils Modules', () => {
         it('instability detection works', () => {
             const Logic = window.Logic;
             Logic.Player.startSession();
+
+            // Advance time past 500ms grace period
+            vi.advanceTimersByTime(600);
 
             // Simulate 4 changes in quick succession
             const keys = ['ref', 'foo', 'bar', 'baz', 'qux'];

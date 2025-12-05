@@ -105,6 +105,31 @@ const ResilienceOrchestrator = (() => {
                         finalPaused: video.paused,
                         finalReadyState: video.readyState
                     });
+
+                    // 8. Nuclear Fallback - If everything failed and video still broken
+                    if (!playSuccess && !validation.isValid && video.paused && video.readyState <= 1) {
+                        Logger.add('[Resilience] All recovery strategies exhausted, triggering page reload', {
+                            readyState: video.readyState,
+                            paused: video.paused
+                        });
+
+                        // Attempt page reload as last resort
+                        try {
+                            // Notify via event bus first (if UI available)
+                            if (typeof Adapters.EventBus !== 'undefined') {
+                                Adapters.EventBus.emit('recovery:fatal', {
+                                    reason: 'All recovery strategies failed',
+                                    action: 'page_reload'
+                                });
+                            }
+
+                            // Delay slightly to allow any logging/state save
+                            await Fn.sleep(500);
+                            window.location.reload();
+                        } catch (e) {
+                            Logger.add('[Resilience] Page reload failed', { error: e.message });
+                        }
+                    }
                 } else {
                     Logger.add('[Resilience] Skipping PlayRetry - video already playing', {
                         paused: video.paused,
