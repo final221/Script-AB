@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.0.1
+// @version       4.0.2
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -5730,6 +5730,13 @@ const CoreOrchestrator = (() => {
                     healer: StreamHealer.getStats(),
                     metrics: Metrics.getSummary()
                 };
+            };
+
+            // Ensure log export is available
+            window.exportTwitchAdLogs = () => {
+                const metricsSummary = Metrics.getSummary();
+                const mergedLogs = Logger.getMergedTimeline();
+                ReportGenerator.exportReport(metricsSummary, mergedLogs);
             };
 
             Logger.add('[CORE] Stream Healer ready', {

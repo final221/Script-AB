@@ -75,6 +75,13 @@ const CoreOrchestrator = (() => {
                 };
             };
 
+            // Ensure log export is available
+            window.exportTwitchAdLogs = () => {
+                const metricsSummary = Metrics.getSummary();
+                const mergedLogs = Logger.getMergedTimeline();
+                ReportGenerator.exportReport(metricsSummary, mergedLogs);
+            };
+
             Logger.add('[CORE] Stream Healer ready', {
                 config: {
                     detectionInterval: CONFIG.stall.DETECTION_INTERVAL_MS + 'ms',
