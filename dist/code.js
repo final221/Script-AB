@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       3.0.1
+// @version       3.0.2
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -2435,17 +2435,35 @@ const Instrumentation = (() => {
         });
     };
 
+    // NEW: Capture console.log for timeline correlation
+    const interceptConsoleLog = () => {
+        const originalLog = console.log;
+
+        console.log = (...args) => {
+            originalLog.apply(console, args);
+            try {
+                // Capture to Logger for merged timeline
+                Logger.captureConsole('log', args);
+            } catch (e) {
+                // Avoid recursion
+            }
+        };
+    };
+
     const interceptConsoleError = () => {
         const originalError = console.error;
 
         console.error = (...args) => {
             originalError.apply(console, args);
             try {
+                // Capture to Logger for merged timeline
+                Logger.captureConsole('error', args);
+
                 const msg = args.map(String).join(' ');
                 const classification = classifyError(null, msg);
 
                 Logger.add('[INSTRUMENT:CONSOLE_ERROR] Console error intercepted', {
-                    message: msg.substring(0, 300), // Truncate long messages
+                    message: msg.substring(0, 300),
                     severity: classification.severity,
                     action: classification.action
                 });
@@ -2502,6 +2520,9 @@ const Instrumentation = (() => {
         console.warn = (...args) => {
             originalWarn.apply(console, args);
             try {
+                // Capture to Logger for merged timeline
+                Logger.captureConsole('warn', args);
+
                 const msg = args.map(String).join(' ');
 
                 // Critical playback warning
@@ -2538,10 +2559,12 @@ const Instrumentation = (() => {
     return {
         init: () => {
             Logger.add('[INSTRUMENT:INIT] Instrumentation initialized', {
-                features: ['globalErrors', 'consoleErrors', 'consoleWarns', 'stallDetection'],
-                stallDebounceMs: 30000
+                features: ['globalErrors', 'consoleLogs', 'consoleErrors', 'consoleWarns', 'stallDetection'],
+                stallDebounceMs: 30000,
+                consoleCapture: true
             });
             setupGlobalErrorHandlers();
+            interceptConsoleLog();  // NEW: Capture console.log
             interceptConsoleError();
             interceptConsoleWarn();
         },
@@ -2553,38 +2576,86 @@ const Instrumentation = (() => {
 // --- Logger ---
 /**
  * High-level logging and telemetry export.
- * @responsibility Collects logs and exports them as a file.
+ * ENHANCED: Now includes console log capture for timeline correlation.
  */
 const Logger = (() => {
     const logs = [];
+    const consoleLogs = []; // Captured console.log/warn/error
     const MAX_LOGS = 5000;
+    const MAX_CONSOLE_LOGS = 2000;
 
     const add = (message, detail = null) => {
         if (logs.length >= MAX_LOGS) logs.shift();
         logs.push({
             timestamp: new Date().toISOString(),
+            type: 'internal',
             message,
             detail,
         });
     };
 
+    // Capture console output with timestamp
+    const captureConsole = (level, args) => {
+        if (consoleLogs.length >= MAX_CONSOLE_LOGS) consoleLogs.shift();
+
+        // Convert args to string, truncate long messages
+        let message;
+        try {
+            message = args.map(arg => {
+                if (typeof arg === 'string') return arg;
+                if (arg instanceof Error) return `${arg.name}: ${arg.message}`;
+                try { return JSON.stringify(arg); } catch { return String(arg); }
+            }).join(' ');
+
+            // Truncate very long messages
+            if (message.length > 500) {
+                message = message.substring(0, 500) + '... [truncated]';
+            }
+        } catch (e) {
+            message = '[Unable to stringify console args]';
+        }
+
+        consoleLogs.push({
+            timestamp: new Date().toISOString(),
+            type: 'console',
+            level, // 'log', 'warn', 'error'
+            message,
+        });
+    };
+
+    // Get merged timeline (our logs + console logs, sorted by timestamp)
+    const getMergedTimeline = () => {
+        const allLogs = [
+            ...logs.map(l => ({ ...l, source: 'SCRIPT' })),
+            ...consoleLogs.map(l => ({ ...l, source: 'CONSOLE' }))
+        ];
+
+        // Sort by timestamp
+        allLogs.sort((a, b) => a.timestamp.localeCompare(b.timestamp));
+
+        return allLogs;
+    };
+
     return {
         add,
-        getLogs: () => logs, // Expose logs for testing/debugging
+        captureConsole,
+        getLogs: () => logs,
+        getConsoleLogs: () => consoleLogs,
+        getMergedTimeline,
         init: () => {
-            // Global error and console interception are now handled by the Instrumentation module.
-            // This Logger.init is intentionally left empty.
+            // Console interception is handled by Instrumentation module
         },
         export: () => {
             const metricsSummary = Metrics.getSummary();
-            const rawLogs = logs; // Access the private logs array
-            ReportGenerator.exportReport(metricsSummary, rawLogs);
+            const mergedLogs = getMergedTimeline();
+            ReportGenerator.exportReport(metricsSummary, mergedLogs);
         },
     };
 })();
 
 // Expose to global scope for user interaction
 window.exportTwitchAdLogs = Logger.export;
+
 
 // --- Metrics ---
 /**
@@ -2633,15 +2704,58 @@ const Metrics = (() => {
 
 // --- ReportGenerator ---
 /**
- * Generates and facilitates the download of a comprehensive report
- * based on collected logs and metrics.
- * @responsibility Formats log and metric data into a report and handles file download.
+ * Generates and facilitates the download of a comprehensive report.
+ * ENHANCED: Now includes merged timeline of script logs and console output.
  */
 const ReportGenerator = (() => {
     const generateContent = (metricsSummary, logs) => {
-        const header = `[METRICS]\nUptime: ${(metricsSummary.uptime_ms / 1000).toFixed(1)}s\nAds Detected: ${metricsSummary.ads_detected}\nAds Blocked: ${metricsSummary.ads_blocked}\nResilience Executions: ${metricsSummary.resilience_executions}\nAggressive Recoveries: ${metricsSummary.aggressive_recoveries}\nHealth Triggers: ${metricsSummary.health_triggers}\nErrors: ${metricsSummary.errors}\n\n[LOGS]\n`;
-        const logContent = logs.map(l => `[${l.timestamp}] ${l.message}${l.detail ? ' | ' + JSON.stringify(l.detail) : ''}`).join('\n');
-        return header + logContent;
+        // Header with metrics
+        const header = `[METRICS]
+Uptime: ${(metricsSummary.uptime_ms / 1000).toFixed(1)}s
+Ads Detected: ${metricsSummary.ads_detected}
+Ads Blocked: ${metricsSummary.ads_blocked}
+Resilience Executions: ${metricsSummary.resilience_executions}
+Aggressive Recoveries: ${metricsSummary.aggressive_recoveries}
+Health Triggers: ${metricsSummary.health_triggers}
+Errors: ${metricsSummary.errors}
+
+[LEGEND]
+🔧 = Script internal log
+📋 = Console.log
+⚠️ = Console.warn
+❌ = Console.error
+
+[TIMELINE - Merged script + console logs]
+`;
+
+        // Format each log entry based on source and type
+        const logContent = logs.map(l => {
+            const time = l.timestamp;
+
+            if (l.source === 'CONSOLE' || l.type === 'console') {
+                // Console log entry
+                const icon = l.level === 'error' ? '❌' : l.level === 'warn' ? '⚠️' : '📋';
+                return `[${time}] ${icon} ${l.message}`;
+            } else {
+                // Internal script log
+                const detail = l.detail ? ' | ' + JSON.stringify(l.detail) : '';
+                return `[${time}] 🔧 ${l.message}${detail}`;
+            }
+        }).join('\n');
+
+        // Stats about what was captured
+        const scriptLogs = logs.filter(l => l.source === 'SCRIPT' || l.type === 'internal').length;
+        const consoleLogs = logs.filter(l => l.source === 'CONSOLE' || l.type === 'console').length;
+
+        const footer = `
+
+[CAPTURE STATS]
+Script logs: ${scriptLogs}
+Console logs: ${consoleLogs}
+Total entries: ${logs.length}
+`;
+
+        return header + logContent + footer;
     };
 
     const downloadFile = (content) => {
@@ -2664,6 +2778,7 @@ const ReportGenerator = (() => {
         },
     };
 })();
+
 
 // --- Store ---
 /**

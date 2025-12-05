@@ -61,17 +61,35 @@ const Instrumentation = (() => {
         });
     };
 
+    // NEW: Capture console.log for timeline correlation
+    const interceptConsoleLog = () => {
+        const originalLog = console.log;
+
+        console.log = (...args) => {
+            originalLog.apply(console, args);
+            try {
+                // Capture to Logger for merged timeline
+                Logger.captureConsole('log', args);
+            } catch (e) {
+                // Avoid recursion
+            }
+        };
+    };
+
     const interceptConsoleError = () => {
         const originalError = console.error;
 
         console.error = (...args) => {
             originalError.apply(console, args);
             try {
+                // Capture to Logger for merged timeline
+                Logger.captureConsole('error', args);
+
                 const msg = args.map(String).join(' ');
                 const classification = classifyError(null, msg);
 
                 Logger.add('[INSTRUMENT:CONSOLE_ERROR] Console error intercepted', {
-                    message: msg.substring(0, 300), // Truncate long messages
+                    message: msg.substring(0, 300),
                     severity: classification.severity,
                     action: classification.action
                 });
@@ -128,6 +146,9 @@ const Instrumentation = (() => {
         console.warn = (...args) => {
             originalWarn.apply(console, args);
             try {
+                // Capture to Logger for merged timeline
+                Logger.captureConsole('warn', args);
+
                 const msg = args.map(String).join(' ');
 
                 // Critical playback warning
@@ -164,10 +185,12 @@ const Instrumentation = (() => {
     return {
         init: () => {
             Logger.add('[INSTRUMENT:INIT] Instrumentation initialized', {
-                features: ['globalErrors', 'consoleErrors', 'consoleWarns', 'stallDetection'],
-                stallDebounceMs: 30000
+                features: ['globalErrors', 'consoleLogs', 'consoleErrors', 'consoleWarns', 'stallDetection'],
+                stallDebounceMs: 30000,
+                consoleCapture: true
             });
             setupGlobalErrorHandlers();
+            interceptConsoleLog();  // NEW: Capture console.log
             interceptConsoleError();
             interceptConsoleWarn();
         },
