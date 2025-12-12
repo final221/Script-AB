@@ -1,36 +1,28 @@
 import fs from 'fs';
 import path from 'path';
 
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 // Define the source directory
 const SRC_DIR = path.resolve(__dirname, '../src');
 
-// Priority list from build.js
+// Priority list must match build.js order logic
 const PRIORITY = [
     'config/Config.js',
     'utils/Utils.js',
     'utils/Adapters.js',
-    'network/PatternTester.js',
-    'utils/network/UrlParser.js',
-    'utils/network/AdDetection.js',
-    'utils/network/MockGenerator.js',
-    'utils/network/PatternDiscovery.js',
-    'monitoring/AdAnalytics.js',
-    'utils/player/SignatureValidator.js',
-    'utils/player/SessionManager.js',
-    'player/context/SignatureDetector.js',
-    'player/context/ContextTraverser.js',
-    'player/context/ContextValidator.js',
-    'recovery/RecoveryConstants.js',
-    'recovery/helpers/VideoSnapshotHelper.js',
-    'recovery/helpers/RecoveryLock.js',
-    'recovery/helpers/RecoveryValidator.js',
-    'recovery/helpers/AVSyncRouter.js',
-    'recovery/retry/PlayValidator.js',
-    'recovery/retry/MicroSeekStrategy.js',
-    'recovery/retry/PlayExecutor.js',
-    'utils/_NetworkLogic.js',
-    'utils/_PlayerLogic.js',
-    'utils/Logic.js'
+    'recovery/BufferGapFinder.js',
+    'recovery/LiveEdgeSeeker.js',
+    'core/StreamHealer.js',
+    'monitoring/ErrorClassifier.js',
+    'monitoring/Instrumentation.js',
+    'monitoring/Logger.js',
+    'monitoring/Metrics.js',
+    'monitoring/ReportGenerator.js',
+    'monitoring/Store.js'
 ];
 
 const ENTRY = 'core/CoreOrchestrator.js';
@@ -38,6 +30,8 @@ const ENTRY = 'core/CoreOrchestrator.js';
 // Recursive file scanner
 const getFiles = (dir) => {
     let results = [];
+    if (!fs.existsSync(dir)) return results;
+
     const list = fs.readdirSync(dir);
     for (const file of list) {
         const filePath = path.join(dir, file);
@@ -66,6 +60,16 @@ if (typeof MediaError === 'undefined') {
     window.MediaError = global.MediaError;
 }
 
+// Global mocks for browser APIs if missing in JSDOM
+if (!window.performance) {
+    window.performance = { now: () => Date.now() };
+}
+
+// Ensure global Utils/Adapters namespace if accessed directly
+window.Fn = window.Fn || {};
+
+console.log('[Setup] Starting setup.js...');
+
 // Load all files
 const loadSourceFiles = () => {
     const allFiles = getFiles(SRC_DIR);
@@ -93,15 +97,13 @@ const loadSourceFiles = () => {
             let modified = false;
 
             // Transform 'const Module =' to 'var Module =' to expose to global scope via eval
-            // We use 'var' because in non-strict eval it creates a global variable.
-            // And we assign to window/global explicitly too.
 
             // Regex for IIFE modules: const Name = (() =>
-            // Allow _Name and flexible whitespace
             exposedContent = exposedContent.replace(
                 /^const\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*=\s*\(\s*\(\)\s*=>/gm,
                 (match, name) => {
                     modified = true;
+                    // console.log(`[Setup] Exposing IIFE: ${name}`);
                     return `var ${name} = window.${name} = global.${name} = (() =>`;
                 }
             );
@@ -111,6 +113,7 @@ const loadSourceFiles = () => {
                 /^const\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*=\s*\{/gm,
                 (match, name) => {
                     modified = true;
+                    // console.log(`[Setup] Exposing Object: ${name}`);
                     return `var ${name} = window.${name} = global.${name} = {`;
                 }
             );
@@ -120,26 +123,34 @@ const loadSourceFiles = () => {
                 /^const\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*=\s*function/gm,
                 (match, name) => {
                     modified = true;
+                    // console.log(`[Setup] Exposing Function: ${name}`);
                     return `var ${name} = window.${name} = global.${name} = function`;
                 }
             );
 
-            if (!modified && file.includes('Logic.js')) {
-                console.warn(`⚠️ Logic.js was NOT modified by regex! Content start: ${content.substring(0, 100)}`);
+            if (!modified) {
+                // console.warn(`[Setup] No global exposed in ${path.basename(file)}`);
             }
 
             try {
                 // Execute in global scope
                 (0, eval)(exposedContent);
             } catch (e) {
-                console.error(`Error loading ${path.relative(SRC_DIR, file)}:`, e);
+                console.error(`[Setup] Error loading ${path.relative(SRC_DIR, file)}:`, e);
             }
+        } else {
+            console.warn(`[Setup] File not found: ${file}`);
         }
     });
 };
 
 // Execute loading
-loadSourceFiles();
+try {
+    loadSourceFiles();
+    console.log('[Setup] Source files loaded.');
+} catch (e) {
+    console.error('[Setup] CRITICAL ERROR loading source files:', e);
+}
 
 // Mock window.exportTwitchAdLogs if needed
 if (!window.exportTwitchAdLogs) {

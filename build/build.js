@@ -6,41 +6,21 @@ const CONFIG = {
     OUT: path.join(__dirname, '..', 'dist', 'code.js'),
     HEADER: path.join(__dirname, 'header.js'),
     VERSION: path.join(__dirname, 'version.txt'),
-    PRIORITY: [
+    priority: [
         'config/Config.js',
         'utils/Utils.js',
         'utils/Adapters.js',
-        // Network modules (must load before _NetworkLogic)
-        'network/PatternTester.js',
-        'utils/network/UrlParser.js',
-        'utils/network/AdDetection.js',
-        'utils/network/MockGenerator.js',
-        'utils/network/PatternDiscovery.js',
-        'monitoring/AdAnalytics.js',
-        // Player modules (must load before _PlayerLogic)
-        'utils/player/SignatureValidator.js',
-        'utils/player/SessionManager.js',
-        // Player Context modules (dependency order)
-        'player/context/SignatureDetector.js',
-        'player/context/ContextTraverser.js',
-        'player/context/ContextValidator.js',
-        // Resilience Orchestrator helpers
-        'recovery/RecoveryConstants.js',
-        'recovery/helpers/VideoSnapshotHelper.js',
-        'recovery/helpers/RecoveryLock.js',
-        'recovery/helpers/RecoveryValidator.js',
-        'recovery/helpers/AVSyncRouter.js',
-        // StreamHealer modules (new - must come before other recovery)
+        // StreamHealer modules
         'recovery/BufferGapFinder.js',
         'recovery/LiveEdgeSeeker.js',
-        // Play Retry helpers
-        'recovery/retry/PlayValidator.js',
-        'recovery/retry/MicroSeekStrategy.js',
-        'recovery/retry/PlayExecutor.js',
-        // Aggregators
-        'utils/_NetworkLogic.js',
-        'utils/_PlayerLogic.js',
-        'utils/Logic.js'
+        'core/StreamHealer.js',
+        // Monitoring (needed for logging)
+        'monitoring/ErrorClassifier.js',
+        'monitoring/Instrumentation.js',
+        'monitoring/Logger.js',
+        'monitoring/Metrics.js',
+        'monitoring/ReportGenerator.js',
+        'monitoring/Store.js',
     ],
     ENTRY: 'core/CoreOrchestrator.js'
 };
@@ -131,10 +111,10 @@ const updateVersion = (type = 'patch') => {
     const allFiles = getFiles(srcDir);
     const normalize = p => path.normalize(p);
 
-    const priorityFiles = CONFIG.PRIORITY.map(file => path.join(srcDir, file));
+    const priorityFiles = CONFIG.priority.map(file => path.join(srcDir, file));
     const entryFile = path.join(srcDir, CONFIG.ENTRY);
 
-    // Filter out non-js files, priority files, and the entry file
+    // Filter out: non-js, priority files, entry file
     const otherFiles = allFiles.filter(file => {
         if (!file.endsWith('.js')) return false;
 
