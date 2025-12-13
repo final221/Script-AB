@@ -57,8 +57,19 @@ const CoreOrchestrator = (() => {
                 document.addEventListener('DOMContentLoaded', startMonitoring, { once: true });
             }
 
-            // Expose debug functions
-            window.forceTwitchHeal = () => {
+            // Expose debug functions robustly
+            const exposeGlobal = (name, fn) => {
+                try {
+                    window[name] = fn;
+                    if (typeof unsafeWindow !== 'undefined') {
+                        unsafeWindow[name] = fn;
+                    }
+                } catch (e) {
+                    console.error('[CORE] Failed to expose global:', name, e);
+                }
+            };
+
+            exposeGlobal('forceTwitchHeal', () => {
                 const video = document.querySelector('video');
                 if (video) {
                     Logger.add('[CORE] Manual heal triggered');
@@ -66,21 +77,20 @@ const CoreOrchestrator = (() => {
                 } else {
                     console.log('No video element found');
                 }
-            };
+            });
 
-            window.getTwitchHealerStats = () => {
+            exposeGlobal('getTwitchHealerStats', () => {
                 return {
                     healer: StreamHealer.getStats(),
                     metrics: Metrics.getSummary()
                 };
-            };
+            });
 
-            // Ensure log export is available
-            window.exportTwitchAdLogs = () => {
+            exposeGlobal('exportTwitchAdLogs', () => {
                 const metricsSummary = Metrics.getSummary();
                 const mergedLogs = Logger.getMergedTimeline();
                 ReportGenerator.exportReport(metricsSummary, mergedLogs);
-            };
+            });
 
             Logger.add('[CORE] Stream Healer ready', {
                 config: {
