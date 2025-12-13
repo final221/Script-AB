@@ -13,30 +13,35 @@ describe('StreamHealer', () => {
         });
 
         document.querySelector = vi.fn().mockReturnValue(video);
-
-        // Mock Fn.sleep if used (likely used in internal loops)
-        // But since we are testing via init/stop, maybe we don't need to mock internals unless we wait.
-
-        if (window.StreamHealer) {
-            window.StreamHealer.init(); // Reset state effectively or re-init
-        }
     });
 
     afterEach(() => {
         vi.clearAllMocks();
-        if (window.StreamHealer && window.StreamHealer.stop) {
-            window.StreamHealer.stop();
-        }
     });
 
-    it('initializes correctly', () => {
+    it('is defined globally', () => {
         expect(window.StreamHealer).toBeDefined();
     });
 
-    // We can't easily test internal polling logic without exposing internals or mocking globals deeply.
-    // For now, existence and basic public API is enough to prove the build works.
+    it('has monitor method', () => {
+        expect(typeof window.StreamHealer.monitor).toBe('function');
+    });
 
-    it('has stop method', () => {
-        expect(typeof window.StreamHealer.stop).toBe('function');
+    it('has onStallDetected method', () => {
+        expect(typeof window.StreamHealer.onStallDetected).toBe('function');
+    });
+
+    it('has attemptHeal method', () => {
+        expect(typeof window.StreamHealer.attemptHeal).toBe('function');
+    });
+
+    it('has getStats method', () => {
+        expect(typeof window.StreamHealer.getStats).toBe('function');
+    });
+
+    it('getStats returns expected shape', () => {
+        const stats = window.StreamHealer.getStats();
+        expect(stats).toHaveProperty('healAttempts');
+        expect(stats).toHaveProperty('isHealing');
     });
 });

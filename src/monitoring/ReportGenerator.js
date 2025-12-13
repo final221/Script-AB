@@ -1,18 +1,17 @@
 // --- ReportGenerator ---
 /**
  * Generates and facilitates the download of a comprehensive report.
- * ENHANCED: Now includes merged timeline of script logs and console output.
+ * Streamlined: Shows stream healing metrics instead of ad-blocking stats.
  */
 const ReportGenerator = (() => {
     const generateContent = (metricsSummary, logs) => {
         // Header with metrics
-        const header = `[METRICS]
+        const header = `[STREAM HEALER METRICS]
 Uptime: ${(metricsSummary.uptime_ms / 1000).toFixed(1)}s
-Ads Detected: ${metricsSummary.ads_detected}
-Ads Blocked: ${metricsSummary.ads_blocked}
-Resilience Executions: ${metricsSummary.resilience_executions}
-Aggressive Recoveries: ${metricsSummary.aggressive_recoveries}
-Health Triggers: ${metricsSummary.health_triggers}
+Stalls Detected: ${metricsSummary.stalls_detected}
+Heals Successful: ${metricsSummary.heals_successful}
+Heals Failed: ${metricsSummary.heals_failed}
+Heal Rate: ${metricsSummary.heal_rate}
 Errors: ${metricsSummary.errors}
 
 [LEGEND]
@@ -59,7 +58,7 @@ Total entries: ${logs.length}
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `twitch_ad_logs_${new Date().toISOString().replace(/[:.]/g, '-')}.txt`;
+        a.download = `stream_healer_logs_${new Date().toISOString().replace(/[:.]/g, '-')}.txt`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
@@ -74,4 +73,3 @@ Total entries: ${logs.length}
         },
     };
 })();
-

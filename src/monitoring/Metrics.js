@@ -1,15 +1,14 @@
 // --- Metrics ---
 /**
- * High-level telemetry and metrics tracking.
+ * High-level telemetry and metrics tracking for Stream Healer.
+ * Streamlined: Only tracks stream healing metrics.
  * @responsibility Collects and calculates application metrics.
  */
 const Metrics = (() => {
     const counters = {
-        ads_detected: 0,
-        ads_blocked: 0,
-        resilience_executions: 0,
-        aggressive_recoveries: 0,
-        health_triggers: 0,
+        stalls_detected: 0,
+        heals_successful: 0,
+        heals_failed: 0,
         errors: 0,
         session_start: Date.now(),
     };
@@ -23,7 +22,9 @@ const Metrics = (() => {
     const getSummary = () => ({
         ...counters,
         uptime_ms: Date.now() - counters.session_start,
-        block_rate: counters.ads_detected > 0 ? (counters.ads_blocked / counters.ads_detected * 100).toFixed(2) + '%' : 'N/A',
+        heal_rate: counters.stalls_detected > 0
+            ? ((counters.heals_successful / counters.stalls_detected) * 100).toFixed(1) + '%'
+            : 'N/A',
     });
 
     const get = (category) => counters[category] || 0;

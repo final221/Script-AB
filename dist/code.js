@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.0.5
+// @version       4.0.6
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -15,124 +15,37 @@
 // 1. CONFIGURATION & CONSTANTS
 // ============================================================================
 /**
- * Central configuration object.
+ * Central configuration object for Stream Healer.
+ * Streamlined: Only contains settings relevant to stream healing.
  * @typedef {Object} Config
  * @property {boolean} debug - Toggles console logging.
  * @property {Object} selectors - DOM selectors for player elements.
- * @property {Object} timing - Timeouts and delays (in ms).
- * @property {Object} network - URL patterns for ad detection.
- * @property {Object} mock - Mock response bodies for blocked requests.
+ * @property {Object} stall - Stall detection and healing settings.
+ * @property {Object} logging - Logging behavior settings.
  */
 const CONFIG = (() => {
     const raw = {
         debug: false,
+
         selectors: {
             PLAYER: '.video-player',
             VIDEO: 'video',
         },
-        timing: {
-            RETRY_MS: 1000,
-            INJECTION_MS: 50,
-            HEALTH_CHECK_MS: 1000,
-            HEALTH_COOLDOWN_MS: 5000,
-            LOG_THROTTLE: 5,
-            LOG_EXPIRY_MIN: 5,
-            REVERSION_DELAY_MS: 100,
-            FORCE_PLAY_DEFER_MS: 1,
-            REATTEMPT_DELAY_MS: 60 * 1000,
-            PLAYBACK_TIMEOUT_MS: 2500,
-            FRAME_DROP_SEVERE_THRESHOLD: 500,
-            FRAME_DROP_MODERATE_THRESHOLD: 100,
-            FRAME_DROP_RATE_THRESHOLD: 30,
-            AV_SYNC_THRESHOLD_MS: 250, // Detection threshold - log all desyncs for visibility
-            AV_SYNC_CHECK_INTERVAL_MS: 3000, // Check every 3s (reduced frequency)
-            AV_SYNC_RECOVERY_THRESHOLD_MS: 2000, // Only trigger recovery for severe desync
-            AV_SYNC_CRITICAL_THRESHOLD_MS: 5000, // Only reload stream for critical desync
-        },
-        logging: {
-            NETWORK_SAMPLE_RATE: 0.05,
-            LOG_CSP_WARNINGS: true,
-            LOG_NORMAL_NETWORK: false,
-        },
-        network: {
-            AD_PATTERNS: ['/ad/v1/', '/usher/v1/ad/', '/api/v5/ads/', 'pubads.g.doubleclick.net', 'supervisor.ext-twitch.tv', '/3p/ads'],
-            TRIGGER_PATTERNS: ['/ad_state/', 'vod_ad_manifest'],
 
-            // NEW: Fuzzy patterns to catch ad URL variations
-            AD_PATTERN_REGEX: [
-                /\/ad[s]?\//i,           // /ad/, /ads/, /Ad/, etc.
-                /\/advertis/i,           // /advertisement/, /advertising/
-                /preroll|midroll/i,      // Common ad types in path/query
-                /doubleclick/i,          // Google ads
-                /\.ad\./i,               // *.ad.* domains
-            ],
-
-            // Structured patterns with type info
-            DELIVERY_PATTERNS_TYPED: [
-                { pattern: '/ad_state/', type: 'path' },
-                { pattern: 'vod_ad_manifest', type: 'path' },
-                { pattern: '/usher/v1/ad/', type: 'path' }
-            ],
-
-            AVAILABILITY_PATTERNS_TYPED: [
-                { pattern: '/3p/ads', type: 'path' },
-                { pattern: 'bp=preroll', type: 'query' },
-                { pattern: 'bp=midroll', type: 'query' }
-            ],
-
-            // Backwards compatibility
-            get DELIVERY_PATTERNS() {
-                return this.DELIVERY_PATTERNS_TYPED.map(p => p.pattern);
-            },
-            get AVAILABILITY_PATTERNS() {
-                return this.AVAILABILITY_PATTERNS_TYPED.map(p => p.pattern);
-            }
-        },
-        mock: {
-            M3U8: '#EXTM3U\n#EXT-X-VERSION:3\n#EXT-X-ENDLIST\n',
-            JSON: '{"data":[]}',
-            VAST: '<?xml version="1.0" encoding="UTF-8"?><VAST version="3.0"><Ad><InLine><AdSystem>Twitch</AdSystem><AdTitle>Ad</AdTitle><Creatives></Creatives></InLine></Ad></VAST>'
-        },
-        player: {
-            MAX_SEARCH_DEPTH: 15,
-            // INCREASED: More tolerant stuck detection (was 0.1s / 2 checks)
-            // Now: 0.5s movement threshold, 5 consecutive checks = 5+ seconds stuck
-            STUCK_THRESHOLD_S: 0.5,    // Was 0.1 - now 5x more tolerant
-            STUCK_COUNT_LIMIT: 5,      // Was 2 - needs 5 consecutive failed checks
-            STANDARD_SEEK_BACK_S: 3.5,
-            BLOB_SEEK_BACK_S: 3,
-            BUFFER_HEALTH_S: 5,
-        },
-        // Plan B: Experimental features
-        experimental: {
-            ENABLE_LIVE_PATTERNS: true,     // Fetch patterns from external sources
-            ENABLE_PLAYER_PATCHING: false,  // Hook into player internals (risky)
-        },
-        // StreamHealer configuration
+        // StreamHealer stall detection configuration
         stall: {
             DETECTION_INTERVAL_MS: 500,     // How often to check for stalls
             STUCK_COUNT_TRIGGER: 4,         // Consecutive stuck checks before triggering (4 * 500ms = 2s)
             HEAL_POLL_INTERVAL_MS: 200,     // How often to poll for heal point
             HEAL_TIMEOUT_S: 15,             // Give up after this many seconds
         },
-        codes: {
-            MEDIA_ERROR_SRC: 4,
+
+        logging: {
+            LOG_CSP_WARNINGS: true,
         },
     };
 
-    return Object.freeze({
-        ...raw,
-        events: {
-            AD_DETECTED: 'AD_DETECTED',
-            ACQUIRE: 'ACQUIRE',
-            REPORT: 'REPORT',
-            LOG: 'LOG',
-        },
-        regex: {
-            AD_BLOCK: new RegExp(raw.network.AD_PATTERNS.map(p => p.replace(/[.*+?^${}()|[\\]\\]/g, '\\$&')).join('|')),
-            AD_TRIGGER: new RegExp(raw.network.AD_PATTERNS.concat(raw.network.TRIGGER_PATTERNS).map(p => p.replace(/[.*+?^${}()|[\\]\\]/g, '\\$&')).join('|')),
-        }
-    });
+    return Object.freeze(raw);
 })();
 
 // ============================================================================
@@ -174,7 +87,7 @@ const Fn = {
 // 3. ADAPTERS (Side-Effects)
 // ============================================================================
 /**
- * Side-effect wrappers for DOM, Storage, and Event handling.
+ * Side-effect wrappers for DOM and Event handling.
  * Isolate impure operations here to keep Logic kernels pure.
  * @namespace Adapters
  */
@@ -187,23 +100,6 @@ const Adapters = {
             const obs = new MutationObserver(cb);
             obs.observe(el, opts);
             return obs;
-        }
-    },
-    Storage: {
-        read: (key) => Fn.tryCatch(() => localStorage.getItem(key))(),
-        write: (key, val) => Fn.tryCatch(() => localStorage.setItem(key, JSON.stringify(val)))(),
-    },
-    EventBus: {
-        listeners: {},
-        on(event, callback) {
-            if (!this.listeners[event]) this.listeners[event] = new Set();
-            this.listeners[event].add(callback);
-        },
-        emit(event, data) {
-            if (!this.listeners[event]) return;
-            queueMicrotask(() => {
-                this.listeners[event].forEach(cb => Fn.tryCatch(cb)(data));
-            });
         }
     }
 };
@@ -483,6 +379,370 @@ const LiveEdgeSeeker = (() => {
     };
 })();
 
+// --- Error Classifier ---
+/**
+ * Classifies errors based on type, message, and known patterns.
+ * @responsibility Determine severity and required action for a given error.
+ */
+const ErrorClassifier = (() => {
+    const BENIGN_PATTERNS = ['graphql', 'unauthenticated', 'pinnedchatsettings'];
+
+    return {
+        classify: (error, message) => {
+            // Critical media errors (always trigger recovery)
+            if (error instanceof MediaError || (error && error.code >= 1 && error.code <= 4)) {
+                return { severity: 'CRITICAL', action: 'TRIGGER_RECOVERY' };
+            }
+
+            // Network errors (usually recoverable)
+            if (error instanceof TypeError && message.includes('fetch')) {
+                return { severity: 'MEDIUM', action: 'LOG_AND_METRIC' };
+            }
+
+            // Known benign errors (log only)
+            if (BENIGN_PATTERNS.some(pattern => message.toLowerCase().includes(pattern))) {
+                return { severity: 'LOW', action: 'LOG_ONLY' };
+            }
+
+            // Unknown errors (log and track)
+            return { severity: 'MEDIUM', action: 'LOG_AND_METRIC' };
+        }
+    };
+})();
+
+// --- Logger ---
+/**
+ * Logging and telemetry collection with console capture for timeline correlation.
+ * @exports add, captureConsole, getMergedTimeline, getLogs, getConsoleLogs
+ */
+const Logger = (() => {
+    const logs = [];
+    const consoleLogs = [];
+    const MAX_LOGS = 5000;
+    const MAX_CONSOLE_LOGS = 2000;
+
+    /**
+     * Add an internal log entry.
+     * @param {string} message - Log message (use prefixes like [HEALER:*], [CORE:*])
+     * @param {Object|null} detail - Optional structured data
+     */
+    const add = (message, detail = null) => {
+        if (logs.length >= MAX_LOGS) logs.shift();
+        logs.push({
+            timestamp: new Date().toISOString(),
+            type: 'internal',
+            message,
+            detail,
+        });
+    };
+
+    /**
+     * Capture console output for timeline correlation.
+     * Called by Instrumentation module.
+     * @param {'log'|'warn'|'error'} level
+     * @param {any[]} args - Console arguments
+     */
+    const captureConsole = (level, args) => {
+        if (consoleLogs.length >= MAX_CONSOLE_LOGS) consoleLogs.shift();
+
+        let message;
+        try {
+            message = args.map(arg => {
+                if (typeof arg === 'string') return arg;
+                if (arg instanceof Error) return `${arg.name}: ${arg.message}`;
+                try { return JSON.stringify(arg); } catch { return String(arg); }
+            }).join(' ');
+
+            if (message.length > 500) {
+                message = message.substring(0, 500) + '... [truncated]';
+            }
+        } catch {
+            message = '[Unable to stringify console args]';
+        }
+
+        consoleLogs.push({
+            timestamp: new Date().toISOString(),
+            type: 'console',
+            level,
+            message,
+        });
+    };
+
+    /**
+     * Get merged timeline of script logs + console logs, sorted chronologically.
+     * @returns {Array<{timestamp, type, source, message, level?, detail?}>}
+     */
+    const getMergedTimeline = () => {
+        const allLogs = [
+            ...logs.map(l => ({ ...l, source: 'SCRIPT' })),
+            ...consoleLogs.map(l => ({ ...l, source: 'CONSOLE' }))
+        ];
+        allLogs.sort((a, b) => a.timestamp.localeCompare(b.timestamp));
+        return allLogs;
+    };
+
+    return {
+        add,
+        captureConsole,
+        getLogs: () => logs,
+        getConsoleLogs: () => consoleLogs,
+        getMergedTimeline,
+    };
+})();
+
+
+
+// --- Metrics ---
+/**
+ * High-level telemetry and metrics tracking for Stream Healer.
+ * Streamlined: Only tracks stream healing metrics.
+ * @responsibility Collects and calculates application metrics.
+ */
+const Metrics = (() => {
+    const counters = {
+        stalls_detected: 0,
+        heals_successful: 0,
+        heals_failed: 0,
+        errors: 0,
+        session_start: Date.now(),
+    };
+
+    const increment = (category, value = 1) => {
+        if (counters[category] !== undefined) {
+            counters[category] += value;
+        }
+    };
+
+    const getSummary = () => ({
+        ...counters,
+        uptime_ms: Date.now() - counters.session_start,
+        heal_rate: counters.stalls_detected > 0
+            ? ((counters.heals_successful / counters.stalls_detected) * 100).toFixed(1) + '%'
+            : 'N/A',
+    });
+
+    const get = (category) => counters[category] || 0;
+
+    const reset = () => {
+        Object.keys(counters).forEach(key => {
+            if (key !== 'session_start') counters[key] = 0;
+        });
+        counters.session_start = Date.now();
+    };
+
+    return {
+        increment,
+        get,
+        reset,
+        getSummary,
+    };
+})();
+
+// --- ReportGenerator ---
+/**
+ * Generates and facilitates the download of a comprehensive report.
+ * Streamlined: Shows stream healing metrics instead of ad-blocking stats.
+ */
+const ReportGenerator = (() => {
+    const generateContent = (metricsSummary, logs) => {
+        // Header with metrics
+        const header = `[STREAM HEALER METRICS]
+Uptime: ${(metricsSummary.uptime_ms / 1000).toFixed(1)}s
+Stalls Detected: ${metricsSummary.stalls_detected}
+Heals Successful: ${metricsSummary.heals_successful}
+Heals Failed: ${metricsSummary.heals_failed}
+Heal Rate: ${metricsSummary.heal_rate}
+Errors: ${metricsSummary.errors}
+
+[LEGEND]
+🔧 = Script internal log
+📋 = Console.log
+⚠️ = Console.warn
+❌ = Console.error
+
+[TIMELINE - Merged script + console logs]
+`;
+
+        // Format each log entry based on source and type
+        const logContent = logs.map(l => {
+            const time = l.timestamp;
+
+            if (l.source === 'CONSOLE' || l.type === 'console') {
+                // Console log entry
+                const icon = l.level === 'error' ? '❌' : l.level === 'warn' ? '⚠️' : '📋';
+                return `[${time}] ${icon} ${l.message}`;
+            } else {
+                // Internal script log
+                const detail = l.detail ? ' | ' + JSON.stringify(l.detail) : '';
+                return `[${time}] 🔧 ${l.message}${detail}`;
+            }
+        }).join('\n');
+
+        // Stats about what was captured
+        const scriptLogs = logs.filter(l => l.source === 'SCRIPT' || l.type === 'internal').length;
+        const consoleLogs = logs.filter(l => l.source === 'CONSOLE' || l.type === 'console').length;
+
+        const footer = `
+
+[CAPTURE STATS]
+Script logs: ${scriptLogs}
+Console logs: ${consoleLogs}
+Total entries: ${logs.length}
+`;
+
+        return header + logContent + footer;
+    };
+
+    const downloadFile = (content) => {
+        const blob = new Blob([content], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `stream_healer_logs_${new Date().toISOString().replace(/[:.]/g, '-')}.txt`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    };
+
+    return {
+        exportReport: (metricsSummary, logs) => {
+            Logger.add("Generating and exporting report...");
+            const content = generateContent(metricsSummary, logs);
+            downloadFile(content);
+        },
+    };
+})();
+
+// --- Instrumentation ---
+/**
+ * Hooks into global events and console methods to monitor application behavior.
+ * Streamlined: Captures console output for debugging timeline, no recovery triggering.
+ * Recovery is now handled entirely by StreamHealer.monitor().
+ */
+const Instrumentation = (() => {
+    const classifyError = ErrorClassifier.classify;
+
+    // Helper to capture video state for logging
+    const getVideoState = () => {
+        const video = document.querySelector('video');
+        if (!video) return { error: 'NO_VIDEO_ELEMENT' };
+        return {
+            currentTime: video.currentTime?.toFixed(2),
+            paused: video.paused,
+            readyState: video.readyState,
+            networkState: video.networkState,
+            buffered: video.buffered.length > 0 ?
+                `${video.buffered.end(video.buffered.length - 1).toFixed(2)}` : 'empty',
+            error: video.error?.code
+        };
+    };
+
+    const setupGlobalErrorHandlers = () => {
+        window.addEventListener('error', (event) => {
+            const classification = classifyError(event.error, event.message || '');
+
+            Logger.add('[INSTRUMENT:ERROR] Global error caught', {
+                message: event.message,
+                filename: event.filename?.split('/').pop(),
+                lineno: event.lineno,
+                severity: classification.severity,
+                action: classification.action,
+                videoState: getVideoState()
+            });
+
+            if (classification.action !== 'LOG_ONLY') {
+                Metrics.increment('errors');
+            }
+        });
+
+        window.addEventListener('unhandledrejection', (event) => {
+            Logger.add('[INSTRUMENT:REJECTION] Unhandled promise rejection', {
+                reason: event.reason ? String(event.reason).substring(0, 200) : 'Unknown',
+                severity: 'MEDIUM',
+                videoState: getVideoState()
+            });
+            Metrics.increment('errors');
+        });
+    };
+
+    // Capture console.log for timeline correlation
+    const interceptConsoleLog = () => {
+        const originalLog = console.log;
+
+        console.log = (...args) => {
+            originalLog.apply(console, args);
+            try {
+                Logger.captureConsole('log', args);
+            } catch (e) {
+                // Avoid recursion
+            }
+        };
+    };
+
+    const interceptConsoleError = () => {
+        const originalError = console.error;
+
+        console.error = (...args) => {
+            originalError.apply(console, args);
+            try {
+                Logger.captureConsole('error', args);
+
+                const msg = args.map(String).join(' ');
+                const classification = classifyError(null, msg);
+
+                Logger.add('[INSTRUMENT:CONSOLE_ERROR] Console error intercepted', {
+                    message: msg.substring(0, 300),
+                    severity: classification.severity,
+                    action: classification.action
+                });
+
+                if (classification.action !== 'LOG_ONLY') {
+                    Metrics.increment('errors');
+                }
+            } catch (e) {
+                // Avoid recursion if logging fails
+            }
+        };
+    };
+
+    const interceptConsoleWarn = () => {
+        const originalWarn = console.warn;
+
+        console.warn = (...args) => {
+            originalWarn.apply(console, args);
+            try {
+                Logger.captureConsole('warn', args);
+
+                const msg = args.map(String).join(' ');
+
+                // Log CSP warnings for debugging
+                if (CONFIG.logging.LOG_CSP_WARNINGS && msg.includes('Content-Security-Policy')) {
+                    Logger.add('[INSTRUMENT:CSP] CSP warning', {
+                        message: msg.substring(0, 200),
+                        severity: 'LOW'
+                    });
+                }
+            } catch (e) {
+                // Avoid recursion if logging fails
+            }
+        };
+    };
+
+    return {
+        init: () => {
+            Logger.add('[INSTRUMENT:INIT] Instrumentation initialized', {
+                features: ['globalErrors', 'consoleLogs', 'consoleErrors', 'consoleWarns'],
+                consoleCapture: true
+            });
+            setupGlobalErrorHandlers();
+            interceptConsoleLog();
+            interceptConsoleError();
+            interceptConsoleWarn();
+        },
+    };
+})();
+
 // --- StreamHealer ---
 /**
  * Main orchestrator for stream healing.
@@ -699,481 +959,6 @@ const StreamHealer = (() => {
         onStallDetected,
         attemptHeal,
         getStats: () => ({ healAttempts, isHealing })
-    };
-})();
-
-// --- Error Classifier ---
-/**
- * Classifies errors based on type, message, and known patterns.
- * @responsibility Determine severity and required action for a given error.
- */
-const ErrorClassifier = (() => {
-    const BENIGN_PATTERNS = ['graphql', 'unauthenticated', 'pinnedchatsettings'];
-
-    return {
-        classify: (error, message) => {
-            // Critical media errors (always trigger recovery)
-            if (error instanceof MediaError || (error && error.code >= 1 && error.code <= 4)) {
-                return { severity: 'CRITICAL', action: 'TRIGGER_RECOVERY' };
-            }
-
-            // Network errors (usually recoverable)
-            if (error instanceof TypeError && message.includes('fetch')) {
-                return { severity: 'MEDIUM', action: 'LOG_AND_METRIC' };
-            }
-
-            // Known benign errors (log only)
-            if (BENIGN_PATTERNS.some(pattern => message.toLowerCase().includes(pattern))) {
-                return { severity: 'LOW', action: 'LOG_ONLY' };
-            }
-
-            // Unknown errors (log and track)
-            return { severity: 'MEDIUM', action: 'LOG_AND_METRIC' };
-        }
-    };
-})();
-
-// --- Instrumentation ---
-/**
- * Hooks into global events and console methods to monitor application behavior.
- * REFACTORED: Enhanced logging, longer debounce, smarter recovery triggering.
- */
-const Instrumentation = (() => {
-    const classifyError = ErrorClassifier.classify;
-
-    // Helper to capture video state for logging
-    const getVideoState = () => {
-        const video = document.querySelector('video');
-        if (!video) return { error: 'NO_VIDEO_ELEMENT' };
-        return {
-            currentTime: video.currentTime?.toFixed(2),
-            paused: video.paused,
-            readyState: video.readyState,
-            networkState: video.networkState,
-            buffered: video.buffered.length > 0 ?
-                `${video.buffered.end(video.buffered.length - 1).toFixed(2)}` : 'empty',
-            error: video.error?.code
-        };
-    };
-
-    const setupGlobalErrorHandlers = () => {
-        window.addEventListener('error', (event) => {
-            const classification = classifyError(event.error, event.message || '');
-
-            Logger.add('[INSTRUMENT:ERROR] Global error caught', {
-                message: event.message,
-                filename: event.filename?.split('/').pop(), // Just filename, not full path
-                lineno: event.lineno,
-                severity: classification.severity,
-                action: classification.action,
-                videoState: getVideoState()
-            });
-
-            if (classification.action !== 'LOG_ONLY') {
-                Metrics.increment('errors');
-            }
-
-            if (classification.action === 'TRIGGER_RECOVERY') {
-                Logger.add('[INSTRUMENT:TRIGGER] Error triggering recovery', {
-                    errorType: event.error?.name || 'unknown',
-                    source: 'GLOBAL_ERROR'
-                });
-                setTimeout(() => Adapters.EventBus.emit(CONFIG.events.AD_DETECTED, {
-                    source: 'INSTRUMENTATION',
-                    trigger: 'GLOBAL_ERROR',
-                    reason: event.message
-                }), 300);
-            }
-        });
-
-        window.addEventListener('unhandledrejection', (event) => {
-            Logger.add('[INSTRUMENT:REJECTION] Unhandled promise rejection', {
-                reason: event.reason ? String(event.reason).substring(0, 200) : 'Unknown',
-                severity: 'MEDIUM',
-                videoState: getVideoState()
-            });
-            Metrics.increment('errors');
-        });
-    };
-
-    // NEW: Capture console.log for timeline correlation
-    const interceptConsoleLog = () => {
-        const originalLog = console.log;
-
-        console.log = (...args) => {
-            originalLog.apply(console, args);
-            try {
-                // Capture to Logger for merged timeline
-                Logger.captureConsole('log', args);
-            } catch (e) {
-                // Avoid recursion
-            }
-        };
-    };
-
-    const interceptConsoleError = () => {
-        const originalError = console.error;
-
-        console.error = (...args) => {
-            originalError.apply(console, args);
-            try {
-                // Capture to Logger for merged timeline
-                Logger.captureConsole('error', args);
-
-                const msg = args.map(String).join(' ');
-                const classification = classifyError(null, msg);
-
-                Logger.add('[INSTRUMENT:CONSOLE_ERROR] Console error intercepted', {
-                    message: msg.substring(0, 300),
-                    severity: classification.severity,
-                    action: classification.action
-                });
-
-                if (classification.action !== 'LOG_ONLY') {
-                    Metrics.increment('errors');
-                }
-            } catch (e) {
-                // Avoid recursion if logging fails
-            }
-        };
-    };
-
-    const interceptConsoleWarn = () => {
-        const originalWarn = console.warn;
-
-        // Track stalling detection
-        let lastStallDetection = 0;
-        let stallCount = 0;
-
-        // INCREASED: 30 second debounce (was 10s) - give player time to self-recover
-        const stallingDebounced = Fn.debounce(() => {
-            const video = document.querySelector('video');
-            const videoState = getVideoState();
-
-            // NEW: Check if player already recovered before triggering
-            if (video && !video.paused && video.readyState >= 3) {
-                Logger.add('[INSTRUMENT:STALL_RECOVERED] Player recovered before debounce fired', {
-                    stallCount,
-                    videoState,
-                    action: 'SKIPPING_RECOVERY'
-                });
-                stallCount = 0; // Reset
-                return; // Don't trigger recovery - already fixed
-            }
-
-            Logger.add('[INSTRUMENT:STALL_TRIGGER] Playhead stalling - triggering recovery', {
-                stallCount,
-                debounceMs: 30000,
-                videoState,
-                action: 'EMITTING_AD_DETECTED'
-            });
-
-            Adapters.EventBus.emit(CONFIG.events.AD_DETECTED, {
-                source: 'INSTRUMENTATION',
-                trigger: 'PLAYHEAD_STALLING',
-                reason: 'Playhead stalled for 30+ seconds',
-                details: { stallCount, videoState }
-            });
-
-            stallCount = 0; // Reset after trigger
-        }, 30000); // INCREASED from 10000
-
-        console.warn = (...args) => {
-            originalWarn.apply(console, args);
-            try {
-                // Capture to Logger for merged timeline
-                Logger.captureConsole('warn', args);
-
-                const msg = args.map(String).join(' ');
-
-                // Critical playback warning
-                if (msg.toLowerCase().includes('playhead stalling')) {
-                    stallCount++;
-                    const now = Date.now();
-                    const timeSinceLast = lastStallDetection ? (now - lastStallDetection) / 1000 : 0;
-                    lastStallDetection = now;
-
-                    Logger.add('[INSTRUMENT:STALL_DETECTED] Playhead stalling warning', {
-                        stallCount,
-                        timeSinceLastStall: timeSinceLast.toFixed(1) + 's',
-                        videoState: getVideoState(),
-                        debounceActive: true,
-                        debounceMs: 30000,
-                        originalMessage: msg.substring(0, 100)
-                    });
-
-                    stallingDebounced();
-                }
-                // CSP warnings (informational)
-                else if (CONFIG.logging.LOG_CSP_WARNINGS && msg.includes('Content-Security-Policy')) {
-                    Logger.add('[INSTRUMENT:CSP] CSP warning', {
-                        message: msg.substring(0, 200),
-                        severity: 'LOW'
-                    });
-                }
-            } catch (e) {
-                // Avoid recursion if logging fails
-            }
-        };
-    };
-
-    return {
-        init: () => {
-            Logger.add('[INSTRUMENT:INIT] Instrumentation initialized', {
-                features: ['globalErrors', 'consoleLogs', 'consoleErrors', 'consoleWarns', 'stallDetection'],
-                stallDebounceMs: 30000,
-                consoleCapture: true
-            });
-            setupGlobalErrorHandlers();
-            interceptConsoleLog();  // NEW: Capture console.log
-            interceptConsoleError();
-            interceptConsoleWarn();
-        },
-    };
-})();
-
-
-
-// --- Logger ---
-/**
- * Logging and telemetry collection with console capture for timeline correlation.
- * @exports add, captureConsole, getMergedTimeline, getLogs, getConsoleLogs
- */
-const Logger = (() => {
-    const logs = [];
-    const consoleLogs = [];
-    const MAX_LOGS = 5000;
-    const MAX_CONSOLE_LOGS = 2000;
-
-    /**
-     * Add an internal log entry.
-     * @param {string} message - Log message (use prefixes like [HEALER:*], [CORE:*])
-     * @param {Object|null} detail - Optional structured data
-     */
-    const add = (message, detail = null) => {
-        if (logs.length >= MAX_LOGS) logs.shift();
-        logs.push({
-            timestamp: new Date().toISOString(),
-            type: 'internal',
-            message,
-            detail,
-        });
-    };
-
-    /**
-     * Capture console output for timeline correlation.
-     * Called by Instrumentation module.
-     * @param {'log'|'warn'|'error'} level
-     * @param {any[]} args - Console arguments
-     */
-    const captureConsole = (level, args) => {
-        if (consoleLogs.length >= MAX_CONSOLE_LOGS) consoleLogs.shift();
-
-        let message;
-        try {
-            message = args.map(arg => {
-                if (typeof arg === 'string') return arg;
-                if (arg instanceof Error) return `${arg.name}: ${arg.message}`;
-                try { return JSON.stringify(arg); } catch { return String(arg); }
-            }).join(' ');
-
-            if (message.length > 500) {
-                message = message.substring(0, 500) + '... [truncated]';
-            }
-        } catch {
-            message = '[Unable to stringify console args]';
-        }
-
-        consoleLogs.push({
-            timestamp: new Date().toISOString(),
-            type: 'console',
-            level,
-            message,
-        });
-    };
-
-    /**
-     * Get merged timeline of script logs + console logs, sorted chronologically.
-     * @returns {Array<{timestamp, type, source, message, level?, detail?}>}
-     */
-    const getMergedTimeline = () => {
-        const allLogs = [
-            ...logs.map(l => ({ ...l, source: 'SCRIPT' })),
-            ...consoleLogs.map(l => ({ ...l, source: 'CONSOLE' }))
-        ];
-        allLogs.sort((a, b) => a.timestamp.localeCompare(b.timestamp));
-        return allLogs;
-    };
-
-    return {
-        add,
-        captureConsole,
-        getLogs: () => logs,
-        getConsoleLogs: () => consoleLogs,
-        getMergedTimeline,
-    };
-})();
-
-
-
-// --- Metrics ---
-/**
- * High-level telemetry and metrics tracking.
- * @responsibility Collects and calculates application metrics.
- */
-const Metrics = (() => {
-    const counters = {
-        ads_detected: 0,
-        ads_blocked: 0,
-        resilience_executions: 0,
-        aggressive_recoveries: 0,
-        health_triggers: 0,
-        errors: 0,
-        session_start: Date.now(),
-    };
-
-    const increment = (category, value = 1) => {
-        if (counters[category] !== undefined) {
-            counters[category] += value;
-        }
-    };
-
-    const getSummary = () => ({
-        ...counters,
-        uptime_ms: Date.now() - counters.session_start,
-        block_rate: counters.ads_detected > 0 ? (counters.ads_blocked / counters.ads_detected * 100).toFixed(2) + '%' : 'N/A',
-    });
-
-    const get = (category) => counters[category] || 0;
-
-    const reset = () => {
-        Object.keys(counters).forEach(key => {
-            if (key !== 'session_start') counters[key] = 0;
-        });
-        counters.session_start = Date.now();
-    };
-
-    return {
-        increment,
-        get,
-        reset,
-        getSummary,
-    };
-})();
-
-// --- ReportGenerator ---
-/**
- * Generates and facilitates the download of a comprehensive report.
- * ENHANCED: Now includes merged timeline of script logs and console output.
- */
-const ReportGenerator = (() => {
-    const generateContent = (metricsSummary, logs) => {
-        // Header with metrics
-        const header = `[METRICS]
-Uptime: ${(metricsSummary.uptime_ms / 1000).toFixed(1)}s
-Ads Detected: ${metricsSummary.ads_detected}
-Ads Blocked: ${metricsSummary.ads_blocked}
-Resilience Executions: ${metricsSummary.resilience_executions}
-Aggressive Recoveries: ${metricsSummary.aggressive_recoveries}
-Health Triggers: ${metricsSummary.health_triggers}
-Errors: ${metricsSummary.errors}
-
-[LEGEND]
-🔧 = Script internal log
-📋 = Console.log
-⚠️ = Console.warn
-❌ = Console.error
-
-[TIMELINE - Merged script + console logs]
-`;
-
-        // Format each log entry based on source and type
-        const logContent = logs.map(l => {
-            const time = l.timestamp;
-
-            if (l.source === 'CONSOLE' || l.type === 'console') {
-                // Console log entry
-                const icon = l.level === 'error' ? '❌' : l.level === 'warn' ? '⚠️' : '📋';
-                return `[${time}] ${icon} ${l.message}`;
-            } else {
-                // Internal script log
-                const detail = l.detail ? ' | ' + JSON.stringify(l.detail) : '';
-                return `[${time}] 🔧 ${l.message}${detail}`;
-            }
-        }).join('\n');
-
-        // Stats about what was captured
-        const scriptLogs = logs.filter(l => l.source === 'SCRIPT' || l.type === 'internal').length;
-        const consoleLogs = logs.filter(l => l.source === 'CONSOLE' || l.type === 'console').length;
-
-        const footer = `
-
-[CAPTURE STATS]
-Script logs: ${scriptLogs}
-Console logs: ${consoleLogs}
-Total entries: ${logs.length}
-`;
-
-        return header + logContent + footer;
-    };
-
-    const downloadFile = (content) => {
-        const blob = new Blob([content], { type: 'text/plain' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `twitch_ad_logs_${new Date().toISOString().replace(/[:.]/g, '-')}.txt`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-    };
-
-    return {
-        exportReport: (metricsSummary, logs) => {
-            Logger.add("Generating and exporting report...");
-            const content = generateContent(metricsSummary, logs);
-            downloadFile(content);
-        },
-    };
-})();
-
-
-// --- Store ---
-/**
- * Persistent state management using localStorage.
- * @typedef {Object} State
- * @property {number} errorCount - Consecutive error counter.
- * @property {number} timestamp - Last update timestamp.
- * @property {string|null} lastError - Last error message.
- * @property {number} lastAttempt - Timestamp of last injection attempt.
- */
-const Store = (() => {
-    let state = { errorCount: 0, timestamp: 0, lastError: null, lastAttempt: 0 };
-
-    const hydrate = Fn.pipe(
-        Adapters.Storage.read,
-        (json) => {
-            if (!json) return null;
-            try {
-                return JSON.parse(json);
-            } catch (e) {
-                Logger.add('Store hydration failed - corrupt data', { error: e.message });
-                return null;
-            }
-        },
-        (data) => (data && Date.now() - data.timestamp <= CONFIG.timing.LOG_EXPIRY_MIN * 60 * 1000) ? data : null
-    );
-
-    const hydrated = hydrate('MAD_STATE');
-    if (hydrated) state = { ...state, ...hydrated };
-
-    return {
-        get: () => state,
-        update: (partial) => {
-            state = { ...state, ...partial, timestamp: Date.now() };
-            Adapters.Storage.write('MAD_STATE', state);
-        }
     };
 })();
 

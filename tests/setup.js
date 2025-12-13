@@ -16,13 +16,12 @@ const PRIORITY = [
     'utils/Adapters.js',
     'recovery/BufferGapFinder.js',
     'recovery/LiveEdgeSeeker.js',
-    'core/StreamHealer.js',
     'monitoring/ErrorClassifier.js',
-    'monitoring/Instrumentation.js',
     'monitoring/Logger.js',
     'monitoring/Metrics.js',
     'monitoring/ReportGenerator.js',
-    'monitoring/Store.js'
+    'monitoring/Instrumentation.js',
+    'core/StreamHealer.js',
 ];
 
 const ENTRY = 'core/CoreOrchestrator.js';
@@ -103,7 +102,6 @@ const loadSourceFiles = () => {
                 /^const\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*=\s*\(\s*\(\)\s*=>/gm,
                 (match, name) => {
                     modified = true;
-                    // console.log(`[Setup] Exposing IIFE: ${name}`);
                     return `var ${name} = window.${name} = global.${name} = (() =>`;
                 }
             );
@@ -113,7 +111,6 @@ const loadSourceFiles = () => {
                 /^const\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*=\s*\{/gm,
                 (match, name) => {
                     modified = true;
-                    // console.log(`[Setup] Exposing Object: ${name}`);
                     return `var ${name} = window.${name} = global.${name} = {`;
                 }
             );
@@ -123,14 +120,9 @@ const loadSourceFiles = () => {
                 /^const\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*=\s*function/gm,
                 (match, name) => {
                     modified = true;
-                    // console.log(`[Setup] Exposing Function: ${name}`);
                     return `var ${name} = window.${name} = global.${name} = function`;
                 }
             );
-
-            if (!modified) {
-                // console.warn(`[Setup] No global exposed in ${path.basename(file)}`);
-            }
 
             try {
                 // Execute in global scope

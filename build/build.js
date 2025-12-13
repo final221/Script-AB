@@ -10,17 +10,17 @@ const CONFIG = {
         'config/Config.js',
         'utils/Utils.js',
         'utils/Adapters.js',
-        // StreamHealer modules
+        // Recovery modules (buffer analysis and seeking)
         'recovery/BufferGapFinder.js',
         'recovery/LiveEdgeSeeker.js',
-        'core/StreamHealer.js',
-        // Monitoring (needed for logging)
+        // Monitoring (needed for logging - must come before StreamHealer)
         'monitoring/ErrorClassifier.js',
-        'monitoring/Instrumentation.js',
         'monitoring/Logger.js',
         'monitoring/Metrics.js',
         'monitoring/ReportGenerator.js',
-        'monitoring/Store.js',
+        'monitoring/Instrumentation.js',
+        // Core stream healer
+        'core/StreamHealer.js',
     ],
     ENTRY: 'core/CoreOrchestrator.js'
 };
@@ -89,7 +89,7 @@ const updateVersion = (type = 'patch') => {
 };
 
 (() => {
-    console.log('🏗️  Building...');
+    console.log('🏗️  Building Stream Healer...');
 
     const args = process.argv.slice(2);
     let versionType = 'patch';

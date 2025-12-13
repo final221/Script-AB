@@ -1,7 +1,8 @@
 // --- Instrumentation ---
 /**
  * Hooks into global events and console methods to monitor application behavior.
- * REFACTORED: Enhanced logging, longer debounce, smarter recovery triggering.
+ * Streamlined: Captures console output for debugging timeline, no recovery triggering.
+ * Recovery is now handled entirely by StreamHealer.monitor().
  */
 const Instrumentation = (() => {
     const classifyError = ErrorClassifier.classify;
@@ -27,7 +28,7 @@ const Instrumentation = (() => {
 
             Logger.add('[INSTRUMENT:ERROR] Global error caught', {
                 message: event.message,
-                filename: event.filename?.split('/').pop(), // Just filename, not full path
+                filename: event.filename?.split('/').pop(),
                 lineno: event.lineno,
                 severity: classification.severity,
                 action: classification.action,
@@ -36,18 +37,6 @@ const Instrumentation = (() => {
 
             if (classification.action !== 'LOG_ONLY') {
                 Metrics.increment('errors');
-            }
-
-            if (classification.action === 'TRIGGER_RECOVERY') {
-                Logger.add('[INSTRUMENT:TRIGGER] Error triggering recovery', {
-                    errorType: event.error?.name || 'unknown',
-                    source: 'GLOBAL_ERROR'
-                });
-                setTimeout(() => Adapters.EventBus.emit(CONFIG.events.AD_DETECTED, {
-                    source: 'INSTRUMENTATION',
-                    trigger: 'GLOBAL_ERROR',
-                    reason: event.message
-                }), 300);
             }
         });
 
@@ -61,14 +50,13 @@ const Instrumentation = (() => {
         });
     };
 
-    // NEW: Capture console.log for timeline correlation
+    // Capture console.log for timeline correlation
     const interceptConsoleLog = () => {
         const originalLog = console.log;
 
         console.log = (...args) => {
             originalLog.apply(console, args);
             try {
-                // Capture to Logger for merged timeline
                 Logger.captureConsole('log', args);
             } catch (e) {
                 // Avoid recursion
@@ -82,7 +70,6 @@ const Instrumentation = (() => {
         console.error = (...args) => {
             originalError.apply(console, args);
             try {
-                // Capture to Logger for merged timeline
                 Logger.captureConsole('error', args);
 
                 const msg = args.map(String).join(' ');
@@ -106,71 +93,15 @@ const Instrumentation = (() => {
     const interceptConsoleWarn = () => {
         const originalWarn = console.warn;
 
-        // Track stalling detection
-        let lastStallDetection = 0;
-        let stallCount = 0;
-
-        // INCREASED: 30 second debounce (was 10s) - give player time to self-recover
-        const stallingDebounced = Fn.debounce(() => {
-            const video = document.querySelector('video');
-            const videoState = getVideoState();
-
-            // NEW: Check if player already recovered before triggering
-            if (video && !video.paused && video.readyState >= 3) {
-                Logger.add('[INSTRUMENT:STALL_RECOVERED] Player recovered before debounce fired', {
-                    stallCount,
-                    videoState,
-                    action: 'SKIPPING_RECOVERY'
-                });
-                stallCount = 0; // Reset
-                return; // Don't trigger recovery - already fixed
-            }
-
-            Logger.add('[INSTRUMENT:STALL_TRIGGER] Playhead stalling - triggering recovery', {
-                stallCount,
-                debounceMs: 30000,
-                videoState,
-                action: 'EMITTING_AD_DETECTED'
-            });
-
-            Adapters.EventBus.emit(CONFIG.events.AD_DETECTED, {
-                source: 'INSTRUMENTATION',
-                trigger: 'PLAYHEAD_STALLING',
-                reason: 'Playhead stalled for 30+ seconds',
-                details: { stallCount, videoState }
-            });
-
-            stallCount = 0; // Reset after trigger
-        }, 30000); // INCREASED from 10000
-
         console.warn = (...args) => {
             originalWarn.apply(console, args);
             try {
-                // Capture to Logger for merged timeline
                 Logger.captureConsole('warn', args);
 
                 const msg = args.map(String).join(' ');
 
-                // Critical playback warning
-                if (msg.toLowerCase().includes('playhead stalling')) {
-                    stallCount++;
-                    const now = Date.now();
-                    const timeSinceLast = lastStallDetection ? (now - lastStallDetection) / 1000 : 0;
-                    lastStallDetection = now;
-
-                    Logger.add('[INSTRUMENT:STALL_DETECTED] Playhead stalling warning', {
-                        stallCount,
-                        timeSinceLastStall: timeSinceLast.toFixed(1) + 's',
-                        videoState: getVideoState(),
-                        debounceActive: true,
-                        debounceMs: 30000,
-                        originalMessage: msg.substring(0, 100)
-                    });
-
-                    stallingDebounced();
-                }
-                // CSP warnings (informational)
-                else if (CONFIG.logging.LOG_CSP_WARNINGS && msg.includes('Content-Security-Policy')) {
+                // Log CSP warnings for debugging
+                if (CONFIG.logging.LOG_CSP_WARNINGS && msg.includes('Content-Security-Policy')) {
                     Logger.add('[INSTRUMENT:CSP] CSP warning', {
                         message: msg.substring(0, 200),
                         severity: 'LOW'
@@ -185,16 +116,13 @@ const Instrumentation = (() => {
     return {
         init: () => {
             Logger.add('[INSTRUMENT:INIT] Instrumentation initialized', {
-                features: ['globalErrors', 'consoleLogs', 'consoleErrors', 'consoleWarns', 'stallDetection'],
-                stallDebounceMs: 30000,
+                features: ['globalErrors', 'consoleLogs', 'consoleErrors', 'consoleWarns'],
                 consoleCapture: true
             });
             setupGlobalErrorHandlers();
-            interceptConsoleLog();  // NEW: Capture console.log
+            interceptConsoleLog();
             interceptConsoleError();
             interceptConsoleWarn();
         },
     };
 })();
-
-
