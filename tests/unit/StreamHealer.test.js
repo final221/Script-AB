@@ -27,6 +27,10 @@ describe('StreamHealer', () => {
         expect(typeof window.StreamHealer.monitor).toBe('function');
     });
 
+    it('has stopMonitoring method', () => {
+        expect(typeof window.StreamHealer.stopMonitoring).toBe('function');
+    });
+
     it('has onStallDetected method', () => {
         expect(typeof window.StreamHealer.onStallDetected).toBe('function');
     });
@@ -43,5 +47,6 @@ describe('StreamHealer', () => {
         const stats = window.StreamHealer.getStats();
         expect(stats).toHaveProperty('healAttempts');
         expect(stats).toHaveProperty('isHealing');
+        expect(stats).toHaveProperty('monitoredCount');
     });
 });

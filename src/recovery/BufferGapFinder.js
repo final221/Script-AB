@@ -5,6 +5,9 @@
  * This module finds that new range so we can seek to it.
  */
 const BufferGapFinder = (() => {
+    // Minimum buffer size to consider a valid heal point (seconds)
+    const MIN_HEAL_BUFFER_S = 2;
+
     /**
      * Get all buffer ranges as an array of {start, end} objects
      */
@@ -25,57 +28,82 @@ const BufferGapFinder = (() => {
      * Format buffer ranges for logging
      */
     const formatRanges = (ranges) => {
+        if (!ranges || ranges.length === 0) return 'none';
         return ranges.map(r => `[${r.start.toFixed(2)}-${r.end.toFixed(2)}]`).join(', ');
     };
 
     /**
      * Find a heal point - a buffer range that starts AFTER currentTime
-     * This is where new content is buffering after a gap
+     * with sufficient buffer to be useful.
      * 
      * @param {HTMLVideoElement} video
-     * @returns {{ start: number, end: number } | null}
+     * @param {Object} options
+     * @param {boolean} options.silent - If true, suppress logging (for polling loops)
+     * @returns {{ start: number, end: number, gapSize: number } | null}
      */
-    const findHealPoint = (video) => {
+    const findHealPoint = (video, options = {}) => {
         if (!video) {
-            Logger.add('[HEALER:ERROR] No video element');
+            if (!options.silent) {
+                Logger.add('[HEALER:ERROR] No video element');
+            }
             return null;
         }
 
         const currentTime = video.currentTime;
         const ranges = getBufferRanges(video);
 
-        Logger.add('[HEALER:SCAN] Scanning for heal point', {
-            currentTime: currentTime.toFixed(3),
-            bufferRanges: formatRanges(ranges),
-            rangeCount: ranges.length
-        });
+        if (!options.silent) {
+            Logger.add('[HEALER:SCAN] Scanning for heal point', {
+                currentTime: currentTime.toFixed(3),
+                bufferRanges: formatRanges(ranges),
+                rangeCount: ranges.length
+            });
+        }
 
         // Look for a buffer range that starts ahead of current position
         for (let i = 0; i < ranges.length; i++) {
             const range = ranges[i];
+            const bufferSize = range.end - range.start;
 
             // Found a range starting after current position (with small gap tolerance)
             if (range.start > currentTime + 0.5) {
+                // Check minimum buffer size
+                if (bufferSize < MIN_HEAL_BUFFER_S) {
+                    if (!options.silent) {
+                        Logger.add('[HEALER:SKIP] Buffer too small', {
+                            range: `${range.start.toFixed(2)}-${range.end.toFixed(2)}`,
+                            size: bufferSize.toFixed(2) + 's',
+                            required: MIN_HEAL_BUFFER_S + 's'
+                        });
+                    }
+                    continue; // Keep looking for a larger buffer
+                }
+
                 const healPoint = {
                     start: range.start,
                     end: range.end,
                     gapSize: range.start - currentTime
                 };
 
-                Logger.add('[HEALER:FOUND] Heal point identified', {
-                    healPoint: `${range.start.toFixed(3)}-${range.end.toFixed(3)}`,
-                    gapSize: healPoint.gapSize.toFixed(2) + 's',
-                    bufferSize: (range.end - range.start).toFixed(2) + 's'
-                });
+                if (!options.silent) {
+                    Logger.add('[HEALER:FOUND] Heal point identified', {
+                        healPoint: `${range.start.toFixed(3)}-${range.end.toFixed(3)}`,
+                        gapSize: healPoint.gapSize.toFixed(2) + 's',
+                        bufferSize: bufferSize.toFixed(2) + 's'
+                    });
+                }
 
                 return healPoint;
             }
         }
 
-        Logger.add('[HEALER:NONE] No heal point found yet', {
-            currentTime: currentTime.toFixed(3),
-            ranges: formatRanges(ranges)
-        });
+        if (!options.silent) {
+            Logger.add('[HEALER:NONE] No valid heal point found', {
+                currentTime: currentTime.toFixed(3),
+                ranges: formatRanges(ranges),
+                minRequired: MIN_HEAL_BUFFER_S + 's'
+            });
+        }
 
         return null;
     };
@@ -100,22 +128,11 @@ const BufferGapFinder = (() => {
                 const bufferRemaining = end - currentTime;
                 const exhausted = bufferRemaining < 0.5; // Less than 0.5s remaining
 
-                if (exhausted) {
-                    Logger.add('[HEALER:EXHAUSTED] Buffer exhausted', {
-                        currentTime: currentTime.toFixed(3),
-                        bufferEnd: end.toFixed(3),
-                        remaining: bufferRemaining.toFixed(3) + 's'
-                    });
-                }
-
                 return exhausted;
             }
         }
 
         // Not in any buffer range - we've fallen off
-        Logger.add('[HEALER:GAP] Current time not in any buffer range', {
-            currentTime: currentTime.toFixed(3)
-        });
         return true;
     };
 
@@ -123,6 +140,7 @@ const BufferGapFinder = (() => {
         findHealPoint,
         isBufferExhausted,
         getBufferRanges,
-        formatRanges
+        formatRanges,
+        MIN_HEAL_BUFFER_S
     };
 })();

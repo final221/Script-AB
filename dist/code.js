@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.0.6
+// @version       4.0.7
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -111,6 +111,9 @@ const Adapters = {
  * This module finds that new range so we can seek to it.
  */
 const BufferGapFinder = (() => {
+    // Minimum buffer size to consider a valid heal point (seconds)
+    const MIN_HEAL_BUFFER_S = 2;
+
     /**
      * Get all buffer ranges as an array of {start, end} objects
      */
@@ -131,57 +134,82 @@ const BufferGapFinder = (() => {
      * Format buffer ranges for logging
      */
     const formatRanges = (ranges) => {
+        if (!ranges || ranges.length === 0) return 'none';
         return ranges.map(r => `[${r.start.toFixed(2)}-${r.end.toFixed(2)}]`).join(', ');
     };
 
     /**
      * Find a heal point - a buffer range that starts AFTER currentTime
-     * This is where new content is buffering after a gap
+     * with sufficient buffer to be useful.
      * 
      * @param {HTMLVideoElement} video
-     * @returns {{ start: number, end: number } | null}
+     * @param {Object} options
+     * @param {boolean} options.silent - If true, suppress logging (for polling loops)
+     * @returns {{ start: number, end: number, gapSize: number } | null}
      */
-    const findHealPoint = (video) => {
+    const findHealPoint = (video, options = {}) => {
         if (!video) {
-            Logger.add('[HEALER:ERROR] No video element');
+            if (!options.silent) {
+                Logger.add('[HEALER:ERROR] No video element');
+            }
             return null;
         }
 
         const currentTime = video.currentTime;
         const ranges = getBufferRanges(video);
 
-        Logger.add('[HEALER:SCAN] Scanning for heal point', {
-            currentTime: currentTime.toFixed(3),
-            bufferRanges: formatRanges(ranges),
-            rangeCount: ranges.length
-        });
+        if (!options.silent) {
+            Logger.add('[HEALER:SCAN] Scanning for heal point', {
+                currentTime: currentTime.toFixed(3),
+                bufferRanges: formatRanges(ranges),
+                rangeCount: ranges.length
+            });
+        }
 
         // Look for a buffer range that starts ahead of current position
         for (let i = 0; i < ranges.length; i++) {
             const range = ranges[i];
+            const bufferSize = range.end - range.start;
 
             // Found a range starting after current position (with small gap tolerance)
             if (range.start > currentTime + 0.5) {
+                // Check minimum buffer size
+                if (bufferSize < MIN_HEAL_BUFFER_S) {
+                    if (!options.silent) {
+                        Logger.add('[HEALER:SKIP] Buffer too small', {
+                            range: `${range.start.toFixed(2)}-${range.end.toFixed(2)}`,
+                            size: bufferSize.toFixed(2) + 's',
+                            required: MIN_HEAL_BUFFER_S + 's'
+                        });
+                    }
+                    continue; // Keep looking for a larger buffer
+                }
+
                 const healPoint = {
                     start: range.start,
                     end: range.end,
                     gapSize: range.start - currentTime
                 };
 
-                Logger.add('[HEALER:FOUND] Heal point identified', {
-                    healPoint: `${range.start.toFixed(3)}-${range.end.toFixed(3)}`,
-                    gapSize: healPoint.gapSize.toFixed(2) + 's',
-                    bufferSize: (range.end - range.start).toFixed(2) + 's'
-                });
+                if (!options.silent) {
+                    Logger.add('[HEALER:FOUND] Heal point identified', {
+                        healPoint: `${range.start.toFixed(3)}-${range.end.toFixed(3)}`,
+                        gapSize: healPoint.gapSize.toFixed(2) + 's',
+                        bufferSize: bufferSize.toFixed(2) + 's'
+                    });
+                }
 
                 return healPoint;
             }
         }
 
-        Logger.add('[HEALER:NONE] No heal point found yet', {
-            currentTime: currentTime.toFixed(3),
-            ranges: formatRanges(ranges)
-        });
+        if (!options.silent) {
+            Logger.add('[HEALER:NONE] No valid heal point found', {
+                currentTime: currentTime.toFixed(3),
+                ranges: formatRanges(ranges),
+                minRequired: MIN_HEAL_BUFFER_S + 's'
+            });
+        }
 
         return null;
     };
@@ -206,22 +234,11 @@ const BufferGapFinder = (() => {
                 const bufferRemaining = end - currentTime;
                 const exhausted = bufferRemaining < 0.5; // Less than 0.5s remaining
 
-                if (exhausted) {
-                    Logger.add('[HEALER:EXHAUSTED] Buffer exhausted', {
-                        currentTime: currentTime.toFixed(3),
-                        bufferEnd: end.toFixed(3),
-                        remaining: bufferRemaining.toFixed(3) + 's'
-                    });
-                }
-
                 return exhausted;
             }
         }
 
         // Not in any buffer range - we've fallen off
-        Logger.add('[HEALER:GAP] Current time not in any buffer range', {
-            currentTime: currentTime.toFixed(3)
-        });
         return true;
     };
 
@@ -229,7 +246,8 @@ const BufferGapFinder = (() => {
         findHealPoint,
         isBufferExhausted,
         getBufferRanges,
-        formatRanges
+        formatRanges,
+        MIN_HEAL_BUFFER_S
     };
 })();
 
@@ -753,6 +771,9 @@ const StreamHealer = (() => {
     let healAttempts = 0;
     let lastStallTime = 0;
 
+    // Track monitored videos to prevent duplicate timers
+    const monitoredVideos = new WeakMap(); // video -> intervalId
+
     /**
      * Get current video state for logging
      */
@@ -768,17 +789,18 @@ const StreamHealer = (() => {
     };
 
     /**
-     * Check if video is currently stalled (not progressing)
+     * Check if video is currently stalled (not making progress with exhausted buffer)
      */
-    const isStalled = (video) => {
+    const isStalled = (video, moved) => {
         if (!video) return false;
 
-        // Must be paused or not making progress
-        if (!video.paused && video.readyState >= 3) {
-            return false; // Playing fine
-        }
+        // Must not be paused and must not have moved
+        if (video.paused || moved) return false;
 
-        // Check if buffer is exhausted
+        // Check if we have enough data
+        if (video.readyState >= 4) return false; // HAVE_ENOUGH_DATA
+
+        // Check if buffer is exhausted at current position
         return BufferGapFinder.isBufferExhausted(video);
     };
 
@@ -797,19 +819,21 @@ const StreamHealer = (() => {
         while (Date.now() - startTime < timeoutMs) {
             pollCount++;
 
-            const healPoint = BufferGapFinder.findHealPoint(video);
+            // Use silent mode during polling to reduce log spam
+            const healPoint = BufferGapFinder.findHealPoint(video, { silent: true });
 
             if (healPoint) {
                 Logger.add('[HEALER:POLL_SUCCESS] Heal point found', {
                     attempts: pollCount,
                     elapsed: (Date.now() - startTime) + 'ms',
-                    healPoint: `${healPoint.start.toFixed(2)}-${healPoint.end.toFixed(2)}`
+                    healPoint: `${healPoint.start.toFixed(2)}-${healPoint.end.toFixed(2)}`,
+                    bufferSize: (healPoint.end - healPoint.start).toFixed(2) + 's'
                 });
                 return healPoint;
             }
 
-            // Log progress every 10 polls
-            if (pollCount % 10 === 0) {
+            // Log progress every 25 polls (~5 seconds)
+            if (pollCount % 25 === 0) {
                 Logger.add('[HEALER:POLLING]', {
                     attempt: pollCount,
                     elapsed: (Date.now() - startTime) + 'ms',
@@ -857,6 +881,7 @@ const StreamHealer = (() => {
                     suggestion: 'User may need to refresh page',
                     finalState: getVideoState(video)
                 });
+                Metrics.increment('heals_failed');
                 return;
             }
 
@@ -886,6 +911,7 @@ const StreamHealer = (() => {
                 message: e.message,
                 stack: e.stack?.split('\n')[0]
             });
+            Metrics.increment('heals_failed');
         } finally {
             isHealing = false;
         }
@@ -897,7 +923,7 @@ const StreamHealer = (() => {
     const onStallDetected = (video, details = {}) => {
         const now = Date.now();
 
-        // Debounce rapid stall events
+        // Debounce rapid stall events (5 seconds)
         if (now - lastStallTime < 5000) {
             Logger.add('[HEALER:DEBOUNCE] Ignoring rapid stall event');
             return;
@@ -914,25 +940,45 @@ const StreamHealer = (() => {
     };
 
     /**
+     * Stop monitoring a specific video
+     */
+    const stopMonitoring = (video) => {
+        const intervalId = monitoredVideos.get(video);
+        if (intervalId) {
+            clearInterval(intervalId);
+            monitoredVideos.delete(video);
+            Logger.add('[HEALER:STOP] Stopped monitoring video');
+        }
+    };
+
+    /**
      * Start monitoring a video element
      */
     const monitor = (video) => {
         if (!video) return;
 
+        // Prevent duplicate monitoring of the same video
+        if (monitoredVideos.has(video)) {
+            Logger.add('[HEALER:SKIP] Video already being monitored');
+            return;
+        }
+
         let lastTime = video.currentTime;
         let stuckCount = 0;
 
         const checkInterval = setInterval(() => {
+            // Cleanup if video removed from DOM
             if (!document.contains(video)) {
                 Logger.add('[HEALER:CLEANUP] Video removed from DOM');
-                clearInterval(checkInterval);
+                stopMonitoring(video);
                 return;
             }
 
             const currentTime = video.currentTime;
             const moved = Math.abs(currentTime - lastTime) > 0.1;
 
-            if (!video.paused && !moved && video.readyState < 4) {
+            // Use consolidated isStalled check
+            if (isStalled(video, moved)) {
                 stuckCount++;
 
                 if (stuckCount >= CONFIG.stall.STUCK_COUNT_TRIGGER) {
@@ -949,16 +995,21 @@ const StreamHealer = (() => {
             lastTime = currentTime;
         }, CONFIG.stall.DETECTION_INTERVAL_MS);
 
+        // Track this video's interval
+        monitoredVideos.set(video, checkInterval);
+
         Logger.add('[HEALER:MONITOR] Started monitoring video', {
-            checkInterval: CONFIG.stall.DETECTION_INTERVAL_MS + 'ms'
+            checkInterval: CONFIG.stall.DETECTION_INTERVAL_MS + 'ms',
+            stuckTrigger: CONFIG.stall.STUCK_COUNT_TRIGGER
         });
     };
 
     return {
         monitor,
+        stopMonitoring,
         onStallDetected,
         attemptHeal,
-        getStats: () => ({ healAttempts, isHealing })
+        getStats: () => ({ healAttempts, isHealing, monitoredCount: monitoredVideos.size || 0 })
     };
 })();
 

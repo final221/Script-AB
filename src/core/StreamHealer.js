@@ -8,6 +8,9 @@ const StreamHealer = (() => {
     let healAttempts = 0;
     let lastStallTime = 0;
 
+    // Track monitored videos to prevent duplicate timers
+    const monitoredVideos = new WeakMap(); // video -> intervalId
+
     /**
      * Get current video state for logging
      */
@@ -23,17 +26,18 @@ const StreamHealer = (() => {
     };
 
     /**
-     * Check if video is currently stalled (not progressing)
+     * Check if video is currently stalled (not making progress with exhausted buffer)
      */
-    const isStalled = (video) => {
+    const isStalled = (video, moved) => {
         if (!video) return false;
 
-        // Must be paused or not making progress
-        if (!video.paused && video.readyState >= 3) {
-            return false; // Playing fine
-        }
+        // Must not be paused and must not have moved
+        if (video.paused || moved) return false;
 
-        // Check if buffer is exhausted
+        // Check if we have enough data
+        if (video.readyState >= 4) return false; // HAVE_ENOUGH_DATA
+
+        // Check if buffer is exhausted at current position
         return BufferGapFinder.isBufferExhausted(video);
     };
 
@@ -52,19 +56,21 @@ const StreamHealer = (() => {
         while (Date.now() - startTime < timeoutMs) {
             pollCount++;
 
-            const healPoint = BufferGapFinder.findHealPoint(video);
+            // Use silent mode during polling to reduce log spam
+            const healPoint = BufferGapFinder.findHealPoint(video, { silent: true });
 
             if (healPoint) {
                 Logger.add('[HEALER:POLL_SUCCESS] Heal point found', {
                     attempts: pollCount,
                     elapsed: (Date.now() - startTime) + 'ms',
-                    healPoint: `${healPoint.start.toFixed(2)}-${healPoint.end.toFixed(2)}`
+                    healPoint: `${healPoint.start.toFixed(2)}-${healPoint.end.toFixed(2)}`,
+                    bufferSize: (healPoint.end - healPoint.start).toFixed(2) + 's'
                 });
                 return healPoint;
             }
 
-            // Log progress every 10 polls
-            if (pollCount % 10 === 0) {
+            // Log progress every 25 polls (~5 seconds)
+            if (pollCount % 25 === 0) {
                 Logger.add('[HEALER:POLLING]', {
                     attempt: pollCount,
                     elapsed: (Date.now() - startTime) + 'ms',
@@ -112,6 +118,7 @@ const StreamHealer = (() => {
                     suggestion: 'User may need to refresh page',
                     finalState: getVideoState(video)
                 });
+                Metrics.increment('heals_failed');
                 return;
             }
 
@@ -141,6 +148,7 @@ const StreamHealer = (() => {
                 message: e.message,
                 stack: e.stack?.split('\n')[0]
             });
+            Metrics.increment('heals_failed');
         } finally {
             isHealing = false;
         }
@@ -152,7 +160,7 @@ const StreamHealer = (() => {
     const onStallDetected = (video, details = {}) => {
         const now = Date.now();
 
-        // Debounce rapid stall events
+        // Debounce rapid stall events (5 seconds)
         if (now - lastStallTime < 5000) {
             Logger.add('[HEALER:DEBOUNCE] Ignoring rapid stall event');
             return;
@@ -169,25 +177,45 @@ const StreamHealer = (() => {
     };
 
     /**
+     * Stop monitoring a specific video
+     */
+    const stopMonitoring = (video) => {
+        const intervalId = monitoredVideos.get(video);
+        if (intervalId) {
+            clearInterval(intervalId);
+            monitoredVideos.delete(video);
+            Logger.add('[HEALER:STOP] Stopped monitoring video');
+        }
+    };
+
+    /**
      * Start monitoring a video element
      */
     const monitor = (video) => {
         if (!video) return;
 
+        // Prevent duplicate monitoring of the same video
+        if (monitoredVideos.has(video)) {
+            Logger.add('[HEALER:SKIP] Video already being monitored');
+            return;
+        }
+
         let lastTime = video.currentTime;
         let stuckCount = 0;
 
         const checkInterval = setInterval(() => {
+            // Cleanup if video removed from DOM
             if (!document.contains(video)) {
                 Logger.add('[HEALER:CLEANUP] Video removed from DOM');
-                clearInterval(checkInterval);
+                stopMonitoring(video);
                 return;
             }
 
             const currentTime = video.currentTime;
             const moved = Math.abs(currentTime - lastTime) > 0.1;
 
-            if (!video.paused && !moved && video.readyState < 4) {
+            // Use consolidated isStalled check
+            if (isStalled(video, moved)) {
                 stuckCount++;
 
                 if (stuckCount >= CONFIG.stall.STUCK_COUNT_TRIGGER) {
@@ -204,15 +232,20 @@ const StreamHealer = (() => {
             lastTime = currentTime;
         }, CONFIG.stall.DETECTION_INTERVAL_MS);
 
+        // Track this video's interval
+        monitoredVideos.set(video, checkInterval);
+
         Logger.add('[HEALER:MONITOR] Started monitoring video', {
-            checkInterval: CONFIG.stall.DETECTION_INTERVAL_MS + 'ms'
+            checkInterval: CONFIG.stall.DETECTION_INTERVAL_MS + 'ms',
+            stuckTrigger: CONFIG.stall.STUCK_COUNT_TRIGGER
         });
     };
 
     return {
         monitor,
+        stopMonitoring,
         onStallDetected,
         attemptHeal,
-        getStats: () => ({ healAttempts, isHealing })
+        getStats: () => ({ healAttempts, isHealing, monitoredCount: monitoredVideos.size || 0 })
     };
 })();
