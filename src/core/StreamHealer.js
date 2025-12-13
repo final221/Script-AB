@@ -7,6 +7,7 @@ const StreamHealer = (() => {
     let isHealing = false;
     let healAttempts = 0;
     let lastStallTime = 0;
+    let monitoredCount = 0; // Track count manually (WeakMap has no .size)
 
     // Track monitored videos to prevent duplicate timers
     const monitoredVideos = new WeakMap(); // video -> intervalId
@@ -23,6 +24,13 @@ const StreamHealer = (() => {
             networkState: video.networkState,
             buffered: BufferGapFinder.formatRanges(BufferGapFinder.getBufferRanges(video))
         };
+    };
+
+    /**
+     * Check if video has recovered (playing normally)
+     */
+    const hasRecovered = (video) => {
+        return video && !video.paused && video.readyState >= 4;
     };
 
     /**
@@ -43,6 +51,7 @@ const StreamHealer = (() => {
 
     /**
      * Poll for a heal point with timeout
+     * Includes early abort if video self-recovers
      */
     const pollForHealPoint = async (video, timeoutMs) => {
         const startTime = Date.now();
@@ -55,6 +64,16 @@ const StreamHealer = (() => {
 
         while (Date.now() - startTime < timeoutMs) {
             pollCount++;
+
+            // Early abort: Check if video recovered on its own
+            if (hasRecovered(video)) {
+                Logger.add('[HEALER:SELF_RECOVERED] Video recovered during polling', {
+                    pollCount,
+                    elapsed: (Date.now() - startTime) + 'ms',
+                    videoState: getVideoState(video)
+                });
+                return null; // No need to heal - already playing
+            }
 
             // Use silent mode during polling to reduce log spam
             const healPoint = BufferGapFinder.findHealPoint(video, { silent: true });
@@ -112,7 +131,17 @@ const StreamHealer = (() => {
             // Step 1: Poll for heal point
             const healPoint = await pollForHealPoint(video, CONFIG.stall.HEAL_TIMEOUT_S * 1000);
 
+            // Check if we got null due to self-recovery (not timeout)
             if (!healPoint) {
+                if (hasRecovered(video)) {
+                    Logger.add('[HEALER:SKIPPED] Video recovered, no heal needed', {
+                        duration: (performance.now() - healStartTime).toFixed(0) + 'ms',
+                        finalState: getVideoState(video)
+                    });
+                    // Don't count as failed - video is fine
+                    return;
+                }
+
                 Logger.add('[HEALER:NO_HEAL_POINT] Could not find heal point', {
                     duration: (performance.now() - healStartTime).toFixed(0) + 'ms',
                     suggestion: 'User may need to refresh page',
@@ -122,8 +151,35 @@ const StreamHealer = (() => {
                 return;
             }
 
-            // Step 2: Seek to heal point and play
-            const result = await LiveEdgeSeeker.seekAndPlay(video, healPoint);
+            // Step 2: Re-validate heal point is still fresh before seeking
+            const freshPoint = BufferGapFinder.findHealPoint(video, { silent: true });
+            if (!freshPoint) {
+                // No heal point anymore - check if video recovered
+                if (hasRecovered(video)) {
+                    Logger.add('[HEALER:STALE_RECOVERED] Heal point gone, but video recovered', {
+                        duration: (performance.now() - healStartTime).toFixed(0) + 'ms'
+                    });
+                    return;
+                }
+                Logger.add('[HEALER:STALE_GONE] Heal point disappeared before seek', {
+                    original: `${healPoint.start.toFixed(2)}-${healPoint.end.toFixed(2)}`,
+                    finalState: getVideoState(video)
+                });
+                Metrics.increment('heals_failed');
+                return;
+            }
+
+            // Use fresh point if it's different (buffer may have grown)
+            const targetPoint = freshPoint;
+            if (freshPoint.start !== healPoint.start || freshPoint.end !== healPoint.end) {
+                Logger.add('[HEALER:POINT_UPDATED] Using refreshed heal point', {
+                    original: `${healPoint.start.toFixed(2)}-${healPoint.end.toFixed(2)}`,
+                    fresh: `${freshPoint.start.toFixed(2)}-${freshPoint.end.toFixed(2)}`
+                });
+            }
+
+            // Step 3: Seek to heal point and play
+            const result = await LiveEdgeSeeker.seekAndPlay(video, targetPoint);
 
             const duration = (performance.now() - healStartTime).toFixed(0);
 
@@ -184,7 +240,10 @@ const StreamHealer = (() => {
         if (intervalId) {
             clearInterval(intervalId);
             monitoredVideos.delete(video);
-            Logger.add('[HEALER:STOP] Stopped monitoring video');
+            monitoredCount--;
+            Logger.add('[HEALER:STOP] Stopped monitoring video', {
+                remainingMonitors: monitoredCount
+            });
         }
     };
 
@@ -234,10 +293,12 @@ const StreamHealer = (() => {
 
         // Track this video's interval
         monitoredVideos.set(video, checkInterval);
+        monitoredCount++;
 
         Logger.add('[HEALER:MONITOR] Started monitoring video', {
             checkInterval: CONFIG.stall.DETECTION_INTERVAL_MS + 'ms',
-            stuckTrigger: CONFIG.stall.STUCK_COUNT_TRIGGER
+            stuckTrigger: CONFIG.stall.STUCK_COUNT_TRIGGER,
+            totalMonitors: monitoredCount
         });
     };
 
@@ -246,6 +307,6 @@ const StreamHealer = (() => {
         stopMonitoring,
         onStallDetected,
         attemptHeal,
-        getStats: () => ({ healAttempts, isHealing, monitoredCount: monitoredVideos.size || 0 })
+        getStats: () => ({ healAttempts, isHealing, monitoredCount })
     };
 })();
