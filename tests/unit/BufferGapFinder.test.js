@@ -52,9 +52,9 @@ describe('BufferGapFinder', () => {
         expect(ranges).toEqual([]);
     });
 
-    it('finds heal point when buffer ahead exists with sufficient size', () => {
+    it('finds heal point (nudge) when contiguous buffer ahead exists', () => {
         const BufferGapFinder = window.BufferGapFinder;
-        // Mock buffered ranges: [0-10], [20-30] (second range is 10s, > MIN_HEAL_BUFFER_S)
+        // Mock buffered ranges: [0-10], [20-30]
         Object.defineProperty(video, 'buffered', {
             value: {
                 length: 2,
@@ -67,36 +67,36 @@ describe('BufferGapFinder', () => {
 
         const result = BufferGapFinder.findHealPoint(video, { silent: true });
         expect(result).not.toBeNull();
-        expect(result.start).toBe(20);
-        expect(result.end).toBe(30);
-        expect(result.gapSize).toBe(15);
+        expect(result.isNudge).toBe(true);
+        expect(result.start).toBe(5.5); // Nudge: current + 0.5
+        expect(result.end).toBe(10);
     });
 
     it('skips heal point if buffer is too small', () => {
         const BufferGapFinder = window.BufferGapFinder;
-        // Mock buffered ranges: [0-10], [20-21] (second range is only 1s, < MIN_HEAL_BUFFER_S)
+        // Mock buffered ranges: [0-5.5] - Current 5, so 0.5s ahead (too small for nudge which needs gap > MIN_HEAL_BUFFER_S)
         Object.defineProperty(video, 'buffered', {
             value: {
-                length: 2,
-                start: (i) => i === 0 ? 0 : 20,
-                end: (i) => i === 0 ? 10 : 21
+                length: 1,
+                start: () => 0,
+                end: () => 5.5
             },
             configurable: true
         });
         video.currentTime = 5;
 
         const result = BufferGapFinder.findHealPoint(video, { silent: true });
-        expect(result).toBeNull(); // Too small, should skip
+        expect(result).toBeNull(); // Too small
     });
 
-    it('finds first valid heal point when multiple buffers ahead', () => {
+    it('prefers contiguous nudge over distant gap', () => {
         const BufferGapFinder = window.BufferGapFinder;
-        // Mock: [0-10], [20-21] (too small), [30-35] (valid)
+        // Mock: [0-10] (contiguous), [30-35] (gap)
         Object.defineProperty(video, 'buffered', {
             value: {
-                length: 3,
-                start: (i) => [0, 20, 30][i],
-                end: (i) => [10, 21, 35][i]
+                length: 2,
+                start: (i) => [0, 30][i],
+                end: (i) => [10, 35][i]
             },
             configurable: true
         });
@@ -104,25 +104,26 @@ describe('BufferGapFinder', () => {
 
         const result = BufferGapFinder.findHealPoint(video, { silent: true });
         expect(result).not.toBeNull();
-        expect(result.start).toBe(30); // Should skip [20-21], find [30-35]
-        expect(result.end).toBe(35);
+        expect(result.isNudge).toBe(true);
+        expect(result.start).toBe(5.5);
     });
 
-    it('returns null if no buffer ahead of currentTime', () => {
+    it('returns nudge if contiguous buffer ahead of currentTime', () => {
         const BufferGapFinder = window.BufferGapFinder;
-        // Mock buffered ranges: [0-10], [12-20]
         Object.defineProperty(video, 'buffered', {
             value: {
-                length: 2,
-                start: (i) => i === 0 ? 0 : 12,
-                end: (i) => i === 0 ? 10 : 20
+                length: 1,
+                start: () => 0,
+                end: () => 20
             },
             configurable: true
         });
-        video.currentTime = 15; // Already in second range
+        video.currentTime = 15;
 
         const result = BufferGapFinder.findHealPoint(video, { silent: true });
-        expect(result).toBeNull();
+        expect(result).not.toBeNull();
+        expect(result.isNudge).toBe(true);
+        expect(result.start).toBe(15.5);
     });
 
     it('detects buffer exhaustion', () => {

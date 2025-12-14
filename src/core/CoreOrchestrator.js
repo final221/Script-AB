@@ -19,25 +19,40 @@ const CoreOrchestrator = (() => {
             // Wait for DOM then start monitoring
             const startMonitoring = () => {
                 // Find video element and start StreamHealer
-                const findAndMonitorVideo = () => {
-                    const video = document.querySelector('video');
+                const findAndMonitorVideo = (targetNode) => {
+                    // If targetNode is provided, use it. Otherwise search document.
+                    // But critical: only monitor if it is/contains a video
+                    let video = null;
+
+                    if (targetNode) {
+                        if (targetNode.nodeName === 'VIDEO') {
+                            video = targetNode;
+                        } else if (targetNode.querySelector) {
+                            video = targetNode.querySelector('video');
+                        }
+                    } else {
+                        video = document.querySelector('video');
+                    }
+
                     if (video) {
+                        Logger.add('[CORE] New video detected in DOM');
                         Logger.add('[CORE] Video element found, starting StreamHealer');
                         StreamHealer.monitor(video);
                     }
                 };
 
-                // Try immediately
+                // Try immediately (initial page load)
                 findAndMonitorVideo();
 
                 // Also observe for new videos
                 const observer = new MutationObserver((mutations) => {
                     for (const mutation of mutations) {
                         for (const node of mutation.addedNodes) {
+                            // Only check relevant nodes
                             if (node.nodeName === 'VIDEO' ||
-                                (node.querySelector && node.querySelector('video'))) {
-                                Logger.add('[CORE] New video detected in DOM');
-                                findAndMonitorVideo();
+                                (node.nodeName === 'DIV' && node.querySelector && node.querySelector('video'))) {
+                                // Pass the specific node to avoid global lookup of existing video
+                                findAndMonitorVideo(node);
                             }
                         }
                     }

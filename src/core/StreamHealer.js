@@ -81,6 +81,7 @@ const StreamHealer = (() => {
             if (healPoint) {
                 Logger.add('[HEALER:POLL_SUCCESS] Heal point found', {
                     attempts: pollCount,
+                    type: healPoint.isNudge ? 'NUDGE' : 'GAP',
                     elapsed: (Date.now() - startTime) + 'ms',
                     healPoint: `${healPoint.start.toFixed(2)}-${healPoint.end.toFixed(2)}`,
                     bufferSize: (healPoint.end - healPoint.start).toFixed(2) + 's'
@@ -174,7 +175,8 @@ const StreamHealer = (() => {
             if (freshPoint.start !== healPoint.start || freshPoint.end !== healPoint.end) {
                 Logger.add('[HEALER:POINT_UPDATED] Using refreshed heal point', {
                     original: `${healPoint.start.toFixed(2)}-${healPoint.end.toFixed(2)}`,
-                    fresh: `${freshPoint.start.toFixed(2)}-${freshPoint.end.toFixed(2)}`
+                    fresh: `${freshPoint.start.toFixed(2)}-${freshPoint.end.toFixed(2)}`,
+                    type: freshPoint.isNudge ? 'NUDGE' : 'GAP'
                 });
             }
 
@@ -267,6 +269,15 @@ const StreamHealer = (() => {
             if (!document.contains(video)) {
                 Logger.add('[HEALER:CLEANUP] Video removed from DOM');
                 stopMonitoring(video);
+                return;
+            }
+
+            // Pause monitoring while healing is active to prevent race conditions
+            if (isHealing) {
+                // Log occasionally or just once per cycle? 
+                // Since this runs every 500ms, let's keep it but maybe the user wants to see it to know why it's silent.
+                Logger.add('[HEALER:MONITOR_SKIP] Skipping check - healing active');
+                stuckCount = 0; // Reset counter while healing
                 return;
             }
 

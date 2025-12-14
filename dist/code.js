@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.0.11
+// @version       4.0.12
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -166,36 +166,46 @@ const BufferGapFinder = (() => {
             });
         }
 
-        // Look for a buffer range that starts ahead of current position
+        // Look for a buffer range that offers enough content ahead
         for (let i = 0; i < ranges.length; i++) {
             const range = ranges[i];
-            const bufferSize = range.end - range.start;
 
-            // Found a range starting after current position (with small gap tolerance)
-            if (range.start > currentTime + 0.5) {
-                // Check minimum buffer size
-                if (bufferSize < MIN_HEAL_BUFFER_S) {
-                    if (!options.silent) {
-                        Logger.add('[HEALER:SKIP] Buffer too small', {
-                            range: `${range.start.toFixed(2)}-${range.end.toFixed(2)}`,
-                            size: bufferSize.toFixed(2) + 's',
-                            required: MIN_HEAL_BUFFER_S + 's'
-                        });
+            // Check if this range has enough content AFTER the current time
+            // (end - max(start, currentTime)) > MIN
+            const effectiveStart = Math.max(range.start, currentTime);
+            const contentAhead = range.end - effectiveStart;
+
+            if (contentAhead > MIN_HEAL_BUFFER_S) {
+                // Determine if this is a gap jump or a contiguous nudge
+                let healStart = range.start;
+                let isNudge = false;
+
+                if (range.start <= currentTime) {
+                    // Contiguous buffer: Nudge forward to unstuck
+                    healStart = currentTime + 0.5;
+                    isNudge = true;
+
+                    // SAFETY: Ensure we don't nudge past the end (though contentAhead check covers this)
+                    if (healStart >= range.end - 0.1) {
+                        if (!options.silent) {
+                            Logger.add('[HEALER:SKIP] Nudge target too close to buffer end');
+                        }
+                        continue;
                     }
-                    continue; // Keep looking for a larger buffer
                 }
 
                 const healPoint = {
-                    start: range.start,
+                    start: healStart,
                     end: range.end,
-                    gapSize: range.start - currentTime
+                    gapSize: healStart - currentTime,
+                    isNudge: isNudge
                 };
 
                 if (!options.silent) {
-                    Logger.add('[HEALER:FOUND] Heal point identified', {
-                        healPoint: `${range.start.toFixed(3)}-${range.end.toFixed(3)}`,
+                    Logger.add(isNudge ? '[HEALER:NUDGE] Contiguous buffer found' : '[HEALER:FOUND] Heal point identified', {
+                        healPoint: `${healStart.toFixed(3)}-${range.end.toFixed(3)}`,
                         gapSize: healPoint.gapSize.toFixed(2) + 's',
-                        bufferSize: bufferSize.toFixed(2) + 's'
+                        bufferAhead: contentAhead.toFixed(2) + 's'
                     });
                 }
 
@@ -844,6 +854,7 @@ const StreamHealer = (() => {
             if (healPoint) {
                 Logger.add('[HEALER:POLL_SUCCESS] Heal point found', {
                     attempts: pollCount,
+                    type: healPoint.isNudge ? 'NUDGE' : 'GAP',
                     elapsed: (Date.now() - startTime) + 'ms',
                     healPoint: `${healPoint.start.toFixed(2)}-${healPoint.end.toFixed(2)}`,
                     bufferSize: (healPoint.end - healPoint.start).toFixed(2) + 's'
@@ -937,7 +948,8 @@ const StreamHealer = (() => {
             if (freshPoint.start !== healPoint.start || freshPoint.end !== healPoint.end) {
                 Logger.add('[HEALER:POINT_UPDATED] Using refreshed heal point', {
                     original: `${healPoint.start.toFixed(2)}-${healPoint.end.toFixed(2)}`,
-                    fresh: `${freshPoint.start.toFixed(2)}-${freshPoint.end.toFixed(2)}`
+                    fresh: `${freshPoint.start.toFixed(2)}-${freshPoint.end.toFixed(2)}`,
+                    type: freshPoint.isNudge ? 'NUDGE' : 'GAP'
                 });
             }
 
@@ -1033,6 +1045,15 @@ const StreamHealer = (() => {
                 return;
             }
 
+            // Pause monitoring while healing is active to prevent race conditions
+            if (isHealing) {
+                // Log occasionally or just once per cycle? 
+                // Since this runs every 500ms, let's keep it but maybe the user wants to see it to know why it's silent.
+                Logger.add('[HEALER:MONITOR_SKIP] Skipping check - healing active');
+                stuckCount = 0; // Reset counter while healing
+                return;
+            }
+
             const currentTime = video.currentTime;
             const moved = Math.abs(currentTime - lastTime) > 0.1;
 
@@ -1095,25 +1116,40 @@ const CoreOrchestrator = (() => {
             // Wait for DOM then start monitoring
             const startMonitoring = () => {
                 // Find video element and start StreamHealer
-                const findAndMonitorVideo = () => {
-                    const video = document.querySelector('video');
+                const findAndMonitorVideo = (targetNode) => {
+                    // If targetNode is provided, use it. Otherwise search document.
+                    // But critical: only monitor if it is/contains a video
+                    let video = null;
+
+                    if (targetNode) {
+                        if (targetNode.nodeName === 'VIDEO') {
+                            video = targetNode;
+                        } else if (targetNode.querySelector) {
+                            video = targetNode.querySelector('video');
+                        }
+                    } else {
+                        video = document.querySelector('video');
+                    }
+
                     if (video) {
+                        Logger.add('[CORE] New video detected in DOM');
                         Logger.add('[CORE] Video element found, starting StreamHealer');
                         StreamHealer.monitor(video);
                     }
                 };
 
-                // Try immediately
+                // Try immediately (initial page load)
                 findAndMonitorVideo();
 
                 // Also observe for new videos
                 const observer = new MutationObserver((mutations) => {
                     for (const mutation of mutations) {
                         for (const node of mutation.addedNodes) {
+                            // Only check relevant nodes
                             if (node.nodeName === 'VIDEO' ||
-                                (node.querySelector && node.querySelector('video'))) {
-                                Logger.add('[CORE] New video detected in DOM');
-                                findAndMonitorVideo();
+                                (node.nodeName === 'DIV' && node.querySelector && node.querySelector('video'))) {
+                                // Pass the specific node to avoid global lookup of existing video
+                                findAndMonitorVideo(node);
                             }
                         }
                     }
