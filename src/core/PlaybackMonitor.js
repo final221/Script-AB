@@ -24,6 +24,11 @@ const PlaybackMonitor = (() => {
             progressStartTime: null,
             progressStreakMs: 0,
             progressEligible: false,
+            hasProgress: false,
+            noHealPointCount: 0,
+            nextHealAllowedTime: 0,
+            lastBackoffLogTime: 0,
+            lastInitLogTime: 0,
             state: 'PLAYING',
             lastHealAttemptTime: 0,
             lastWatchdogLogTime: 0,
@@ -101,6 +106,26 @@ const PlaybackMonitor = (() => {
                     minProgressMs: CONFIG.monitoring.CANDIDATE_MIN_PROGRESS_MS,
                     videoState: VideoState.get(video, videoId)
                 });
+            }
+
+            if (!state.hasProgress) {
+                state.hasProgress = true;
+                logDebug('[HEALER:PROGRESS] Initial progress observed', {
+                    reason,
+                    videoState: VideoState.get(video, videoId)
+                });
+            }
+
+            if (state.noHealPointCount > 0 || state.nextHealAllowedTime > 0) {
+                logDebug('[HEALER:BACKOFF] Cleared after progress', {
+                    reason,
+                    previousNoHealPoints: state.noHealPointCount,
+                    previousNextHealAllowedMs: state.nextHealAllowedTime
+                        ? (state.nextHealAllowedTime - now)
+                        : 0
+                });
+                state.noHealPointCount = 0;
+                state.nextHealAllowedTime = 0;
             }
         };
 
@@ -255,6 +280,17 @@ const PlaybackMonitor = (() => {
                 }
                 if (video.paused && pauseFromStall && state.state !== 'STALLED') {
                     setState('STALLED', 'paused_after_stall');
+                }
+
+                if (!state.hasProgress) {
+                    if (now - state.lastInitLogTime > 5000) {
+                        state.lastInitLogTime = now;
+                        logDebug(`${LOG.WATCHDOG} Awaiting initial progress`, {
+                            state: state.state,
+                            videoState: VideoState.get(video, videoId)
+                        });
+                    }
+                    return;
                 }
 
                 const currentSrc = video.currentSrc || video.getAttribute('src') || '';

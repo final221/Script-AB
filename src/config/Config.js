@@ -29,6 +29,12 @@ const CONFIG = (() => {
             RETRY_COOLDOWN_MS: 2000,        // Cooldown between heal attempts for same stall
             HEAL_POLL_INTERVAL_MS: 200,     // How often to poll for heal point
             HEAL_TIMEOUT_S: 15,             // Give up after this many seconds
+            NO_HEAL_POINT_BACKOFF_BASE_MS: 5000, // Base backoff after no heal point
+            NO_HEAL_POINT_BACKOFF_MAX_MS: 60000, // Max backoff after repeated no heal points
+            FAILOVER_AFTER_NO_HEAL_POINTS: 3, // Failover after this many consecutive no-heal points
+            FAILOVER_AFTER_STALL_MS: 30000,  // Failover after this long stuck without progress
+            FAILOVER_PROGRESS_TIMEOUT_MS: 8000, // Trial time for failover candidate to progress
+            FAILOVER_COOLDOWN_MS: 30000,     // Minimum time between failover attempts
         },
 
         monitoring: {

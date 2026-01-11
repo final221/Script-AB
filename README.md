@@ -81,6 +81,12 @@ Key settings in `Config.js`:
 | `stall.PAUSED_STALL_GRACE_MS` | 3000 | Allow stall detection shortly after pause |
 | `stall.RETRY_COOLDOWN_MS` | 2000 | Cooldown between heal attempts |
 | `stall.HEAL_TIMEOUT_S` | 15 | Give up finding heal point after |
+| `stall.NO_HEAL_POINT_BACKOFF_BASE_MS` | 5000 | Base backoff after no heal point |
+| `stall.NO_HEAL_POINT_BACKOFF_MAX_MS` | 60000 | Max backoff after repeated no heal points |
+| `stall.FAILOVER_AFTER_NO_HEAL_POINTS` | 3 | Failover after this many consecutive no-heal points |
+| `stall.FAILOVER_AFTER_STALL_MS` | 30000 | Failover after this long without progress |
+| `stall.FAILOVER_PROGRESS_TIMEOUT_MS` | 8000 | Trial window for failover candidate to progress |
+| `stall.FAILOVER_COOLDOWN_MS` | 30000 | Minimum time between failover attempts |
 | `monitoring.MAX_VIDEO_MONITORS` | 3 | Max concurrent video elements to monitor |
 | `monitoring.CANDIDATE_SWITCH_DELTA` | 2 | Score delta required to switch active video |
 | `monitoring.CANDIDATE_MIN_PROGRESS_MS` | 5000 | Minimum sustained progress before switching to new video |
@@ -88,7 +94,7 @@ Key settings in `Config.js`:
 
 ## Version
 
-Current: **4.0.23**
+Current: **4.0.24**
 
 Version increments automatically on each build (patch).
 

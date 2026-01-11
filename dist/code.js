@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.0.23
+// @version       4.0.24
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -42,6 +42,12 @@ const CONFIG = (() => {
             RETRY_COOLDOWN_MS: 2000,        // Cooldown between heal attempts for same stall
             HEAL_POLL_INTERVAL_MS: 200,     // How often to poll for heal point
             HEAL_TIMEOUT_S: 15,             // Give up after this many seconds
+            NO_HEAL_POINT_BACKOFF_BASE_MS: 5000, // Base backoff after no heal point
+            NO_HEAL_POINT_BACKOFF_MAX_MS: 60000, // Max backoff after repeated no heal points
+            FAILOVER_AFTER_NO_HEAL_POINTS: 3, // Failover after this many consecutive no-heal points
+            FAILOVER_AFTER_STALL_MS: 30000,  // Failover after this long stuck without progress
+            FAILOVER_PROGRESS_TIMEOUT_MS: 8000, // Trial time for failover candidate to progress
+            FAILOVER_COOLDOWN_MS: 30000,     // Minimum time between failover attempts
         },
 
         monitoring: {
@@ -837,6 +843,11 @@ const PlaybackMonitor = (() => {
             progressStartTime: null,
             progressStreakMs: 0,
             progressEligible: false,
+            hasProgress: false,
+            noHealPointCount: 0,
+            nextHealAllowedTime: 0,
+            lastBackoffLogTime: 0,
+            lastInitLogTime: 0,
             state: 'PLAYING',
             lastHealAttemptTime: 0,
             lastWatchdogLogTime: 0,
@@ -914,6 +925,26 @@ const PlaybackMonitor = (() => {
                     minProgressMs: CONFIG.monitoring.CANDIDATE_MIN_PROGRESS_MS,
                     videoState: VideoState.get(video, videoId)
                 });
+            }
+
+            if (!state.hasProgress) {
+                state.hasProgress = true;
+                logDebug('[HEALER:PROGRESS] Initial progress observed', {
+                    reason,
+                    videoState: VideoState.get(video, videoId)
+                });
+            }
+
+            if (state.noHealPointCount > 0 || state.nextHealAllowedTime > 0) {
+                logDebug('[HEALER:BACKOFF] Cleared after progress', {
+                    reason,
+                    previousNoHealPoints: state.noHealPointCount,
+                    previousNextHealAllowedMs: state.nextHealAllowedTime
+                        ? (state.nextHealAllowedTime - now)
+                        : 0
+                });
+                state.noHealPointCount = 0;
+                state.nextHealAllowedTime = 0;
             }
         };
 
@@ -1070,6 +1101,17 @@ const PlaybackMonitor = (() => {
                     setState('STALLED', 'paused_after_stall');
                 }
 
+                if (!state.hasProgress) {
+                    if (now - state.lastInitLogTime > 5000) {
+                        state.lastInitLogTime = now;
+                        logDebug(`${LOG.WATCHDOG} Awaiting initial progress`, {
+                            state: state.state,
+                            videoState: VideoState.get(video, videoId)
+                        });
+                    }
+                    return;
+                }
+
                 const currentSrc = video.currentSrc || video.getAttribute('src') || '';
                 if (currentSrc !== state.lastSrc) {
                     logDebug('[HEALER:SRC] Source changed', {
@@ -1161,6 +1203,15 @@ const StreamHealer = (() => {
     let candidateIntervalId = null;
     const MAX_VIDEO_MONITORS = CONFIG.monitoring.MAX_VIDEO_MONITORS;
     const FALLBACK_SOURCE_PATTERN = /(404_processing|_404\/404_processing|_404_processing|_404)/i;
+    const failoverState = {
+        inProgress: false,
+        timerId: null,
+        lastAttemptTime: 0,
+        fromId: null,
+        toId: null,
+        startTime: 0,
+        baselineProgressTime: 0
+    };
 
     const LOG = {
         POLL_START: '[HEALER:POLL_START]',
@@ -1188,6 +1239,11 @@ const StreamHealer = (() => {
         return id;
     };
 
+    const getVideoIndex = (videoId) => {
+        const match = /video-(\d+)/.exec(videoId);
+        return match ? Number(match[1]) : -1;
+    };
+
     const logWithState = (message, video, detail = {}) => {
         Logger.add(message, {
             ...detail,
@@ -1200,7 +1256,7 @@ const StreamHealer = (() => {
     const scoreVideo = (video, monitor, videoId) => {
         const vs = VideoState.get(video, videoId);
         const state = monitor.state;
-        const progressAgoMs = state.lastProgressTime
+        const progressAgoMs = state.hasProgress && state.lastProgressTime
             ? Date.now() - state.lastProgressTime
             : null;
         const progressStreakMs = state.progressStreakMs || 0;
@@ -1299,6 +1355,15 @@ const StreamHealer = (() => {
     };
 
     const evaluateCandidates = (reason) => {
+        if (failoverState.inProgress) {
+            logDebug('[HEALER:CANDIDATE] Failover lock active', {
+                reason,
+                activeVideoId: activeCandidateId,
+                failoverTo: failoverState.toId
+            });
+            return activeCandidateId ? { id: activeCandidateId } : null;
+        }
+
         if (monitorsById.size === 0) {
             activeCandidateId = null;
             return null;
@@ -1387,6 +1452,186 @@ const StreamHealer = (() => {
         }
 
         return best;
+    };
+
+    const resetFailover = (reason) => {
+        if (failoverState.timerId) {
+            clearTimeout(failoverState.timerId);
+        }
+        if (failoverState.inProgress) {
+            Logger.add('[HEALER:FAILOVER] Cleared', {
+                reason,
+                from: failoverState.fromId,
+                to: failoverState.toId
+            });
+        }
+        failoverState.inProgress = false;
+        failoverState.timerId = null;
+        failoverState.fromId = null;
+        failoverState.toId = null;
+        failoverState.startTime = 0;
+        failoverState.baselineProgressTime = 0;
+    };
+
+    const resetNoHealPointState = (state, reason) => {
+        if (!state) return;
+        if (state.noHealPointCount > 0 || state.nextHealAllowedTime > 0) {
+            logDebug('[HEALER:BACKOFF] Reset', {
+                reason,
+                previousNoHealPoints: state.noHealPointCount,
+                previousNextHealAllowedMs: state.nextHealAllowedTime
+                    ? Math.max(state.nextHealAllowedTime - Date.now(), 0)
+                    : 0
+            });
+        }
+        state.noHealPointCount = 0;
+        state.nextHealAllowedTime = 0;
+    };
+
+    const applyNoHealPointBackoff = (videoId, state, reason) => {
+        if (!state) return;
+        const count = (state.noHealPointCount || 0) + 1;
+        const base = CONFIG.stall.NO_HEAL_POINT_BACKOFF_BASE_MS;
+        const max = CONFIG.stall.NO_HEAL_POINT_BACKOFF_MAX_MS;
+        const backoffMs = Math.min(base * count, max);
+
+        state.noHealPointCount = count;
+        state.nextHealAllowedTime = Date.now() + backoffMs;
+
+        Logger.add('[HEALER:BACKOFF] No heal point', {
+            videoId,
+            reason,
+            noHealPointCount: count,
+            backoffMs,
+            nextHealAllowedInMs: backoffMs
+        });
+    };
+
+    const selectNewestCandidate = (excludeId) => {
+        let newest = null;
+        let newestIndex = -1;
+        for (const [videoId, entry] of monitorsById.entries()) {
+            if (videoId === excludeId) continue;
+            const idx = getVideoIndex(videoId);
+            if (idx > newestIndex) {
+                newestIndex = idx;
+                newest = { id: videoId, entry };
+            }
+        }
+        return newest;
+    };
+
+    const attemptFailover = (fromVideoId, reason, state) => {
+        const now = Date.now();
+        if (failoverState.inProgress) {
+            logDebug('[HEALER:FAILOVER_SKIP] Failover already in progress', {
+                from: fromVideoId,
+                reason
+            });
+            return false;
+        }
+        if (now - failoverState.lastAttemptTime < CONFIG.stall.FAILOVER_COOLDOWN_MS) {
+            logDebug('[HEALER:FAILOVER_SKIP] Failover cooldown active', {
+                from: fromVideoId,
+                reason,
+                cooldownMs: CONFIG.stall.FAILOVER_COOLDOWN_MS,
+                lastAttemptAgoMs: now - failoverState.lastAttemptTime
+            });
+            return false;
+        }
+
+        const candidate = selectNewestCandidate(fromVideoId);
+        if (!candidate) {
+            logDebug('[HEALER:FAILOVER_SKIP] No candidate available', {
+                from: fromVideoId,
+                reason
+            });
+            return false;
+        }
+
+        const toId = candidate.id;
+        const entry = candidate.entry;
+
+        failoverState.inProgress = true;
+        failoverState.lastAttemptTime = now;
+        failoverState.fromId = fromVideoId;
+        failoverState.toId = toId;
+        failoverState.startTime = now;
+        failoverState.baselineProgressTime = entry.monitor.state.lastProgressTime || 0;
+
+        activeCandidateId = toId;
+
+        Logger.add('[HEALER:FAILOVER] Switching to candidate', {
+            from: fromVideoId,
+            to: toId,
+            reason,
+            stalledForMs: state?.lastProgressTime ? (now - state.lastProgressTime) : null,
+            candidateState: VideoState.get(entry.video, toId)
+        });
+
+        const playPromise = entry.video?.play?.();
+        if (playPromise && typeof playPromise.catch === 'function') {
+            playPromise.catch((err) => {
+                Logger.add('[HEALER:FAILOVER_PLAY] Play rejected', {
+                    to: toId,
+                    error: err?.name,
+                    message: err?.message
+                });
+            });
+        }
+
+        failoverState.timerId = setTimeout(() => {
+            if (!failoverState.inProgress || failoverState.toId !== toId) {
+                return;
+            }
+
+            const currentEntry = monitorsById.get(toId);
+            const fromEntry = monitorsById.get(fromVideoId);
+            const latestProgressTime = currentEntry?.monitor.state.lastProgressTime || 0;
+            const progressed = currentEntry
+                && currentEntry.monitor.state.hasProgress
+                && latestProgressTime > failoverState.baselineProgressTime
+                && latestProgressTime >= failoverState.startTime;
+
+            if (progressed) {
+                Logger.add('[HEALER:FAILOVER_SUCCESS] Candidate progressed', {
+                    from: fromVideoId,
+                    to: toId,
+                    progressDelayMs: latestProgressTime - failoverState.startTime,
+                    candidateState: VideoState.get(currentEntry.video, toId)
+                });
+                resetNoHealPointState(currentEntry.monitor.state, 'failover_success');
+            } else {
+                Logger.add('[HEALER:FAILOVER_REVERT] Candidate did not progress', {
+                    from: fromVideoId,
+                    to: toId,
+                    timeoutMs: CONFIG.stall.FAILOVER_PROGRESS_TIMEOUT_MS,
+                    progressObserved: Boolean(currentEntry?.monitor.state.hasProgress),
+                    candidateState: currentEntry ? VideoState.get(currentEntry.video, toId) : null
+                });
+                if (fromEntry) {
+                    activeCandidateId = fromVideoId;
+                }
+            }
+
+            resetFailover('timeout');
+        }, CONFIG.stall.FAILOVER_PROGRESS_TIMEOUT_MS);
+
+        return true;
+    };
+
+    const handleNoHealPoint = (video, state, reason) => {
+        const videoId = getVideoId(video);
+        applyNoHealPointBackoff(videoId, state, reason);
+
+        const stalledForMs = state?.lastProgressTime ? (Date.now() - state.lastProgressTime) : null;
+        const shouldFailover = monitorsById.size > 1
+            && (state?.noHealPointCount >= CONFIG.stall.FAILOVER_AFTER_NO_HEAL_POINTS
+                || (stalledForMs !== null && stalledForMs >= CONFIG.stall.FAILOVER_AFTER_STALL_MS));
+
+        if (shouldFailover) {
+            attemptFailover(videoId, reason, state);
+        }
     };
 
     const startCandidateEvaluation = () => {
@@ -1526,6 +1771,7 @@ const StreamHealer = (() => {
                         duration: (performance.now() - healStartTime).toFixed(0) + 'ms',
                         finalState: VideoState.get(video, getVideoId(video))
                     });
+                    resetNoHealPointState(state, 'self_recovered');
                     // Don't count as failed - video is fine
                     return;
                 }
@@ -1536,6 +1782,7 @@ const StreamHealer = (() => {
                     finalState: VideoState.get(video, getVideoId(video))
                 });
                 Metrics.increment('heals_failed');
+                handleNoHealPoint(video, state, 'no_heal_point');
                 return;
             }
 
@@ -1547,6 +1794,7 @@ const StreamHealer = (() => {
                     Logger.add('[HEALER:STALE_RECOVERED] Heal point gone, but video recovered', {
                         duration: (performance.now() - healStartTime).toFixed(0) + 'ms'
                     });
+                    resetNoHealPointState(state, 'stale_recovered');
                     return;
                 }
                 Logger.add('[HEALER:STALE_GONE] Heal point disappeared before seek', {
@@ -1554,6 +1802,7 @@ const StreamHealer = (() => {
                     finalState: VideoState.get(video, getVideoId(video))
                 });
                 Metrics.increment('heals_failed');
+                handleNoHealPoint(video, state, 'stale_gone');
                 return;
             }
 
@@ -1579,6 +1828,7 @@ const StreamHealer = (() => {
                     finalState: VideoState.get(video, getVideoId(video))
                 });
                 Metrics.increment('heals_successful');
+                resetNoHealPointState(state, 'heal_success');
             } else {
                 Logger.add('[HEALER:FAILED] Heal attempt failed', {
                     duration: duration + 'ms',
@@ -1614,6 +1864,30 @@ const StreamHealer = (() => {
     const onStallDetected = (video, details = {}, state = null) => {
         const now = Date.now();
         const videoId = getVideoId(video);
+
+        if (failoverState.inProgress && failoverState.toId === videoId) {
+            const elapsedMs = now - failoverState.startTime;
+            if (elapsedMs < CONFIG.stall.FAILOVER_PROGRESS_TIMEOUT_MS) {
+                logDebug('[HEALER:FAILOVER] Stall ignored during failover', {
+                    videoId,
+                    elapsedMs,
+                    timeoutMs: CONFIG.stall.FAILOVER_PROGRESS_TIMEOUT_MS
+                });
+                return;
+            }
+        }
+
+        if (state?.nextHealAllowedTime && now < state.nextHealAllowedTime) {
+            if (now - (state.lastBackoffLogTime || 0) > 5000) {
+                state.lastBackoffLogTime = now;
+                logDebug('[HEALER:BACKOFF] Stall skipped due to backoff', {
+                    videoId,
+                    remainingMs: state.nextHealAllowedTime - now,
+                    noHealPointCount: state.noHealPointCount
+                });
+            }
+            return;
+        }
 
         if (state) {
             const progressedSinceAttempt = state.lastProgressTime > state.lastHealAttemptTime;
@@ -1663,6 +1937,9 @@ const StreamHealer = (() => {
         const videoId = getVideoId(video);
         monitorsById.delete(videoId);
         monitoredCount--;
+        if (failoverState.inProgress && (videoId === failoverState.toId || videoId === failoverState.fromId)) {
+            resetFailover('monitor_removed');
+        }
         if (activeCandidateId === videoId) {
             activeCandidateId = null;
             if (monitorsById.size > 0) {
