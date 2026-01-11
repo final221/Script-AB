@@ -56,14 +56,16 @@ The build uses a priority list followed by auto-discovered modules, then the ent
 10. `monitoring/Instrumentation.js`
 11. `core/VideoState.js`
 12. `core/PlaybackStateTracker.js`
-13. `core/PlaybackMonitor.js`
-14. `core/CandidateSelector.js`
-15. `core/RecoveryManager.js`
-16. `core/MonitorRegistry.js`
-17. `core/HealPipeline.js`
-18. `core/ExternalSignalRouter.js`
-19. `core/StreamHealer.js`
-20. `core/CoreOrchestrator.js`
+13. `core/PlaybackEventHandlers.js`
+14. `core/PlaybackWatchdog.js`
+15. `core/PlaybackMonitor.js`
+16. `core/CandidateSelector.js`
+17. `core/RecoveryManager.js`
+18. `core/MonitorRegistry.js`
+19. `core/HealPipeline.js`
+20. `core/ExternalSignalRouter.js`
+21. `core/StreamHealer.js`
+22. `core/CoreOrchestrator.js`
 <!-- LOAD_ORDER_END -->
 
 
@@ -144,6 +146,8 @@ Script Logger.add() ────────┼──> Logger.getMergedTimeline(
 - **CoreOrchestrator.js** - Application initialization, global function exports
 - **VideoState.js** - Shared video state helper
 - **PlaybackStateTracker.js** - Progress and stall state tracking
+- **PlaybackEventHandlers.js** - Video event wiring for playback monitoring
+- **PlaybackWatchdog.js** - Watchdog interval for stall checks
 - **PlaybackMonitor.js** - Event-driven playback monitoring with watchdog
 - **CandidateSelector.js** - Scores and selects the active video
 - **RecoveryManager.js** - Backoff and failover coordination

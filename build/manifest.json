@@ -12,6 +12,8 @@
     "monitoring/Instrumentation.js",
     "core/VideoState.js",
     "core/PlaybackStateTracker.js",
+    "core/PlaybackEventHandlers.js",
+    "core/PlaybackWatchdog.js",
     "core/PlaybackMonitor.js",
     "core/CandidateSelector.js",
     "core/RecoveryManager.js",

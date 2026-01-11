@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.0.27
+// @version       4.0.28
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -1020,54 +1020,23 @@ const PlaybackStateTracker = (() => {
     return { create };
 })();
 
-// --- PlaybackMonitor ---
+// --- PlaybackEventHandlers ---
 /**
- * Tracks playback progress using media events plus a watchdog interval.
- * Emits stall detection callbacks while keeping event/state logging centralized.
+ * Wires media element events to playback state tracking.
  */
-const PlaybackMonitor = (() => {
+const PlaybackEventHandlers = (() => {
     const LOG = {
-        STATE: '[HEALER:STATE]',
-        EVENT: '[HEALER:EVENT]',
-        WATCHDOG: '[HEALER:WATCHDOG]'
+        EVENT: '[HEALER:EVENT]'
     };
 
-    const create = (video, options = {}) => {
-        const isHealing = options.isHealing || (() => false);
-        const onStall = options.onStall || (() => {});
-        const onRemoved = options.onRemoved || (() => {});
+    const create = (options) => {
+        const video = options.video;
+        const videoId = options.videoId;
+        const logDebug = options.logDebug;
+        const tracker = options.tracker;
+        const state = options.state;
+        const setState = options.setState;
         const onReset = options.onReset || (() => {});
-        const videoId = options.videoId || 'unknown';
-
-        const logDebug = (message, detail) => {
-            if (CONFIG.debug) {
-                Logger.add(message, {
-                    videoId,
-                    ...detail
-                });
-            }
-        };
-
-        const tracker = PlaybackStateTracker.create(video, videoId, logDebug);
-        const state = tracker.state;
-
-        const setState = (nextState, reason) => {
-            if (state.state === nextState) return;
-            const prevState = state.state;
-            state.state = nextState;
-            logDebug(LOG.STATE, {
-                from: prevState,
-                to: nextState,
-                reason,
-                pauseFromStall: state.pauseFromStall,
-                progressStreakMs: state.progressStreakMs,
-                progressEligible: state.progressEligible,
-                lastProgressAgoMs: state.lastProgressTime
-                    ? (Date.now() - state.lastProgressTime)
-                    : null,
-                videoState: VideoState.get(video, videoId)
-            });
-        };
 
         const handlers = {
             timeupdate: () => {
@@ -1170,96 +1139,221 @@ const PlaybackMonitor = (() => {
             }
         };
 
+        const attach = () => {
+            Object.entries(handlers).forEach(([event, handler]) => {
+                video.addEventListener(event, handler);
+            });
+        };
+
+        const detach = () => {
+            Object.entries(handlers).forEach(([event, handler]) => {
+                video.removeEventListener(event, handler);
+            });
+        };
+
+        return {
+            attach,
+            detach
+        };
+    };
+
+    return { create };
+})();
+
+// --- PlaybackWatchdog ---
+/**
+ * Watchdog interval that evaluates stalled playback state.
+ */
+const PlaybackWatchdog = (() => {
+    const LOG = {
+        WATCHDOG: '[HEALER:WATCHDOG]'
+    };
+
+    const create = (options) => {
+        const video = options.video;
+        const videoId = options.videoId;
+        const logDebug = options.logDebug;
+        const tracker = options.tracker;
+        const state = options.state;
+        const setState = options.setState;
+        const isHealing = options.isHealing;
+        const onRemoved = options.onRemoved || (() => {});
+        const onStall = options.onStall || (() => {});
+
         let intervalId;
+
+        const tick = () => {
+            const now = Date.now();
+            if (!document.contains(video)) {
+                Logger.add('[HEALER:CLEANUP] Video removed from DOM', {
+                    videoId
+                });
+                onRemoved();
+                return;
+            }
+
+            if (isHealing()) {
+                return;
+            }
+
+            const bufferExhausted = BufferGapFinder.isBufferExhausted(video);
+            const pausedAfterStall = state.lastStallEventTime > 0
+                && (now - state.lastStallEventTime) < CONFIG.stall.PAUSED_STALL_GRACE_MS;
+            let pauseFromStall = state.pauseFromStall || pausedAfterStall;
+            if (video.paused && bufferExhausted && !pauseFromStall) {
+                tracker.markStallEvent('watchdog_pause_buffer_exhausted');
+                pauseFromStall = true;
+            }
+            if (video.paused && !pauseFromStall) {
+                setState('PAUSED', 'watchdog_paused');
+                return;
+            }
+            if (video.paused && pauseFromStall && state.state !== 'STALLED') {
+                setState('STALLED', bufferExhausted ? 'paused_buffer_exhausted' : 'paused_after_stall');
+            }
+
+            if (tracker.shouldSkipUntilProgress()) {
+                return;
+            }
+
+            const currentSrc = video.currentSrc || video.getAttribute('src') || '';
+            if (currentSrc !== state.lastSrc) {
+                logDebug('[HEALER:SRC] Source changed', {
+                    previous: state.lastSrc,
+                    current: currentSrc,
+                    videoState: VideoState.get(video, videoId)
+                });
+                state.lastSrc = currentSrc;
+            }
+
+            const stalledForMs = now - state.lastProgressTime;
+            if (stalledForMs < CONFIG.stall.STALL_CONFIRM_MS) {
+                return;
+            }
+
+            const confirmMs = bufferExhausted
+                ? CONFIG.stall.STALL_CONFIRM_MS
+                : CONFIG.stall.STALL_CONFIRM_MS + CONFIG.stall.STALL_CONFIRM_BUFFER_OK_MS;
+
+            if (stalledForMs < confirmMs) {
+                return;
+            }
+
+            if (state.state !== 'STALLED') {
+                setState('STALLED', 'watchdog_no_progress');
+            }
+
+            if (now - state.lastWatchdogLogTime > 5000) {
+                state.lastWatchdogLogTime = now;
+                logDebug(`${LOG.WATCHDOG} No progress observed`, {
+                    stalledForMs,
+                    bufferExhausted,
+                    state: state.state,
+                    videoState: VideoState.get(video, videoId)
+                });
+            }
+
+            onStall({
+                trigger: 'WATCHDOG',
+                stalledFor: stalledForMs + 'ms',
+                bufferExhausted,
+                paused: video.paused,
+                pauseFromStall
+            }, state);
+        };
+
+        const start = () => {
+            intervalId = setInterval(tick, CONFIG.stall.WATCHDOG_INTERVAL_MS);
+        };
+
+        const stop = () => {
+            if (intervalId !== undefined) {
+                clearInterval(intervalId);
+            }
+        };
+
+        return { start, stop };
+    };
+
+    return { create };
+})();
+
+// --- PlaybackMonitor ---
+/**
+ * Tracks playback progress using media events plus a watchdog interval.
+ * Emits stall detection callbacks while keeping event/state logging centralized.
+ */
+const PlaybackMonitor = (() => {
+    const LOG = {
+        STATE: '[HEALER:STATE]'
+    };
+
+    const create = (video, options = {}) => {
+        const isHealing = options.isHealing || (() => false);
+        const onStall = options.onStall || (() => {});
+        const onRemoved = options.onRemoved || (() => {});
+        const onReset = options.onReset || (() => {});
+        const videoId = options.videoId || 'unknown';
+
+        const logDebug = (message, detail) => {
+            if (CONFIG.debug) {
+                Logger.add(message, {
+                    videoId,
+                    ...detail
+                });
+            }
+        };
+
+        const tracker = PlaybackStateTracker.create(video, videoId, logDebug);
+        const state = tracker.state;
+
+        const setState = (nextState, reason) => {
+            if (state.state === nextState) return;
+            const prevState = state.state;
+            state.state = nextState;
+            logDebug(LOG.STATE, {
+                from: prevState,
+                to: nextState,
+                reason,
+                pauseFromStall: state.pauseFromStall,
+                progressStreakMs: state.progressStreakMs,
+                progressEligible: state.progressEligible,
+                lastProgressAgoMs: state.lastProgressTime
+                    ? (Date.now() - state.lastProgressTime)
+                    : null,
+                videoState: VideoState.get(video, videoId)
+            });
+        };
+
+        const eventHandlers = PlaybackEventHandlers.create({
+            video,
+            videoId,
+            logDebug,
+            tracker,
+            state,
+            setState,
+            onReset
+        });
+
+        const watchdog = PlaybackWatchdog.create({
+            video,
+            videoId,
+            logDebug,
+            tracker,
+            state,
+            setState,
+            isHealing,
+            onRemoved,
+            onStall
+        });
 
         const start = () => {
             logDebug('[HEALER:MONITOR] PlaybackMonitor started', {
                 state: state.state,
                 videoState: VideoState.get(video, videoId)
             });
-            Object.entries(handlers).forEach(([event, handler]) => {
-                video.addEventListener(event, handler);
-            });
-
-            intervalId = setInterval(() => {
-                const now = Date.now();
-                if (!document.contains(video)) {
-                    Logger.add('[HEALER:CLEANUP] Video removed from DOM', {
-                        videoId
-                    });
-                    onRemoved();
-                    return;
-                }
-
-                if (isHealing()) {
-                    return;
-                }
-
-                const bufferExhausted = BufferGapFinder.isBufferExhausted(video);
-                const pausedAfterStall = state.lastStallEventTime > 0
-                    && (now - state.lastStallEventTime) < CONFIG.stall.PAUSED_STALL_GRACE_MS;
-                let pauseFromStall = state.pauseFromStall || pausedAfterStall;
-                if (video.paused && bufferExhausted && !pauseFromStall) {
-                    tracker.markStallEvent('watchdog_pause_buffer_exhausted');
-                    pauseFromStall = true;
-                }
-                if (video.paused && !pauseFromStall) {
-                    setState('PAUSED', 'watchdog_paused');
-                    return;
-                }
-                if (video.paused && pauseFromStall && state.state !== 'STALLED') {
-                    setState('STALLED', bufferExhausted ? 'paused_buffer_exhausted' : 'paused_after_stall');
-                }
-
-                if (tracker.shouldSkipUntilProgress()) {
-                    return;
-                }
-
-                const currentSrc = video.currentSrc || video.getAttribute('src') || '';
-                if (currentSrc !== state.lastSrc) {
-                    logDebug('[HEALER:SRC] Source changed', {
-                        previous: state.lastSrc,
-                        current: currentSrc,
-                        videoState: VideoState.get(video, videoId)
-                    });
-                    state.lastSrc = currentSrc;
-                }
-
-                const stalledForMs = now - state.lastProgressTime;
-                if (stalledForMs < CONFIG.stall.STALL_CONFIRM_MS) {
-                    return;
-                }
-
-                const confirmMs = bufferExhausted
-                    ? CONFIG.stall.STALL_CONFIRM_MS
-                    : CONFIG.stall.STALL_CONFIRM_MS + CONFIG.stall.STALL_CONFIRM_BUFFER_OK_MS;
-
-                if (stalledForMs < confirmMs) {
-                    return;
-                }
-
-                if (state.state !== 'STALLED') {
-                    setState('STALLED', 'watchdog_no_progress');
-                }
-
-                if (now - state.lastWatchdogLogTime > 5000) {
-                    state.lastWatchdogLogTime = now;
-                    logDebug(`${LOG.WATCHDOG} No progress observed`, {
-                        stalledForMs,
-                        bufferExhausted,
-                        state: state.state,
-                        videoState: VideoState.get(video, videoId)
-                    });
-                }
-
-                onStall({
-                    trigger: 'WATCHDOG',
-                    stalledFor: stalledForMs + 'ms',
-                    bufferExhausted,
-                    paused: video.paused,
-                    pauseFromStall
-                }, state);
-            }, CONFIG.stall.WATCHDOG_INTERVAL_MS);
+            eventHandlers.attach();
+            watchdog.start();
         };
 
         const stop = () => {
@@ -1267,13 +1361,8 @@ const PlaybackMonitor = (() => {
                 state: state.state,
                 videoState: VideoState.get(video, videoId)
             });
-            if (intervalId !== undefined) {
-                clearInterval(intervalId);
-            }
-
-            Object.entries(handlers).forEach(([event, handler]) => {
-                video.removeEventListener(event, handler);
-            });
+            watchdog.stop();
+            eventHandlers.detach();
         };
 
         return {
