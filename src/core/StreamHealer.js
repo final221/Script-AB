@@ -8,6 +8,7 @@ const StreamHealer = (() => {
     let healAttempts = 0;
     let lastStallTime = 0;
     let monitoredCount = 0; // Track count manually (WeakMap has no .size)
+    let activeVideo = null; // Track the current active video
 
     // Track monitored videos to prevent duplicate timers
     const monitoredVideos = new WeakMap(); // video -> intervalId
@@ -239,10 +240,13 @@ const StreamHealer = (() => {
      */
     const stopMonitoring = (video) => {
         const intervalId = monitoredVideos.get(video);
-        if (intervalId) {
+        if (intervalId !== undefined) {
             clearInterval(intervalId);
             monitoredVideos.delete(video);
             monitoredCount--;
+            if (video === activeVideo) {
+                activeVideo = null;
+            }
             Logger.add('[HEALER:STOP] Stopped monitoring video', {
                 remainingMonitors: monitoredCount
             });
@@ -260,6 +264,11 @@ const StreamHealer = (() => {
             Logger.add('[HEALER:SKIP] Video already being monitored');
             return;
         }
+
+        if (activeVideo && activeVideo !== video) {
+            stopMonitoring(activeVideo);
+        }
+        activeVideo = video;
 
         let lastTime = video.currentTime;
         let stuckCount = 0;
@@ -321,3 +330,7 @@ const StreamHealer = (() => {
         getStats: () => ({ healAttempts, isHealing, monitoredCount })
     };
 })();
+
+
+
+

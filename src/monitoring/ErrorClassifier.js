@@ -8,9 +8,9 @@ const ErrorClassifier = (() => {
 
     return {
         classify: (error, message) => {
-            // Critical media errors (always trigger recovery)
+            // Critical media errors (track for recovery)
             if (error instanceof MediaError || (error && error.code >= 1 && error.code <= 4)) {
-                return { severity: 'CRITICAL', action: 'TRIGGER_RECOVERY' };
+                return { severity: 'CRITICAL', action: 'LOG_AND_METRIC' };
             }
 
             // Network errors (usually recoverable)
@@ -28,3 +28,4 @@ const ErrorClassifier = (() => {
         }
     };
 })();
+

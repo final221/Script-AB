@@ -28,7 +28,6 @@ Output: `dist/code.js`
 ### Debug
 ```javascript
 getTwitchHealerStats()    // Get heal statistics
-forceTwitchHeal()         // Manually trigger heal attempt
 exportTwitchAdLogs()      // Download merged timeline (script + console logs)
 ```
 
@@ -82,6 +81,7 @@ Key settings in `Config.js`:
 
 ## Version
 
-Current: **4.0.5**
+Current: **4.0.13**
 
 Version increments automatically on each build (patch).
+

@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.0.12
+// @version       4.0.13
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -417,9 +417,9 @@ const ErrorClassifier = (() => {
 
     return {
         classify: (error, message) => {
-            // Critical media errors (always trigger recovery)
+            // Critical media errors (track for recovery)
             if (error instanceof MediaError || (error && error.code >= 1 && error.code <= 4)) {
-                return { severity: 'CRITICAL', action: 'TRIGGER_RECOVERY' };
+                return { severity: 'CRITICAL', action: 'LOG_AND_METRIC' };
             }
 
             // Network errors (usually recoverable)
@@ -437,6 +437,7 @@ const ErrorClassifier = (() => {
         }
     };
 })();
+
 
 // --- Logger ---
 /**
@@ -781,6 +782,7 @@ const StreamHealer = (() => {
     let healAttempts = 0;
     let lastStallTime = 0;
     let monitoredCount = 0; // Track count manually (WeakMap has no .size)
+    let activeVideo = null; // Track the current active video
 
     // Track monitored videos to prevent duplicate timers
     const monitoredVideos = new WeakMap(); // video -> intervalId
@@ -1012,10 +1014,13 @@ const StreamHealer = (() => {
      */
     const stopMonitoring = (video) => {
         const intervalId = monitoredVideos.get(video);
-        if (intervalId) {
+        if (intervalId !== undefined) {
             clearInterval(intervalId);
             monitoredVideos.delete(video);
             monitoredCount--;
+            if (video === activeVideo) {
+                activeVideo = null;
+            }
             Logger.add('[HEALER:STOP] Stopped monitoring video', {
                 remainingMonitors: monitoredCount
             });
@@ -1033,6 +1038,11 @@ const StreamHealer = (() => {
             Logger.add('[HEALER:SKIP] Video already being monitored');
             return;
         }
+
+        if (activeVideo && activeVideo !== video) {
+            stopMonitoring(activeVideo);
+        }
+        activeVideo = video;
 
         let lastTime = video.currentTime;
         let stuckCount = 0;
@@ -1094,6 +1104,10 @@ const StreamHealer = (() => {
         getStats: () => ({ healAttempts, isHealing, monitoredCount })
     };
 })();
+
+
+
+
 
 // ============================================================================
 // 6. CORE ORCHESTRATOR (Stream Healer Edition)
@@ -1181,16 +1195,6 @@ const CoreOrchestrator = (() => {
                 }
             };
 
-            exposeGlobal('forceTwitchHeal', () => {
-                const video = document.querySelector('video');
-                if (video) {
-                    Logger.add('[CORE] Manual heal triggered');
-                    StreamHealer.onStallDetected(video, { trigger: 'MANUAL' });
-                } else {
-                    console.log('No video element found');
-                }
-            });
-
             exposeGlobal('getTwitchHealerStats', () => {
                 return {
                     healer: StreamHealer.getStats(),
@@ -1216,7 +1220,5 @@ const CoreOrchestrator = (() => {
 })();
 
 CoreOrchestrator.init();
-
-
 
 })();

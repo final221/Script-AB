@@ -84,16 +84,6 @@ const CoreOrchestrator = (() => {
                 }
             };
 
-            exposeGlobal('forceTwitchHeal', () => {
-                const video = document.querySelector('video');
-                if (video) {
-                    Logger.add('[CORE] Manual heal triggered');
-                    StreamHealer.onStallDetected(video, { trigger: 'MANUAL' });
-                } else {
-                    console.log('No video element found');
-                }
-            });
-
             exposeGlobal('getTwitchHealerStats', () => {
                 return {
                     healer: StreamHealer.getStats(),
@@ -119,5 +109,3 @@ const CoreOrchestrator = (() => {
 })();
 
 CoreOrchestrator.init();
-
-

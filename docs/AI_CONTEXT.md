@@ -40,8 +40,7 @@
 | **Logging** | `Logger` | `Instrumentation` |
 
 ## Debugging Tools
-The following global functions are exposed for debugging and manual intervention:
-- `window.forceTwitchHeal()`: Manually triggers a heal attempt.
+The following global functions are exposed for debugging:
 - `window.getTwitchHealerStats()`: Returns current heal statistics.
 - `window.exportTwitchAdLogs()`: Downloads merged timeline of script + console logs.
 
@@ -59,3 +58,6 @@ Build order matters (dependencies must load first):
 10. `Instrumentation.js` - Console capture (uses Logger)
 11. `StreamHealer.js` - Main healer (uses all above)
 12. `CoreOrchestrator.js` - Entry point (initializes everything)
+
+
+
