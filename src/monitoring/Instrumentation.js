@@ -6,16 +6,8 @@
  */
 const Instrumentation = (() => {
     const classifyError = ErrorClassifier.classify;
-    const SIGNAL_THROTTLE_MS = 2000;
-    const SIGNAL_PATTERNS = {
-        PLAYHEAD_STALL: /playhead stalling at/i,
-        PROCESSING_ASSET: /404_processing_640x360\.png/i,
-    };
-    const lastSignalTimes = {
-        playhead_stall: 0,
-        processing_asset: 0
-    };
     let externalSignalHandler = null;
+    let signalDetector = null;
 
     // Helper to capture video state for logging
     const getVideoState = () => {
@@ -72,116 +64,63 @@ const Instrumentation = (() => {
         }
     };
 
-    const maybeEmitSignal = (type, message, level) => {
-        const now = Date.now();
-        const lastTime = lastSignalTimes[type] || 0;
-        if (now - lastTime < SIGNAL_THROTTLE_MS) {
-            return;
-        }
-        lastSignalTimes[type] = now;
-        Logger.add('[INSTRUMENT:CONSOLE_HINT] Console signal detected', {
-            type,
-            level,
-            message: message.substring(0, 300)
-        });
-        emitExternalSignal({
-            type,
-            level,
-            message,
-            timestamp: new Date().toISOString()
-        });
-    };
+    const consoleInterceptor = ConsoleInterceptor.create({
+        onLog: (args) => {
+            Logger.captureConsole('log', args);
+        },
+        onError: (args) => {
+            Logger.captureConsole('error', args);
 
-    const detectConsoleSignals = (level, message) => {
-        if (SIGNAL_PATTERNS.PLAYHEAD_STALL.test(message)) {
-            maybeEmitSignal('playhead_stall', message, level);
-        }
-        if (SIGNAL_PATTERNS.PROCESSING_ASSET.test(message)) {
-            maybeEmitSignal('processing_asset', message, level);
-        }
-    };
+            const msg = args.map(String).join(' ');
+            const classification = classifyError(null, msg);
 
-    // Capture console.log for timeline correlation
-    const interceptConsoleLog = () => {
-        const originalLog = console.log;
+            Logger.add('[INSTRUMENT:CONSOLE_ERROR] Console error intercepted', {
+                message: msg.substring(0, 300),
+                severity: classification.severity,
+                action: classification.action
+            });
 
-        console.log = (...args) => {
-            originalLog.apply(console, args);
-            try {
-                Logger.captureConsole('log', args);
-            } catch (e) {
-                // Avoid recursion
+            if (signalDetector) {
+                signalDetector.detect('error', msg);
             }
-        };
-    };
 
-    const interceptConsoleError = () => {
-        const originalError = console.error;
+            if (classification.action !== 'LOG_ONLY') {
+                Metrics.increment('errors');
+            }
+        },
+        onWarn: (args) => {
+            Logger.captureConsole('warn', args);
 
-        console.error = (...args) => {
-            originalError.apply(console, args);
-            try {
-                Logger.captureConsole('error', args);
+            const msg = args.map(String).join(' ');
 
-                const msg = args.map(String).join(' ');
-                const classification = classifyError(null, msg);
+            if (signalDetector) {
+                signalDetector.detect('warn', msg);
+            }
 
-                Logger.add('[INSTRUMENT:CONSOLE_ERROR] Console error intercepted', {
-                    message: msg.substring(0, 300),
-                    severity: classification.severity,
-                    action: classification.action
+            if (CONFIG.logging.LOG_CSP_WARNINGS && msg.includes('Content-Security-Policy')) {
+                Logger.add('[INSTRUMENT:CSP] CSP warning', {
+                    message: msg.substring(0, 200),
+                    severity: 'LOW'
                 });
-
-                detectConsoleSignals('error', msg);
-
-                if (classification.action !== 'LOG_ONLY') {
-                    Metrics.increment('errors');
-                }
-            } catch (e) {
-                // Avoid recursion if logging fails
             }
-        };
-    };
-
-    const interceptConsoleWarn = () => {
-        const originalWarn = console.warn;
-
-        console.warn = (...args) => {
-            originalWarn.apply(console, args);
-            try {
-                Logger.captureConsole('warn', args);
-
-                const msg = args.map(String).join(' ');
-
-                detectConsoleSignals('warn', msg);
-
-                // Log CSP warnings for debugging
-                if (CONFIG.logging.LOG_CSP_WARNINGS && msg.includes('Content-Security-Policy')) {
-                    Logger.add('[INSTRUMENT:CSP] CSP warning', {
-                        message: msg.substring(0, 200),
-                        severity: 'LOW'
-                    });
-                }
-            } catch (e) {
-                // Avoid recursion if logging fails
-            }
-        };
-    };
+        }
+    });
 
     return {
         init: (options = {}) => {
             externalSignalHandler = typeof options.onSignal === 'function'
                 ? options.onSignal
                 : null;
+            signalDetector = ConsoleSignalDetector.create({
+                emitSignal: emitExternalSignal
+            });
             Logger.add('[INSTRUMENT:INIT] Instrumentation initialized', {
                 features: ['globalErrors', 'consoleLogs', 'consoleErrors', 'consoleWarns'],
                 consoleCapture: true,
                 externalSignals: Boolean(externalSignalHandler)
             });
             setupGlobalErrorHandlers();
-            interceptConsoleLog();
-            interceptConsoleError();
-            interceptConsoleWarn();
+            consoleInterceptor.attach();
         },
     };
 })();

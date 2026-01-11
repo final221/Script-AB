@@ -47,25 +47,34 @@ The build uses a priority list followed by auto-discovered modules, then the ent
 1. `config/Config.js`
 2. `utils/Utils.js`
 3. `utils/Adapters.js`
-4. `recovery/BufferGapFinder.js`
-5. `recovery/LiveEdgeSeeker.js`
-6. `monitoring/ErrorClassifier.js`
-7. `monitoring/Logger.js`
-8. `monitoring/Metrics.js`
-9. `monitoring/ReportGenerator.js`
-10. `monitoring/Instrumentation.js`
-11. `core/VideoState.js`
-12. `core/PlaybackStateTracker.js`
-13. `core/PlaybackEventHandlers.js`
-14. `core/PlaybackWatchdog.js`
-15. `core/PlaybackMonitor.js`
-16. `core/CandidateSelector.js`
-17. `core/RecoveryManager.js`
-18. `core/MonitorRegistry.js`
-19. `core/HealPipeline.js`
-20. `core/ExternalSignalRouter.js`
-21. `core/StreamHealer.js`
-22. `core/CoreOrchestrator.js`
+4. `recovery/BufferRanges.js`
+5. `recovery/HealPointFinder.js`
+6. `recovery/BufferGapFinder.js`
+7. `recovery/SeekTargetCalculator.js`
+8. `recovery/LiveEdgeSeeker.js`
+9. `monitoring/ErrorClassifier.js`
+10. `monitoring/Logger.js`
+11. `monitoring/Metrics.js`
+12. `monitoring/ReportGenerator.js`
+13. `monitoring/ConsoleInterceptor.js`
+14. `monitoring/ConsoleSignalDetector.js`
+15. `monitoring/Instrumentation.js`
+16. `core/VideoState.js`
+17. `core/PlaybackStateTracker.js`
+18. `core/PlaybackEventHandlers.js`
+19. `core/PlaybackWatchdog.js`
+20. `core/PlaybackMonitor.js`
+21. `core/CandidateScorer.js`
+22. `core/CandidateSelector.js`
+23. `core/BackoffManager.js`
+24. `core/FailoverManager.js`
+25. `core/RecoveryManager.js`
+26. `core/MonitorRegistry.js`
+27. `core/HealPointPoller.js`
+28. `core/HealPipeline.js`
+29. `core/ExternalSignalRouter.js`
+30. `core/StreamHealer.js`
+31. `core/CoreOrchestrator.js`
 <!-- LOAD_ORDER_END -->
 
 
@@ -149,25 +158,35 @@ Script Logger.add() ────────┼──> Logger.getMergedTimeline(
 - **PlaybackEventHandlers.js** - Video event wiring for playback monitoring
 - **PlaybackWatchdog.js** - Watchdog interval for stall checks
 - **PlaybackMonitor.js** - Event-driven playback monitoring with watchdog
+- **CandidateScorer.js** - Scores video candidates
 - **CandidateSelector.js** - Scores and selects the active video
+- **BackoffManager.js** - No-heal-point backoff tracking
+- **FailoverManager.js** - Failover attempt logic
 - **RecoveryManager.js** - Backoff and failover coordination
 - **MonitorRegistry.js** - Tracks monitored video lifecycle
+- **HealPointPoller.js** - Polls for heal points
 - **HealPipeline.js** - Polls for heal points and executes seeks
 - **ExternalSignalRouter.js** - Handles console signal hints
 - **StreamHealer.js** - Main orchestrator for stall detection and healing
 
 ### Recovery Layer
-- **BufferGapFinder.js** - Analyzes video buffer for heal points
-  - `findHealPoint()` - Finds buffer range starting after currentTime
-  - `isBufferExhausted()` - Checks if we're at buffer edge
+- **BufferRanges.js** - Buffer range helpers
   - `getBufferRanges()` - Extracts all buffer ranges
-- **LiveEdgeSeeker.js** - Executes seek and play operations
-  - `seekAndPlay()` - Seeks to heal point, starts playback
+  - `formatRanges()` - Formats ranges for logs
+  - `isBufferExhausted()` - Checks if we're at buffer edge
+- **HealPointFinder.js** - Finds heal points
+  - `findHealPoint()` - Finds buffer range starting after currentTime
+- **BufferGapFinder.js** - Buffer analysis facade
+- **SeekTargetCalculator.js** - Validates and calculates seek targets
   - `validateSeekTarget()` - Ensures seek is safe (within buffer)
   - `calculateSafeTarget()` - Calculates optimal seek position
+- **LiveEdgeSeeker.js** - Executes seek and play operations
+  - `seekAndPlay()` - Seeks to heal point, starts playback
 
 ### Monitoring Layer
 - **Logger.js** - Log collection with console capture
+- **ConsoleInterceptor.js** - Wraps console methods for capture
+- **ConsoleSignalDetector.js** - Detects console signal hints
 - **Instrumentation.js** - Console interception for timeline
 - **Metrics.js** - Metrics tracking (stalls, heals, errors)
 - **ReportGenerator.js** - Export functionality

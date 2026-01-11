@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.0.28
+// @version       4.0.29
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -121,19 +121,11 @@ const Adapters = {
     }
 };
 
-// --- BufferGapFinder ---
+// --- BufferRanges ---
 /**
- * Finds "heal points" in the video buffer after a stall.
- * When uBO blocks ad segments, new content arrives in a separate buffer range.
- * This module finds that new range so we can seek to it.
+ * Helpers for working with media buffer ranges.
  */
-const BufferGapFinder = (() => {
-    // Minimum buffer size to consider a valid heal point (seconds)
-    const MIN_HEAL_BUFFER_S = 2;
-
-    /**
-     * Get all buffer ranges as an array of {start, end} objects
-     */
+const BufferRanges = (() => {
     const getBufferRanges = (video) => {
         const ranges = [];
         if (!video?.buffered) return ranges;
@@ -147,23 +139,45 @@ const BufferGapFinder = (() => {
         return ranges;
     };
 
-    /**
-     * Format buffer ranges for logging
-     */
     const formatRanges = (ranges) => {
         if (!ranges || ranges.length === 0) return 'none';
         return ranges.map(r => `[${r.start.toFixed(2)}-${r.end.toFixed(2)}]`).join(', ');
     };
 
-    /**
-     * Find a heal point - a buffer range that starts AFTER currentTime
-     * with sufficient buffer to be useful.
-     * 
-     * @param {HTMLVideoElement} video
-     * @param {Object} options
-     * @param {boolean} options.silent - If true, suppress logging (for polling loops)
-     * @returns {{ start: number, end: number, gapSize: number } | null}
-     */
+    const isBufferExhausted = (video) => {
+        if (!video?.buffered || video.buffered.length === 0) {
+            return true;
+        }
+
+        const currentTime = video.currentTime;
+
+        for (let i = 0; i < video.buffered.length; i++) {
+            const start = video.buffered.start(i);
+            const end = video.buffered.end(i);
+
+            if (currentTime >= start && currentTime <= end) {
+                const bufferRemaining = end - currentTime;
+                return bufferRemaining < 0.5;
+            }
+        }
+
+        return true;
+    };
+
+    return {
+        getBufferRanges,
+        formatRanges,
+        isBufferExhausted
+    };
+})();
+
+// --- HealPointFinder ---
+/**
+ * Finds heal points in buffered ranges.
+ */
+const HealPointFinder = (() => {
+    const MIN_HEAL_BUFFER_S = 2;
+
     const findHealPoint = (video, options = {}) => {
         if (!video) {
             if (!options.silent) {
@@ -173,36 +187,29 @@ const BufferGapFinder = (() => {
         }
 
         const currentTime = video.currentTime;
-        const ranges = getBufferRanges(video);
+        const ranges = BufferRanges.getBufferRanges(video);
 
         if (!options.silent) {
             Logger.add('[HEALER:SCAN] Scanning for heal point', {
                 currentTime: currentTime.toFixed(3),
-                bufferRanges: formatRanges(ranges),
+                bufferRanges: BufferRanges.formatRanges(ranges),
                 rangeCount: ranges.length
             });
         }
 
-        // Look for a buffer range that offers enough content ahead
         for (let i = 0; i < ranges.length; i++) {
             const range = ranges[i];
-
-            // Check if this range has enough content AFTER the current time
-            // (end - max(start, currentTime)) > MIN
             const effectiveStart = Math.max(range.start, currentTime);
             const contentAhead = range.end - effectiveStart;
 
             if (contentAhead > MIN_HEAL_BUFFER_S) {
-                // Determine if this is a gap jump or a contiguous nudge
                 let healStart = range.start;
                 let isNudge = false;
 
                 if (range.start <= currentTime) {
-                    // Contiguous buffer: Nudge forward to unstuck
                     healStart = currentTime + 0.5;
                     isNudge = true;
 
-                    // SAFETY: Ensure we don't nudge past the end (though contentAhead check covers this)
                     if (healStart >= range.end - 0.1) {
                         if (!options.silent) {
                             Logger.add('[HEALER:SKIP] Nudge target too close to buffer end');
@@ -233,7 +240,7 @@ const BufferGapFinder = (() => {
         if (!options.silent) {
             Logger.add('[HEALER:NONE] No valid heal point found', {
                 currentTime: currentTime.toFixed(3),
-                ranges: formatRanges(ranges),
+                ranges: BufferRanges.formatRanges(ranges),
                 minRequired: MIN_HEAL_BUFFER_S + 's'
             });
         }
@@ -241,58 +248,38 @@ const BufferGapFinder = (() => {
         return null;
     };
 
-    /**
-     * Check if we're at buffer exhaustion (stalled because buffer ran out)
-     */
-    const isBufferExhausted = (video) => {
-        if (!video?.buffered || video.buffered.length === 0) {
-            return true; // No buffer at all
-        }
-
-        const currentTime = video.currentTime;
-
-        // Find which buffer range contains currentTime
-        for (let i = 0; i < video.buffered.length; i++) {
-            const start = video.buffered.start(i);
-            const end = video.buffered.end(i);
-
-            if (currentTime >= start && currentTime <= end) {
-                // We're in this range - check if we're at the edge
-                const bufferRemaining = end - currentTime;
-                const exhausted = bufferRemaining < 0.5; // Less than 0.5s remaining
-
-                return exhausted;
-            }
-        }
-
-        // Not in any buffer range - we've fallen off
-        return true;
-    };
-
     return {
         findHealPoint,
-        isBufferExhausted,
-        getBufferRanges,
-        formatRanges,
         MIN_HEAL_BUFFER_S
     };
 })();
 
-// --- LiveEdgeSeeker ---
+// --- BufferGapFinder ---
 /**
- * Seeks to a heal point and resumes playback.
- * CRITICAL: Validates seek target is within buffer bounds to avoid Infinity duration.
+ * Finds "heal points" in the video buffer after a stall.
+ * When uBO blocks ad segments, new content arrives in a separate buffer range.
+ * This module finds that new range so we can seek to it.
  */
-const LiveEdgeSeeker = (() => {
-    /**
-     * Validate that a seek target is safe (within buffer bounds)
-     */
+const BufferGapFinder = (() => {
+    return {
+        findHealPoint: HealPointFinder.findHealPoint,
+        isBufferExhausted: BufferRanges.isBufferExhausted,
+        getBufferRanges: BufferRanges.getBufferRanges,
+        formatRanges: BufferRanges.formatRanges,
+        MIN_HEAL_BUFFER_S: HealPointFinder.MIN_HEAL_BUFFER_S
+    };
+})();
+
+// --- SeekTargetCalculator ---
+/**
+ * Calculates and validates safe seek targets.
+ */
+const SeekTargetCalculator = (() => {
     const validateSeekTarget = (video, target) => {
         if (!video?.buffered || video.buffered.length === 0) {
             return { valid: false, reason: 'No buffer' };
         }
 
-        // Check if target is within any buffer range
         for (let i = 0; i < video.buffered.length; i++) {
             const start = video.buffered.start(i);
             const end = video.buffered.end(i);
@@ -309,24 +296,30 @@ const LiveEdgeSeeker = (() => {
         return { valid: false, reason: 'Target not in buffer' };
     };
 
-    /**
-     * Calculate safe seek target within a heal point range
-     * Seeks to just after start, but never beyond end
-     */
     const calculateSafeTarget = (healPoint) => {
         const { start, end } = healPoint;
         const bufferSize = end - start;
 
-        // Seek to 0.1s after start, or middle of tiny buffers
         if (bufferSize < 1) {
-            return start + (bufferSize * 0.5); // Middle of small buffer
+            return start + (bufferSize * 0.5);
         }
 
-        // For larger buffers, seek to 0.5s in (but ensure at least 1s headroom)
         const offset = Math.min(0.5, bufferSize - 1);
         return start + offset;
     };
 
+    return {
+        validateSeekTarget,
+        calculateSafeTarget
+    };
+})();
+
+// --- LiveEdgeSeeker ---
+/**
+ * Seeks to a heal point and resumes playback.
+ * CRITICAL: Validates seek target is within buffer bounds to avoid Infinity duration.
+ */
+const LiveEdgeSeeker = (() => {
     /**
      * Seek to heal point and attempt to resume playback
      * 
@@ -339,10 +332,9 @@ const LiveEdgeSeeker = (() => {
         const fromTime = video.currentTime;
 
         // Calculate safe target
-        const target = calculateSafeTarget(healPoint);
+        const target = SeekTargetCalculator.calculateSafeTarget(healPoint);
 
-        // Validate before seeking
-        const validation = validateSeekTarget(video, target);
+        const validation = SeekTargetCalculator.validateSeekTarget(video, target);
 
         Logger.add('[HEALER:SEEK] Attempting seek', {
             from: fromTime.toFixed(3),
@@ -419,8 +411,8 @@ const LiveEdgeSeeker = (() => {
 
     return {
         seekAndPlay,
-        validateSeekTarget,
-        calculateSafeTarget
+        validateSeekTarget: SeekTargetCalculator.validateSeekTarget,
+        calculateSafeTarget: SeekTargetCalculator.calculateSafeTarget
     };
 })();
 
@@ -660,6 +652,93 @@ Total entries: ${logs.length}
     };
 })();
 
+// --- ConsoleInterceptor ---
+/**
+ * Captures console output and forwards to callbacks.
+ */
+const ConsoleInterceptor = (() => {
+    const create = (options = {}) => {
+        const onLog = options.onLog || (() => {});
+        const onWarn = options.onWarn || (() => {});
+        const onError = options.onError || (() => {});
+
+        const intercept = (level, handler) => {
+            const original = console[level];
+            console[level] = (...args) => {
+                original.apply(console, args);
+                try {
+                    handler(args);
+                } catch (e) {
+                    // Avoid recursion
+                }
+            };
+        };
+
+        const attach = () => {
+            intercept('log', onLog);
+            intercept('warn', onWarn);
+            intercept('error', onError);
+        };
+
+        return { attach };
+    };
+
+    return { create };
+})();
+
+// --- ConsoleSignalDetector ---
+/**
+ * Detects console messages that hint at playback issues.
+ */
+const ConsoleSignalDetector = (() => {
+    const SIGNAL_THROTTLE_MS = 2000;
+    const SIGNAL_PATTERNS = {
+        PLAYHEAD_STALL: /playhead stalling at/i,
+        PROCESSING_ASSET: /404_processing_640x360\.png/i,
+    };
+
+    const create = (options = {}) => {
+        const emitSignal = options.emitSignal || (() => {});
+        const lastSignalTimes = {
+            playhead_stall: 0,
+            processing_asset: 0
+        };
+
+        const maybeEmit = (type, message, level) => {
+            const now = Date.now();
+            const lastTime = lastSignalTimes[type] || 0;
+            if (now - lastTime < SIGNAL_THROTTLE_MS) {
+                return;
+            }
+            lastSignalTimes[type] = now;
+            Logger.add('[INSTRUMENT:CONSOLE_HINT] Console signal detected', {
+                type,
+                level,
+                message: message.substring(0, 300)
+            });
+            emitSignal({
+                type,
+                level,
+                message,
+                timestamp: new Date().toISOString()
+            });
+        };
+
+        const detect = (level, message) => {
+            if (SIGNAL_PATTERNS.PLAYHEAD_STALL.test(message)) {
+                maybeEmit('playhead_stall', message, level);
+            }
+            if (SIGNAL_PATTERNS.PROCESSING_ASSET.test(message)) {
+                maybeEmit('processing_asset', message, level);
+            }
+        };
+
+        return { detect };
+    };
+
+    return { create };
+})();
+
 // --- Instrumentation ---
 /**
  * Hooks into global events and console methods to monitor application behavior.
@@ -668,16 +747,8 @@ Total entries: ${logs.length}
  */
 const Instrumentation = (() => {
     const classifyError = ErrorClassifier.classify;
-    const SIGNAL_THROTTLE_MS = 2000;
-    const SIGNAL_PATTERNS = {
-        PLAYHEAD_STALL: /playhead stalling at/i,
-        PROCESSING_ASSET: /404_processing_640x360\.png/i,
-    };
-    const lastSignalTimes = {
-        playhead_stall: 0,
-        processing_asset: 0
-    };
     let externalSignalHandler = null;
+    let signalDetector = null;
 
     // Helper to capture video state for logging
     const getVideoState = () => {
@@ -734,116 +805,63 @@ const Instrumentation = (() => {
         }
     };
 
-    const maybeEmitSignal = (type, message, level) => {
-        const now = Date.now();
-        const lastTime = lastSignalTimes[type] || 0;
-        if (now - lastTime < SIGNAL_THROTTLE_MS) {
-            return;
-        }
-        lastSignalTimes[type] = now;
-        Logger.add('[INSTRUMENT:CONSOLE_HINT] Console signal detected', {
-            type,
-            level,
-            message: message.substring(0, 300)
-        });
-        emitExternalSignal({
-            type,
-            level,
-            message,
-            timestamp: new Date().toISOString()
-        });
-    };
+    const consoleInterceptor = ConsoleInterceptor.create({
+        onLog: (args) => {
+            Logger.captureConsole('log', args);
+        },
+        onError: (args) => {
+            Logger.captureConsole('error', args);
 
-    const detectConsoleSignals = (level, message) => {
-        if (SIGNAL_PATTERNS.PLAYHEAD_STALL.test(message)) {
-            maybeEmitSignal('playhead_stall', message, level);
-        }
-        if (SIGNAL_PATTERNS.PROCESSING_ASSET.test(message)) {
-            maybeEmitSignal('processing_asset', message, level);
-        }
-    };
+            const msg = args.map(String).join(' ');
+            const classification = classifyError(null, msg);
 
-    // Capture console.log for timeline correlation
-    const interceptConsoleLog = () => {
-        const originalLog = console.log;
+            Logger.add('[INSTRUMENT:CONSOLE_ERROR] Console error intercepted', {
+                message: msg.substring(0, 300),
+                severity: classification.severity,
+                action: classification.action
+            });
 
-        console.log = (...args) => {
-            originalLog.apply(console, args);
-            try {
-                Logger.captureConsole('log', args);
-            } catch (e) {
-                // Avoid recursion
+            if (signalDetector) {
+                signalDetector.detect('error', msg);
             }
-        };
-    };
 
-    const interceptConsoleError = () => {
-        const originalError = console.error;
+            if (classification.action !== 'LOG_ONLY') {
+                Metrics.increment('errors');
+            }
+        },
+        onWarn: (args) => {
+            Logger.captureConsole('warn', args);
 
-        console.error = (...args) => {
-            originalError.apply(console, args);
-            try {
-                Logger.captureConsole('error', args);
+            const msg = args.map(String).join(' ');
 
-                const msg = args.map(String).join(' ');
-                const classification = classifyError(null, msg);
+            if (signalDetector) {
+                signalDetector.detect('warn', msg);
+            }
 
-                Logger.add('[INSTRUMENT:CONSOLE_ERROR] Console error intercepted', {
-                    message: msg.substring(0, 300),
-                    severity: classification.severity,
-                    action: classification.action
+            if (CONFIG.logging.LOG_CSP_WARNINGS && msg.includes('Content-Security-Policy')) {
+                Logger.add('[INSTRUMENT:CSP] CSP warning', {
+                    message: msg.substring(0, 200),
+                    severity: 'LOW'
                 });
-
-                detectConsoleSignals('error', msg);
-
-                if (classification.action !== 'LOG_ONLY') {
-                    Metrics.increment('errors');
-                }
-            } catch (e) {
-                // Avoid recursion if logging fails
             }
-        };
-    };
-
-    const interceptConsoleWarn = () => {
-        const originalWarn = console.warn;
-
-        console.warn = (...args) => {
-            originalWarn.apply(console, args);
-            try {
-                Logger.captureConsole('warn', args);
-
-                const msg = args.map(String).join(' ');
-
-                detectConsoleSignals('warn', msg);
-
-                // Log CSP warnings for debugging
-                if (CONFIG.logging.LOG_CSP_WARNINGS && msg.includes('Content-Security-Policy')) {
-                    Logger.add('[INSTRUMENT:CSP] CSP warning', {
-                        message: msg.substring(0, 200),
-                        severity: 'LOW'
-                    });
-                }
-            } catch (e) {
-                // Avoid recursion if logging fails
-            }
-        };
-    };
+        }
+    });
 
     return {
         init: (options = {}) => {
             externalSignalHandler = typeof options.onSignal === 'function'
                 ? options.onSignal
                 : null;
+            signalDetector = ConsoleSignalDetector.create({
+                emitSignal: emitExternalSignal
+            });
             Logger.add('[INSTRUMENT:INIT] Instrumentation initialized', {
                 features: ['globalErrors', 'consoleLogs', 'consoleErrors', 'consoleWarns'],
                 consoleCapture: true,
                 externalSignals: Boolean(externalSignalHandler)
             });
             setupGlobalErrorHandlers();
-            interceptConsoleLog();
-            interceptConsoleError();
-            interceptConsoleWarn();
+            consoleInterceptor.attach();
         },
     };
 })();
@@ -1375,33 +1393,16 @@ const PlaybackMonitor = (() => {
     return { create };
 })();
 
-// --- CandidateSelector ---
+// --- CandidateScorer ---
 /**
- * Scores and selects the best video candidate for healing.
+ * Scores a video candidate based on playback state.
  */
-const CandidateSelector = (() => {
+const CandidateScorer = (() => {
     const create = (options) => {
-        const monitorsById = options.monitorsById;
-        const getVideoId = options.getVideoId;
-        const logDebug = options.logDebug;
-        const maxMonitors = options.maxMonitors;
         const minProgressMs = options.minProgressMs;
-        const switchDelta = options.switchDelta;
         const isFallbackSource = options.isFallbackSource;
 
-        let activeCandidateId = null;
-        let lockChecker = null;
-
-        const setLockChecker = (fn) => {
-            lockChecker = fn;
-        };
-
-        const getActiveId = () => activeCandidateId;
-        const setActiveId = (id) => {
-            activeCandidateId = id;
-        };
-
-        const scoreVideo = (video, monitor, videoId) => {
+        const score = (video, monitor, videoId) => {
             const vs = VideoState.get(video, videoId);
             const state = monitor.state;
             const progressAgoMs = state.hasProgress && state.lastProgressTime
@@ -1501,6 +1502,40 @@ const CandidateSelector = (() => {
                 progressEligible
             };
         };
+
+        return { score };
+    };
+
+    return { create };
+})();
+
+// --- CandidateSelector ---
+/**
+ * Scores and selects the best video candidate for healing.
+ */
+const CandidateSelector = (() => {
+    const create = (options) => {
+        const monitorsById = options.monitorsById;
+        const logDebug = options.logDebug;
+        const maxMonitors = options.maxMonitors;
+        const minProgressMs = options.minProgressMs;
+        const switchDelta = options.switchDelta;
+        const isFallbackSource = options.isFallbackSource;
+
+        let activeCandidateId = null;
+        let lockChecker = null;
+        const scorer = CandidateScorer.create({ minProgressMs, isFallbackSource });
+
+        const setLockChecker = (fn) => {
+            lockChecker = fn;
+        };
+
+        const getActiveId = () => activeCandidateId;
+        const setActiveId = (id) => {
+            activeCandidateId = id;
+        };
+
+        const scoreVideo = (video, monitor, videoId) => scorer.score(video, monitor, videoId);
 
         const evaluateCandidates = (reason) => {
             if (lockChecker && lockChecker()) {
@@ -1636,50 +1671,13 @@ const CandidateSelector = (() => {
     return { create };
 })();
 
-// --- RecoveryManager ---
+// --- BackoffManager ---
 /**
- * Handles backoff and failover recovery strategies.
+ * Tracks stall backoff state for no-heal-point scenarios.
  */
-const RecoveryManager = (() => {
-    const create = (options) => {
-        const monitorsById = options.monitorsById;
-        const candidateSelector = options.candidateSelector;
-        const getVideoId = options.getVideoId;
-        const logDebug = options.logDebug;
-
-        const state = {
-            inProgress: false,
-            timerId: null,
-            lastAttemptTime: 0,
-            fromId: null,
-            toId: null,
-            startTime: 0,
-            baselineProgressTime: 0
-        };
-
-        const getVideoIndex = (videoId) => {
-            const match = /video-(\d+)/.exec(videoId);
-            return match ? Number(match[1]) : -1;
-        };
-
-        const resetFailover = (reason) => {
-            if (state.timerId) {
-                clearTimeout(state.timerId);
-            }
-            if (state.inProgress) {
-                Logger.add('[HEALER:FAILOVER] Cleared', {
-                    reason,
-                    from: state.fromId,
-                    to: state.toId
-                });
-            }
-            state.inProgress = false;
-            state.timerId = null;
-            state.fromId = null;
-            state.toId = null;
-            state.startTime = 0;
-            state.baselineProgressTime = 0;
-        };
+const BackoffManager = (() => {
+    const create = (options = {}) => {
+        const logDebug = options.logDebug || (() => {});
 
         const resetBackoff = (monitorState, reason) => {
             if (!monitorState) return;
@@ -1713,6 +1711,78 @@ const RecoveryManager = (() => {
                 backoffMs,
                 nextHealAllowedInMs: backoffMs
             });
+        };
+
+        const shouldSkip = (videoId, monitorState) => {
+            const now = Date.now();
+            if (monitorState?.nextHealAllowedTime && now < monitorState.nextHealAllowedTime) {
+                if (now - (monitorState.lastBackoffLogTime || 0) > 5000) {
+                    monitorState.lastBackoffLogTime = now;
+                    logDebug('[HEALER:BACKOFF] Stall skipped due to backoff', {
+                        videoId,
+                        remainingMs: monitorState.nextHealAllowedTime - now,
+                        noHealPointCount: monitorState.noHealPointCount
+                    });
+                }
+                return true;
+            }
+            return false;
+        };
+
+        return {
+            resetBackoff,
+            applyBackoff,
+            shouldSkip
+        };
+    };
+
+    return { create };
+})();
+
+// --- FailoverManager ---
+/**
+ * Handles candidate failover attempts when healing fails.
+ */
+const FailoverManager = (() => {
+    const create = (options) => {
+        const monitorsById = options.monitorsById;
+        const candidateSelector = options.candidateSelector;
+        const getVideoId = options.getVideoId;
+        const logDebug = options.logDebug;
+        const resetBackoff = options.resetBackoff || (() => {});
+
+        const state = {
+            inProgress: false,
+            timerId: null,
+            lastAttemptTime: 0,
+            fromId: null,
+            toId: null,
+            startTime: 0,
+            baselineProgressTime: 0
+        };
+
+        const getVideoIndex = (videoId) => {
+            const match = /video-(\d+)/.exec(videoId);
+            return match ? Number(match[1]) : -1;
+        };
+
+        const resetFailover = (reason) => {
+            if (state.timerId) {
+                clearTimeout(state.timerId);
+            }
+            if (state.inProgress) {
+                Logger.add('[HEALER:FAILOVER] Cleared', {
+                    reason,
+                    from: state.fromId,
+                    to: state.toId
+                });
+            }
+            state.inProgress = false;
+            state.timerId = null;
+            state.fromId = null;
+            state.toId = null;
+            state.startTime = 0;
+            state.baselineProgressTime = 0;
         };
 
         const selectNewestCandidate = (excludeId) => {
@@ -1828,26 +1898,9 @@ const RecoveryManager = (() => {
             return true;
         };
 
-        const handleNoHealPoint = (video, monitorState, reason) => {
-            const videoId = getVideoId(video);
-            applyBackoff(videoId, monitorState, reason);
-
-            const stalledForMs = monitorState?.lastProgressTime
-                ? (Date.now() - monitorState.lastProgressTime)
-                : null;
-            const shouldFailover = monitorsById.size > 1
-                && (monitorState?.noHealPointCount >= CONFIG.stall.FAILOVER_AFTER_NO_HEAL_POINTS
-                    || (stalledForMs !== null && stalledForMs >= CONFIG.stall.FAILOVER_AFTER_STALL_MS));
-
-            if (shouldFailover) {
-                attemptFailover(videoId, reason, monitorState);
-            }
-        };
-
-        const shouldSkipStall = (videoId, monitorState) => {
-            const now = Date.now();
+        const shouldIgnoreStall = (videoId) => {
             if (state.inProgress && state.toId === videoId) {
-                const elapsedMs = now - state.startTime;
+                const elapsedMs = Date.now() - state.startTime;
                 if (elapsedMs < CONFIG.stall.FAILOVER_PROGRESS_TIMEOUT_MS) {
                     logDebug('[HEALER:FAILOVER] Stall ignored during failover', {
                         videoId,
@@ -1857,19 +1910,6 @@ const RecoveryManager = (() => {
                     return true;
                 }
             }
-
-            if (monitorState?.nextHealAllowedTime && now < monitorState.nextHealAllowedTime) {
-                if (now - (monitorState.lastBackoffLogTime || 0) > 5000) {
-                    monitorState.lastBackoffLogTime = now;
-                    logDebug('[HEALER:BACKOFF] Stall skipped due to backoff', {
-                        videoId,
-                        remainingMs: monitorState.nextHealAllowedTime - now,
-                        noHealPointCount: monitorState.noHealPointCount
-                    });
-                }
-                return true;
-            }
-
             return false;
         };
 
@@ -1880,12 +1920,70 @@ const RecoveryManager = (() => {
         };
 
         return {
-            isFailoverActive: () => state.inProgress,
+            isActive: () => state.inProgress,
             resetFailover,
-            resetBackoff,
+            attemptFailover,
+            shouldIgnoreStall,
+            onMonitorRemoved
+        };
+    };
+
+    return { create };
+})();
+
+// --- RecoveryManager ---
+/**
+ * Coordinates backoff and failover recovery strategies.
+ */
+const RecoveryManager = (() => {
+    const create = (options) => {
+        const monitorsById = options.monitorsById;
+        const candidateSelector = options.candidateSelector;
+        const getVideoId = options.getVideoId;
+        const logDebug = options.logDebug;
+
+        const backoffManager = BackoffManager.create({ logDebug });
+        const failoverManager = FailoverManager.create({
+            monitorsById,
+            candidateSelector,
+            getVideoId,
+            logDebug,
+            resetBackoff: backoffManager.resetBackoff
+        });
+
+        const handleNoHealPoint = (video, monitorState, reason) => {
+            const videoId = getVideoId(video);
+            backoffManager.applyBackoff(videoId, monitorState, reason);
+
+            const stalledForMs = monitorState?.lastProgressTime
+                ? (Date.now() - monitorState.lastProgressTime)
+                : null;
+            const shouldFailover = monitorsById.size > 1
+                && (monitorState?.noHealPointCount >= CONFIG.stall.FAILOVER_AFTER_NO_HEAL_POINTS
+                    || (stalledForMs !== null && stalledForMs >= CONFIG.stall.FAILOVER_AFTER_STALL_MS));
+
+            if (shouldFailover) {
+                failoverManager.attemptFailover(videoId, reason, monitorState);
+            }
+        };
+
+        const shouldSkipStall = (videoId, monitorState) => {
+            if (failoverManager.shouldIgnoreStall(videoId)) {
+                return true;
+            }
+            if (backoffManager.shouldSkip(videoId, monitorState)) {
+                return true;
+            }
+            return false;
+        };
+
+        return {
+            isFailoverActive: () => failoverManager.isActive(),
+            resetFailover: failoverManager.resetFailover,
+            resetBackoff: backoffManager.resetBackoff,
             handleNoHealPoint,
             shouldSkipStall,
-            onMonitorRemoved
+            onMonitorRemoved: failoverManager.onMonitorRemoved
         };
     };
 
@@ -2030,30 +2128,23 @@ const MonitorRegistry = (() => {
     return { create };
 })();
 
-// --- HealPipeline ---
+// --- HealPointPoller ---
 /**
- * Handles heal-point polling and seek recovery.
+ * Polls for heal points and detects self-recovery.
  */
-const HealPipeline = (() => {
+const HealPointPoller = (() => {
     const LOG = {
         POLL_START: '[HEALER:POLL_START]',
         POLL_SUCCESS: '[HEALER:POLL_SUCCESS]',
         POLL_TIMEOUT: '[HEALER:POLL_TIMEOUT]',
         POLLING: '[HEALER:POLLING]',
-        SELF_RECOVERED: '[HEALER:SELF_RECOVERED]',
-        START: '[HEALER:START]'
+        SELF_RECOVERED: '[HEALER:SELF_RECOVERED]'
     };
 
     const create = (options) => {
         const getVideoId = options.getVideoId;
         const logWithState = options.logWithState;
         const logDebug = options.logDebug;
-        const recoveryManager = options.recoveryManager;
-
-        const state = {
-            isHealing: false,
-            healAttempts: 0
-        };
 
         const hasRecovered = (video, monitorState) => {
             if (!video || !monitorState) return false;
@@ -2112,6 +2203,39 @@ const HealPipeline = (() => {
             return null;
         };
 
+        return {
+            pollForHealPoint,
+            hasRecovered
+        };
+    };
+
+    return { create };
+})();
+
+// --- HealPipeline ---
+/**
+ * Handles heal-point polling and seek recovery.
+ */
+const HealPipeline = (() => {
+    const LOG = {
+        START: '[HEALER:START]'
+    };
+
+    const create = (options) => {
+        const getVideoId = options.getVideoId;
+        const logWithState = options.logWithState;
+        const recoveryManager = options.recoveryManager;
+        const poller = HealPointPoller.create({
+            getVideoId,
+            logWithState,
+            logDebug: options.logDebug
+        });
+
+        const state = {
+            isHealing: false,
+            healAttempts: 0
+        };
+
         const attemptHeal = async (video, monitorState) => {
             if (state.isHealing) {
                 Logger.add('[HEALER:BLOCKED] Already healing');
@@ -2132,10 +2256,14 @@ const HealPipeline = (() => {
             });
 
             try {
-                const healPoint = await pollForHealPoint(video, monitorState, CONFIG.stall.HEAL_TIMEOUT_S * 1000);
+                const healPoint = await poller.pollForHealPoint(
+                    video,
+                    monitorState,
+                    CONFIG.stall.HEAL_TIMEOUT_S * 1000
+                );
 
                 if (!healPoint) {
-                    if (hasRecovered(video, monitorState)) {
+                    if (poller.hasRecovered(video, monitorState)) {
                         Logger.add('[HEALER:SKIPPED] Video recovered, no heal needed', {
                             duration: (performance.now() - healStartTime).toFixed(0) + 'ms',
                             finalState: VideoState.get(video, getVideoId(video))
@@ -2156,7 +2284,7 @@ const HealPipeline = (() => {
 
                 const freshPoint = BufferGapFinder.findHealPoint(video, { silent: true });
                 if (!freshPoint) {
-                    if (hasRecovered(video, monitorState)) {
+                    if (poller.hasRecovered(video, monitorState)) {
                         Logger.add('[HEALER:STALE_RECOVERED] Heal point gone, but video recovered', {
                             duration: (performance.now() - healStartTime).toFixed(0) + 'ms'
                         });
@@ -2213,7 +2341,7 @@ const HealPipeline = (() => {
                 if (monitorState) {
                     if (video.paused) {
                         monitorState.state = 'PAUSED';
-                    } else if (hasRecovered(video, monitorState)) {
+                    } else if (poller.hasRecovered(video, monitorState)) {
                         monitorState.state = 'PLAYING';
                     } else {
                         monitorState.state = 'STALLED';

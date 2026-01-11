@@ -49,25 +49,34 @@ Build order matters (dependencies must load first):
 1. `Config.js` - Configuration constants
 2. `Utils.js` - Utility functions (Fn namespace)
 3. `Adapters.js` - DOM adapters
-4. `BufferGapFinder.js` - Buffer analysis
-5. `LiveEdgeSeeker.js` - Seek execution
-6. `ErrorClassifier.js` - Error classification
-7. `Logger.js` - Logging (used by everything)
-8. `Metrics.js` - Metrics tracking
-9. `ReportGenerator.js` - Export functionality
-10. `Instrumentation.js` - Console capture (uses Logger)
-11. `VideoState.js` - Shared video state helper
-12. `PlaybackStateTracker.js` - Progress/stall tracking helper
-13. `PlaybackEventHandlers.js` - Event binding for playback monitoring
-14. `PlaybackWatchdog.js` - Watchdog interval logic
-15. `PlaybackMonitor.js` - Event-driven stall detection + watchdog
-16. `CandidateSelector.js` - Active video scoring/selection
-17. `RecoveryManager.js` - Backoff + failover coordination
-18. `MonitorRegistry.js` - Monitored video lifecycle
-19. `HealPipeline.js` - Heal-point polling + seeking
-20. `ExternalSignalRouter.js` - Console signal hints
-21. `StreamHealer.js` - Main healer (uses all above)
-22. `CoreOrchestrator.js` - Entry point (initializes everything)
+4. `BufferRanges.js` - Buffer range helpers
+5. `HealPointFinder.js` - Heal point search
+6. `BufferGapFinder.js` - Buffer analysis facade
+7. `SeekTargetCalculator.js` - Seek target validation
+8. `LiveEdgeSeeker.js` - Seek execution
+9. `ErrorClassifier.js` - Error classification
+10. `Logger.js` - Logging (used by everything)
+11. `Metrics.js` - Metrics tracking
+12. `ReportGenerator.js` - Export functionality
+13. `ConsoleInterceptor.js` - Console capture hooks
+14. `ConsoleSignalDetector.js` - Console signal detection
+15. `Instrumentation.js` - Console capture (uses Logger)
+16. `VideoState.js` - Shared video state helper
+17. `PlaybackStateTracker.js` - Progress/stall tracking helper
+18. `PlaybackEventHandlers.js` - Event binding for playback monitoring
+19. `PlaybackWatchdog.js` - Watchdog interval logic
+20. `PlaybackMonitor.js` - Event-driven stall detection + watchdog
+21. `CandidateScorer.js` - Candidate scoring logic
+22. `CandidateSelector.js` - Active video scoring/selection
+23. `BackoffManager.js` - Heal backoff tracking
+24. `FailoverManager.js` - Failover attempt orchestration
+25. `RecoveryManager.js` - Backoff + failover coordination
+26. `MonitorRegistry.js` - Monitored video lifecycle
+27. `HealPointPoller.js` - Heal point polling
+28. `HealPipeline.js` - Heal-point polling + seeking
+29. `ExternalSignalRouter.js` - Console signal hints
+30. `StreamHealer.js` - Main healer (uses all above)
+31. `CoreOrchestrator.js` - Entry point (initializes everything)
 
 
 

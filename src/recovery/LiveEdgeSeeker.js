@@ -5,49 +5,6 @@
  */
 const LiveEdgeSeeker = (() => {
     /**
-     * Validate that a seek target is safe (within buffer bounds)
-     */
-    const validateSeekTarget = (video, target) => {
-        if (!video?.buffered || video.buffered.length === 0) {
-            return { valid: false, reason: 'No buffer' };
-        }
-
-        // Check if target is within any buffer range
-        for (let i = 0; i < video.buffered.length; i++) {
-            const start = video.buffered.start(i);
-            const end = video.buffered.end(i);
-
-            if (target >= start && target <= end) {
-                return {
-                    valid: true,
-                    bufferRange: { start, end },
-                    headroom: end - target
-                };
-            }
-        }
-
-        return { valid: false, reason: 'Target not in buffer' };
-    };
-
-    /**
-     * Calculate safe seek target within a heal point range
-     * Seeks to just after start, but never beyond end
-     */
-    const calculateSafeTarget = (healPoint) => {
-        const { start, end } = healPoint;
-        const bufferSize = end - start;
-
-        // Seek to 0.1s after start, or middle of tiny buffers
-        if (bufferSize < 1) {
-            return start + (bufferSize * 0.5); // Middle of small buffer
-        }
-
-        // For larger buffers, seek to 0.5s in (but ensure at least 1s headroom)
-        const offset = Math.min(0.5, bufferSize - 1);
-        return start + offset;
-    };
-
-    /**
      * Seek to heal point and attempt to resume playback
      * 
      * @param {HTMLVideoElement} video
@@ -59,10 +16,9 @@ const LiveEdgeSeeker = (() => {
         const fromTime = video.currentTime;
 
         // Calculate safe target
-        const target = calculateSafeTarget(healPoint);
+        const target = SeekTargetCalculator.calculateSafeTarget(healPoint);
 
-        // Validate before seeking
-        const validation = validateSeekTarget(video, target);
+        const validation = SeekTargetCalculator.validateSeekTarget(video, target);
 
         Logger.add('[HEALER:SEEK] Attempting seek', {
             from: fromTime.toFixed(3),
@@ -139,7 +95,7 @@ const LiveEdgeSeeker = (() => {
 
     return {
         seekAndPlay,
-        validateSeekTarget,
-        calculateSafeTarget
+        validateSeekTarget: SeekTargetCalculator.validateSeekTarget,
+        calculateSafeTarget: SeekTargetCalculator.calculateSafeTarget
     };
 })();
