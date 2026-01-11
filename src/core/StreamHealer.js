@@ -296,6 +296,7 @@ const StreamHealer = (() => {
         monitoredCount++;
 
         Logger.add('[HEALER:MONITOR] Started monitoring video', {
+            debug: CONFIG.debug,
             checkInterval: CONFIG.stall.WATCHDOG_INTERVAL_MS + 'ms',
             totalMonitors: monitoredCount
         });

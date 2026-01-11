@@ -95,6 +95,10 @@ const PlaybackMonitor = (() => {
         let intervalId;
 
         const start = () => {
+            logDebug('[HEALER:MONITOR] PlaybackMonitor started', {
+                state: state.state,
+                videoState: VideoState.get(video)
+            });
             Object.entries(handlers).forEach(([event, handler]) => {
                 video.addEventListener(event, handler);
             });
@@ -153,6 +157,10 @@ const PlaybackMonitor = (() => {
         };
 
         const stop = () => {
+            logDebug('[HEALER:MONITOR] PlaybackMonitor stopped', {
+                state: state.state,
+                videoState: VideoState.get(video)
+            });
             if (intervalId !== undefined) {
                 clearInterval(intervalId);
             }

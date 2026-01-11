@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.0.19
+// @version       4.0.20
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -25,7 +25,7 @@
  */
 const CONFIG = (() => {
     const raw = {
-        debug: false,
+        debug: true,
 
         selectors: {
             PLAYER: '.video-player',
@@ -891,6 +891,10 @@ const PlaybackMonitor = (() => {
         let intervalId;
 
         const start = () => {
+            logDebug('[HEALER:MONITOR] PlaybackMonitor started', {
+                state: state.state,
+                videoState: VideoState.get(video)
+            });
             Object.entries(handlers).forEach(([event, handler]) => {
                 video.addEventListener(event, handler);
             });
@@ -949,6 +953,10 @@ const PlaybackMonitor = (() => {
         };
 
         const stop = () => {
+            logDebug('[HEALER:MONITOR] PlaybackMonitor stopped', {
+                state: state.state,
+                videoState: VideoState.get(video)
+            });
             if (intervalId !== undefined) {
                 clearInterval(intervalId);
             }
@@ -1266,6 +1274,7 @@ const StreamHealer = (() => {
         monitoredCount++;
 
         Logger.add('[HEALER:MONITOR] Started monitoring video', {
+            debug: CONFIG.debug,
             checkInterval: CONFIG.stall.WATCHDOG_INTERVAL_MS + 'ms',
             totalMonitors: monitoredCount
         });
