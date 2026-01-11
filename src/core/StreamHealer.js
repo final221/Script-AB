@@ -71,6 +71,15 @@ const StreamHealer = (() => {
             ...detail
         });
         for (const video of videos) {
+            const videoId = getVideoId(video);
+            logDebug('[HEALER:SCAN_ITEM] Video discovered', {
+                reason,
+                videoId,
+                alreadyMonitored: monitorsById.has(videoId),
+                videoState: VideoState.get(video, videoId)
+            });
+        }
+        for (const video of videos) {
             monitorRegistry.monitor(video);
         }
         candidateSelector.evaluateCandidates(`scan_${reason || 'manual'}`);
