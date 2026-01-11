@@ -1,0 +1,260 @@
+// --- CandidateSelector ---
+/**
+ * Scores and selects the best video candidate for healing.
+ */
+const CandidateSelector = (() => {
+    const create = (options) => {
+        const monitorsById = options.monitorsById;
+        const getVideoId = options.getVideoId;
+        const logDebug = options.logDebug;
+        const maxMonitors = options.maxMonitors;
+        const minProgressMs = options.minProgressMs;
+        const switchDelta = options.switchDelta;
+        const isFallbackSource = options.isFallbackSource;
+
+        let activeCandidateId = null;
+        let lockChecker = null;
+
+        const setLockChecker = (fn) => {
+            lockChecker = fn;
+        };
+
+        const getActiveId = () => activeCandidateId;
+        const setActiveId = (id) => {
+            activeCandidateId = id;
+        };
+
+        const scoreVideo = (video, monitor, videoId) => {
+            const vs = VideoState.get(video, videoId);
+            const state = monitor.state;
+            const progressAgoMs = state.hasProgress && state.lastProgressTime
+                ? Date.now() - state.lastProgressTime
+                : null;
+            const progressStreakMs = state.progressStreakMs || 0;
+            const progressEligible = state.progressEligible
+                || progressStreakMs >= minProgressMs;
+            let score = 0;
+            const reasons = [];
+
+            if (!document.contains(video)) {
+                score -= 10;
+                reasons.push('not_in_dom');
+            }
+
+            if (vs.ended) {
+                score -= 5;
+                reasons.push('ended');
+            }
+
+            if (vs.errorCode) {
+                score -= 3;
+                reasons.push('error');
+            }
+
+            if (state.state === 'RESET') {
+                score -= 3;
+                reasons.push('reset');
+            }
+
+            if (state.state === 'ERROR') {
+                score -= 2;
+                reasons.push('error_state');
+            }
+
+            if (isFallbackSource(vs.currentSrc)) {
+                score -= 4;
+                reasons.push('fallback_src');
+            }
+
+            if (!vs.paused) {
+                score += 2;
+                reasons.push('playing');
+            } else {
+                score -= 1;
+                reasons.push('paused');
+            }
+
+            if (vs.readyState >= 3) {
+                score += 2;
+                reasons.push('ready_high');
+            } else if (vs.readyState >= 2) {
+                score += 1;
+                reasons.push('ready_mid');
+            } else {
+                score -= 1;
+                reasons.push('ready_low');
+            }
+
+            if (progressAgoMs === null) {
+                score -= 2;
+                reasons.push('no_progress');
+            } else if (progressAgoMs < 2000) {
+                score += 3;
+                reasons.push('recent_progress');
+            } else if (progressAgoMs < 5000) {
+                score += 1;
+                reasons.push('stale_progress');
+            } else {
+                score -= 1;
+                reasons.push('no_progress');
+            }
+
+            if (!progressEligible) {
+                score -= 3;
+                reasons.push('progress_short');
+            }
+
+            if (vs.buffered !== 'none') {
+                score += 1;
+                reasons.push('buffered');
+            }
+
+            const timeValue = Number.parseFloat(vs.currentTime);
+            if (!Number.isNaN(timeValue) && timeValue > 0) {
+                score += 1;
+                reasons.push('time_nonzero');
+            }
+
+            return {
+                score,
+                reasons,
+                vs,
+                progressAgoMs,
+                progressStreakMs,
+                progressEligible
+            };
+        };
+
+        const evaluateCandidates = (reason) => {
+            if (lockChecker && lockChecker()) {
+                logDebug('[HEALER:CANDIDATE] Failover lock active', {
+                    reason,
+                    activeVideoId: activeCandidateId
+                });
+                return activeCandidateId ? { id: activeCandidateId } : null;
+            }
+
+            if (monitorsById.size === 0) {
+                activeCandidateId = null;
+                return null;
+            }
+
+            let best = null;
+            let current = null;
+            const scores = [];
+
+            if (activeCandidateId && monitorsById.has(activeCandidateId)) {
+                const entry = monitorsById.get(activeCandidateId);
+                current = { id: activeCandidateId, ...scoreVideo(entry.video, entry.monitor, activeCandidateId) };
+            }
+
+            for (const [videoId, entry] of monitorsById.entries()) {
+                const result = scoreVideo(entry.video, entry.monitor, videoId);
+                scores.push({
+                    id: videoId,
+                    score: result.score,
+                    progressAgoMs: result.progressAgoMs,
+                    progressStreakMs: result.progressStreakMs,
+                    progressEligible: result.progressEligible,
+                    paused: result.vs.paused,
+                    readyState: result.vs.readyState,
+                    currentSrc: result.vs.currentSrc,
+                    reasons: result.reasons
+                });
+
+                if (!best || result.score > best.score) {
+                    best = { id: videoId, ...result };
+                }
+            }
+
+            if (best && best.id !== activeCandidateId) {
+                let allowSwitch = true;
+                let delta = null;
+                let currentScore = null;
+                let suppression = null;
+
+                if (current) {
+                    delta = best.score - current.score;
+                    currentScore = current.score;
+                    const currentBad = current.reasons.includes('fallback_src')
+                        || current.reasons.includes('ended')
+                        || current.reasons.includes('not_in_dom')
+                        || current.reasons.includes('reset')
+                        || current.reasons.includes('error_state');
+                    if (!best.progressEligible && !currentBad) {
+                        allowSwitch = false;
+                        suppression = 'insufficient_progress';
+                    } else if (!currentBad && delta < switchDelta) {
+                        allowSwitch = false;
+                        suppression = 'score_delta';
+                    }
+                }
+
+                if (!allowSwitch) {
+                    logDebug('[HEALER:CANDIDATE] Switch suppressed', {
+                        from: activeCandidateId,
+                        to: best.id,
+                        reason,
+                        suppression,
+                        delta,
+                        currentScore,
+                        bestScore: best.score,
+                        bestProgressStreakMs: best.progressStreakMs,
+                        minProgressMs,
+                        scores
+                    });
+                }
+
+                if (allowSwitch) {
+                    Logger.add('[HEALER:CANDIDATE] Active video switched', {
+                        from: activeCandidateId,
+                        to: best.id,
+                        reason,
+                        delta,
+                        currentScore,
+                        bestScore: best.score,
+                        bestProgressStreakMs: best.progressStreakMs,
+                        bestProgressEligible: best.progressEligible,
+                        scores
+                    });
+                    activeCandidateId = best.id;
+                }
+            }
+
+            return best;
+        };
+
+        const pruneMonitors = (excludeId, stopMonitoring) => {
+            if (monitorsById.size <= maxMonitors) return;
+
+            let worst = null;
+            for (const [videoId, entry] of monitorsById.entries()) {
+                if (videoId === excludeId) continue;
+                const result = scoreVideo(entry.video, entry.monitor, videoId);
+                if (!worst || result.score < worst.score) {
+                    worst = { id: videoId, entry, score: result.score };
+                }
+            }
+
+            if (worst) {
+                Logger.add('[HEALER:PRUNE] Stopped monitor due to cap', {
+                    videoId: worst.id,
+                    score: worst.score,
+                    maxMonitors
+                });
+                stopMonitoring(worst.entry.video);
+            }
+        };
+
+        return {
+            evaluateCandidates,
+            pruneMonitors,
+            scoreVideo,
+            getActiveId,
+            setActiveId,
+            setLockChecker
+        };
+    };
+
+    return { create };
+})();

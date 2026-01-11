@@ -115,7 +115,10 @@ Script Logger.add() ────────┼──> Logger.getMergedTimeline(
 ### Core Layer
 - **CoreOrchestrator.js** - Application initialization, global function exports
 - **VideoState.js** - Shared video state helper
+- **PlaybackStateTracker.js** - Progress and stall state tracking
 - **PlaybackMonitor.js** - Event-driven playback monitoring with watchdog
+- **CandidateSelector.js** - Scores and selects the active video
+- **RecoveryManager.js** - Backoff and failover coordination
 - **StreamHealer.js** - Main orchestrator for stall detection and healing
 
 ### Recovery Layer

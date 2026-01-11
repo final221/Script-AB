@@ -9,7 +9,6 @@ const PlaybackMonitor = (() => {
         EVENT: '[HEALER:EVENT]',
         WATCHDOG: '[HEALER:WATCHDOG]'
     };
-    const PROGRESS_EPSILON = 0.05;
 
     const create = (video, options = {}) => {
         const isHealing = options.isHealing || (() => false);
@@ -17,25 +16,6 @@ const PlaybackMonitor = (() => {
         const onRemoved = options.onRemoved || (() => {});
         const onReset = options.onReset || (() => {});
         const videoId = options.videoId || 'unknown';
-
-        const state = {
-            lastProgressTime: 0,
-            lastTime: video.currentTime,
-            progressStartTime: null,
-            progressStreakMs: 0,
-            progressEligible: false,
-            hasProgress: false,
-            noHealPointCount: 0,
-            nextHealAllowedTime: 0,
-            lastBackoffLogTime: 0,
-            lastInitLogTime: 0,
-            state: 'PLAYING',
-            lastHealAttemptTime: 0,
-            lastWatchdogLogTime: 0,
-            lastSrc: video.currentSrc || video.getAttribute('src') || '',
-            lastStallEventTime: 0,
-            pauseFromStall: false
-        };
 
         const logDebug = (message, detail) => {
             if (CONFIG.debug) {
@@ -45,6 +25,9 @@ const PlaybackMonitor = (() => {
                 });
             }
         };
+
+        const tracker = PlaybackStateTracker.create(video, videoId, logDebug);
+        const state = tracker.state;
 
         const setState = (nextState, reason) => {
             if (state.state === nextState) return;
@@ -64,99 +47,9 @@ const PlaybackMonitor = (() => {
             });
         };
 
-        const updateProgress = (reason) => {
-            const now = Date.now();
-            const timeDelta = video.currentTime - state.lastTime;
-            const progressGapMs = state.lastProgressTime
-                ? now - state.lastProgressTime
-                : null;
-
-            state.lastTime = video.currentTime;
-
-            if (video.paused || timeDelta <= PROGRESS_EPSILON) {
-                return;
-            }
-
-            if (!state.progressStartTime
-                || (progressGapMs !== null && progressGapMs > CONFIG.monitoring.PROGRESS_STREAK_RESET_MS)) {
-                if (state.progressStartTime) {
-                    logDebug('[HEALER:PROGRESS] Progress streak reset', {
-                        reason,
-                        progressGapMs,
-                        previousStreakMs: state.progressStreakMs,
-                        videoState: VideoState.get(video, videoId)
-                    });
-                }
-                state.progressStartTime = now;
-                state.progressStreakMs = 0;
-                state.progressEligible = false;
-            } else {
-                state.progressStreakMs = now - state.progressStartTime;
-            }
-
-            state.lastProgressTime = now;
-            state.pauseFromStall = false;
-
-            if (!state.progressEligible
-                && state.progressStreakMs >= CONFIG.monitoring.CANDIDATE_MIN_PROGRESS_MS) {
-                state.progressEligible = true;
-                logDebug('[HEALER:PROGRESS] Candidate eligibility reached', {
-                    reason,
-                    progressStreakMs: state.progressStreakMs,
-                    minProgressMs: CONFIG.monitoring.CANDIDATE_MIN_PROGRESS_MS,
-                    videoState: VideoState.get(video, videoId)
-                });
-            }
-
-            if (!state.hasProgress) {
-                state.hasProgress = true;
-                logDebug('[HEALER:PROGRESS] Initial progress observed', {
-                    reason,
-                    videoState: VideoState.get(video, videoId)
-                });
-            }
-
-            if (state.noHealPointCount > 0 || state.nextHealAllowedTime > 0) {
-                logDebug('[HEALER:BACKOFF] Cleared after progress', {
-                    reason,
-                    previousNoHealPoints: state.noHealPointCount,
-                    previousNextHealAllowedMs: state.nextHealAllowedTime
-                        ? (state.nextHealAllowedTime - now)
-                        : 0
-                });
-                state.noHealPointCount = 0;
-                state.nextHealAllowedTime = 0;
-            }
-        };
-
-        const markStallEvent = (reason) => {
-            state.lastStallEventTime = Date.now();
-            if (!state.pauseFromStall) {
-                state.pauseFromStall = true;
-                logDebug('[HEALER:STALL] Marked paused due to stall', {
-                    reason,
-                    videoState: VideoState.get(video, videoId)
-                });
-            }
-        };
-
-        const handleReset = (reason) => {
-            const vs = VideoState.get(video, videoId);
-            if (vs.currentSrc || vs.src || vs.readyState !== 0) {
-                return;
-            }
-
-            setState('RESET', reason);
-            logDebug('[HEALER:RESET] Video reset', {
-                reason,
-                videoState: vs
-            });
-            onReset({ reason, videoState: vs }, state);
-        };
-
         const handlers = {
             timeupdate: () => {
-                updateProgress('timeupdate');
+                tracker.updateProgress('timeupdate');
                 if (state.state !== 'PLAYING') {
                     logDebug(`${LOG.EVENT} timeupdate`, {
                         state: state.state,
@@ -179,7 +72,7 @@ const PlaybackMonitor = (() => {
                 }
             },
             waiting: () => {
-                markStallEvent('waiting');
+                tracker.markStallEvent('waiting');
                 logDebug(`${LOG.EVENT} waiting`, {
                     state: state.state,
                     videoState: VideoState.get(video, videoId)
@@ -189,7 +82,7 @@ const PlaybackMonitor = (() => {
                 }
             },
             stalled: () => {
-                markStallEvent('stalled');
+                tracker.markStallEvent('stalled');
                 logDebug(`${LOG.EVENT} stalled`, {
                     state: state.state,
                     videoState: VideoState.get(video, videoId)
@@ -228,7 +121,7 @@ const PlaybackMonitor = (() => {
                     videoState: VideoState.get(video, videoId)
                 });
                 setState('PAUSED', 'abort');
-                handleReset('abort');
+                tracker.handleReset('abort', onReset);
             },
             emptied: () => {
                 state.pauseFromStall = false;
@@ -236,7 +129,7 @@ const PlaybackMonitor = (() => {
                     state: state.state,
                     videoState: VideoState.get(video, videoId)
                 });
-                handleReset('emptied');
+                tracker.handleReset('emptied', onReset);
             },
             suspend: () => {
                 logDebug(`${LOG.EVENT} suspend`, {
@@ -282,14 +175,7 @@ const PlaybackMonitor = (() => {
                     setState('STALLED', 'paused_after_stall');
                 }
 
-                if (!state.hasProgress) {
-                    if (now - state.lastInitLogTime > 5000) {
-                        state.lastInitLogTime = now;
-                        logDebug(`${LOG.WATCHDOG} Awaiting initial progress`, {
-                            state: state.state,
-                            videoState: VideoState.get(video, videoId)
-                        });
-                    }
+                if (tracker.shouldSkipUntilProgress()) {
                     return;
                 }
 

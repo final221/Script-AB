@@ -21,8 +21,13 @@ const CONFIG = {
         'monitoring/Instrumentation.js',
         // Shared video state helper
         'core/VideoState.js',
+        // Playback state tracking helpers
+        'core/PlaybackStateTracker.js',
         // Playback monitoring (event-driven stall detection)
         'core/PlaybackMonitor.js',
+        // Candidate selection & recovery helpers
+        'core/CandidateSelector.js',
+        'core/RecoveryManager.js',
         // Core stream healer
         'core/StreamHealer.js',
     ],
