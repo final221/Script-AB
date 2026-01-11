@@ -65,16 +65,18 @@ The build uses a priority list followed by auto-discovered modules, then the ent
 19. `core/PlaybackWatchdog.js`
 20. `core/PlaybackMonitor.js`
 21. `core/CandidateScorer.js`
-22. `core/CandidateSelector.js`
-23. `core/BackoffManager.js`
-24. `core/FailoverManager.js`
-25. `core/RecoveryManager.js`
-26. `core/MonitorRegistry.js`
-27. `core/HealPointPoller.js`
-28. `core/HealPipeline.js`
-29. `core/ExternalSignalRouter.js`
-30. `core/StreamHealer.js`
-31. `core/CoreOrchestrator.js`
+22. `core/CandidateSwitchPolicy.js`
+23. `core/CandidateSelector.js`
+24. `core/BackoffManager.js`
+25. `core/FailoverCandidatePicker.js`
+26. `core/FailoverManager.js`
+27. `core/RecoveryManager.js`
+28. `core/MonitorRegistry.js`
+29. `core/HealPointPoller.js`
+30. `core/HealPipeline.js`
+31. `core/ExternalSignalRouter.js`
+32. `core/StreamHealer.js`
+33. `core/CoreOrchestrator.js`
 <!-- LOAD_ORDER_END -->
 
 
@@ -159,8 +161,10 @@ Script Logger.add() ────────┼──> Logger.getMergedTimeline(
 - **PlaybackWatchdog.js** - Watchdog interval for stall checks
 - **PlaybackMonitor.js** - Event-driven playback monitoring with watchdog
 - **CandidateScorer.js** - Scores video candidates
+- **CandidateSwitchPolicy.js** - Switch decision logic
 - **CandidateSelector.js** - Scores and selects the active video
 - **BackoffManager.js** - No-heal-point backoff tracking
+- **FailoverCandidatePicker.js** - Failover candidate selection
 - **FailoverManager.js** - Failover attempt logic
 - **RecoveryManager.js** - Backoff and failover coordination
 - **MonitorRegistry.js** - Tracks monitored video lifecycle

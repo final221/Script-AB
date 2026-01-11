@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.0.29
+// @version       4.0.30
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -1509,6 +1509,67 @@ const CandidateScorer = (() => {
     return { create };
 })();
 
+// --- CandidateSwitchPolicy ---
+/**
+ * Determines whether switching candidates should be allowed.
+ */
+const CandidateSwitchPolicy = (() => {
+    const create = (options) => {
+        const switchDelta = options.switchDelta;
+        const minProgressMs = options.minProgressMs;
+        const logDebug = options.logDebug || (() => {});
+
+        const shouldSwitch = (current, best, scores, reason) => {
+            if (!current) {
+                return { allow: true };
+            }
+
+            const delta = best.score - current.score;
+            const currentScore = current.score;
+            const currentBad = current.reasons.includes('fallback_src')
+                || current.reasons.includes('ended')
+                || current.reasons.includes('not_in_dom')
+                || current.reasons.includes('reset')
+                || current.reasons.includes('error_state');
+            let suppression = null;
+            let allow = true;
+
+            if (!best.progressEligible && !currentBad) {
+                allow = false;
+                suppression = 'insufficient_progress';
+            } else if (!currentBad && delta < switchDelta) {
+                allow = false;
+                suppression = 'score_delta';
+            }
+
+            if (!allow) {
+                logDebug('[HEALER:CANDIDATE] Switch suppressed', {
+                    from: current.id,
+                    to: best.id,
+                    reason,
+                    suppression,
+                    delta,
+                    currentScore,
+                    bestScore: best.score,
+                    bestProgressStreakMs: best.progressStreakMs,
+                    minProgressMs,
+                    scores
+                });
+            }
+
+            return {
+                allow,
+                delta,
+                currentScore
+            };
+        };
+
+        return { shouldSwitch };
+    };
+
+    return { create };
+})();
+
 // --- CandidateSelector ---
 /**
  * Scores and selects the best video candidate for healing.
@@ -1525,6 +1586,11 @@ const CandidateSelector = (() => {
         let activeCandidateId = null;
         let lockChecker = null;
         const scorer = CandidateScorer.create({ minProgressMs, isFallbackSource });
+        const switchPolicy = CandidateSwitchPolicy.create({
+            switchDelta,
+            minProgressMs,
+            logDebug
+        });
 
         const setLockChecker = (fn) => {
             lockChecker = fn;
@@ -1580,50 +1646,14 @@ const CandidateSelector = (() => {
             }
 
             if (best && best.id !== activeCandidateId) {
-                let allowSwitch = true;
-                let delta = null;
-                let currentScore = null;
-                let suppression = null;
-
-                if (current) {
-                    delta = best.score - current.score;
-                    currentScore = current.score;
-                    const currentBad = current.reasons.includes('fallback_src')
-                        || current.reasons.includes('ended')
-                        || current.reasons.includes('not_in_dom')
-                        || current.reasons.includes('reset')
-                        || current.reasons.includes('error_state');
-                    if (!best.progressEligible && !currentBad) {
-                        allowSwitch = false;
-                        suppression = 'insufficient_progress';
-                    } else if (!currentBad && delta < switchDelta) {
-                        allowSwitch = false;
-                        suppression = 'score_delta';
-                    }
-                }
-
-                if (!allowSwitch) {
-                    logDebug('[HEALER:CANDIDATE] Switch suppressed', {
-                        from: activeCandidateId,
-                        to: best.id,
-                        reason,
-                        suppression,
-                        delta,
-                        currentScore,
-                        bestScore: best.score,
-                        bestProgressStreakMs: best.progressStreakMs,
-                        minProgressMs,
-                        scores
-                    });
-                }
-
-                if (allowSwitch) {
+                const decision = switchPolicy.shouldSwitch(current, best, scores, reason);
+                if (decision.allow) {
                     Logger.add('[HEALER:CANDIDATE] Active video switched', {
                         from: activeCandidateId,
                         to: best.id,
                         reason,
-                        delta,
-                        currentScore,
+                        delta: decision.delta,
+                        currentScore: decision.currentScore,
                         bestScore: best.score,
                         bestProgressStreakMs: best.progressStreakMs,
                         bestProgressEligible: best.progressEligible,
@@ -1739,6 +1769,39 @@ const BackoffManager = (() => {
     return { create };
 })();
 
+// --- FailoverCandidatePicker ---
+/**
+ * Chooses a failover candidate from monitored videos.
+ */
+const FailoverCandidatePicker = (() => {
+    const create = (options) => {
+        const monitorsById = options.monitorsById;
+
+        const getVideoIndex = (videoId) => {
+            const match = /video-(\d+)/.exec(videoId);
+            return match ? Number(match[1]) : -1;
+        };
+
+        const selectNewest = (excludeId) => {
+            let newest = null;
+            let newestIndex = -1;
+            for (const [videoId, entry] of monitorsById.entries()) {
+                if (videoId === excludeId) continue;
+                const idx = getVideoIndex(videoId);
+                if (idx > newestIndex) {
+                    newestIndex = idx;
+                    newest = { id: videoId, entry };
+                }
+            }
+            return newest;
+        };
+
+        return { selectNewest };
+    };
+
+    return { create };
+})();
+
 // --- FailoverManager ---
 /**
  * Handles candidate failover attempts when healing fails.
@@ -1750,6 +1813,7 @@ const FailoverManager = (() => {
         const getVideoId = options.getVideoId;
         const logDebug = options.logDebug;
         const resetBackoff = options.resetBackoff || (() => {});
+        const picker = FailoverCandidatePicker.create({ monitorsById });
 
         const state = {
             inProgress: false,
@@ -1759,11 +1823,6 @@ const FailoverManager = (() => {
             toId: null,
             startTime: 0,
             baselineProgressTime: 0
-        };
-
-        const getVideoIndex = (videoId) => {
-            const match = /video-(\d+)/.exec(videoId);
-            return match ? Number(match[1]) : -1;
         };
 
         const resetFailover = (reason) => {
@@ -1785,20 +1844,6 @@ const FailoverManager = (() => {
             state.baselineProgressTime = 0;
         };
 
-        const selectNewestCandidate = (excludeId) => {
-            let newest = null;
-            let newestIndex = -1;
-            for (const [videoId, entry] of monitorsById.entries()) {
-                if (videoId === excludeId) continue;
-                const idx = getVideoIndex(videoId);
-                if (idx > newestIndex) {
-                    newestIndex = idx;
-                    newest = { id: videoId, entry };
-                }
-            }
-            return newest;
-        };
-
         const attemptFailover = (fromVideoId, reason, monitorState) => {
             const now = Date.now();
             if (state.inProgress) {
@@ -1818,7 +1863,7 @@ const FailoverManager = (() => {
                 return false;
             }
 
-            const candidate = selectNewestCandidate(fromVideoId);
+            const candidate = picker.selectNewest(fromVideoId);
             if (!candidate) {
                 logDebug('[HEALER:FAILOVER_SKIP] No candidate available', {
                     from: fromVideoId,

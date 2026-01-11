@@ -67,16 +67,18 @@ Build order matters (dependencies must load first):
 19. `PlaybackWatchdog.js` - Watchdog interval logic
 20. `PlaybackMonitor.js` - Event-driven stall detection + watchdog
 21. `CandidateScorer.js` - Candidate scoring logic
-22. `CandidateSelector.js` - Active video scoring/selection
-23. `BackoffManager.js` - Heal backoff tracking
-24. `FailoverManager.js` - Failover attempt orchestration
-25. `RecoveryManager.js` - Backoff + failover coordination
-26. `MonitorRegistry.js` - Monitored video lifecycle
-27. `HealPointPoller.js` - Heal point polling
-28. `HealPipeline.js` - Heal-point polling + seeking
-29. `ExternalSignalRouter.js` - Console signal hints
-30. `StreamHealer.js` - Main healer (uses all above)
-31. `CoreOrchestrator.js` - Entry point (initializes everything)
+22. `CandidateSwitchPolicy.js` - Candidate switch decision logic
+23. `CandidateSelector.js` - Active video scoring/selection
+24. `BackoffManager.js` - Heal backoff tracking
+25. `FailoverCandidatePicker.js` - Failover candidate selection
+26. `FailoverManager.js` - Failover attempt orchestration
+27. `RecoveryManager.js` - Backoff + failover coordination
+28. `MonitorRegistry.js` - Monitored video lifecycle
+29. `HealPointPoller.js` - Heal point polling
+30. `HealPipeline.js` - Heal-point polling + seeking
+31. `ExternalSignalRouter.js` - Console signal hints
+32. `StreamHealer.js` - Main healer (uses all above)
+33. `CoreOrchestrator.js` - Entry point (initializes everything)
 
 
 

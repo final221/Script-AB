@@ -14,6 +14,11 @@ const CandidateSelector = (() => {
         let activeCandidateId = null;
         let lockChecker = null;
         const scorer = CandidateScorer.create({ minProgressMs, isFallbackSource });
+        const switchPolicy = CandidateSwitchPolicy.create({
+            switchDelta,
+            minProgressMs,
+            logDebug
+        });
 
         const setLockChecker = (fn) => {
             lockChecker = fn;
@@ -69,50 +74,14 @@ const CandidateSelector = (() => {
             }
 
             if (best && best.id !== activeCandidateId) {
-                let allowSwitch = true;
-                let delta = null;
-                let currentScore = null;
-                let suppression = null;
-
-                if (current) {
-                    delta = best.score - current.score;
-                    currentScore = current.score;
-                    const currentBad = current.reasons.includes('fallback_src')
-                        || current.reasons.includes('ended')
-                        || current.reasons.includes('not_in_dom')
-                        || current.reasons.includes('reset')
-                        || current.reasons.includes('error_state');
-                    if (!best.progressEligible && !currentBad) {
-                        allowSwitch = false;
-                        suppression = 'insufficient_progress';
-                    } else if (!currentBad && delta < switchDelta) {
-                        allowSwitch = false;
-                        suppression = 'score_delta';
-                    }
-                }
-
-                if (!allowSwitch) {
-                    logDebug('[HEALER:CANDIDATE] Switch suppressed', {
-                        from: activeCandidateId,
-                        to: best.id,
-                        reason,
-                        suppression,
-                        delta,
-                        currentScore,
-                        bestScore: best.score,
-                        bestProgressStreakMs: best.progressStreakMs,
-                        minProgressMs,
-                        scores
-                    });
-                }
-
-                if (allowSwitch) {
+                const decision = switchPolicy.shouldSwitch(current, best, scores, reason);
+                if (decision.allow) {
                     Logger.add('[HEALER:CANDIDATE] Active video switched', {
                         from: activeCandidateId,
                         to: best.id,
                         reason,
-                        delta,
-                        currentScore,
+                        delta: decision.delta,
+                        currentScore: decision.currentScore,
                         bestScore: best.score,
                         bestProgressStreakMs: best.progressStreakMs,
                         bestProgressEligible: best.progressEligible,

@@ -9,6 +9,7 @@ const FailoverManager = (() => {
         const getVideoId = options.getVideoId;
         const logDebug = options.logDebug;
         const resetBackoff = options.resetBackoff || (() => {});
+        const picker = FailoverCandidatePicker.create({ monitorsById });
 
         const state = {
             inProgress: false,
@@ -18,11 +19,6 @@ const FailoverManager = (() => {
             toId: null,
             startTime: 0,
             baselineProgressTime: 0
-        };
-
-        const getVideoIndex = (videoId) => {
-            const match = /video-(\d+)/.exec(videoId);
-            return match ? Number(match[1]) : -1;
         };
 
         const resetFailover = (reason) => {
@@ -44,20 +40,6 @@ const FailoverManager = (() => {
             state.baselineProgressTime = 0;
         };
 
-        const selectNewestCandidate = (excludeId) => {
-            let newest = null;
-            let newestIndex = -1;
-            for (const [videoId, entry] of monitorsById.entries()) {
-                if (videoId === excludeId) continue;
-                const idx = getVideoIndex(videoId);
-                if (idx > newestIndex) {
-                    newestIndex = idx;
-                    newest = { id: videoId, entry };
-                }
-            }
-            return newest;
-        };
-
         const attemptFailover = (fromVideoId, reason, monitorState) => {
             const now = Date.now();
             if (state.inProgress) {
@@ -77,7 +59,7 @@ const FailoverManager = (() => {
                 return false;
             }
 
-            const candidate = selectNewestCandidate(fromVideoId);
+            const candidate = picker.selectNewest(fromVideoId);
             if (!candidate) {
                 logDebug('[HEALER:FAILOVER_SKIP] No candidate available', {
                     from: fromVideoId,
