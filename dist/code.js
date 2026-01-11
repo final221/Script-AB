@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.0.22
+// @version       4.0.23
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -47,6 +47,8 @@ const CONFIG = (() => {
         monitoring: {
             MAX_VIDEO_MONITORS: 3,          // Max concurrent video elements to monitor
             CANDIDATE_SWITCH_DELTA: 2,      // Min score delta before switching active video
+            CANDIDATE_MIN_PROGRESS_MS: 5000, // Require sustained progress before switching to new video
+            PROGRESS_STREAK_RESET_MS: 2500, // Reset progress streak after this long without progress
         },
 
         logging: {
@@ -820,6 +822,7 @@ const PlaybackMonitor = (() => {
         EVENT: '[HEALER:EVENT]',
         WATCHDOG: '[HEALER:WATCHDOG]'
     };
+    const PROGRESS_EPSILON = 0.05;
 
     const create = (video, options = {}) => {
         const isHealing = options.isHealing || (() => false);
@@ -829,13 +832,17 @@ const PlaybackMonitor = (() => {
         const videoId = options.videoId || 'unknown';
 
         const state = {
-            lastProgressTime: Date.now(),
+            lastProgressTime: 0,
             lastTime: video.currentTime,
+            progressStartTime: null,
+            progressStreakMs: 0,
+            progressEligible: false,
             state: 'PLAYING',
             lastHealAttemptTime: 0,
             lastWatchdogLogTime: 0,
             lastSrc: video.currentSrc || video.getAttribute('src') || '',
-            lastStallEventTime: 0
+            lastStallEventTime: 0,
+            pauseFromStall: false
         };
 
         const logDebug = (message, detail) => {
@@ -855,8 +862,70 @@ const PlaybackMonitor = (() => {
                 from: prevState,
                 to: nextState,
                 reason,
+                pauseFromStall: state.pauseFromStall,
+                progressStreakMs: state.progressStreakMs,
+                progressEligible: state.progressEligible,
+                lastProgressAgoMs: state.lastProgressTime
+                    ? (Date.now() - state.lastProgressTime)
+                    : null,
                 videoState: VideoState.get(video, videoId)
             });
+        };
+
+        const updateProgress = (reason) => {
+            const now = Date.now();
+            const timeDelta = video.currentTime - state.lastTime;
+            const progressGapMs = state.lastProgressTime
+                ? now - state.lastProgressTime
+                : null;
+
+            state.lastTime = video.currentTime;
+
+            if (video.paused || timeDelta <= PROGRESS_EPSILON) {
+                return;
+            }
+
+            if (!state.progressStartTime
+                || (progressGapMs !== null && progressGapMs > CONFIG.monitoring.PROGRESS_STREAK_RESET_MS)) {
+                if (state.progressStartTime) {
+                    logDebug('[HEALER:PROGRESS] Progress streak reset', {
+                        reason,
+                        progressGapMs,
+                        previousStreakMs: state.progressStreakMs,
+                        videoState: VideoState.get(video, videoId)
+                    });
+                }
+                state.progressStartTime = now;
+                state.progressStreakMs = 0;
+                state.progressEligible = false;
+            } else {
+                state.progressStreakMs = now - state.progressStartTime;
+            }
+
+            state.lastProgressTime = now;
+            state.pauseFromStall = false;
+
+            if (!state.progressEligible
+                && state.progressStreakMs >= CONFIG.monitoring.CANDIDATE_MIN_PROGRESS_MS) {
+                state.progressEligible = true;
+                logDebug('[HEALER:PROGRESS] Candidate eligibility reached', {
+                    reason,
+                    progressStreakMs: state.progressStreakMs,
+                    minProgressMs: CONFIG.monitoring.CANDIDATE_MIN_PROGRESS_MS,
+                    videoState: VideoState.get(video, videoId)
+                });
+            }
+        };
+
+        const markStallEvent = (reason) => {
+            state.lastStallEventTime = Date.now();
+            if (!state.pauseFromStall) {
+                state.pauseFromStall = true;
+                logDebug('[HEALER:STALL] Marked paused due to stall', {
+                    reason,
+                    videoState: VideoState.get(video, videoId)
+                });
+            }
         };
 
         const handleReset = (reason) => {
@@ -875,10 +944,7 @@ const PlaybackMonitor = (() => {
 
         const handlers = {
             timeupdate: () => {
-                if (!video.paused) {
-                    state.lastProgressTime = Date.now();
-                }
-                state.lastTime = video.currentTime;
+                updateProgress('timeupdate');
                 if (state.state !== 'PLAYING') {
                     logDebug(`${LOG.EVENT} timeupdate`, {
                         state: state.state,
@@ -890,7 +956,8 @@ const PlaybackMonitor = (() => {
                 }
             },
             playing: () => {
-                state.lastProgressTime = Date.now();
+                state.pauseFromStall = false;
+                state.lastTime = video.currentTime;
                 logDebug(`${LOG.EVENT} playing`, {
                     state: state.state,
                     videoState: VideoState.get(video, videoId)
@@ -900,7 +967,7 @@ const PlaybackMonitor = (() => {
                 }
             },
             waiting: () => {
-                state.lastStallEventTime = Date.now();
+                markStallEvent('waiting');
                 logDebug(`${LOG.EVENT} waiting`, {
                     state: state.state,
                     videoState: VideoState.get(video, videoId)
@@ -910,7 +977,7 @@ const PlaybackMonitor = (() => {
                 }
             },
             stalled: () => {
-                state.lastStallEventTime = Date.now();
+                markStallEvent('stalled');
                 logDebug(`${LOG.EVENT} stalled`, {
                     state: state.state,
                     videoState: VideoState.get(video, videoId)
@@ -927,6 +994,7 @@ const PlaybackMonitor = (() => {
                 setState('PAUSED', 'pause');
             },
             ended: () => {
+                state.pauseFromStall = false;
                 logDebug(`${LOG.EVENT} ended`, {
                     state: state.state,
                     videoState: VideoState.get(video, videoId)
@@ -934,6 +1002,7 @@ const PlaybackMonitor = (() => {
                 setState('ENDED', 'ended');
             },
             error: () => {
+                state.pauseFromStall = false;
                 logDebug(`${LOG.EVENT} error`, {
                     state: state.state,
                     videoState: VideoState.get(video, videoId)
@@ -941,6 +1010,7 @@ const PlaybackMonitor = (() => {
                 setState('ERROR', 'error');
             },
             abort: () => {
+                state.pauseFromStall = false;
                 logDebug(`${LOG.EVENT} abort`, {
                     state: state.state,
                     videoState: VideoState.get(video, videoId)
@@ -949,6 +1019,7 @@ const PlaybackMonitor = (() => {
                 handleReset('abort');
             },
             emptied: () => {
+                state.pauseFromStall = false;
                 logDebug(`${LOG.EVENT} emptied`, {
                     state: state.state,
                     videoState: VideoState.get(video, videoId)
@@ -990,11 +1061,12 @@ const PlaybackMonitor = (() => {
 
                 const pausedAfterStall = state.lastStallEventTime > 0
                     && (now - state.lastStallEventTime) < CONFIG.stall.PAUSED_STALL_GRACE_MS;
-                if (video.paused && !pausedAfterStall) {
+                const pauseFromStall = state.pauseFromStall || pausedAfterStall;
+                if (video.paused && !pauseFromStall) {
                     setState('PAUSED', 'watchdog_paused');
                     return;
                 }
-                if (video.paused && pausedAfterStall && state.state !== 'STALLED') {
+                if (video.paused && pauseFromStall && state.state !== 'STALLED') {
                     setState('STALLED', 'paused_after_stall');
                 }
 
@@ -1039,7 +1111,9 @@ const PlaybackMonitor = (() => {
                 onStall({
                     trigger: 'WATCHDOG',
                     stalledFor: stalledForMs + 'ms',
-                    bufferExhausted
+                    bufferExhausted,
+                    paused: video.paused,
+                    pauseFromStall
                 }, state);
             }, CONFIG.stall.WATCHDOG_INTERVAL_MS);
         };
@@ -1126,7 +1200,12 @@ const StreamHealer = (() => {
     const scoreVideo = (video, monitor, videoId) => {
         const vs = VideoState.get(video, videoId);
         const state = monitor.state;
-        const progressAgoMs = Date.now() - state.lastProgressTime;
+        const progressAgoMs = state.lastProgressTime
+            ? Date.now() - state.lastProgressTime
+            : null;
+        const progressStreakMs = state.progressStreakMs || 0;
+        const progressEligible = state.progressEligible
+            || progressStreakMs >= CONFIG.monitoring.CANDIDATE_MIN_PROGRESS_MS;
         let score = 0;
         const reasons = [];
 
@@ -1179,7 +1258,10 @@ const StreamHealer = (() => {
             reasons.push('ready_low');
         }
 
-        if (progressAgoMs < 2000) {
+        if (progressAgoMs === null) {
+            score -= 2;
+            reasons.push('no_progress');
+        } else if (progressAgoMs < 2000) {
             score += 3;
             reasons.push('recent_progress');
         } else if (progressAgoMs < 5000) {
@@ -1188,6 +1270,11 @@ const StreamHealer = (() => {
         } else {
             score -= 1;
             reasons.push('no_progress');
+        }
+
+        if (!progressEligible) {
+            score -= 3;
+            reasons.push('progress_short');
         }
 
         if (vs.buffered !== 'none') {
@@ -1205,7 +1292,9 @@ const StreamHealer = (() => {
             score,
             reasons,
             vs,
-            progressAgoMs
+            progressAgoMs,
+            progressStreakMs,
+            progressEligible
         };
     };
 
@@ -1230,6 +1319,8 @@ const StreamHealer = (() => {
                 id: videoId,
                 score: result.score,
                 progressAgoMs: result.progressAgoMs,
+                progressStreakMs: result.progressStreakMs,
+                progressEligible: result.progressEligible,
                 paused: result.vs.paused,
                 readyState: result.vs.readyState,
                 currentSrc: result.vs.currentSrc,
@@ -1245,6 +1336,7 @@ const StreamHealer = (() => {
             let allowSwitch = true;
             let delta = null;
             let currentScore = null;
+            let suppression = null;
 
             if (current) {
                 delta = best.score - current.score;
@@ -1254,17 +1346,28 @@ const StreamHealer = (() => {
                     || current.reasons.includes('not_in_dom')
                     || current.reasons.includes('reset')
                     || current.reasons.includes('error_state');
-                allowSwitch = currentBad || delta >= CONFIG.monitoring.CANDIDATE_SWITCH_DELTA;
-                if (!allowSwitch) {
-                    logDebug('[HEALER:CANDIDATE] Switch suppressed', {
-                        from: activeCandidateId,
-                        to: best.id,
-                        reason,
-                        delta,
-                        currentScore,
-                        bestScore: best.score
-                    });
+                if (!best.progressEligible && !currentBad) {
+                    allowSwitch = false;
+                    suppression = 'insufficient_progress';
+                } else if (!currentBad && delta < CONFIG.monitoring.CANDIDATE_SWITCH_DELTA) {
+                    allowSwitch = false;
+                    suppression = 'score_delta';
                 }
+            }
+
+            if (!allowSwitch) {
+                logDebug('[HEALER:CANDIDATE] Switch suppressed', {
+                    from: activeCandidateId,
+                    to: best.id,
+                    reason,
+                    suppression,
+                    delta,
+                    currentScore,
+                    bestScore: best.score,
+                    bestProgressStreakMs: best.progressStreakMs,
+                    minProgressMs: CONFIG.monitoring.CANDIDATE_MIN_PROGRESS_MS,
+                    scores
+                });
             }
 
             if (allowSwitch) {
@@ -1275,6 +1378,8 @@ const StreamHealer = (() => {
                     delta,
                     currentScore,
                     bestScore: best.score,
+                    bestProgressStreakMs: best.progressStreakMs,
+                    bestProgressEligible: best.progressEligible,
                     scores
                 });
                 activeCandidateId = best.id;

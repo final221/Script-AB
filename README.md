@@ -83,10 +83,12 @@ Key settings in `Config.js`:
 | `stall.HEAL_TIMEOUT_S` | 15 | Give up finding heal point after |
 | `monitoring.MAX_VIDEO_MONITORS` | 3 | Max concurrent video elements to monitor |
 | `monitoring.CANDIDATE_SWITCH_DELTA` | 2 | Score delta required to switch active video |
+| `monitoring.CANDIDATE_MIN_PROGRESS_MS` | 5000 | Minimum sustained progress before switching to new video |
+| `monitoring.PROGRESS_STREAK_RESET_MS` | 2500 | Reset progress streak after this long without progress |
 
 ## Version
 
-Current: **4.0.22**
+Current: **4.0.23**
 
 Version increments automatically on each build (patch).
 

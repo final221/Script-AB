@@ -56,7 +56,12 @@ const StreamHealer = (() => {
     const scoreVideo = (video, monitor, videoId) => {
         const vs = VideoState.get(video, videoId);
         const state = monitor.state;
-        const progressAgoMs = Date.now() - state.lastProgressTime;
+        const progressAgoMs = state.lastProgressTime
+            ? Date.now() - state.lastProgressTime
+            : null;
+        const progressStreakMs = state.progressStreakMs || 0;
+        const progressEligible = state.progressEligible
+            || progressStreakMs >= CONFIG.monitoring.CANDIDATE_MIN_PROGRESS_MS;
         let score = 0;
         const reasons = [];
 
@@ -109,7 +114,10 @@ const StreamHealer = (() => {
             reasons.push('ready_low');
         }
 
-        if (progressAgoMs < 2000) {
+        if (progressAgoMs === null) {
+            score -= 2;
+            reasons.push('no_progress');
+        } else if (progressAgoMs < 2000) {
             score += 3;
             reasons.push('recent_progress');
         } else if (progressAgoMs < 5000) {
@@ -118,6 +126,11 @@ const StreamHealer = (() => {
         } else {
             score -= 1;
             reasons.push('no_progress');
+        }
+
+        if (!progressEligible) {
+            score -= 3;
+            reasons.push('progress_short');
         }
 
         if (vs.buffered !== 'none') {
@@ -135,7 +148,9 @@ const StreamHealer = (() => {
             score,
             reasons,
             vs,
-            progressAgoMs
+            progressAgoMs,
+            progressStreakMs,
+            progressEligible
         };
     };
 
@@ -160,6 +175,8 @@ const StreamHealer = (() => {
                 id: videoId,
                 score: result.score,
                 progressAgoMs: result.progressAgoMs,
+                progressStreakMs: result.progressStreakMs,
+                progressEligible: result.progressEligible,
                 paused: result.vs.paused,
                 readyState: result.vs.readyState,
                 currentSrc: result.vs.currentSrc,
@@ -175,6 +192,7 @@ const StreamHealer = (() => {
             let allowSwitch = true;
             let delta = null;
             let currentScore = null;
+            let suppression = null;
 
             if (current) {
                 delta = best.score - current.score;
@@ -184,17 +202,28 @@ const StreamHealer = (() => {
                     || current.reasons.includes('not_in_dom')
                     || current.reasons.includes('reset')
                     || current.reasons.includes('error_state');
-                allowSwitch = currentBad || delta >= CONFIG.monitoring.CANDIDATE_SWITCH_DELTA;
-                if (!allowSwitch) {
-                    logDebug('[HEALER:CANDIDATE] Switch suppressed', {
-                        from: activeCandidateId,
-                        to: best.id,
-                        reason,
-                        delta,
-                        currentScore,
-                        bestScore: best.score
-                    });
+                if (!best.progressEligible && !currentBad) {
+                    allowSwitch = false;
+                    suppression = 'insufficient_progress';
+                } else if (!currentBad && delta < CONFIG.monitoring.CANDIDATE_SWITCH_DELTA) {
+                    allowSwitch = false;
+                    suppression = 'score_delta';
                 }
+            }
+
+            if (!allowSwitch) {
+                logDebug('[HEALER:CANDIDATE] Switch suppressed', {
+                    from: activeCandidateId,
+                    to: best.id,
+                    reason,
+                    suppression,
+                    delta,
+                    currentScore,
+                    bestScore: best.score,
+                    bestProgressStreakMs: best.progressStreakMs,
+                    minProgressMs: CONFIG.monitoring.CANDIDATE_MIN_PROGRESS_MS,
+                    scores
+                });
             }
 
             if (allowSwitch) {
@@ -205,6 +234,8 @@ const StreamHealer = (() => {
                     delta,
                     currentScore,
                     bestScore: best.score,
+                    bestProgressStreakMs: best.progressStreakMs,
+                    bestProgressEligible: best.progressEligible,
                     scores
                 });
                 activeCandidateId = best.id;

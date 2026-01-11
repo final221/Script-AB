@@ -99,6 +99,8 @@ Script Logger.add() ────────┼──> Logger.getMergedTimeline(
   - `stall.HEAL_TIMEOUT_S: 15` - Max wait for heal point
   - `monitoring.MAX_VIDEO_MONITORS: 3` - Max concurrent video elements to monitor
   - `monitoring.CANDIDATE_SWITCH_DELTA: 2` - Score delta required to switch active video
+  - `monitoring.CANDIDATE_MIN_PROGRESS_MS: 5000` - Minimum sustained progress before switching to new video
+  - `monitoring.PROGRESS_STREAK_RESET_MS: 2500` - Reset progress streak after this long without progress
 
 ### Utility Layer
 - **Utils.js (Fn)** - Pure utility functions (pipe, debounce, sleep, tryCatch)
