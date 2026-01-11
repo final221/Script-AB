@@ -9,6 +9,7 @@ const ExternalSignalRouter = (() => {
         const recoveryManager = options.recoveryManager;
         const logDebug = options.logDebug || (() => {});
         const onStallDetected = options.onStallDetected || (() => {});
+        const onRescan = options.onRescan || (() => {});
 
         const getActiveEntry = () => {
             const activeId = candidateSelector.getActiveId();
@@ -91,6 +92,7 @@ const ExternalSignalRouter = (() => {
                 });
 
                 logCandidateSnapshot('processing_asset');
+                onRescan('processing_asset', { level, message: message.substring(0, 300) });
 
                 if (recoveryManager.isFailoverActive()) {
                     logDebug('[HEALER:ASSET_HINT_SKIP] Failover in progress', {

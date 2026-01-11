@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.0.32
+// @version       4.0.33
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -2565,6 +2565,7 @@ const ExternalSignalRouter = (() => {
         const recoveryManager = options.recoveryManager;
         const logDebug = options.logDebug || (() => {});
         const onStallDetected = options.onStallDetected || (() => {});
+        const onRescan = options.onRescan || (() => {});
 
         const getActiveEntry = () => {
             const activeId = candidateSelector.getActiveId();
@@ -2647,6 +2648,7 @@ const ExternalSignalRouter = (() => {
                 });
 
                 logCandidateSnapshot('processing_asset');
+                onRescan('processing_asset', { level, message: message.substring(0, 300) });
 
                 if (recoveryManager.isFailoverActive()) {
                     logDebug('[HEALER:ASSET_HINT_SKIP] Failover in progress', {
@@ -2761,18 +2763,41 @@ const StreamHealer = (() => {
     candidateSelector.setLockChecker(recoveryManager.isFailoverActive);
     monitorRegistry.bind({ candidateSelector, recoveryManager });
 
+    const scanForVideos = (reason, detail = {}) => {
+        if (!document?.querySelectorAll) {
+            return;
+        }
+        const beforeCount = monitorsById.size;
+        const videos = Array.from(document.querySelectorAll('video'));
+        Logger.add('[HEALER:SCAN] Video rescan requested', {
+            reason,
+            found: videos.length,
+            ...detail
+        });
+        for (const video of videos) {
+            monitorRegistry.monitor(video);
+        }
+        candidateSelector.evaluateCandidates(`scan_${reason || 'manual'}`);
+        candidateSelector.getActiveId();
+        const afterCount = monitorsById.size;
+        Logger.add('[HEALER:SCAN] Video rescan complete', {
+            reason,
+            found: videos.length,
+            newMonitors: Math.max(afterCount - beforeCount, 0),
+            totalMonitors: afterCount
+        });
+    };
+
     healPipeline = HealPipeline.create({
         getVideoId,
         logWithState,
         logDebug,
         recoveryManager,
         onDetached: (video, reason) => {
-            Logger.add('[HEALER:DETACHED] Candidate re-evaluation', {
+            scanForVideos('detached', {
                 reason,
                 videoId: getVideoId(video)
             });
-            candidateSelector.evaluateCandidates('detached');
-            candidateSelector.getActiveId();
         }
     });
 
@@ -2825,7 +2850,8 @@ const StreamHealer = (() => {
         candidateSelector,
         recoveryManager,
         logDebug,
-        onStallDetected
+        onStallDetected,
+        onRescan: (reason, detail) => scanForVideos(reason, detail)
     });
 
     const handleExternalSignal = (signal = {}) => {
@@ -2838,6 +2864,7 @@ const StreamHealer = (() => {
         onStallDetected,
         attemptHeal: (video, state) => healPipeline.attemptHeal(video, state),
         handleExternalSignal,
+        scanForVideos,
         getStats: () => ({
             healAttempts: healPipeline.getAttempts(),
             isHealing: healPipeline.isHealing(),
