@@ -94,9 +94,11 @@ Script Logger.add() ────────┼──> Logger.getMergedTimeline(
   - `stall.WATCHDOG_INTERVAL_MS: 1000` - Watchdog check frequency
   - `stall.STALL_CONFIRM_MS: 2500` - No-progress window before healing
   - `stall.STALL_CONFIRM_BUFFER_OK_MS: 1500` - Extra delay when buffer looks healthy
+  - `stall.PAUSED_STALL_GRACE_MS: 3000` - Allow stall detection shortly after pause
   - `stall.RETRY_COOLDOWN_MS: 2000` - Cooldown between heal attempts
   - `stall.HEAL_TIMEOUT_S: 15` - Max wait for heal point
   - `monitoring.MAX_VIDEO_MONITORS: 3` - Max concurrent video elements to monitor
+  - `monitoring.CANDIDATE_SWITCH_DELTA: 2` - Score delta required to switch active video
 
 ### Utility Layer
 - **Utils.js (Fn)** - Pure utility functions (pipe, debounce, sleep, tryCatch)

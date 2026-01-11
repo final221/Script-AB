@@ -14,6 +14,7 @@ const PlaybackMonitor = (() => {
         const isHealing = options.isHealing || (() => false);
         const onStall = options.onStall || (() => {});
         const onRemoved = options.onRemoved || (() => {});
+        const onReset = options.onReset || (() => {});
         const videoId = options.videoId || 'unknown';
 
         const state = {
@@ -22,7 +23,8 @@ const PlaybackMonitor = (() => {
             state: 'PLAYING',
             lastHealAttemptTime: 0,
             lastWatchdogLogTime: 0,
-            lastSrc: video.currentSrc || video.getAttribute('src') || ''
+            lastSrc: video.currentSrc || video.getAttribute('src') || '',
+            lastStallEventTime: 0
         };
 
         const logDebug = (message, detail) => {
@@ -44,6 +46,20 @@ const PlaybackMonitor = (() => {
                 reason,
                 videoState: VideoState.get(video, videoId)
             });
+        };
+
+        const handleReset = (reason) => {
+            const vs = VideoState.get(video, videoId);
+            if (vs.currentSrc || vs.src || vs.readyState !== 0) {
+                return;
+            }
+
+            setState('RESET', reason);
+            logDebug('[HEALER:RESET] Video reset', {
+                reason,
+                videoState: vs
+            });
+            onReset({ reason, videoState: vs }, state);
         };
 
         const handlers = {
@@ -73,6 +89,7 @@ const PlaybackMonitor = (() => {
                 }
             },
             waiting: () => {
+                state.lastStallEventTime = Date.now();
                 logDebug(`${LOG.EVENT} waiting`, {
                     state: state.state,
                     videoState: VideoState.get(video, videoId)
@@ -82,6 +99,7 @@ const PlaybackMonitor = (() => {
                 }
             },
             stalled: () => {
+                state.lastStallEventTime = Date.now();
                 logDebug(`${LOG.EVENT} stalled`, {
                     state: state.state,
                     videoState: VideoState.get(video, videoId)
@@ -117,12 +135,14 @@ const PlaybackMonitor = (() => {
                     videoState: VideoState.get(video, videoId)
                 });
                 setState('PAUSED', 'abort');
+                handleReset('abort');
             },
             emptied: () => {
                 logDebug(`${LOG.EVENT} emptied`, {
                     state: state.state,
                     videoState: VideoState.get(video, videoId)
                 });
+                handleReset('emptied');
             },
             suspend: () => {
                 logDebug(`${LOG.EVENT} suspend`, {
@@ -144,6 +164,7 @@ const PlaybackMonitor = (() => {
             });
 
             intervalId = setInterval(() => {
+                const now = Date.now();
                 if (!document.contains(video)) {
                     Logger.add('[HEALER:CLEANUP] Video removed from DOM', {
                         videoId
@@ -156,9 +177,14 @@ const PlaybackMonitor = (() => {
                     return;
                 }
 
-                if (video.paused) {
+                const pausedAfterStall = state.lastStallEventTime > 0
+                    && (now - state.lastStallEventTime) < CONFIG.stall.PAUSED_STALL_GRACE_MS;
+                if (video.paused && !pausedAfterStall) {
                     setState('PAUSED', 'watchdog_paused');
                     return;
+                }
+                if (video.paused && pausedAfterStall && state.state !== 'STALLED') {
+                    setState('STALLED', 'paused_after_stall');
                 }
 
                 const currentSrc = video.currentSrc || video.getAttribute('src') || '';
@@ -171,7 +197,7 @@ const PlaybackMonitor = (() => {
                     state.lastSrc = currentSrc;
                 }
 
-                const stalledForMs = Date.now() - state.lastProgressTime;
+                const stalledForMs = now - state.lastProgressTime;
                 if (stalledForMs < CONFIG.stall.STALL_CONFIRM_MS) {
                     return;
                 }
@@ -189,7 +215,6 @@ const PlaybackMonitor = (() => {
                     setState('STALLED', 'watchdog_no_progress');
                 }
 
-                const now = Date.now();
                 if (now - state.lastWatchdogLogTime > 5000) {
                     state.lastWatchdogLogTime = now;
                     logDebug(`${LOG.WATCHDOG} No progress observed`, {

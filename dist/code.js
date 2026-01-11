@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.0.21
+// @version       4.0.22
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -37,6 +37,7 @@ const CONFIG = (() => {
             WATCHDOG_INTERVAL_MS: 1000,     // Watchdog interval for stall checks
             STALL_CONFIRM_MS: 2500,         // Required no-progress window before healing
             STALL_CONFIRM_BUFFER_OK_MS: 1500, // Extra delay when buffer is healthy
+            PAUSED_STALL_GRACE_MS: 3000,    // Allow stall detection shortly after pause
             RECOVERY_WINDOW_MS: 1500,       // Recent progress window to consider recovered
             RETRY_COOLDOWN_MS: 2000,        // Cooldown between heal attempts for same stall
             HEAL_POLL_INTERVAL_MS: 200,     // How often to poll for heal point
@@ -45,6 +46,7 @@ const CONFIG = (() => {
 
         monitoring: {
             MAX_VIDEO_MONITORS: 3,          // Max concurrent video elements to monitor
+            CANDIDATE_SWITCH_DELTA: 2,      // Min score delta before switching active video
         },
 
         logging: {
@@ -823,6 +825,7 @@ const PlaybackMonitor = (() => {
         const isHealing = options.isHealing || (() => false);
         const onStall = options.onStall || (() => {});
         const onRemoved = options.onRemoved || (() => {});
+        const onReset = options.onReset || (() => {});
         const videoId = options.videoId || 'unknown';
 
         const state = {
@@ -831,7 +834,8 @@ const PlaybackMonitor = (() => {
             state: 'PLAYING',
             lastHealAttemptTime: 0,
             lastWatchdogLogTime: 0,
-            lastSrc: video.currentSrc || video.getAttribute('src') || ''
+            lastSrc: video.currentSrc || video.getAttribute('src') || '',
+            lastStallEventTime: 0
         };
 
         const logDebug = (message, detail) => {
@@ -853,6 +857,20 @@ const PlaybackMonitor = (() => {
                 reason,
                 videoState: VideoState.get(video, videoId)
             });
+        };
+
+        const handleReset = (reason) => {
+            const vs = VideoState.get(video, videoId);
+            if (vs.currentSrc || vs.src || vs.readyState !== 0) {
+                return;
+            }
+
+            setState('RESET', reason);
+            logDebug('[HEALER:RESET] Video reset', {
+                reason,
+                videoState: vs
+            });
+            onReset({ reason, videoState: vs }, state);
         };
 
         const handlers = {
@@ -882,6 +900,7 @@ const PlaybackMonitor = (() => {
                 }
             },
             waiting: () => {
+                state.lastStallEventTime = Date.now();
                 logDebug(`${LOG.EVENT} waiting`, {
                     state: state.state,
                     videoState: VideoState.get(video, videoId)
@@ -891,6 +910,7 @@ const PlaybackMonitor = (() => {
                 }
             },
             stalled: () => {
+                state.lastStallEventTime = Date.now();
                 logDebug(`${LOG.EVENT} stalled`, {
                     state: state.state,
                     videoState: VideoState.get(video, videoId)
@@ -926,12 +946,14 @@ const PlaybackMonitor = (() => {
                     videoState: VideoState.get(video, videoId)
                 });
                 setState('PAUSED', 'abort');
+                handleReset('abort');
             },
             emptied: () => {
                 logDebug(`${LOG.EVENT} emptied`, {
                     state: state.state,
                     videoState: VideoState.get(video, videoId)
                 });
+                handleReset('emptied');
             },
             suspend: () => {
                 logDebug(`${LOG.EVENT} suspend`, {
@@ -953,6 +975,7 @@ const PlaybackMonitor = (() => {
             });
 
             intervalId = setInterval(() => {
+                const now = Date.now();
                 if (!document.contains(video)) {
                     Logger.add('[HEALER:CLEANUP] Video removed from DOM', {
                         videoId
@@ -965,9 +988,14 @@ const PlaybackMonitor = (() => {
                     return;
                 }
 
-                if (video.paused) {
+                const pausedAfterStall = state.lastStallEventTime > 0
+                    && (now - state.lastStallEventTime) < CONFIG.stall.PAUSED_STALL_GRACE_MS;
+                if (video.paused && !pausedAfterStall) {
                     setState('PAUSED', 'watchdog_paused');
                     return;
+                }
+                if (video.paused && pausedAfterStall && state.state !== 'STALLED') {
+                    setState('STALLED', 'paused_after_stall');
                 }
 
                 const currentSrc = video.currentSrc || video.getAttribute('src') || '';
@@ -980,7 +1008,7 @@ const PlaybackMonitor = (() => {
                     state.lastSrc = currentSrc;
                 }
 
-                const stalledForMs = Date.now() - state.lastProgressTime;
+                const stalledForMs = now - state.lastProgressTime;
                 if (stalledForMs < CONFIG.stall.STALL_CONFIRM_MS) {
                     return;
                 }
@@ -998,7 +1026,6 @@ const PlaybackMonitor = (() => {
                     setState('STALLED', 'watchdog_no_progress');
                 }
 
-                const now = Date.now();
                 if (now - state.lastWatchdogLogTime > 5000) {
                     state.lastWatchdogLogTime = now;
                     logDebug(`${LOG.WATCHDOG} No progress observed`, {
@@ -1118,6 +1145,16 @@ const StreamHealer = (() => {
             reasons.push('error');
         }
 
+        if (state.state === 'RESET') {
+            score -= 3;
+            reasons.push('reset');
+        }
+
+        if (state.state === 'ERROR') {
+            score -= 2;
+            reasons.push('error_state');
+        }
+
         if (isFallbackSource(vs.currentSrc)) {
             score -= 4;
             reasons.push('fallback_src');
@@ -1179,7 +1216,13 @@ const StreamHealer = (() => {
         }
 
         let best = null;
+        let current = null;
         const scores = [];
+
+        if (activeCandidateId && monitorsById.has(activeCandidateId)) {
+            const entry = monitorsById.get(activeCandidateId);
+            current = { id: activeCandidateId, ...scoreVideo(entry.video, entry.monitor, activeCandidateId) };
+        }
 
         for (const [videoId, entry] of monitorsById.entries()) {
             const result = scoreVideo(entry.video, entry.monitor, videoId);
@@ -1199,13 +1242,43 @@ const StreamHealer = (() => {
         }
 
         if (best && best.id !== activeCandidateId) {
-            Logger.add('[HEALER:CANDIDATE] Active video switched', {
-                from: activeCandidateId,
-                to: best.id,
-                reason,
-                scores
-            });
-            activeCandidateId = best.id;
+            let allowSwitch = true;
+            let delta = null;
+            let currentScore = null;
+
+            if (current) {
+                delta = best.score - current.score;
+                currentScore = current.score;
+                const currentBad = current.reasons.includes('fallback_src')
+                    || current.reasons.includes('ended')
+                    || current.reasons.includes('not_in_dom')
+                    || current.reasons.includes('reset')
+                    || current.reasons.includes('error_state');
+                allowSwitch = currentBad || delta >= CONFIG.monitoring.CANDIDATE_SWITCH_DELTA;
+                if (!allowSwitch) {
+                    logDebug('[HEALER:CANDIDATE] Switch suppressed', {
+                        from: activeCandidateId,
+                        to: best.id,
+                        reason,
+                        delta,
+                        currentScore,
+                        bestScore: best.score
+                    });
+                }
+            }
+
+            if (allowSwitch) {
+                Logger.add('[HEALER:CANDIDATE] Active video switched', {
+                    from: activeCandidateId,
+                    to: best.id,
+                    reason,
+                    delta,
+                    currentScore,
+                    bestScore: best.score,
+                    scores
+                });
+                activeCandidateId = best.id;
+            }
         }
 
         return best;
@@ -1453,11 +1526,11 @@ const StreamHealer = (() => {
             state.lastHealAttemptTime = now;
         }
 
-        const best = evaluateCandidates('stall');
-        if (best && best.id !== videoId) {
+        evaluateCandidates('stall');
+        if (activeCandidateId && activeCandidateId !== videoId) {
             logDebug('[HEALER:STALL_SKIP] Stall on non-active video', {
                 videoId,
-                activeVideoId: best.id,
+                activeVideoId: activeCandidateId,
                 stalledFor: details.stalledFor
             });
             return;
@@ -1520,6 +1593,13 @@ const StreamHealer = (() => {
             isHealing: () => isHealing,
             onRemoved: () => stopMonitoring(video),
             onStall: (details, state) => onStallDetected(video, details, state),
+            onReset: (details) => {
+                Logger.add('[HEALER:RESET] Video reset detected', {
+                    videoId,
+                    ...details
+                });
+                evaluateCandidates('reset');
+            },
             videoId
         });
 
@@ -1531,6 +1611,7 @@ const StreamHealer = (() => {
         monitoredCount++;
         startCandidateEvaluation();
         pruneMonitors(videoId);
+        evaluateCandidates('register');
 
         Logger.add('[HEALER:MONITOR] Started monitoring video', {
             videoId,

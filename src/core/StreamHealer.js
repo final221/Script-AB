@@ -75,6 +75,16 @@ const StreamHealer = (() => {
             reasons.push('error');
         }
 
+        if (state.state === 'RESET') {
+            score -= 3;
+            reasons.push('reset');
+        }
+
+        if (state.state === 'ERROR') {
+            score -= 2;
+            reasons.push('error_state');
+        }
+
         if (isFallbackSource(vs.currentSrc)) {
             score -= 4;
             reasons.push('fallback_src');
@@ -136,7 +146,13 @@ const StreamHealer = (() => {
         }
 
         let best = null;
+        let current = null;
         const scores = [];
+
+        if (activeCandidateId && monitorsById.has(activeCandidateId)) {
+            const entry = monitorsById.get(activeCandidateId);
+            current = { id: activeCandidateId, ...scoreVideo(entry.video, entry.monitor, activeCandidateId) };
+        }
 
         for (const [videoId, entry] of monitorsById.entries()) {
             const result = scoreVideo(entry.video, entry.monitor, videoId);
@@ -156,13 +172,43 @@ const StreamHealer = (() => {
         }
 
         if (best && best.id !== activeCandidateId) {
-            Logger.add('[HEALER:CANDIDATE] Active video switched', {
-                from: activeCandidateId,
-                to: best.id,
-                reason,
-                scores
-            });
-            activeCandidateId = best.id;
+            let allowSwitch = true;
+            let delta = null;
+            let currentScore = null;
+
+            if (current) {
+                delta = best.score - current.score;
+                currentScore = current.score;
+                const currentBad = current.reasons.includes('fallback_src')
+                    || current.reasons.includes('ended')
+                    || current.reasons.includes('not_in_dom')
+                    || current.reasons.includes('reset')
+                    || current.reasons.includes('error_state');
+                allowSwitch = currentBad || delta >= CONFIG.monitoring.CANDIDATE_SWITCH_DELTA;
+                if (!allowSwitch) {
+                    logDebug('[HEALER:CANDIDATE] Switch suppressed', {
+                        from: activeCandidateId,
+                        to: best.id,
+                        reason,
+                        delta,
+                        currentScore,
+                        bestScore: best.score
+                    });
+                }
+            }
+
+            if (allowSwitch) {
+                Logger.add('[HEALER:CANDIDATE] Active video switched', {
+                    from: activeCandidateId,
+                    to: best.id,
+                    reason,
+                    delta,
+                    currentScore,
+                    bestScore: best.score,
+                    scores
+                });
+                activeCandidateId = best.id;
+            }
         }
 
         return best;
@@ -410,11 +456,11 @@ const StreamHealer = (() => {
             state.lastHealAttemptTime = now;
         }
 
-        const best = evaluateCandidates('stall');
-        if (best && best.id !== videoId) {
+        evaluateCandidates('stall');
+        if (activeCandidateId && activeCandidateId !== videoId) {
             logDebug('[HEALER:STALL_SKIP] Stall on non-active video', {
                 videoId,
-                activeVideoId: best.id,
+                activeVideoId: activeCandidateId,
                 stalledFor: details.stalledFor
             });
             return;
@@ -477,6 +523,13 @@ const StreamHealer = (() => {
             isHealing: () => isHealing,
             onRemoved: () => stopMonitoring(video),
             onStall: (details, state) => onStallDetected(video, details, state),
+            onReset: (details) => {
+                Logger.add('[HEALER:RESET] Video reset detected', {
+                    videoId,
+                    ...details
+                });
+                evaluateCandidates('reset');
+            },
             videoId
         });
 
@@ -488,6 +541,7 @@ const StreamHealer = (() => {
         monitoredCount++;
         startCandidateEvaluation();
         pruneMonitors(videoId);
+        evaluateCandidates('register');
 
         Logger.add('[HEALER:MONITOR] Started monitoring video', {
             videoId,

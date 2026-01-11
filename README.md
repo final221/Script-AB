@@ -78,13 +78,15 @@ Key settings in `Config.js`:
 | `stall.WATCHDOG_INTERVAL_MS` | 1000 | How often the watchdog checks for stalls |
 | `stall.STALL_CONFIRM_MS` | 2500 | No-progress window before healing |
 | `stall.STALL_CONFIRM_BUFFER_OK_MS` | 1500 | Extra delay when buffer looks healthy |
+| `stall.PAUSED_STALL_GRACE_MS` | 3000 | Allow stall detection shortly after pause |
 | `stall.RETRY_COOLDOWN_MS` | 2000 | Cooldown between heal attempts |
 | `stall.HEAL_TIMEOUT_S` | 15 | Give up finding heal point after |
 | `monitoring.MAX_VIDEO_MONITORS` | 3 | Max concurrent video elements to monitor |
+| `monitoring.CANDIDATE_SWITCH_DELTA` | 2 | Score delta required to switch active video |
 
 ## Version
 
-Current: **4.0.21**
+Current: **4.0.22**
 
 Version increments automatically on each build (patch).
 
