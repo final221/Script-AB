@@ -12,18 +12,28 @@ const StreamHealer = (() => {
     // Track monitored videos to prevent duplicate monitors
     const monitoredVideos = new WeakMap(); // video -> monitor
 
-    /**
-     * Get current video state for logging
-     */
-    const getVideoState = (video) => {
-        if (!video) return { error: 'NO_VIDEO' };
-        return {
-            currentTime: video.currentTime?.toFixed(3),
-            paused: video.paused,
-            readyState: video.readyState,
-            networkState: video.networkState,
-            buffered: BufferGapFinder.formatRanges(BufferGapFinder.getBufferRanges(video))
-        };
+    const LOG = {
+        POLL_START: '[HEALER:POLL_START]',
+        POLL_SUCCESS: '[HEALER:POLL_SUCCESS]',
+        POLL_TIMEOUT: '[HEALER:POLL_TIMEOUT]',
+        POLLING: '[HEALER:POLLING]',
+        SELF_RECOVERED: '[HEALER:SELF_RECOVERED]',
+        START: '[HEALER:START]',
+        DEBOUNCE: '[HEALER:DEBOUNCE]',
+        STALL_DETECTED: '[STALL:DETECTED]'
+    };
+
+    const logDebug = (message, detail) => {
+        if (CONFIG.debug) {
+            Logger.add(message, detail);
+        }
+    };
+
+    const logWithState = (message, video, detail = {}) => {
+        Logger.add(message, {
+            ...detail,
+            videoState: VideoState.get(video)
+        });
     };
 
     /**
@@ -42,9 +52,8 @@ const StreamHealer = (() => {
         const startTime = Date.now();
         let pollCount = 0;
 
-        Logger.add('[HEALER:POLL_START] Polling for heal point', {
-            timeout: timeoutMs + 'ms',
-            videoState: getVideoState(video)
+        logWithState(LOG.POLL_START, video, {
+            timeout: timeoutMs + 'ms'
         });
 
         while (Date.now() - startTime < timeoutMs) {
@@ -52,10 +61,9 @@ const StreamHealer = (() => {
 
             // Early abort: Check if video recovered on its own
             if (hasRecovered(video, state)) {
-                Logger.add('[HEALER:SELF_RECOVERED] Video recovered during polling', {
+                logWithState(LOG.SELF_RECOVERED, video, {
                     pollCount,
-                    elapsed: (Date.now() - startTime) + 'ms',
-                    videoState: getVideoState(video)
+                    elapsed: (Date.now() - startTime) + 'ms'
                 });
                 return null; // No need to heal - already playing
             }
@@ -64,7 +72,7 @@ const StreamHealer = (() => {
             const healPoint = BufferGapFinder.findHealPoint(video, { silent: true });
 
             if (healPoint) {
-                Logger.add('[HEALER:POLL_SUCCESS] Heal point found', {
+                Logger.add(LOG.POLL_SUCCESS, {
                     attempts: pollCount,
                     type: healPoint.isNudge ? 'NUDGE' : 'GAP',
                     elapsed: (Date.now() - startTime) + 'ms',
@@ -76,7 +84,7 @@ const StreamHealer = (() => {
 
             // Log progress every 25 polls (~5 seconds)
             if (pollCount % 25 === 0) {
-                Logger.add('[HEALER:POLLING]', {
+                logDebug(LOG.POLLING, {
                     attempt: pollCount,
                     elapsed: (Date.now() - startTime) + 'ms',
                     buffers: BufferGapFinder.formatRanges(BufferGapFinder.getBufferRanges(video))
@@ -86,10 +94,10 @@ const StreamHealer = (() => {
             await Fn.sleep(CONFIG.stall.HEAL_POLL_INTERVAL_MS);
         }
 
-        Logger.add('[HEALER:POLL_TIMEOUT] No heal point found within timeout', {
+        Logger.add(LOG.POLL_TIMEOUT, {
             attempts: pollCount,
             elapsed: (Date.now() - startTime) + 'ms',
-            finalState: getVideoState(video)
+            finalState: VideoState.get(video)
         });
 
         return null;
@@ -112,10 +120,9 @@ const StreamHealer = (() => {
             state.lastHealAttemptTime = Date.now();
         }
 
-        Logger.add('[HEALER:START] Beginning heal attempt', {
+        logWithState(LOG.START, video, {
             attempt: healAttempts,
-            lastProgressAgoMs: state ? (Date.now() - state.lastProgressTime) : undefined,
-            videoState: getVideoState(video)
+            lastProgressAgoMs: state ? (Date.now() - state.lastProgressTime) : undefined
         });
 
         try {
@@ -127,7 +134,7 @@ const StreamHealer = (() => {
                 if (hasRecovered(video, state)) {
                     Logger.add('[HEALER:SKIPPED] Video recovered, no heal needed', {
                         duration: (performance.now() - healStartTime).toFixed(0) + 'ms',
-                        finalState: getVideoState(video)
+                        finalState: VideoState.get(video)
                     });
                     // Don't count as failed - video is fine
                     return;
@@ -136,7 +143,7 @@ const StreamHealer = (() => {
                 Logger.add('[HEALER:NO_HEAL_POINT] Could not find heal point', {
                     duration: (performance.now() - healStartTime).toFixed(0) + 'ms',
                     suggestion: 'User may need to refresh page',
-                    finalState: getVideoState(video)
+                    finalState: VideoState.get(video)
                 });
                 Metrics.increment('heals_failed');
                 return;
@@ -154,7 +161,7 @@ const StreamHealer = (() => {
                 }
                 Logger.add('[HEALER:STALE_GONE] Heal point disappeared before seek', {
                     original: `${healPoint.start.toFixed(2)}-${healPoint.end.toFixed(2)}`,
-                    finalState: getVideoState(video)
+                    finalState: VideoState.get(video)
                 });
                 Metrics.increment('heals_failed');
                 return;
@@ -179,14 +186,14 @@ const StreamHealer = (() => {
                 Logger.add('[HEALER:COMPLETE] Stream healed successfully', {
                     duration: duration + 'ms',
                     healAttempts,
-                    finalState: getVideoState(video)
+                    finalState: VideoState.get(video)
                 });
                 Metrics.increment('heals_successful');
             } else {
                 Logger.add('[HEALER:FAILED] Heal attempt failed', {
                     duration: duration + 'ms',
                     error: result.error,
-                    finalState: getVideoState(video)
+                    finalState: VideoState.get(video)
                 });
                 Metrics.increment('heals_failed');
             }
@@ -220,7 +227,7 @@ const StreamHealer = (() => {
         if (state) {
             const progressedSinceAttempt = state.lastProgressTime > state.lastHealAttemptTime;
             if (progressedSinceAttempt && now - state.lastHealAttemptTime < CONFIG.stall.RETRY_COOLDOWN_MS) {
-                Logger.add('[HEALER:DEBOUNCE] Ignoring rapid stall event', {
+                logDebug(LOG.DEBOUNCE, {
                     cooldownMs: CONFIG.stall.RETRY_COOLDOWN_MS,
                     lastHealAttemptAgoMs: now - state.lastHealAttemptTime,
                     state: state.state
@@ -232,10 +239,9 @@ const StreamHealer = (() => {
             state.lastHealAttemptTime = now;
         }
 
-        Logger.add('[STALL:DETECTED] Stall detected, initiating heal', {
+        logWithState(LOG.STALL_DETECTED, video, {
             ...details,
-            lastProgressAgoMs: state ? (Date.now() - state.lastProgressTime) : undefined,
-            videoState: getVideoState(video)
+            lastProgressAgoMs: state ? (Date.now() - state.lastProgressTime) : undefined
         });
 
         Metrics.increment('stalls_detected');
@@ -268,7 +274,7 @@ const StreamHealer = (() => {
 
         // Prevent duplicate monitoring of the same video
         if (monitoredVideos.has(video)) {
-            Logger.add('[HEALER:SKIP] Video already being monitored');
+            logDebug('[HEALER:SKIP] Video already being monitored');
             return;
         }
 
@@ -303,6 +309,9 @@ const StreamHealer = (() => {
         getStats: () => ({ healAttempts, isHealing, monitoredCount })
     };
 })();
+
+
+
 
 
 

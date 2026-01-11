@@ -4,15 +4,16 @@
  * Emits stall detection callbacks while keeping event/state logging centralized.
  */
 const PlaybackMonitor = (() => {
-    const getVideoState = (video) => {
-        if (!video) return { error: 'NO_VIDEO' };
-        return {
-            currentTime: video.currentTime?.toFixed(3),
-            paused: video.paused,
-            readyState: video.readyState,
-            networkState: video.networkState,
-            buffered: BufferGapFinder.formatRanges(BufferGapFinder.getBufferRanges(video))
-        };
+    const LOG = {
+        STATE: '[HEALER:STATE]',
+        EVENT: '[HEALER:EVENT]',
+        WATCHDOG: '[HEALER:WATCHDOG]'
+    };
+
+    const logDebug = (message, detail) => {
+        if (CONFIG.debug) {
+            Logger.add(message, detail);
+        }
     };
 
     const create = (video, options = {}) => {
@@ -32,11 +33,11 @@ const PlaybackMonitor = (() => {
             if (state.state === nextState) return;
             const prevState = state.state;
             state.state = nextState;
-            Logger.add('[HEALER:STATE] State transition', {
+            logDebug(LOG.STATE, {
                 from: prevState,
                 to: nextState,
                 reason,
-                videoState: getVideoState(video)
+                videoState: VideoState.get(video)
             });
         };
 
@@ -45,9 +46,9 @@ const PlaybackMonitor = (() => {
                 state.lastProgressTime = Date.now();
                 state.lastTime = video.currentTime;
                 if (state.state !== 'PLAYING') {
-                    Logger.add('[HEALER:EVENT] timeupdate', {
+                    logDebug(`${LOG.EVENT} timeupdate`, {
                         state: state.state,
-                        videoState: getVideoState(video)
+                        videoState: VideoState.get(video)
                     });
                 }
                 if (state.state !== 'HEALING') {
@@ -56,36 +57,36 @@ const PlaybackMonitor = (() => {
             },
             playing: () => {
                 state.lastProgressTime = Date.now();
-                Logger.add('[HEALER:EVENT] playing', {
+                logDebug(`${LOG.EVENT} playing`, {
                     state: state.state,
-                    videoState: getVideoState(video)
+                    videoState: VideoState.get(video)
                 });
                 if (state.state !== 'HEALING') {
                     setState('PLAYING', 'playing');
                 }
             },
             waiting: () => {
-                Logger.add('[HEALER:EVENT] waiting', {
+                logDebug(`${LOG.EVENT} waiting`, {
                     state: state.state,
-                    videoState: getVideoState(video)
+                    videoState: VideoState.get(video)
                 });
                 if (!video.paused && state.state !== 'HEALING') {
                     setState('STALLED', 'waiting');
                 }
             },
             stalled: () => {
-                Logger.add('[HEALER:EVENT] stalled', {
+                logDebug(`${LOG.EVENT} stalled`, {
                     state: state.state,
-                    videoState: getVideoState(video)
+                    videoState: VideoState.get(video)
                 });
                 if (!video.paused && state.state !== 'HEALING') {
                     setState('STALLED', 'stalled');
                 }
             },
             pause: () => {
-                Logger.add('[HEALER:EVENT] pause', {
+                logDebug(`${LOG.EVENT} pause`, {
                     state: state.state,
-                    videoState: getVideoState(video)
+                    videoState: VideoState.get(video)
                 });
                 setState('PAUSED', 'pause');
             }
@@ -135,11 +136,11 @@ const PlaybackMonitor = (() => {
                 const now = Date.now();
                 if (now - state.lastWatchdogLogTime > 5000) {
                     state.lastWatchdogLogTime = now;
-                    Logger.add('[HEALER:WATCHDOG] No progress observed', {
+                    logDebug(`${LOG.WATCHDOG} No progress observed`, {
                         stalledForMs,
                         bufferExhausted,
                         state: state.state,
-                        videoState: getVideoState(video)
+                        videoState: VideoState.get(video)
                     });
                 }
 

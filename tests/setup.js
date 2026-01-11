@@ -21,6 +21,7 @@ const PRIORITY = [
     'monitoring/Metrics.js',
     'monitoring/ReportGenerator.js',
     'monitoring/Instrumentation.js',
+    'core/VideoState.js',
     'core/PlaybackMonitor.js',
     'core/StreamHealer.js',
 ];
