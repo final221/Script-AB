@@ -56,8 +56,9 @@ Build order matters (dependencies must load first):
 8. `Metrics.js` - Metrics tracking
 9. `ReportGenerator.js` - Export functionality
 10. `Instrumentation.js` - Console capture (uses Logger)
-11. `StreamHealer.js` - Main healer (uses all above)
-12. `CoreOrchestrator.js` - Entry point (initializes everything)
+11. `PlaybackMonitor.js` - Event-driven stall detection + watchdog
+12. `StreamHealer.js` - Main healer (uses all above)
+13. `CoreOrchestrator.js` - Entry point (initializes everything)
 
 
 

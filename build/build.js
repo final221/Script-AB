@@ -19,6 +19,8 @@ const CONFIG = {
         'monitoring/Metrics.js',
         'monitoring/ReportGenerator.js',
         'monitoring/Instrumentation.js',
+        // Playback monitoring (event-driven stall detection)
+        'core/PlaybackMonitor.js',
         // Core stream healer
         'core/StreamHealer.js',
     ],

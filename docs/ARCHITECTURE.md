@@ -27,6 +27,7 @@
 CoreOrchestrator
 ├─> Instrumentation (console capture for debugging)
 ├─> StreamHealer (main healing orchestrator)
+│   ├─> PlaybackMonitor (event-driven stall detection)
 │   ├─> BufferGapFinder (buffer analysis)
 │   │   └─> findHealPoint() - finds buffer ahead of currentTime
 │   │   └─> isBufferExhausted() - detects stall condition
@@ -43,8 +44,8 @@ CoreOrchestrator
 ```
 Video Element → StreamHealer.monitor()
                       │
-                      ▼ (every 500ms)
-                 Check: is stuck?
+                      ▼ (events + watchdog)
+                 Check: no progress?
                       │
          ┌────────────┴────────────┐
          ▼                         ▼
@@ -101,6 +102,7 @@ Script Logger.add() ────────┼──> Logger.getMergedTimeline(
 
 ### Core Layer
 - **CoreOrchestrator.js** - Application initialization, global function exports
+- **PlaybackMonitor.js** - Event-driven playback monitoring with watchdog
 - **StreamHealer.js** - Main orchestrator for stall detection and healing
 
 ### Recovery Layer
@@ -137,7 +139,7 @@ Script Logger.add() ────────┼──> Logger.getMergedTimeline(
 {
     isHealing: boolean,      // Currently in heal attempt
     healAttempts: number,    // Total heal attempts
-    lastStallTime: number,   // Last stall timestamp (debounce)
+    monitoredCount: number,  // Active monitored videos
 }
 ```
 
@@ -179,7 +181,9 @@ When uBlock Origin blocks ad segments, the video buffer has a gap:
 ```
 
 ### Timing
-- Check every 500ms
-- 4 consecutive stuck = 2 seconds minimum stuck time
+- Watchdog checks every 1000ms
+- Stall confirmed after 2500ms without progress (longer if buffer is healthy)
 - Poll for heal point up to 15 seconds
-- 5 second debounce between heal attempts
+- Cooldown between heal attempts is 2000ms when progress resumed
+
+

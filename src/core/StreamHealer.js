@@ -9,8 +9,8 @@ const StreamHealer = (() => {
     let monitoredCount = 0; // Track count manually (WeakMap has no .size)
     let activeVideo = null; // Track the current active video
 
-    // Track monitored videos to prevent duplicate timers
-    const monitoredVideos = new WeakMap(); // video -> { intervalId, handlers, state }
+    // Track monitored videos to prevent duplicate monitors
+    const monitoredVideos = new WeakMap(); // video -> monitor
 
     /**
      * Get current video state for logging
@@ -220,12 +220,12 @@ const StreamHealer = (() => {
         if (state) {
             const progressedSinceAttempt = state.lastProgressTime > state.lastHealAttemptTime;
             if (progressedSinceAttempt && now - state.lastHealAttemptTime < CONFIG.stall.RETRY_COOLDOWN_MS) {
-            Logger.add('[HEALER:DEBOUNCE] Ignoring rapid stall event', {
-                cooldownMs: CONFIG.stall.RETRY_COOLDOWN_MS,
-                lastHealAttemptAgoMs: now - state.lastHealAttemptTime,
-                state: state.state
-            });
-            return;
+                Logger.add('[HEALER:DEBOUNCE] Ignoring rapid stall event', {
+                    cooldownMs: CONFIG.stall.RETRY_COOLDOWN_MS,
+                    lastHealAttemptAgoMs: now - state.lastHealAttemptTime,
+                    state: state.state
+                });
+                return;
             }
         }
         if (state) {
@@ -249,16 +249,7 @@ const StreamHealer = (() => {
         const monitor = monitoredVideos.get(video);
         if (!monitor) return;
 
-        if (monitor.intervalId !== undefined) {
-            clearInterval(monitor.intervalId);
-        }
-
-        if (monitor.handlers) {
-            Object.entries(monitor.handlers).forEach(([event, handler]) => {
-                video.removeEventListener(event, handler);
-            });
-        }
-
+        monitor.stop();
         monitoredVideos.delete(video);
         monitoredCount--;
         if (video === activeVideo) {
@@ -286,137 +277,16 @@ const StreamHealer = (() => {
         }
         activeVideo = video;
 
-        const state = {
-            lastProgressTime: Date.now(),
-            lastTime: video.currentTime,
-            state: 'PLAYING',
-            lastHealAttemptTime: 0,
-            lastWatchdogLogTime: 0
-        };
-
-        const setState = (nextState, reason) => {
-            if (state.state === nextState) return;
-            const prevState = state.state;
-            state.state = nextState;
-            Logger.add('[HEALER:STATE] State transition', {
-                from: prevState,
-                to: nextState,
-                reason,
-                videoState: getVideoState(video)
-            });
-        };
-
-        const handlers = {
-            timeupdate: () => {
-                state.lastProgressTime = Date.now();
-                state.lastTime = video.currentTime;
-                if (state.state !== 'PLAYING') {
-                    Logger.add('[HEALER:EVENT] timeupdate', {
-                        state: state.state,
-                        videoState: getVideoState(video)
-                    });
-                }
-                if (state.state !== 'HEALING') {
-                    setState('PLAYING', 'timeupdate');
-                }
-            },
-            playing: () => {
-                state.lastProgressTime = Date.now();
-                Logger.add('[HEALER:EVENT] playing', {
-                    state: state.state,
-                    videoState: getVideoState(video)
-                });
-                if (state.state !== 'HEALING') {
-                    setState('PLAYING', 'playing');
-                }
-            },
-            waiting: () => {
-                Logger.add('[HEALER:EVENT] waiting', {
-                    state: state.state,
-                    videoState: getVideoState(video)
-                });
-                if (!video.paused && state.state !== 'HEALING') {
-                    setState('STALLED', 'waiting');
-                }
-            },
-            stalled: () => {
-                Logger.add('[HEALER:EVENT] stalled', {
-                    state: state.state,
-                    videoState: getVideoState(video)
-                });
-                if (!video.paused && state.state !== 'HEALING') {
-                    setState('STALLED', 'stalled');
-                }
-            },
-            pause: () => {
-                Logger.add('[HEALER:EVENT] pause', {
-                    state: state.state,
-                    videoState: getVideoState(video)
-                });
-                setState('PAUSED', 'pause');
-            }
-        };
-
-        Object.entries(handlers).forEach(([event, handler]) => {
-            video.addEventListener(event, handler);
+        const monitor = PlaybackMonitor.create(video, {
+            isHealing: () => isHealing,
+            onRemoved: () => stopMonitoring(video),
+            onStall: (details, state) => onStallDetected(video, details, state)
         });
 
-        const checkInterval = setInterval(() => {
-            // Cleanup if video removed from DOM
-            if (!document.contains(video)) {
-                Logger.add('[HEALER:CLEANUP] Video removed from DOM');
-                stopMonitoring(video);
-                return;
-            }
+        monitor.start();
 
-            // Pause monitoring while healing is active to prevent race conditions
-            if (isHealing) {
-                return;
-            }
-
-            if (video.paused) {
-                setState('PAUSED', 'watchdog_paused');
-                return;
-            }
-
-            const stalledForMs = Date.now() - state.lastProgressTime;
-            if (stalledForMs < CONFIG.stall.STALL_CONFIRM_MS) {
-                return;
-            }
-
-            if (state.state !== 'STALLED') {
-                setState('STALLED', 'watchdog_no_progress');
-            }
-
-            const bufferExhausted = BufferGapFinder.isBufferExhausted(video);
-            const confirmMs = bufferExhausted
-                ? CONFIG.stall.STALL_CONFIRM_MS
-                : CONFIG.stall.STALL_CONFIRM_MS + CONFIG.stall.STALL_CONFIRM_BUFFER_OK_MS;
-
-            if (stalledForMs < confirmMs) {
-                return;
-            }
-
-            const now = Date.now();
-            if (now - state.lastWatchdogLogTime > 5000) {
-                state.lastWatchdogLogTime = now;
-                Logger.add('[HEALER:WATCHDOG] No progress observed', {
-                    stalledForMs,
-                    bufferExhausted,
-                    state: state.state,
-                    videoState: getVideoState(video)
-                });
-            }
-
-            onStallDetected(video, {
-                trigger: 'WATCHDOG',
-                stalledFor: stalledForMs + 'ms',
-                bufferExhausted
-            }, state);
-        }, CONFIG.stall.WATCHDOG_INTERVAL_MS);
-
-        // Track this video's interval
-        monitoredVideos.set(video, { intervalId: checkInterval, handlers, state });
+        // Track this video monitor
+        monitoredVideos.set(video, monitor);
         monitoredCount++;
 
         Logger.add('[HEALER:MONITOR] Started monitoring video', {
