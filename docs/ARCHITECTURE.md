@@ -91,6 +91,7 @@ Script Logger.add() ────────┼──> Logger.getMergedTimeline(
 - **Config.js** - Central configuration, frozen object
   - `stall.WATCHDOG_INTERVAL_MS: 1000` - Watchdog check frequency
   - `stall.STALL_CONFIRM_MS: 2500` - No-progress window before healing
+  - `stall.STALL_CONFIRM_BUFFER_OK_MS: 1500` - Extra delay when buffer looks healthy
   - `stall.RETRY_COOLDOWN_MS: 2000` - Cooldown between heal attempts
   - `stall.HEAL_TIMEOUT_S: 15` - Max wait for heal point
 

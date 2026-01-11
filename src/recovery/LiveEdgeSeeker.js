@@ -17,7 +17,7 @@ const LiveEdgeSeeker = (() => {
             const start = video.buffered.start(i);
             const end = video.buffered.end(i);
 
-            if (target >= start && target < end) {
+            if (target >= start && target <= end) {
                 return {
                     valid: true,
                     bufferRange: { start, end },

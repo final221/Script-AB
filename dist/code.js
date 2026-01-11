@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.0.16
+// @version       4.0.17
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -36,6 +36,7 @@ const CONFIG = (() => {
         stall: {
             WATCHDOG_INTERVAL_MS: 1000,     // Watchdog interval for stall checks
             STALL_CONFIRM_MS: 2500,         // Required no-progress window before healing
+            STALL_CONFIRM_BUFFER_OK_MS: 1500, // Extra delay when buffer is healthy
             RECOVERY_WINDOW_MS: 1500,       // Recent progress window to consider recovered
             RETRY_COOLDOWN_MS: 2000,        // Cooldown between heal attempts for same stall
             HEAL_POLL_INTERVAL_MS: 200,     // How often to poll for heal point
@@ -282,7 +283,7 @@ const LiveEdgeSeeker = (() => {
             const start = video.buffered.start(i);
             const end = video.buffered.end(i);
 
-            if (target >= start && target < end) {
+            if (target >= start && target <= end) {
                 return {
                     valid: true,
                     bufferRange: { start, end },
@@ -993,13 +994,16 @@ const StreamHealer = (() => {
     const onStallDetected = (video, details = {}, state = null) => {
         const now = Date.now();
 
-        if (state && now - state.lastHealAttemptTime < CONFIG.stall.RETRY_COOLDOWN_MS) {
+        if (state) {
+            const progressedSinceAttempt = state.lastProgressTime > state.lastHealAttemptTime;
+            if (progressedSinceAttempt && now - state.lastHealAttemptTime < CONFIG.stall.RETRY_COOLDOWN_MS) {
             Logger.add('[HEALER:DEBOUNCE] Ignoring rapid stall event', {
                 cooldownMs: CONFIG.stall.RETRY_COOLDOWN_MS,
                 lastHealAttemptAgoMs: now - state.lastHealAttemptTime,
                 state: state.state
             });
             return;
+            }
         }
         if (state) {
             state.lastHealAttemptTime = now;
@@ -1162,6 +1166,14 @@ const StreamHealer = (() => {
             }
 
             const bufferExhausted = BufferGapFinder.isBufferExhausted(video);
+            const confirmMs = bufferExhausted
+                ? CONFIG.stall.STALL_CONFIRM_MS
+                : CONFIG.stall.STALL_CONFIRM_MS + CONFIG.stall.STALL_CONFIRM_BUFFER_OK_MS;
+
+            if (stalledForMs < confirmMs) {
+                return;
+            }
+
             const now = Date.now();
             if (now - state.lastWatchdogLogTime > 5000) {
                 state.lastWatchdogLogTime = now;

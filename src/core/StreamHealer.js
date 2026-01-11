@@ -217,13 +217,16 @@ const StreamHealer = (() => {
     const onStallDetected = (video, details = {}, state = null) => {
         const now = Date.now();
 
-        if (state && now - state.lastHealAttemptTime < CONFIG.stall.RETRY_COOLDOWN_MS) {
+        if (state) {
+            const progressedSinceAttempt = state.lastProgressTime > state.lastHealAttemptTime;
+            if (progressedSinceAttempt && now - state.lastHealAttemptTime < CONFIG.stall.RETRY_COOLDOWN_MS) {
             Logger.add('[HEALER:DEBOUNCE] Ignoring rapid stall event', {
                 cooldownMs: CONFIG.stall.RETRY_COOLDOWN_MS,
                 lastHealAttemptAgoMs: now - state.lastHealAttemptTime,
                 state: state.state
             });
             return;
+            }
         }
         if (state) {
             state.lastHealAttemptTime = now;
@@ -386,6 +389,14 @@ const StreamHealer = (() => {
             }
 
             const bufferExhausted = BufferGapFinder.isBufferExhausted(video);
+            const confirmMs = bufferExhausted
+                ? CONFIG.stall.STALL_CONFIRM_MS
+                : CONFIG.stall.STALL_CONFIRM_MS + CONFIG.stall.STALL_CONFIRM_BUFFER_OK_MS;
+
+            if (stalledForMs < confirmMs) {
+                return;
+            }
+
             const now = Date.now();
             if (now - state.lastWatchdogLogTime > 5000) {
                 state.lastWatchdogLogTime = now;
