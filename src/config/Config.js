@@ -21,8 +21,10 @@ const CONFIG = (() => {
 
         // StreamHealer stall detection configuration
         stall: {
-            DETECTION_INTERVAL_MS: 500,     // How often to check for stalls
-            STUCK_COUNT_TRIGGER: 4,         // Consecutive stuck checks before triggering (4 * 500ms = 2s)
+            WATCHDOG_INTERVAL_MS: 1000,     // Watchdog interval for stall checks
+            STALL_CONFIRM_MS: 2500,         // Required no-progress window before healing
+            RECOVERY_WINDOW_MS: 1500,       // Recent progress window to consider recovered
+            RETRY_COOLDOWN_MS: 2000,        // Cooldown between heal attempts for same stall
             HEAL_POLL_INTERVAL_MS: 200,     // How often to poll for heal point
             HEAL_TIMEOUT_S: 15,             // Give up after this many seconds
         },

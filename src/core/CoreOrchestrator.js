@@ -99,8 +99,7 @@ const CoreOrchestrator = (() => {
 
             Logger.add('[CORE] Stream Healer ready', {
                 config: {
-                    detectionInterval: CONFIG.stall.DETECTION_INTERVAL_MS + 'ms',
-                    stuckTrigger: CONFIG.stall.STUCK_COUNT_TRIGGER + ' checks',
+                    watchdogInterval: CONFIG.stall.WATCHDOG_INTERVAL_MS + 'ms',
                     healTimeout: CONFIG.stall.HEAL_TIMEOUT_S + 's'
                 }
             });
