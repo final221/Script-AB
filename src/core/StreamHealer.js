@@ -114,6 +114,7 @@ const StreamHealer = (() => {
 
         Logger.add('[HEALER:START] Beginning heal attempt', {
             attempt: healAttempts,
+            lastProgressAgoMs: state ? (Date.now() - state.lastProgressTime) : undefined,
             videoState: getVideoState(video)
         });
 
@@ -217,7 +218,11 @@ const StreamHealer = (() => {
         const now = Date.now();
 
         if (state && now - state.lastHealAttemptTime < CONFIG.stall.RETRY_COOLDOWN_MS) {
-            Logger.add('[HEALER:DEBOUNCE] Ignoring rapid stall event');
+            Logger.add('[HEALER:DEBOUNCE] Ignoring rapid stall event', {
+                cooldownMs: CONFIG.stall.RETRY_COOLDOWN_MS,
+                lastHealAttemptAgoMs: now - state.lastHealAttemptTime,
+                state: state.state
+            });
             return;
         }
         if (state) {
@@ -226,6 +231,7 @@ const StreamHealer = (() => {
 
         Logger.add('[STALL:DETECTED] Stall detected, initiating heal', {
             ...details,
+            lastProgressAgoMs: state ? (Date.now() - state.lastProgressTime) : undefined,
             videoState: getVideoState(video)
         });
 
@@ -281,7 +287,20 @@ const StreamHealer = (() => {
             lastProgressTime: Date.now(),
             lastTime: video.currentTime,
             state: 'PLAYING',
-            lastHealAttemptTime: 0
+            lastHealAttemptTime: 0,
+            lastWatchdogLogTime: 0
+        };
+
+        const setState = (nextState, reason) => {
+            if (state.state === nextState) return;
+            const prevState = state.state;
+            state.state = nextState;
+            Logger.add('[HEALER:STATE] State transition', {
+                from: prevState,
+                to: nextState,
+                reason,
+                videoState: getVideoState(video)
+            });
         };
 
         const handlers = {
@@ -289,27 +308,27 @@ const StreamHealer = (() => {
                 state.lastProgressTime = Date.now();
                 state.lastTime = video.currentTime;
                 if (state.state !== 'HEALING') {
-                    state.state = 'PLAYING';
+                    setState('PLAYING', 'timeupdate');
                 }
             },
             playing: () => {
                 state.lastProgressTime = Date.now();
                 if (state.state !== 'HEALING') {
-                    state.state = 'PLAYING';
+                    setState('PLAYING', 'playing');
                 }
             },
             waiting: () => {
                 if (!video.paused && state.state !== 'HEALING') {
-                    state.state = 'STALLED';
+                    setState('STALLED', 'waiting');
                 }
             },
             stalled: () => {
                 if (!video.paused && state.state !== 'HEALING') {
-                    state.state = 'STALLED';
+                    setState('STALLED', 'stalled');
                 }
             },
             pause: () => {
-                state.state = 'PAUSED';
+                setState('PAUSED', 'pause');
             }
         };
 
@@ -331,7 +350,7 @@ const StreamHealer = (() => {
             }
 
             if (video.paused) {
-                state.state = 'PAUSED';
+                setState('PAUSED', 'watchdog_paused');
                 return;
             }
 
@@ -340,12 +359,26 @@ const StreamHealer = (() => {
                 return;
             }
 
+            if (state.state !== 'STALLED') {
+                setState('STALLED', 'watchdog_no_progress');
+            }
+
             const bufferExhausted = BufferGapFinder.isBufferExhausted(video);
+            const now = Date.now();
+            if (now - state.lastWatchdogLogTime > 5000) {
+                state.lastWatchdogLogTime = now;
+                Logger.add('[HEALER:WATCHDOG] No progress observed', {
+                    stalledForMs,
+                    bufferExhausted,
+                    state: state.state,
+                    videoState: getVideoState(video)
+                });
+            }
+
             onStallDetected(video, {
                 trigger: 'WATCHDOG',
                 stalledFor: stalledForMs + 'ms',
-                bufferExhausted,
-                videoState: getVideoState(video)
+                bufferExhausted
             }, state);
         }, CONFIG.stall.WATCHDOG_INTERVAL_MS);
 
