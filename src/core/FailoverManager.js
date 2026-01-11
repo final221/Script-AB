@@ -9,7 +9,10 @@ const FailoverManager = (() => {
         const getVideoId = options.getVideoId;
         const logDebug = options.logDebug;
         const resetBackoff = options.resetBackoff || (() => {});
-        const picker = FailoverCandidatePicker.create({ monitorsById });
+        const picker = FailoverCandidatePicker.create({
+            monitorsById,
+            scoreVideo: candidateSelector?.scoreVideo
+        });
 
         const state = {
             inProgress: false,
@@ -59,7 +62,7 @@ const FailoverManager = (() => {
                 return false;
             }
 
-            const candidate = picker.selectNewest(fromVideoId);
+            const candidate = picker.selectPreferred(fromVideoId);
             if (!candidate) {
                 logDebug('[HEALER:FAILOVER_SKIP] No candidate available', {
                     from: fromVideoId,
