@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.0.31
+// @version       4.0.32
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -2281,6 +2281,7 @@ const HealPointPoller = (() => {
         const getVideoId = options.getVideoId;
         const logWithState = options.logWithState;
         const logDebug = options.logDebug;
+        const shouldAbort = options.shouldAbort || (() => false);
 
         const hasRecovered = (video, monitorState) => {
             if (!video || !monitorState) return false;
@@ -2298,12 +2299,24 @@ const HealPointPoller = (() => {
             while (Date.now() - startTime < timeoutMs) {
                 pollCount++;
 
+                const abortReason = shouldAbort(video, monitorState);
+                if (abortReason) {
+                    return {
+                        healPoint: null,
+                        aborted: true,
+                        reason: typeof abortReason === 'string' ? abortReason : 'abort'
+                    };
+                }
+
                 if (hasRecovered(video, monitorState)) {
                     logWithState(LOG.SELF_RECOVERED, video, {
                         pollCount,
                         elapsed: (Date.now() - startTime) + 'ms'
                     });
-                    return null;
+                    return {
+                        healPoint: null,
+                        aborted: false
+                    };
                 }
 
                 const healPoint = BufferGapFinder.findHealPoint(video, { silent: true });
@@ -2316,7 +2329,10 @@ const HealPointPoller = (() => {
                         healPoint: `${healPoint.start.toFixed(2)}-${healPoint.end.toFixed(2)}`,
                         bufferSize: (healPoint.end - healPoint.start).toFixed(2) + 's'
                     });
-                    return healPoint;
+                    return {
+                        healPoint,
+                        aborted: false
+                    };
                 }
 
                 if (pollCount % 25 === 0) {
@@ -2336,7 +2352,10 @@ const HealPointPoller = (() => {
                 finalState: VideoState.get(video, getVideoId(video))
             });
 
-            return null;
+            return {
+                healPoint: null,
+                aborted: false
+            };
         };
 
         return {
@@ -2361,10 +2380,12 @@ const HealPipeline = (() => {
         const getVideoId = options.getVideoId;
         const logWithState = options.logWithState;
         const recoveryManager = options.recoveryManager;
+        const onDetached = options.onDetached || (() => {});
         const poller = HealPointPoller.create({
             getVideoId,
             logWithState,
-            logDebug: options.logDebug
+            logDebug: options.logDebug,
+            shouldAbort: (video) => (!document.contains(video) ? 'detached' : false)
         });
 
         const state = {
@@ -2375,6 +2396,15 @@ const HealPipeline = (() => {
         const attemptHeal = async (video, monitorState) => {
             if (state.isHealing) {
                 Logger.add('[HEALER:BLOCKED] Already healing');
+                return;
+            }
+
+            if (!document.contains(video)) {
+                Logger.add('[HEALER:DETACHED] Heal skipped, video not in DOM', {
+                    reason: 'pre_heal',
+                    videoId: getVideoId(video)
+                });
+                onDetached(video, 'pre_heal');
                 return;
             }
 
@@ -2392,12 +2422,22 @@ const HealPipeline = (() => {
             });
 
             try {
-                const healPoint = await poller.pollForHealPoint(
+                const pollResult = await poller.pollForHealPoint(
                     video,
                     monitorState,
                     CONFIG.stall.HEAL_TIMEOUT_S * 1000
                 );
 
+                if (pollResult.aborted) {
+                    Logger.add('[HEALER:DETACHED] Heal aborted during polling', {
+                        reason: pollResult.reason || 'poll_abort',
+                        videoId: getVideoId(video)
+                    });
+                    onDetached(video, pollResult.reason || 'poll_abort');
+                    return;
+                }
+
+                const healPoint = pollResult.healPoint;
                 if (!healPoint) {
                     if (poller.hasRecovered(video, monitorState)) {
                         Logger.add('[HEALER:SKIPPED] Video recovered, no heal needed', {
@@ -2418,6 +2458,15 @@ const HealPipeline = (() => {
                     return;
                 }
 
+                if (!document.contains(video)) {
+                    Logger.add('[HEALER:DETACHED] Heal aborted before revalidation', {
+                        reason: 'pre_revalidate',
+                        videoId: getVideoId(video)
+                    });
+                    onDetached(video, 'pre_revalidate');
+                    return;
+                }
+
                 const freshPoint = BufferGapFinder.findHealPoint(video, { silent: true });
                 if (!freshPoint) {
                     if (poller.hasRecovered(video, monitorState)) {
@@ -2433,6 +2482,15 @@ const HealPipeline = (() => {
                     });
                     Metrics.increment('heals_failed');
                     recoveryManager.handleNoHealPoint(video, monitorState, 'stale_gone');
+                    return;
+                }
+
+                if (!document.contains(video)) {
+                    Logger.add('[HEALER:DETACHED] Heal aborted before seek', {
+                        reason: 'pre_seek',
+                        videoId: getVideoId(video)
+                    });
+                    onDetached(video, 'pre_seek');
                     return;
                 }
 
@@ -2707,7 +2765,15 @@ const StreamHealer = (() => {
         getVideoId,
         logWithState,
         logDebug,
-        recoveryManager
+        recoveryManager,
+        onDetached: (video, reason) => {
+            Logger.add('[HEALER:DETACHED] Candidate re-evaluation', {
+                reason,
+                videoId: getVideoId(video)
+            });
+            candidateSelector.evaluateCandidates('detached');
+            candidateSelector.getActiveId();
+        }
     });
 
     onStallDetected = (video, details = {}, state = null) => {

@@ -11,10 +11,12 @@ const HealPipeline = (() => {
         const getVideoId = options.getVideoId;
         const logWithState = options.logWithState;
         const recoveryManager = options.recoveryManager;
+        const onDetached = options.onDetached || (() => {});
         const poller = HealPointPoller.create({
             getVideoId,
             logWithState,
-            logDebug: options.logDebug
+            logDebug: options.logDebug,
+            shouldAbort: (video) => (!document.contains(video) ? 'detached' : false)
         });
 
         const state = {
@@ -25,6 +27,15 @@ const HealPipeline = (() => {
         const attemptHeal = async (video, monitorState) => {
             if (state.isHealing) {
                 Logger.add('[HEALER:BLOCKED] Already healing');
+                return;
+            }
+
+            if (!document.contains(video)) {
+                Logger.add('[HEALER:DETACHED] Heal skipped, video not in DOM', {
+                    reason: 'pre_heal',
+                    videoId: getVideoId(video)
+                });
+                onDetached(video, 'pre_heal');
                 return;
             }
 
@@ -42,12 +53,22 @@ const HealPipeline = (() => {
             });
 
             try {
-                const healPoint = await poller.pollForHealPoint(
+                const pollResult = await poller.pollForHealPoint(
                     video,
                     monitorState,
                     CONFIG.stall.HEAL_TIMEOUT_S * 1000
                 );
 
+                if (pollResult.aborted) {
+                    Logger.add('[HEALER:DETACHED] Heal aborted during polling', {
+                        reason: pollResult.reason || 'poll_abort',
+                        videoId: getVideoId(video)
+                    });
+                    onDetached(video, pollResult.reason || 'poll_abort');
+                    return;
+                }
+
+                const healPoint = pollResult.healPoint;
                 if (!healPoint) {
                     if (poller.hasRecovered(video, monitorState)) {
                         Logger.add('[HEALER:SKIPPED] Video recovered, no heal needed', {
@@ -68,6 +89,15 @@ const HealPipeline = (() => {
                     return;
                 }
 
+                if (!document.contains(video)) {
+                    Logger.add('[HEALER:DETACHED] Heal aborted before revalidation', {
+                        reason: 'pre_revalidate',
+                        videoId: getVideoId(video)
+                    });
+                    onDetached(video, 'pre_revalidate');
+                    return;
+                }
+
                 const freshPoint = BufferGapFinder.findHealPoint(video, { silent: true });
                 if (!freshPoint) {
                     if (poller.hasRecovered(video, monitorState)) {
@@ -83,6 +113,15 @@ const HealPipeline = (() => {
                     });
                     Metrics.increment('heals_failed');
                     recoveryManager.handleNoHealPoint(video, monitorState, 'stale_gone');
+                    return;
+                }
+
+                if (!document.contains(video)) {
+                    Logger.add('[HEALER:DETACHED] Heal aborted before seek', {
+                        reason: 'pre_seek',
+                        videoId: getVideoId(video)
+                    });
+                    onDetached(video, 'pre_seek');
                     return;
                 }
 

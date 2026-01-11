@@ -15,6 +15,7 @@ const HealPointPoller = (() => {
         const getVideoId = options.getVideoId;
         const logWithState = options.logWithState;
         const logDebug = options.logDebug;
+        const shouldAbort = options.shouldAbort || (() => false);
 
         const hasRecovered = (video, monitorState) => {
             if (!video || !monitorState) return false;
@@ -32,12 +33,24 @@ const HealPointPoller = (() => {
             while (Date.now() - startTime < timeoutMs) {
                 pollCount++;
 
+                const abortReason = shouldAbort(video, monitorState);
+                if (abortReason) {
+                    return {
+                        healPoint: null,
+                        aborted: true,
+                        reason: typeof abortReason === 'string' ? abortReason : 'abort'
+                    };
+                }
+
                 if (hasRecovered(video, monitorState)) {
                     logWithState(LOG.SELF_RECOVERED, video, {
                         pollCount,
                         elapsed: (Date.now() - startTime) + 'ms'
                     });
-                    return null;
+                    return {
+                        healPoint: null,
+                        aborted: false
+                    };
                 }
 
                 const healPoint = BufferGapFinder.findHealPoint(video, { silent: true });
@@ -50,7 +63,10 @@ const HealPointPoller = (() => {
                         healPoint: `${healPoint.start.toFixed(2)}-${healPoint.end.toFixed(2)}`,
                         bufferSize: (healPoint.end - healPoint.start).toFixed(2) + 's'
                     });
-                    return healPoint;
+                    return {
+                        healPoint,
+                        aborted: false
+                    };
                 }
 
                 if (pollCount % 25 === 0) {
@@ -70,7 +86,10 @@ const HealPointPoller = (() => {
                 finalState: VideoState.get(video, getVideoId(video))
             });
 
-            return null;
+            return {
+                healPoint: null,
+                aborted: false
+            };
         };
 
         return {

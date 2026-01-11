@@ -63,7 +63,15 @@ const StreamHealer = (() => {
         getVideoId,
         logWithState,
         logDebug,
-        recoveryManager
+        recoveryManager,
+        onDetached: (video, reason) => {
+            Logger.add('[HEALER:DETACHED] Candidate re-evaluation', {
+                reason,
+                videoId: getVideoId(video)
+            });
+            candidateSelector.evaluateCandidates('detached');
+            candidateSelector.getActiveId();
+        }
     });
 
     onStallDetected = (video, details = {}, state = null) => {
