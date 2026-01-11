@@ -39,6 +39,34 @@ CoreOrchestrator
     └─> ReportGenerator (export functionality)
 ```
 
+## Module Load Order
+
+The build uses a priority list followed by auto-discovered modules, then the entry module.
+
+<!-- LOAD_ORDER_START -->
+1. `config/Config.js`
+2. `utils/Utils.js`
+3. `utils/Adapters.js`
+4. `recovery/BufferGapFinder.js`
+5. `recovery/LiveEdgeSeeker.js`
+6. `monitoring/ErrorClassifier.js`
+7. `monitoring/Logger.js`
+8. `monitoring/Metrics.js`
+9. `monitoring/ReportGenerator.js`
+10. `monitoring/Instrumentation.js`
+11. `core/VideoState.js`
+12. `core/PlaybackStateTracker.js`
+13. `core/PlaybackMonitor.js`
+14. `core/CandidateSelector.js`
+15. `core/RecoveryManager.js`
+16. `core/MonitorRegistry.js`
+17. `core/HealPipeline.js`
+18. `core/ExternalSignalRouter.js`
+19. `core/StreamHealer.js`
+20. `core/CoreOrchestrator.js`
+<!-- LOAD_ORDER_END -->
+
+
 ## Data Flow
 
 ### Stall Detection & Healing
@@ -119,6 +147,9 @@ Script Logger.add() ────────┼──> Logger.getMergedTimeline(
 - **PlaybackMonitor.js** - Event-driven playback monitoring with watchdog
 - **CandidateSelector.js** - Scores and selects the active video
 - **RecoveryManager.js** - Backoff and failover coordination
+- **MonitorRegistry.js** - Tracks monitored video lifecycle
+- **HealPipeline.js** - Polls for heal points and executes seeks
+- **ExternalSignalRouter.js** - Handles console signal hints
 - **StreamHealer.js** - Main orchestrator for stall detection and healing
 
 ### Recovery Layer

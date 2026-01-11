@@ -9,27 +9,10 @@ const __dirname = path.dirname(__filename);
 // Define the source directory
 const SRC_DIR = path.resolve(__dirname, '../src');
 
-// Priority list must match build.js order logic
-const PRIORITY = [
-    'config/Config.js',
-    'utils/Utils.js',
-    'utils/Adapters.js',
-    'recovery/BufferGapFinder.js',
-    'recovery/LiveEdgeSeeker.js',
-    'monitoring/ErrorClassifier.js',
-    'monitoring/Logger.js',
-    'monitoring/Metrics.js',
-    'monitoring/ReportGenerator.js',
-    'monitoring/Instrumentation.js',
-    'core/VideoState.js',
-    'core/PlaybackStateTracker.js',
-    'core/PlaybackMonitor.js',
-    'core/CandidateSelector.js',
-    'core/RecoveryManager.js',
-    'core/StreamHealer.js',
-];
-
-const ENTRY = 'core/CoreOrchestrator.js';
+const MANIFEST_PATH = path.resolve(__dirname, '../build/manifest.json');
+const manifest = JSON.parse(fs.readFileSync(MANIFEST_PATH, 'utf8'));
+const PRIORITY = Array.isArray(manifest.priority) ? manifest.priority : [];
+const ENTRY = manifest.entry || 'core/CoreOrchestrator.js';
 
 // Recursive file scanner
 const getFiles = (dir) => {

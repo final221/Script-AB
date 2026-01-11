@@ -6,32 +6,7 @@ const CONFIG = {
     OUT: path.join(__dirname, '..', 'dist', 'code.js'),
     HEADER: path.join(__dirname, 'header.js'),
     VERSION: path.join(__dirname, 'version.txt'),
-    priority: [
-        'config/Config.js',
-        'utils/Utils.js',
-        'utils/Adapters.js',
-        // Recovery modules (buffer analysis and seeking)
-        'recovery/BufferGapFinder.js',
-        'recovery/LiveEdgeSeeker.js',
-        // Monitoring (needed for logging - must come before StreamHealer)
-        'monitoring/ErrorClassifier.js',
-        'monitoring/Logger.js',
-        'monitoring/Metrics.js',
-        'monitoring/ReportGenerator.js',
-        'monitoring/Instrumentation.js',
-        // Shared video state helper
-        'core/VideoState.js',
-        // Playback state tracking helpers
-        'core/PlaybackStateTracker.js',
-        // Playback monitoring (event-driven stall detection)
-        'core/PlaybackMonitor.js',
-        // Candidate selection & recovery helpers
-        'core/CandidateSelector.js',
-        'core/RecoveryManager.js',
-        // Core stream healer
-        'core/StreamHealer.js',
-    ],
-    ENTRY: 'core/CoreOrchestrator.js'
+    MANIFEST: path.join(__dirname, 'manifest.json')
 };
 
 /**
@@ -100,6 +75,10 @@ const updateVersion = (type = 'patch') => {
 (() => {
     console.log('🏗️  Building Stream Healer...');
 
+    const manifest = JSON.parse(fs.readFileSync(CONFIG.MANIFEST, 'utf8'));
+    const priority = Array.isArray(manifest.priority) ? manifest.priority : [];
+    const entry = manifest.entry || 'core/CoreOrchestrator.js';
+
     const args = process.argv.slice(2);
     let versionType = 'patch';
 
@@ -120,8 +99,8 @@ const updateVersion = (type = 'patch') => {
     const allFiles = getFiles(srcDir);
     const normalize = p => path.normalize(p);
 
-    const priorityFiles = CONFIG.priority.map(file => path.join(srcDir, file));
-    const entryFile = path.join(srcDir, CONFIG.ENTRY);
+    const priorityFiles = priority.map(file => path.join(srcDir, file));
+    const entryFile = path.join(srcDir, entry);
 
     // Filter out: non-js, priority files, entry file
     const otherFiles = allFiles.filter(file => {

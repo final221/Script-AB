@@ -1,0 +1,24 @@
+{
+  "priority": [
+    "config/Config.js",
+    "utils/Utils.js",
+    "utils/Adapters.js",
+    "recovery/BufferGapFinder.js",
+    "recovery/LiveEdgeSeeker.js",
+    "monitoring/ErrorClassifier.js",
+    "monitoring/Logger.js",
+    "monitoring/Metrics.js",
+    "monitoring/ReportGenerator.js",
+    "monitoring/Instrumentation.js",
+    "core/VideoState.js",
+    "core/PlaybackStateTracker.js",
+    "core/PlaybackMonitor.js",
+    "core/CandidateSelector.js",
+    "core/RecoveryManager.js",
+    "core/MonitorRegistry.js",
+    "core/HealPipeline.js",
+    "core/ExternalSignalRouter.js",
+    "core/StreamHealer.js"
+  ],
+  "entry": "core/CoreOrchestrator.js"
+}
