@@ -8,9 +8,18 @@ const SeekTargetCalculator = (() => {
             return { valid: false, reason: 'No buffer' };
         }
 
-        for (let i = 0; i < video.buffered.length; i++) {
-            const start = video.buffered.start(i);
-            const end = video.buffered.end(i);
+        const buffered = video.buffered;
+        const length = buffered.length;
+        for (let i = 0; i < length; i++) {
+            if (i >= buffered.length) break;
+            let start;
+            let end;
+            try {
+                start = buffered.start(i);
+                end = buffered.end(i);
+            } catch (error) {
+                return { valid: false, reason: 'Buffer read failed' };
+            }
 
             if (target >= start && target <= end) {
                 return {

@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.0.35
+// @version       4.0.36
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -129,13 +129,26 @@ const Adapters = {
 const BufferRanges = (() => {
     const getBufferRanges = (video) => {
         const ranges = [];
-        if (!video?.buffered) return ranges;
+        const buffered = video?.buffered;
+        if (!buffered) return ranges;
 
-        for (let i = 0; i < video.buffered.length; i++) {
-            ranges.push({
-                start: video.buffered.start(i),
-                end: video.buffered.end(i)
-            });
+        const length = buffered.length;
+        for (let i = 0; i < length; i++) {
+            if (i >= buffered.length) break;
+            try {
+                ranges.push({
+                    start: buffered.start(i),
+                    end: buffered.end(i)
+                });
+            } catch (error) {
+                Logger.add('[HEALER:BUFFER_ERROR] Buffer ranges changed during read', {
+                    error: error?.name,
+                    message: error?.message,
+                    index: i,
+                    length: buffered.length
+                });
+                break;
+            }
         }
         return ranges;
     };
@@ -146,15 +159,30 @@ const BufferRanges = (() => {
     };
 
     const isBufferExhausted = (video) => {
-        if (!video?.buffered || video.buffered.length === 0) {
+        const buffered = video?.buffered;
+        if (!buffered || buffered.length === 0) {
             return true;
         }
 
         const currentTime = video.currentTime;
 
-        for (let i = 0; i < video.buffered.length; i++) {
-            const start = video.buffered.start(i);
-            const end = video.buffered.end(i);
+        const length = buffered.length;
+        for (let i = 0; i < length; i++) {
+            if (i >= buffered.length) break;
+            let start;
+            let end;
+            try {
+                start = buffered.start(i);
+                end = buffered.end(i);
+            } catch (error) {
+                Logger.add('[HEALER:BUFFER_ERROR] Buffer exhaustion check failed', {
+                    error: error?.name,
+                    message: error?.message,
+                    index: i,
+                    length: buffered.length
+                });
+                return true;
+            }
 
             if (currentTime >= start && currentTime <= end) {
                 const bufferRemaining = end - currentTime;
@@ -281,9 +309,18 @@ const SeekTargetCalculator = (() => {
             return { valid: false, reason: 'No buffer' };
         }
 
-        for (let i = 0; i < video.buffered.length; i++) {
-            const start = video.buffered.start(i);
-            const end = video.buffered.end(i);
+        const buffered = video.buffered;
+        const length = buffered.length;
+        for (let i = 0; i < length; i++) {
+            if (i >= buffered.length) break;
+            let start;
+            let end;
+            try {
+                start = buffered.start(i);
+                end = buffered.end(i);
+            } catch (error) {
+                return { valid: false, reason: 'Buffer read failed' };
+            }
 
             if (target >= start && target <= end) {
                 return {
@@ -755,13 +792,20 @@ const Instrumentation = (() => {
     const getVideoState = () => {
         const video = document.querySelector('video');
         if (!video) return { error: 'NO_VIDEO_ELEMENT' };
+        let bufferedState = 'empty';
+        try {
+            if (video.buffered?.length > 0) {
+                bufferedState = `${video.buffered.end(video.buffered.length - 1).toFixed(2)}`;
+            }
+        } catch (error) {
+            bufferedState = 'unavailable';
+        }
         return {
             currentTime: video.currentTime?.toFixed(2),
             paused: video.paused,
             readyState: video.readyState,
             networkState: video.networkState,
-            buffered: video.buffered.length > 0 ?
-                `${video.buffered.end(video.buffered.length - 1).toFixed(2)}` : 'empty',
+            buffered: bufferedState,
             error: video.error?.code
         };
     };

@@ -13,13 +13,20 @@ const Instrumentation = (() => {
     const getVideoState = () => {
         const video = document.querySelector('video');
         if (!video) return { error: 'NO_VIDEO_ELEMENT' };
+        let bufferedState = 'empty';
+        try {
+            if (video.buffered?.length > 0) {
+                bufferedState = `${video.buffered.end(video.buffered.length - 1).toFixed(2)}`;
+            }
+        } catch (error) {
+            bufferedState = 'unavailable';
+        }
         return {
             currentTime: video.currentTime?.toFixed(2),
             paused: video.paused,
             readyState: video.readyState,
             networkState: video.networkState,
-            buffered: video.buffered.length > 0 ?
-                `${video.buffered.end(video.buffered.length - 1).toFixed(2)}` : 'empty',
+            buffered: bufferedState,
             error: video.error?.code
         };
     };

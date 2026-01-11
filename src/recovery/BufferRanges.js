@@ -5,13 +5,26 @@
 const BufferRanges = (() => {
     const getBufferRanges = (video) => {
         const ranges = [];
-        if (!video?.buffered) return ranges;
+        const buffered = video?.buffered;
+        if (!buffered) return ranges;
 
-        for (let i = 0; i < video.buffered.length; i++) {
-            ranges.push({
-                start: video.buffered.start(i),
-                end: video.buffered.end(i)
-            });
+        const length = buffered.length;
+        for (let i = 0; i < length; i++) {
+            if (i >= buffered.length) break;
+            try {
+                ranges.push({
+                    start: buffered.start(i),
+                    end: buffered.end(i)
+                });
+            } catch (error) {
+                Logger.add('[HEALER:BUFFER_ERROR] Buffer ranges changed during read', {
+                    error: error?.name,
+                    message: error?.message,
+                    index: i,
+                    length: buffered.length
+                });
+                break;
+            }
         }
         return ranges;
     };
@@ -22,15 +35,30 @@ const BufferRanges = (() => {
     };
 
     const isBufferExhausted = (video) => {
-        if (!video?.buffered || video.buffered.length === 0) {
+        const buffered = video?.buffered;
+        if (!buffered || buffered.length === 0) {
             return true;
         }
 
         const currentTime = video.currentTime;
 
-        for (let i = 0; i < video.buffered.length; i++) {
-            const start = video.buffered.start(i);
-            const end = video.buffered.end(i);
+        const length = buffered.length;
+        for (let i = 0; i < length; i++) {
+            if (i >= buffered.length) break;
+            let start;
+            let end;
+            try {
+                start = buffered.start(i);
+                end = buffered.end(i);
+            } catch (error) {
+                Logger.add('[HEALER:BUFFER_ERROR] Buffer exhaustion check failed', {
+                    error: error?.name,
+                    message: error?.message,
+                    index: i,
+                    length: buffered.length
+                });
+                return true;
+            }
 
             if (currentTime >= start && currentTime <= end) {
                 const bufferRemaining = end - currentTime;
