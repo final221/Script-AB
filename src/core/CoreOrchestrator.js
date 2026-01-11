@@ -14,7 +14,9 @@ const CoreOrchestrator = (() => {
             if (window.self !== window.top) return;
 
             // Initialize essential modules only
-            Instrumentation.init();  // Console capture for debugging
+            Instrumentation.init({
+                onSignal: StreamHealer.handleExternalSignal
+            });  // Console capture + external hints
 
             // Wait for DOM then start monitoring
             const startMonitoring = () => {

@@ -92,10 +92,19 @@ const PlaybackMonitor = (() => {
                 }
             },
             pause: () => {
+                const bufferExhausted = BufferGapFinder.isBufferExhausted(video);
                 logDebug(`${LOG.EVENT} pause`, {
                     state: state.state,
+                    bufferExhausted,
                     videoState: VideoState.get(video, videoId)
                 });
+                if (bufferExhausted && !video.ended) {
+                    tracker.markStallEvent('pause_buffer_exhausted');
+                    if (state.state !== 'HEALING') {
+                        setState('STALLED', 'pause_buffer_exhausted');
+                    }
+                    return;
+                }
                 setState('PAUSED', 'pause');
             },
             ended: () => {
@@ -164,15 +173,20 @@ const PlaybackMonitor = (() => {
                     return;
                 }
 
+                const bufferExhausted = BufferGapFinder.isBufferExhausted(video);
                 const pausedAfterStall = state.lastStallEventTime > 0
                     && (now - state.lastStallEventTime) < CONFIG.stall.PAUSED_STALL_GRACE_MS;
-                const pauseFromStall = state.pauseFromStall || pausedAfterStall;
+                let pauseFromStall = state.pauseFromStall || pausedAfterStall;
+                if (video.paused && bufferExhausted && !pauseFromStall) {
+                    tracker.markStallEvent('watchdog_pause_buffer_exhausted');
+                    pauseFromStall = true;
+                }
                 if (video.paused && !pauseFromStall) {
                     setState('PAUSED', 'watchdog_paused');
                     return;
                 }
                 if (video.paused && pauseFromStall && state.state !== 'STALLED') {
-                    setState('STALLED', 'paused_after_stall');
+                    setState('STALLED', bufferExhausted ? 'paused_buffer_exhausted' : 'paused_after_stall');
                 }
 
                 if (tracker.shouldSkipUntilProgress()) {
@@ -194,7 +208,6 @@ const PlaybackMonitor = (() => {
                     return;
                 }
 
-                const bufferExhausted = BufferGapFinder.isBufferExhausted(video);
                 const confirmMs = bufferExhausted
                     ? CONFIG.stall.STALL_CONFIRM_MS
                     : CONFIG.stall.STALL_CONFIRM_MS + CONFIG.stall.STALL_CONFIRM_BUFFER_OK_MS;

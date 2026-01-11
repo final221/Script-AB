@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.0.25
+// @version       4.0.26
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -668,6 +668,16 @@ Total entries: ${logs.length}
  */
 const Instrumentation = (() => {
     const classifyError = ErrorClassifier.classify;
+    const SIGNAL_THROTTLE_MS = 2000;
+    const SIGNAL_PATTERNS = {
+        PLAYHEAD_STALL: /playhead stalling at/i,
+        PROCESSING_ASSET: /404_processing_640x360\.png/i,
+    };
+    const lastSignalTimes = {
+        playhead_stall: 0,
+        processing_asset: 0
+    };
+    let externalSignalHandler = null;
 
     // Helper to capture video state for logging
     const getVideoState = () => {
@@ -712,6 +722,47 @@ const Instrumentation = (() => {
         });
     };
 
+    const emitExternalSignal = (signal) => {
+        if (!externalSignalHandler) return;
+        try {
+            externalSignalHandler(signal);
+        } catch (e) {
+            Logger.add('[INSTRUMENT:ERROR] External signal handler failed', {
+                error: e?.name,
+                message: e?.message
+            });
+        }
+    };
+
+    const maybeEmitSignal = (type, message, level) => {
+        const now = Date.now();
+        const lastTime = lastSignalTimes[type] || 0;
+        if (now - lastTime < SIGNAL_THROTTLE_MS) {
+            return;
+        }
+        lastSignalTimes[type] = now;
+        Logger.add('[INSTRUMENT:CONSOLE_HINT] Console signal detected', {
+            type,
+            level,
+            message: message.substring(0, 300)
+        });
+        emitExternalSignal({
+            type,
+            level,
+            message,
+            timestamp: new Date().toISOString()
+        });
+    };
+
+    const detectConsoleSignals = (level, message) => {
+        if (SIGNAL_PATTERNS.PLAYHEAD_STALL.test(message)) {
+            maybeEmitSignal('playhead_stall', message, level);
+        }
+        if (SIGNAL_PATTERNS.PROCESSING_ASSET.test(message)) {
+            maybeEmitSignal('processing_asset', message, level);
+        }
+    };
+
     // Capture console.log for timeline correlation
     const interceptConsoleLog = () => {
         const originalLog = console.log;
@@ -743,6 +794,8 @@ const Instrumentation = (() => {
                     action: classification.action
                 });
 
+                detectConsoleSignals('error', msg);
+
                 if (classification.action !== 'LOG_ONLY') {
                     Metrics.increment('errors');
                 }
@@ -762,6 +815,8 @@ const Instrumentation = (() => {
 
                 const msg = args.map(String).join(' ');
 
+                detectConsoleSignals('warn', msg);
+
                 // Log CSP warnings for debugging
                 if (CONFIG.logging.LOG_CSP_WARNINGS && msg.includes('Content-Security-Policy')) {
                     Logger.add('[INSTRUMENT:CSP] CSP warning', {
@@ -776,10 +831,14 @@ const Instrumentation = (() => {
     };
 
     return {
-        init: () => {
+        init: (options = {}) => {
+            externalSignalHandler = typeof options.onSignal === 'function'
+                ? options.onSignal
+                : null;
             Logger.add('[INSTRUMENT:INIT] Instrumentation initialized', {
                 features: ['globalErrors', 'consoleLogs', 'consoleErrors', 'consoleWarns'],
-                consoleCapture: true
+                consoleCapture: true,
+                externalSignals: Boolean(externalSignalHandler)
             });
             setupGlobalErrorHandlers();
             interceptConsoleLog();
@@ -1055,10 +1114,19 @@ const PlaybackMonitor = (() => {
                 }
             },
             pause: () => {
+                const bufferExhausted = BufferGapFinder.isBufferExhausted(video);
                 logDebug(`${LOG.EVENT} pause`, {
                     state: state.state,
+                    bufferExhausted,
                     videoState: VideoState.get(video, videoId)
                 });
+                if (bufferExhausted && !video.ended) {
+                    tracker.markStallEvent('pause_buffer_exhausted');
+                    if (state.state !== 'HEALING') {
+                        setState('STALLED', 'pause_buffer_exhausted');
+                    }
+                    return;
+                }
                 setState('PAUSED', 'pause');
             },
             ended: () => {
@@ -1127,15 +1195,20 @@ const PlaybackMonitor = (() => {
                     return;
                 }
 
+                const bufferExhausted = BufferGapFinder.isBufferExhausted(video);
                 const pausedAfterStall = state.lastStallEventTime > 0
                     && (now - state.lastStallEventTime) < CONFIG.stall.PAUSED_STALL_GRACE_MS;
-                const pauseFromStall = state.pauseFromStall || pausedAfterStall;
+                let pauseFromStall = state.pauseFromStall || pausedAfterStall;
+                if (video.paused && bufferExhausted && !pauseFromStall) {
+                    tracker.markStallEvent('watchdog_pause_buffer_exhausted');
+                    pauseFromStall = true;
+                }
                 if (video.paused && !pauseFromStall) {
                     setState('PAUSED', 'watchdog_paused');
                     return;
                 }
                 if (video.paused && pauseFromStall && state.state !== 'STALLED') {
-                    setState('STALLED', 'paused_after_stall');
+                    setState('STALLED', bufferExhausted ? 'paused_buffer_exhausted' : 'paused_after_stall');
                 }
 
                 if (tracker.shouldSkipUntilProgress()) {
@@ -1157,7 +1230,6 @@ const PlaybackMonitor = (() => {
                     return;
                 }
 
-                const bufferExhausted = BufferGapFinder.isBufferExhausted(video);
                 const confirmMs = bufferExhausted
                     ? CONFIG.stall.STALL_CONFIRM_MS
                     : CONFIG.stall.STALL_CONFIRM_MS + CONFIG.stall.STALL_CONFIRM_BUFFER_OK_MS;
@@ -1815,6 +1887,40 @@ const StreamHealer = (() => {
         }
     };
 
+    const getActiveEntry = () => {
+        const activeId = candidateSelector.getActiveId();
+        if (activeId && monitorsById.has(activeId)) {
+            return { id: activeId, entry: monitorsById.get(activeId) };
+        }
+        const first = monitorsById.entries().next();
+        if (!first.done) {
+            return { id: first.value[0], entry: first.value[1] };
+        }
+        return null;
+    };
+
+    const logCandidateSnapshot = (reason) => {
+        const candidates = [];
+        for (const [videoId, entry] of monitorsById.entries()) {
+            const score = candidateSelector.scoreVideo(entry.video, entry.monitor, videoId);
+            candidates.push({
+                videoId,
+                score: score.score,
+                progressEligible: score.progressEligible,
+                progressStreakMs: score.progressStreakMs,
+                progressAgoMs: score.progressAgoMs,
+                readyState: score.vs.readyState,
+                paused: score.vs.paused,
+                currentSrc: score.vs.currentSrc,
+                reasons: score.reasons
+            });
+        }
+        Logger.add('[HEALER:CANDIDATE_SNAPSHOT] Candidates scored', {
+            reason,
+            candidates
+        });
+    };
+
     /**
      * Check if video has recovered (recent progress observed)
      */
@@ -2050,6 +2156,100 @@ const StreamHealer = (() => {
         attemptHeal(video, state);
     };
 
+    const handleExternalSignal = (signal = {}) => {
+        if (!signal || monitorsById.size === 0) return;
+
+        const type = signal.type || 'unknown';
+        const level = signal.level || 'unknown';
+        const message = signal.message || '';
+
+        if (type === 'playhead_stall') {
+            const active = getActiveEntry();
+            if (!active) return;
+            const now = Date.now();
+            const state = active.entry.monitor.state;
+            state.lastStallEventTime = now;
+            state.pauseFromStall = true;
+
+            Logger.add('[HEALER:STALL_HINT] Console playhead stall warning', {
+                videoId: active.id,
+                level,
+                message: message.substring(0, 300),
+                lastProgressAgoMs: state.lastProgressTime ? (now - state.lastProgressTime) : null,
+                videoState: VideoState.get(active.entry.video, active.id)
+            });
+
+            if (!state.hasProgress || !state.lastProgressTime) {
+                return;
+            }
+
+            const stalledForMs = now - state.lastProgressTime;
+            if (stalledForMs >= CONFIG.stall.STALL_CONFIRM_MS) {
+                onStallDetected(active.entry.video, {
+                    trigger: 'CONSOLE_STALL',
+                    stalledFor: stalledForMs + 'ms',
+                    bufferExhausted: BufferGapFinder.isBufferExhausted(active.entry.video),
+                    paused: active.entry.video.paused,
+                    pauseFromStall: true
+                }, state);
+            }
+            return;
+        }
+
+        if (type === 'processing_asset') {
+            Logger.add('[HEALER:ASSET_HINT] Processing/offline asset detected', {
+                level,
+                message: message.substring(0, 300)
+            });
+
+            logCandidateSnapshot('processing_asset');
+
+            if (recoveryManager.isFailoverActive()) {
+                logDebug('[HEALER:ASSET_HINT_SKIP] Failover in progress', {
+                    reason: 'processing_asset'
+                });
+                return;
+            }
+
+            const best = candidateSelector.evaluateCandidates('processing_asset');
+            let activeId = candidateSelector.getActiveId();
+
+            if (best && best.id && activeId && best.id !== activeId && best.progressEligible) {
+                const fromId = activeId;
+                activeId = best.id;
+                candidateSelector.setActiveId(activeId);
+                Logger.add('[HEALER:CANDIDATE] Forced switch after processing asset', {
+                    from: fromId,
+                    to: activeId,
+                    bestScore: best.score,
+                    progressStreakMs: best.progressStreakMs,
+                    progressEligible: best.progressEligible
+                });
+            }
+
+            const activeEntry = activeId ? monitorsById.get(activeId) : null;
+            if (activeEntry) {
+                const playPromise = activeEntry.video?.play?.();
+                if (playPromise && typeof playPromise.catch === 'function') {
+                    playPromise.catch((err) => {
+                        Logger.add('[HEALER:ASSET_HINT_PLAY] Play rejected', {
+                            videoId: activeId,
+                            error: err?.name,
+                            message: err?.message
+                        });
+                    });
+                }
+            }
+            return;
+        }
+
+        Logger.add('[HEALER:EXTERNAL] Unhandled external signal', {
+            type,
+            level,
+            message: message.substring(0, 300)
+        });
+    };
+
     /**
      * Stop monitoring a specific video
      */
@@ -2131,6 +2331,7 @@ const StreamHealer = (() => {
         stopMonitoring,
         onStallDetected,
         attemptHeal,
+        handleExternalSignal,
         getStats: () => ({ healAttempts, isHealing, monitoredCount })
     };
 })();
@@ -2159,7 +2360,9 @@ const CoreOrchestrator = (() => {
             if (window.self !== window.top) return;
 
             // Initialize essential modules only
-            Instrumentation.init();  // Console capture for debugging
+            Instrumentation.init({
+                onSignal: StreamHealer.handleExternalSignal
+            });  // Console capture + external hints
 
             // Wait for DOM then start monitoring
             const startMonitoring = () => {
