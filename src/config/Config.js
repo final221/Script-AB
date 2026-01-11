@@ -46,6 +46,7 @@ const CONFIG = (() => {
 
         logging: {
             LOG_CSP_WARNINGS: true,
+            NON_ACTIVE_LOG_MS: 60000,
         },
     };
 

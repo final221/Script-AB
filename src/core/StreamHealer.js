@@ -19,6 +19,7 @@ const StreamHealer = (() => {
 
     let healPipeline = null;
     let onStallDetected = null;
+    const stallSkipLogTimes = new Map();
 
     const monitorRegistry = MonitorRegistry.create({
         logDebug,
@@ -133,11 +134,17 @@ const StreamHealer = (() => {
         candidateSelector.evaluateCandidates('stall');
         const activeCandidateId = candidateSelector.getActiveId();
         if (activeCandidateId && activeCandidateId !== videoId) {
-            logDebug('[HEALER:STALL_SKIP] Stall on non-active video', {
-                videoId,
-                activeVideoId: activeCandidateId,
-                stalledFor: details.stalledFor
-            });
+            const now = Date.now();
+            const lastLog = stallSkipLogTimes.get(videoId) || 0;
+            const logIntervalMs = CONFIG.logging.NON_ACTIVE_LOG_MS || 60000;
+            if (now - lastLog >= logIntervalMs) {
+                stallSkipLogTimes.set(videoId, now);
+                logDebug('[HEALER:STALL_SKIP] Stall on non-active video', {
+                    videoId,
+                    activeVideoId: activeCandidateId,
+                    stalledFor: details.stalledFor
+                });
+            }
             return;
         }
 

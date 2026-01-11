@@ -94,6 +94,7 @@ const MonitorRegistry = (() => {
 
             const monitor = PlaybackMonitor.create(video, {
                 isHealing,
+                isActive: () => candidateSelector.getActiveId() === videoId,
                 onRemoved: () => stopMonitoring(video),
                 onStall: (details, state) => onStall(video, details, state),
                 onReset: (details) => {

@@ -15,6 +15,7 @@ const PlaybackWatchdog = (() => {
         const state = options.state;
         const setState = options.setState;
         const isHealing = options.isHealing;
+        const isActive = options.isActive || (() => true);
         const onRemoved = options.onRemoved || (() => {});
         const onStall = options.onStall || (() => {});
 
@@ -81,7 +82,10 @@ const PlaybackWatchdog = (() => {
                 setState('STALLED', 'watchdog_no_progress');
             }
 
-            if (now - state.lastWatchdogLogTime > 5000) {
+            const logIntervalMs = isActive()
+                ? 5000
+                : (CONFIG.logging.NON_ACTIVE_LOG_MS || 60000);
+            if (now - state.lastWatchdogLogTime > logIntervalMs) {
                 state.lastWatchdogLogTime = now;
                 logDebug(`${LOG.WATCHDOG} No progress observed`, {
                     stalledForMs,

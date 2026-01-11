@@ -13,6 +13,7 @@ const PlaybackMonitor = (() => {
         const onStall = options.onStall || (() => {});
         const onRemoved = options.onRemoved || (() => {});
         const onReset = options.onReset || (() => {});
+        const isActive = options.isActive || (() => true);
         const videoId = options.videoId || 'unknown';
 
         const logDebug = (message, detail) => {
@@ -63,6 +64,7 @@ const PlaybackMonitor = (() => {
             state,
             setState,
             isHealing,
+            isActive,
             onRemoved,
             onStall
         });

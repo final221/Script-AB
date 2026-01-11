@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.0.34
+// @version       4.0.35
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -59,6 +59,7 @@ const CONFIG = (() => {
 
         logging: {
             LOG_CSP_WARNINGS: true,
+            NON_ACTIVE_LOG_MS: 60000,
         },
     };
 
@@ -1195,6 +1196,7 @@ const PlaybackWatchdog = (() => {
         const state = options.state;
         const setState = options.setState;
         const isHealing = options.isHealing;
+        const isActive = options.isActive || (() => true);
         const onRemoved = options.onRemoved || (() => {});
         const onStall = options.onStall || (() => {});
 
@@ -1261,7 +1263,10 @@ const PlaybackWatchdog = (() => {
                 setState('STALLED', 'watchdog_no_progress');
             }
 
-            if (now - state.lastWatchdogLogTime > 5000) {
+            const logIntervalMs = isActive()
+                ? 5000
+                : (CONFIG.logging.NON_ACTIVE_LOG_MS || 60000);
+            if (now - state.lastWatchdogLogTime > logIntervalMs) {
                 state.lastWatchdogLogTime = now;
                 logDebug(`${LOG.WATCHDOG} No progress observed`, {
                     stalledForMs,
@@ -1311,6 +1316,7 @@ const PlaybackMonitor = (() => {
         const onStall = options.onStall || (() => {});
         const onRemoved = options.onRemoved || (() => {});
         const onReset = options.onReset || (() => {});
+        const isActive = options.isActive || (() => true);
         const videoId = options.videoId || 'unknown';
 
         const logDebug = (message, detail) => {
@@ -1361,6 +1367,7 @@ const PlaybackMonitor = (() => {
             state,
             setState,
             isHealing,
+            isActive,
             onRemoved,
             onStall
         });
@@ -2222,6 +2229,7 @@ const MonitorRegistry = (() => {
 
             const monitor = PlaybackMonitor.create(video, {
                 isHealing,
+                isActive: () => candidateSelector.getActiveId() === videoId,
                 onRemoved: () => stopMonitoring(video),
                 onStall: (details, state) => onStall(video, details, state),
                 onReset: (details) => {
@@ -2723,6 +2731,7 @@ const StreamHealer = (() => {
 
     let healPipeline = null;
     let onStallDetected = null;
+    const stallSkipLogTimes = new Map();
 
     const monitorRegistry = MonitorRegistry.create({
         logDebug,
@@ -2837,11 +2846,17 @@ const StreamHealer = (() => {
         candidateSelector.evaluateCandidates('stall');
         const activeCandidateId = candidateSelector.getActiveId();
         if (activeCandidateId && activeCandidateId !== videoId) {
-            logDebug('[HEALER:STALL_SKIP] Stall on non-active video', {
-                videoId,
-                activeVideoId: activeCandidateId,
-                stalledFor: details.stalledFor
-            });
+            const now = Date.now();
+            const lastLog = stallSkipLogTimes.get(videoId) || 0;
+            const logIntervalMs = CONFIG.logging.NON_ACTIVE_LOG_MS || 60000;
+            if (now - lastLog >= logIntervalMs) {
+                stallSkipLogTimes.set(videoId, now);
+                logDebug('[HEALER:STALL_SKIP] Stall on non-active video', {
+                    videoId,
+                    activeVideoId: activeCandidateId,
+                    stalledFor: details.stalledFor
+                });
+            }
             return;
         }
 
