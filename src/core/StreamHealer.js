@@ -307,27 +307,49 @@ const StreamHealer = (() => {
             timeupdate: () => {
                 state.lastProgressTime = Date.now();
                 state.lastTime = video.currentTime;
+                if (state.state !== 'PLAYING') {
+                    Logger.add('[HEALER:EVENT] timeupdate', {
+                        state: state.state,
+                        videoState: getVideoState(video)
+                    });
+                }
                 if (state.state !== 'HEALING') {
                     setState('PLAYING', 'timeupdate');
                 }
             },
             playing: () => {
                 state.lastProgressTime = Date.now();
+                Logger.add('[HEALER:EVENT] playing', {
+                    state: state.state,
+                    videoState: getVideoState(video)
+                });
                 if (state.state !== 'HEALING') {
                     setState('PLAYING', 'playing');
                 }
             },
             waiting: () => {
+                Logger.add('[HEALER:EVENT] waiting', {
+                    state: state.state,
+                    videoState: getVideoState(video)
+                });
                 if (!video.paused && state.state !== 'HEALING') {
                     setState('STALLED', 'waiting');
                 }
             },
             stalled: () => {
+                Logger.add('[HEALER:EVENT] stalled', {
+                    state: state.state,
+                    videoState: getVideoState(video)
+                });
                 if (!video.paused && state.state !== 'HEALING') {
                     setState('STALLED', 'stalled');
                 }
             },
             pause: () => {
+                Logger.add('[HEALER:EVENT] pause', {
+                    state: state.state,
+                    videoState: getVideoState(video)
+                });
                 setState('PAUSED', 'pause');
             }
         };
