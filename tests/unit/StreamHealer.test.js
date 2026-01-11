@@ -50,23 +50,21 @@ describe('StreamHealer', () => {
         expect(stats).toHaveProperty('monitoredCount');
     });
 
-    it('replaces active video monitor on new video', () => {
+    it('tracks multiple video monitors for new videos', () => {
         const StreamHealer = window.StreamHealer;
         const videoA = document.createElement('video');
         const videoB = document.createElement('video');
 
         vi.useFakeTimers();
-        const clearSpy = vi.spyOn(globalThis, 'clearInterval');
 
         StreamHealer.monitor(videoA);
         StreamHealer.monitor(videoB);
 
-        expect(clearSpy).toHaveBeenCalledTimes(1);
-        expect(StreamHealer.getStats().monitoredCount).toBe(1);
+        expect(StreamHealer.getStats().monitoredCount).toBe(2);
 
+        StreamHealer.stopMonitoring(videoA);
         StreamHealer.stopMonitoring(videoB);
         vi.useRealTimers();
-        clearSpy.mockRestore();
     });
 });
 

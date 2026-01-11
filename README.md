@@ -80,10 +80,11 @@ Key settings in `Config.js`:
 | `stall.STALL_CONFIRM_BUFFER_OK_MS` | 1500 | Extra delay when buffer looks healthy |
 | `stall.RETRY_COOLDOWN_MS` | 2000 | Cooldown between heal attempts |
 | `stall.HEAL_TIMEOUT_S` | 15 | Give up finding heal point after |
+| `monitoring.MAX_VIDEO_MONITORS` | 3 | Max concurrent video elements to monitor |
 
 ## Version
 
-Current: **4.0.20**
+Current: **4.0.21**
 
 Version increments automatically on each build (patch).
 

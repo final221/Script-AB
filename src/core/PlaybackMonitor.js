@@ -10,23 +10,28 @@ const PlaybackMonitor = (() => {
         WATCHDOG: '[HEALER:WATCHDOG]'
     };
 
-    const logDebug = (message, detail) => {
-        if (CONFIG.debug) {
-            Logger.add(message, detail);
-        }
-    };
-
     const create = (video, options = {}) => {
         const isHealing = options.isHealing || (() => false);
         const onStall = options.onStall || (() => {});
         const onRemoved = options.onRemoved || (() => {});
+        const videoId = options.videoId || 'unknown';
 
         const state = {
             lastProgressTime: Date.now(),
             lastTime: video.currentTime,
             state: 'PLAYING',
             lastHealAttemptTime: 0,
-            lastWatchdogLogTime: 0
+            lastWatchdogLogTime: 0,
+            lastSrc: video.currentSrc || video.getAttribute('src') || ''
+        };
+
+        const logDebug = (message, detail) => {
+            if (CONFIG.debug) {
+                Logger.add(message, {
+                    videoId,
+                    ...detail
+                });
+            }
         };
 
         const setState = (nextState, reason) => {
@@ -37,21 +42,23 @@ const PlaybackMonitor = (() => {
                 from: prevState,
                 to: nextState,
                 reason,
-                videoState: VideoState.get(video)
+                videoState: VideoState.get(video, videoId)
             });
         };
 
         const handlers = {
             timeupdate: () => {
-                state.lastProgressTime = Date.now();
+                if (!video.paused) {
+                    state.lastProgressTime = Date.now();
+                }
                 state.lastTime = video.currentTime;
                 if (state.state !== 'PLAYING') {
                     logDebug(`${LOG.EVENT} timeupdate`, {
                         state: state.state,
-                        videoState: VideoState.get(video)
+                        videoState: VideoState.get(video, videoId)
                     });
                 }
-                if (state.state !== 'HEALING') {
+                if (!video.paused && state.state !== 'HEALING') {
                     setState('PLAYING', 'timeupdate');
                 }
             },
@@ -59,7 +66,7 @@ const PlaybackMonitor = (() => {
                 state.lastProgressTime = Date.now();
                 logDebug(`${LOG.EVENT} playing`, {
                     state: state.state,
-                    videoState: VideoState.get(video)
+                    videoState: VideoState.get(video, videoId)
                 });
                 if (state.state !== 'HEALING') {
                     setState('PLAYING', 'playing');
@@ -68,7 +75,7 @@ const PlaybackMonitor = (() => {
             waiting: () => {
                 logDebug(`${LOG.EVENT} waiting`, {
                     state: state.state,
-                    videoState: VideoState.get(video)
+                    videoState: VideoState.get(video, videoId)
                 });
                 if (!video.paused && state.state !== 'HEALING') {
                     setState('STALLED', 'waiting');
@@ -77,7 +84,7 @@ const PlaybackMonitor = (() => {
             stalled: () => {
                 logDebug(`${LOG.EVENT} stalled`, {
                     state: state.state,
-                    videoState: VideoState.get(video)
+                    videoState: VideoState.get(video, videoId)
                 });
                 if (!video.paused && state.state !== 'HEALING') {
                     setState('STALLED', 'stalled');
@@ -86,9 +93,42 @@ const PlaybackMonitor = (() => {
             pause: () => {
                 logDebug(`${LOG.EVENT} pause`, {
                     state: state.state,
-                    videoState: VideoState.get(video)
+                    videoState: VideoState.get(video, videoId)
                 });
                 setState('PAUSED', 'pause');
+            },
+            ended: () => {
+                logDebug(`${LOG.EVENT} ended`, {
+                    state: state.state,
+                    videoState: VideoState.get(video, videoId)
+                });
+                setState('ENDED', 'ended');
+            },
+            error: () => {
+                logDebug(`${LOG.EVENT} error`, {
+                    state: state.state,
+                    videoState: VideoState.get(video, videoId)
+                });
+                setState('ERROR', 'error');
+            },
+            abort: () => {
+                logDebug(`${LOG.EVENT} abort`, {
+                    state: state.state,
+                    videoState: VideoState.get(video, videoId)
+                });
+                setState('PAUSED', 'abort');
+            },
+            emptied: () => {
+                logDebug(`${LOG.EVENT} emptied`, {
+                    state: state.state,
+                    videoState: VideoState.get(video, videoId)
+                });
+            },
+            suspend: () => {
+                logDebug(`${LOG.EVENT} suspend`, {
+                    state: state.state,
+                    videoState: VideoState.get(video, videoId)
+                });
             }
         };
 
@@ -97,7 +137,7 @@ const PlaybackMonitor = (() => {
         const start = () => {
             logDebug('[HEALER:MONITOR] PlaybackMonitor started', {
                 state: state.state,
-                videoState: VideoState.get(video)
+                videoState: VideoState.get(video, videoId)
             });
             Object.entries(handlers).forEach(([event, handler]) => {
                 video.addEventListener(event, handler);
@@ -105,7 +145,9 @@ const PlaybackMonitor = (() => {
 
             intervalId = setInterval(() => {
                 if (!document.contains(video)) {
-                    Logger.add('[HEALER:CLEANUP] Video removed from DOM');
+                    Logger.add('[HEALER:CLEANUP] Video removed from DOM', {
+                        videoId
+                    });
                     onRemoved();
                     return;
                 }
@@ -117,6 +159,16 @@ const PlaybackMonitor = (() => {
                 if (video.paused) {
                     setState('PAUSED', 'watchdog_paused');
                     return;
+                }
+
+                const currentSrc = video.currentSrc || video.getAttribute('src') || '';
+                if (currentSrc !== state.lastSrc) {
+                    logDebug('[HEALER:SRC] Source changed', {
+                        previous: state.lastSrc,
+                        current: currentSrc,
+                        videoState: VideoState.get(video, videoId)
+                    });
+                    state.lastSrc = currentSrc;
                 }
 
                 const stalledForMs = Date.now() - state.lastProgressTime;
@@ -144,7 +196,7 @@ const PlaybackMonitor = (() => {
                         stalledForMs,
                         bufferExhausted,
                         state: state.state,
-                        videoState: VideoState.get(video)
+                        videoState: VideoState.get(video, videoId)
                     });
                 }
 
@@ -159,7 +211,7 @@ const PlaybackMonitor = (() => {
         const stop = () => {
             logDebug('[HEALER:MONITOR] PlaybackMonitor stopped', {
                 state: state.state,
-                videoState: VideoState.get(video)
+                videoState: VideoState.get(video, videoId)
             });
             if (intervalId !== undefined) {
                 clearInterval(intervalId);

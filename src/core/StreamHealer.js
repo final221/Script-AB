@@ -7,10 +7,16 @@ const StreamHealer = (() => {
     let isHealing = false;
     let healAttempts = 0;
     let monitoredCount = 0; // Track count manually (WeakMap has no .size)
-    let activeVideo = null; // Track the current active video
 
     // Track monitored videos to prevent duplicate monitors
     const monitoredVideos = new WeakMap(); // video -> monitor
+    const monitorsById = new Map(); // videoId -> { video, monitor }
+    const videoIds = new WeakMap();
+    let nextVideoId = 1;
+    let activeCandidateId = null;
+    let candidateIntervalId = null;
+    const MAX_VIDEO_MONITORS = CONFIG.monitoring.MAX_VIDEO_MONITORS;
+    const FALLBACK_SOURCE_PATTERN = /(404_processing|_404\/404_processing|_404_processing|_404)/i;
 
     const LOG = {
         POLL_START: '[HEALER:POLL_START]',
@@ -29,11 +35,174 @@ const StreamHealer = (() => {
         }
     };
 
+    const getVideoId = (video) => {
+        let id = videoIds.get(video);
+        if (!id) {
+            id = `video-${nextVideoId++}`;
+            videoIds.set(video, id);
+        }
+        return id;
+    };
+
     const logWithState = (message, video, detail = {}) => {
         Logger.add(message, {
             ...detail,
-            videoState: VideoState.get(video)
+            videoState: VideoState.get(video, getVideoId(video))
         });
+    };
+
+    const isFallbackSource = (src) => src && FALLBACK_SOURCE_PATTERN.test(src);
+
+    const scoreVideo = (video, monitor, videoId) => {
+        const vs = VideoState.get(video, videoId);
+        const state = monitor.state;
+        const progressAgoMs = Date.now() - state.lastProgressTime;
+        let score = 0;
+        const reasons = [];
+
+        if (!document.contains(video)) {
+            score -= 10;
+            reasons.push('not_in_dom');
+        }
+
+        if (vs.ended) {
+            score -= 5;
+            reasons.push('ended');
+        }
+
+        if (vs.errorCode) {
+            score -= 3;
+            reasons.push('error');
+        }
+
+        if (isFallbackSource(vs.currentSrc)) {
+            score -= 4;
+            reasons.push('fallback_src');
+        }
+
+        if (!vs.paused) {
+            score += 2;
+            reasons.push('playing');
+        } else {
+            score -= 1;
+            reasons.push('paused');
+        }
+
+        if (vs.readyState >= 3) {
+            score += 2;
+            reasons.push('ready_high');
+        } else if (vs.readyState >= 2) {
+            score += 1;
+            reasons.push('ready_mid');
+        } else {
+            score -= 1;
+            reasons.push('ready_low');
+        }
+
+        if (progressAgoMs < 2000) {
+            score += 3;
+            reasons.push('recent_progress');
+        } else if (progressAgoMs < 5000) {
+            score += 1;
+            reasons.push('stale_progress');
+        } else {
+            score -= 1;
+            reasons.push('no_progress');
+        }
+
+        if (vs.buffered !== 'none') {
+            score += 1;
+            reasons.push('buffered');
+        }
+
+        const timeValue = Number.parseFloat(vs.currentTime);
+        if (!Number.isNaN(timeValue) && timeValue > 0) {
+            score += 1;
+            reasons.push('time_nonzero');
+        }
+
+        return {
+            score,
+            reasons,
+            vs,
+            progressAgoMs
+        };
+    };
+
+    const evaluateCandidates = (reason) => {
+        if (monitorsById.size === 0) {
+            activeCandidateId = null;
+            return null;
+        }
+
+        let best = null;
+        const scores = [];
+
+        for (const [videoId, entry] of monitorsById.entries()) {
+            const result = scoreVideo(entry.video, entry.monitor, videoId);
+            scores.push({
+                id: videoId,
+                score: result.score,
+                progressAgoMs: result.progressAgoMs,
+                paused: result.vs.paused,
+                readyState: result.vs.readyState,
+                currentSrc: result.vs.currentSrc,
+                reasons: result.reasons
+            });
+
+            if (!best || result.score > best.score) {
+                best = { id: videoId, ...result };
+            }
+        }
+
+        if (best && best.id !== activeCandidateId) {
+            Logger.add('[HEALER:CANDIDATE] Active video switched', {
+                from: activeCandidateId,
+                to: best.id,
+                reason,
+                scores
+            });
+            activeCandidateId = best.id;
+        }
+
+        return best;
+    };
+
+    const startCandidateEvaluation = () => {
+        if (candidateIntervalId) return;
+        candidateIntervalId = setInterval(() => {
+            evaluateCandidates('interval');
+        }, CONFIG.stall.WATCHDOG_INTERVAL_MS);
+    };
+
+    const stopCandidateEvaluationIfIdle = () => {
+        if (monitorsById.size === 0 && candidateIntervalId) {
+            clearInterval(candidateIntervalId);
+            candidateIntervalId = null;
+            activeCandidateId = null;
+        }
+    };
+
+    const pruneMonitors = (excludeId) => {
+        if (monitorsById.size <= MAX_VIDEO_MONITORS) return;
+
+        let worst = null;
+        for (const [videoId, entry] of monitorsById.entries()) {
+            if (videoId === excludeId) continue;
+            const result = scoreVideo(entry.video, entry.monitor, videoId);
+            if (!worst || result.score < worst.score) {
+                worst = { id: videoId, entry, score: result.score };
+            }
+        }
+
+        if (worst) {
+            Logger.add('[HEALER:PRUNE] Stopped monitor due to cap', {
+                videoId: worst.id,
+                score: worst.score,
+                maxMonitors: MAX_VIDEO_MONITORS
+            });
+            stopMonitoring(worst.entry.video);
+        }
     };
 
     /**
@@ -97,7 +266,7 @@ const StreamHealer = (() => {
         Logger.add(LOG.POLL_TIMEOUT, {
             attempts: pollCount,
             elapsed: (Date.now() - startTime) + 'ms',
-            finalState: VideoState.get(video)
+            finalState: VideoState.get(video, getVideoId(video))
         });
 
         return null;
@@ -134,7 +303,7 @@ const StreamHealer = (() => {
                 if (hasRecovered(video, state)) {
                     Logger.add('[HEALER:SKIPPED] Video recovered, no heal needed', {
                         duration: (performance.now() - healStartTime).toFixed(0) + 'ms',
-                        finalState: VideoState.get(video)
+                        finalState: VideoState.get(video, getVideoId(video))
                     });
                     // Don't count as failed - video is fine
                     return;
@@ -143,7 +312,7 @@ const StreamHealer = (() => {
                 Logger.add('[HEALER:NO_HEAL_POINT] Could not find heal point', {
                     duration: (performance.now() - healStartTime).toFixed(0) + 'ms',
                     suggestion: 'User may need to refresh page',
-                    finalState: VideoState.get(video)
+                    finalState: VideoState.get(video, getVideoId(video))
                 });
                 Metrics.increment('heals_failed');
                 return;
@@ -161,7 +330,7 @@ const StreamHealer = (() => {
                 }
                 Logger.add('[HEALER:STALE_GONE] Heal point disappeared before seek', {
                     original: `${healPoint.start.toFixed(2)}-${healPoint.end.toFixed(2)}`,
-                    finalState: VideoState.get(video)
+                    finalState: VideoState.get(video, getVideoId(video))
                 });
                 Metrics.increment('heals_failed');
                 return;
@@ -186,14 +355,14 @@ const StreamHealer = (() => {
                 Logger.add('[HEALER:COMPLETE] Stream healed successfully', {
                     duration: duration + 'ms',
                     healAttempts,
-                    finalState: VideoState.get(video)
+                    finalState: VideoState.get(video, getVideoId(video))
                 });
                 Metrics.increment('heals_successful');
             } else {
                 Logger.add('[HEALER:FAILED] Heal attempt failed', {
                     duration: duration + 'ms',
                     error: result.error,
-                    finalState: VideoState.get(video)
+                    finalState: VideoState.get(video, getVideoId(video))
                 });
                 Metrics.increment('heals_failed');
             }
@@ -223,6 +392,7 @@ const StreamHealer = (() => {
      */
     const onStallDetected = (video, details = {}, state = null) => {
         const now = Date.now();
+        const videoId = getVideoId(video);
 
         if (state) {
             const progressedSinceAttempt = state.lastProgressTime > state.lastHealAttemptTime;
@@ -230,7 +400,8 @@ const StreamHealer = (() => {
                 logDebug(LOG.DEBOUNCE, {
                     cooldownMs: CONFIG.stall.RETRY_COOLDOWN_MS,
                     lastHealAttemptAgoMs: now - state.lastHealAttemptTime,
-                    state: state.state
+                    state: state.state,
+                    videoId
                 });
                 return;
             }
@@ -239,9 +410,20 @@ const StreamHealer = (() => {
             state.lastHealAttemptTime = now;
         }
 
+        const best = evaluateCandidates('stall');
+        if (best && best.id !== videoId) {
+            logDebug('[HEALER:STALL_SKIP] Stall on non-active video', {
+                videoId,
+                activeVideoId: best.id,
+                stalledFor: details.stalledFor
+            });
+            return;
+        }
+
         logWithState(LOG.STALL_DETECTED, video, {
             ...details,
-            lastProgressAgoMs: state ? (Date.now() - state.lastProgressTime) : undefined
+            lastProgressAgoMs: state ? (Date.now() - state.lastProgressTime) : undefined,
+            videoId
         });
 
         Metrics.increment('stalls_detected');
@@ -257,12 +439,19 @@ const StreamHealer = (() => {
 
         monitor.stop();
         monitoredVideos.delete(video);
+        const videoId = getVideoId(video);
+        monitorsById.delete(videoId);
         monitoredCount--;
-        if (video === activeVideo) {
-            activeVideo = null;
+        if (activeCandidateId === videoId) {
+            activeCandidateId = null;
+            if (monitorsById.size > 0) {
+                evaluateCandidates('removed');
+            }
         }
+        stopCandidateEvaluationIfIdle();
         Logger.add('[HEALER:STOP] Stopped monitoring video', {
-            remainingMonitors: monitoredCount
+            remainingMonitors: monitoredCount,
+            videoId
         });
     };
 
@@ -278,24 +467,30 @@ const StreamHealer = (() => {
             return;
         }
 
-        if (activeVideo && activeVideo !== video) {
-            stopMonitoring(activeVideo);
-        }
-        activeVideo = video;
+        const videoId = getVideoId(video);
+        Logger.add('[HEALER:VIDEO] Video registered', {
+            videoId,
+            videoState: VideoState.get(video, videoId)
+        });
 
         const monitor = PlaybackMonitor.create(video, {
             isHealing: () => isHealing,
             onRemoved: () => stopMonitoring(video),
-            onStall: (details, state) => onStallDetected(video, details, state)
+            onStall: (details, state) => onStallDetected(video, details, state),
+            videoId
         });
 
         monitor.start();
 
         // Track this video monitor
         monitoredVideos.set(video, monitor);
+        monitorsById.set(videoId, { video, monitor });
         monitoredCount++;
+        startCandidateEvaluation();
+        pruneMonitors(videoId);
 
         Logger.add('[HEALER:MONITOR] Started monitoring video', {
+            videoId,
             debug: CONFIG.debug,
             checkInterval: CONFIG.stall.WATCHDOG_INTERVAL_MS + 'ms',
             totalMonitors: monitoredCount
@@ -310,6 +505,7 @@ const StreamHealer = (() => {
         getStats: () => ({ healAttempts, isHealing, monitoredCount })
     };
 })();
+
 
 
 

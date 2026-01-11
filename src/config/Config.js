@@ -30,6 +30,10 @@ const CONFIG = (() => {
             HEAL_TIMEOUT_S: 15,             // Give up after this many seconds
         },
 
+        monitoring: {
+            MAX_VIDEO_MONITORS: 3,          // Max concurrent video elements to monitor
+        },
+
         logging: {
             LOG_CSP_WARNINGS: true,
         },

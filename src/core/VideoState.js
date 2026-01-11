@@ -4,14 +4,23 @@
  */
 const VideoState = (() => {
     return {
-        get: (video) => {
+        get: (video, id) => {
             if (!video) return { error: 'NO_VIDEO' };
+            const duration = Number.isFinite(video.duration)
+                ? video.duration.toFixed(3)
+                : String(video.duration);
             return {
+                id,
                 currentTime: video.currentTime?.toFixed(3),
                 paused: video.paused,
                 readyState: video.readyState,
                 networkState: video.networkState,
-                buffered: BufferGapFinder.formatRanges(BufferGapFinder.getBufferRanges(video))
+                buffered: BufferGapFinder.formatRanges(BufferGapFinder.getBufferRanges(video)),
+                duration,
+                ended: video.ended,
+                currentSrc: video.currentSrc || '',
+                src: video.getAttribute ? (video.getAttribute('src') || '') : '',
+                errorCode: video.error ? video.error.code : null
             };
         }
     };

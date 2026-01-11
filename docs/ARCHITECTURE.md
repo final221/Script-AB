@@ -96,6 +96,7 @@ Script Logger.add() ────────┼──> Logger.getMergedTimeline(
   - `stall.STALL_CONFIRM_BUFFER_OK_MS: 1500` - Extra delay when buffer looks healthy
   - `stall.RETRY_COOLDOWN_MS: 2000` - Cooldown between heal attempts
   - `stall.HEAL_TIMEOUT_S: 15` - Max wait for heal point
+  - `monitoring.MAX_VIDEO_MONITORS: 3` - Max concurrent video elements to monitor
 
 ### Utility Layer
 - **Utils.js (Fn)** - Pure utility functions (pipe, debounce, sleep, tryCatch)
@@ -187,6 +188,7 @@ When uBlock Origin blocks ad segments, the video buffer has a gap:
 - Stall confirmed after 2500ms without progress (longer if buffer is healthy)
 - Poll for heal point up to 15 seconds
 - Cooldown between heal attempts is 2000ms when progress resumed
+
 
 
 
