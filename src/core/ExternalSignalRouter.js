@@ -99,6 +99,7 @@ const ExternalSignalRouter = (() => {
                     progressStreakMs: score.progressStreakMs,
                     progressAgoMs: score.progressAgoMs,
                     readyState: score.vs.readyState,
+                    bufferedLength: score.vs.bufferedLength,
                     paused: score.vs.paused,
                     currentSrc: score.vs.currentSrc,
                     reasons: score.reasons

@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.0.47
+// @version       4.0.48
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -971,6 +971,32 @@ const Instrumentation = (() => {
  * Shared helper for consistent video state logging.
  */
 const VideoState = (() => {
+    const getLite = (video, id) => {
+        if (!video) return { error: 'NO_VIDEO' };
+        let bufferedLength = 0;
+        try {
+            bufferedLength = video.buffered ? video.buffered.length : 0;
+        } catch (error) {
+            bufferedLength = 0;
+        }
+        const duration = Number.isFinite(video.duration)
+            ? video.duration.toFixed(3)
+            : String(video.duration);
+        return {
+            id,
+            currentTime: video.currentTime?.toFixed(3),
+            paused: video.paused,
+            readyState: video.readyState,
+            networkState: video.networkState,
+            bufferedLength,
+            duration,
+            ended: video.ended,
+            currentSrc: video.currentSrc || '',
+            src: video.getAttribute ? (video.getAttribute('src') || '') : '',
+            errorCode: video.error ? video.error.code : null
+        };
+    };
+
     return {
         get: (video, id) => {
             if (!video) return { error: 'NO_VIDEO' };
@@ -990,7 +1016,8 @@ const VideoState = (() => {
                 src: video.getAttribute ? (video.getAttribute('src') || '') : '',
                 errorCode: video.error ? video.error.code : null
             };
-        }
+        },
+        getLite
     };
 })();
 
@@ -1558,7 +1585,7 @@ const CandidateScorer = (() => {
         const isFallbackSource = options.isFallbackSource;
 
         const score = (video, monitor, videoId) => {
-            const vs = VideoState.get(video, videoId);
+            const vs = VideoState.getLite(video, videoId);
             const state = monitor.state;
             const progressAgoMs = state.hasProgress && state.lastProgressTime
                 ? Date.now() - state.lastProgressTime
@@ -1637,7 +1664,7 @@ const CandidateScorer = (() => {
                 reasons.push('progress_short');
             }
 
-            if (vs.buffered !== 'none') {
+            if (vs.bufferedLength > 0) {
                 score += 1;
                 reasons.push('buffered');
             }
@@ -2928,6 +2955,7 @@ const ExternalSignalRouter = (() => {
                     progressStreakMs: score.progressStreakMs,
                     progressAgoMs: score.progressAgoMs,
                     readyState: score.vs.readyState,
+                    bufferedLength: score.vs.bufferedLength,
                     paused: score.vs.paused,
                     currentSrc: score.vs.currentSrc,
                     reasons: score.reasons

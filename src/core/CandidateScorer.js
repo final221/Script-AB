@@ -8,7 +8,7 @@ const CandidateScorer = (() => {
         const isFallbackSource = options.isFallbackSource;
 
         const score = (video, monitor, videoId) => {
-            const vs = VideoState.get(video, videoId);
+            const vs = VideoState.getLite(video, videoId);
             const state = monitor.state;
             const progressAgoMs = state.hasProgress && state.lastProgressTime
                 ? Date.now() - state.lastProgressTime
@@ -87,7 +87,7 @@ const CandidateScorer = (() => {
                 reasons.push('progress_short');
             }
 
-            if (vs.buffered !== 'none') {
+            if (vs.bufferedLength > 0) {
                 score += 1;
                 reasons.push('buffered');
             }
