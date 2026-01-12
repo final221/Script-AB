@@ -9,6 +9,17 @@ const ConsoleSignalDetector = (() => {
         PROCESSING_ASSET: /404_processing_640x360\.png/i,
     };
 
+    const parsePlayheadStall = (message) => {
+        const match = message.match(/playhead stalling at\s*([0-9.]+)\s*,\s*buffer end\s*([0-9.]+)/i);
+        if (!match) return null;
+        const playheadSeconds = Number.parseFloat(match[1]);
+        const bufferEndSeconds = Number.parseFloat(match[2]);
+        if (!Number.isFinite(playheadSeconds) || !Number.isFinite(bufferEndSeconds)) {
+            return null;
+        }
+        return { playheadSeconds, bufferEndSeconds };
+    };
+
     const create = (options = {}) => {
         const emitSignal = options.emitSignal || (() => {});
         const lastSignalTimes = {
@@ -16,7 +27,7 @@ const ConsoleSignalDetector = (() => {
             processing_asset: 0
         };
 
-        const maybeEmit = (type, message, level) => {
+        const maybeEmit = (type, message, level, detail = null) => {
             const now = Date.now();
             const lastTime = lastSignalTimes[type] || 0;
             if (now - lastTime < SIGNAL_THROTTLE_MS) {
@@ -26,19 +37,22 @@ const ConsoleSignalDetector = (() => {
             Logger.add('[INSTRUMENT:CONSOLE_HINT] Console signal detected', {
                 type,
                 level,
-                message: message.substring(0, 300)
+                message: message.substring(0, 300),
+                ...(detail || {})
             });
             emitSignal({
                 type,
                 level,
                 message,
-                timestamp: new Date().toISOString()
+                timestamp: new Date().toISOString(),
+                ...(detail || {})
             });
         };
 
         const detect = (level, message) => {
             if (SIGNAL_PATTERNS.PLAYHEAD_STALL.test(message)) {
-                maybeEmit('playhead_stall', message, level);
+                const detail = parsePlayheadStall(message);
+                maybeEmit('playhead_stall', message, level, detail);
             }
             if (SIGNAL_PATTERNS.PROCESSING_ASSET.test(message)) {
                 maybeEmit('processing_asset', message, level);
