@@ -88,14 +88,14 @@ Key settings in `Config.js`:
 | `stall.FAILOVER_AFTER_STALL_MS` | 30000 | Failover after this long without progress |
 | `stall.FAILOVER_PROGRESS_TIMEOUT_MS` | 8000 | Trial window for failover candidate to progress |
 | `stall.FAILOVER_COOLDOWN_MS` | 30000 | Minimum time between failover attempts |
-| `monitoring.MAX_VIDEO_MONITORS` | 3 | Max concurrent video elements to monitor |
+| `monitoring.MAX_VIDEO_MONITORS` | 8 | Max concurrent video elements to monitor |
 | `monitoring.CANDIDATE_SWITCH_DELTA` | 2 | Score delta required to switch active video |
 | `monitoring.CANDIDATE_MIN_PROGRESS_MS` | 5000 | Minimum sustained progress before switching to new video |
 | `monitoring.PROGRESS_STREAK_RESET_MS` | 2500 | Reset progress streak after this long without progress |
 
 ## Version
 
-Current: **4.0.46**
+Current: **4.0.47**
 
 Version increments automatically on each build (patch).
 
