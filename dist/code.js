@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.0.52
+// @version       4.0.53
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -56,6 +56,7 @@ const CONFIG = (() => {
             CANDIDATE_SWITCH_DELTA: 2,      // Min score delta before switching active video
             CANDIDATE_MIN_PROGRESS_MS: 5000, // Require sustained progress before switching to new video
             PROGRESS_STREAK_RESET_MS: 2500, // Reset progress streak after this long without progress
+            TRUST_STALE_MS: 8000,           // Trust expires if progress is older than this
             PROBE_COOLDOWN_MS: 5000,        // Min time between probe attempts per candidate
         },
 
@@ -1037,6 +1038,7 @@ const PlaybackStateTracker = (() => {
             progressEligible: false,
             hasProgress: false,
             firstSeenTime: Date.now(),
+            firstReadyTime: 0,
             initialProgressTimeoutLogged: false,
             noHealPointCount: 0,
             nextHealAllowedTime: 0,
@@ -1115,6 +1117,20 @@ const PlaybackStateTracker = (() => {
             }
         };
 
+        const markReady = (reason) => {
+            if (state.firstReadyTime) return;
+            const src = video.currentSrc || video.getAttribute('src') || '';
+            if (!src && video.readyState < 1) {
+                return;
+            }
+            state.firstReadyTime = Date.now();
+            logDebug('[HEALER:READY] Initial ready state observed', {
+                reason,
+                readyState: video.readyState,
+                currentSrc: src
+            });
+        };
+
         const markStallEvent = (reason) => {
             state.lastStallEventTime = Date.now();
             if (!state.pauseFromStall) {
@@ -1171,8 +1187,10 @@ const PlaybackStateTracker = (() => {
         const shouldSkipUntilProgress = () => {
             if (!state.hasProgress) {
                 const now = Date.now();
+                markReady('watchdog_ready_check');
                 const graceMs = CONFIG.stall.INIT_PROGRESS_GRACE_MS || CONFIG.stall.STALL_CONFIRM_MS;
-                const waitingForProgress = (now - state.firstSeenTime) < graceMs;
+                const baselineTime = state.firstReadyTime || state.firstSeenTime;
+                const waitingForProgress = (now - baselineTime) < graceMs;
 
                 if (waitingForProgress) {
                     if (!state.initLogEmitted) {
@@ -1180,6 +1198,7 @@ const PlaybackStateTracker = (() => {
                         logDebug('[HEALER:WATCHDOG] Awaiting initial progress', {
                             state: state.state,
                             graceMs,
+                            baseline: state.firstReadyTime ? 'ready' : 'seen',
                             videoState: VideoState.get(video, videoId)
                         });
                     }
@@ -1190,8 +1209,9 @@ const PlaybackStateTracker = (() => {
                     state.initialProgressTimeoutLogged = true;
                     logDebug('[HEALER:WATCHDOG] Initial progress timeout', {
                         state: state.state,
-                        waitedMs: now - state.firstSeenTime,
+                        waitedMs: now - baselineTime,
                         graceMs,
+                        baseline: state.firstReadyTime ? 'ready' : 'seen',
                         videoState: VideoState.get(video, videoId)
                     });
                 }
@@ -1205,6 +1225,7 @@ const PlaybackStateTracker = (() => {
             state,
             updateProgress,
             markStallEvent,
+            markReady,
             handleReset,
             shouldSkipUntilProgress
         };
@@ -1245,6 +1266,7 @@ const PlaybackEventHandlers = (() => {
                 }
             },
             playing: () => {
+                tracker.markReady('playing');
                 state.pauseFromStall = false;
                 state.lastTime = video.currentTime;
                 logDebug(`${LOG.EVENT} playing`, {
@@ -1254,6 +1276,27 @@ const PlaybackEventHandlers = (() => {
                 if (state.state !== 'HEALING') {
                     setState('PLAYING', 'playing');
                 }
+            },
+            loadedmetadata: () => {
+                tracker.markReady('loadedmetadata');
+                logDebug(`${LOG.EVENT} loadedmetadata`, {
+                    state: state.state,
+                    videoState: VideoState.get(video, videoId)
+                });
+            },
+            loadeddata: () => {
+                tracker.markReady('loadeddata');
+                logDebug(`${LOG.EVENT} loadeddata`, {
+                    state: state.state,
+                    videoState: VideoState.get(video, videoId)
+                });
+            },
+            canplay: () => {
+                tracker.markReady('canplay');
+                logDebug(`${LOG.EVENT} canplay`, {
+                    state: state.state,
+                    videoState: VideoState.get(video, videoId)
+                });
             },
             waiting: () => {
                 tracker.markStallEvent('waiting');
@@ -1763,13 +1806,29 @@ const CandidateSwitchPolicy = (() => {
 const CandidateTrust = (() => {
     const BAD_REASONS = ['fallback_src', 'ended', 'not_in_dom', 'reset', 'error_state', 'error'];
 
-    const isTrusted = (result) => {
-        if (!result || !result.progressEligible) return false;
+    const getTrustInfo = (result) => {
+        if (!result || !result.progressEligible) {
+            return { trusted: false, reason: 'progress_ineligible' };
+        }
         const reasons = Array.isArray(result.reasons) ? result.reasons : [];
-        return !BAD_REASONS.some(reason => reasons.includes(reason));
+        if (BAD_REASONS.some(reason => reasons.includes(reason))) {
+            return { trusted: false, reason: 'bad_reason' };
+        }
+        const progressAgoMs = Number.isFinite(result.progressAgoMs)
+            ? result.progressAgoMs
+            : null;
+        if (progressAgoMs === null || progressAgoMs > CONFIG.monitoring.TRUST_STALE_MS) {
+            return { trusted: false, reason: 'progress_stale' };
+        }
+        return { trusted: true, reason: 'trusted' };
     };
 
-    return { isTrusted };
+    const isTrusted = (result) => getTrustInfo(result).trusted;
+
+    return {
+        isTrusted,
+        getTrustInfo
+    };
 })();
 
 // --- CandidateSelector ---
@@ -1842,17 +1901,20 @@ const CandidateSelector = (() => {
             if (activeCandidateId && monitorsById.has(activeCandidateId)) {
                 const entry = monitorsById.get(activeCandidateId);
                 const result = scoreVideo(entry.video, entry.monitor, activeCandidateId);
+                const trustInfo = CandidateTrust.getTrustInfo(result);
                 current = {
                     id: activeCandidateId,
                     state: entry.monitor.state.state,
                     ...result
                 };
-                current.trusted = CandidateTrust.isTrusted(current);
+                current.trusted = trustInfo.trusted;
+                current.trustReason = trustInfo.reason;
             }
 
             for (const [videoId, entry] of monitorsById.entries()) {
                 const result = scoreVideo(entry.video, entry.monitor, videoId);
-                const trusted = CandidateTrust.isTrusted(result);
+                const trustInfo = CandidateTrust.getTrustInfo(result);
+                const trusted = trustInfo.trusted;
                 scores.push({
                     id: videoId,
                     score: result.score,
@@ -1864,7 +1926,8 @@ const CandidateSelector = (() => {
                     currentSrc: result.vs.currentSrc,
                     state: entry.monitor.state.state,
                     reasons: result.reasons,
-                    trusted
+                    trusted,
+                    trustReason: trustInfo.reason
                 });
 
                 if (!best || result.score > best.score) {
@@ -2989,8 +3052,8 @@ const VideoDiscovery = (() => {
         const observer = new MutationObserver((mutations) => {
             for (const mutation of mutations) {
                 for (const node of mutation.addedNodes) {
-                    if (node.nodeName === 'VIDEO' ||
-                        (node.nodeName === 'DIV' && node.querySelector && node.querySelector('video'))) {
+                    if (node.nodeType === 1 && (node.nodeName === 'VIDEO'
+                        || (node.querySelector && node.querySelector('video')))) {
                         scan(node);
                     }
                 }

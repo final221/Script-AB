@@ -44,8 +44,8 @@ const VideoDiscovery = (() => {
         const observer = new MutationObserver((mutations) => {
             for (const mutation of mutations) {
                 for (const node of mutation.addedNodes) {
-                    if (node.nodeName === 'VIDEO' ||
-                        (node.nodeName === 'DIV' && node.querySelector && node.querySelector('video'))) {
+                    if (node.nodeType === 1 && (node.nodeName === 'VIDEO'
+                        || (node.querySelector && node.querySelector('video')))) {
                         scan(node);
                     }
                 }

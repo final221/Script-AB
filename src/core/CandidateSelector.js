@@ -68,17 +68,20 @@ const CandidateSelector = (() => {
             if (activeCandidateId && monitorsById.has(activeCandidateId)) {
                 const entry = monitorsById.get(activeCandidateId);
                 const result = scoreVideo(entry.video, entry.monitor, activeCandidateId);
+                const trustInfo = CandidateTrust.getTrustInfo(result);
                 current = {
                     id: activeCandidateId,
                     state: entry.monitor.state.state,
                     ...result
                 };
-                current.trusted = CandidateTrust.isTrusted(current);
+                current.trusted = trustInfo.trusted;
+                current.trustReason = trustInfo.reason;
             }
 
             for (const [videoId, entry] of monitorsById.entries()) {
                 const result = scoreVideo(entry.video, entry.monitor, videoId);
-                const trusted = CandidateTrust.isTrusted(result);
+                const trustInfo = CandidateTrust.getTrustInfo(result);
+                const trusted = trustInfo.trusted;
                 scores.push({
                     id: videoId,
                     score: result.score,
@@ -90,7 +93,8 @@ const CandidateSelector = (() => {
                     currentSrc: result.vs.currentSrc,
                     state: entry.monitor.state.state,
                     reasons: result.reasons,
-                    trusted
+                    trusted,
+                    trustReason: trustInfo.reason
                 });
 
                 if (!best || result.score > best.score) {

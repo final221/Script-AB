@@ -92,10 +92,11 @@ Key settings in `Config.js`:
 | `monitoring.CANDIDATE_SWITCH_DELTA` | 2 | Score delta required to switch active video |
 | `monitoring.CANDIDATE_MIN_PROGRESS_MS` | 5000 | Minimum sustained progress before switching to new video |
 | `monitoring.PROGRESS_STREAK_RESET_MS` | 2500 | Reset progress streak after this long without progress |
+| `monitoring.TRUST_STALE_MS` | 8000 | Trust expires if progress is older than this |
 
 ## Version
 
-Current: **4.0.52**
+Current: **4.0.53**
 
 Version increments automatically on each build (patch).
 

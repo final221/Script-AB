@@ -14,6 +14,7 @@ const PlaybackStateTracker = (() => {
             progressEligible: false,
             hasProgress: false,
             firstSeenTime: Date.now(),
+            firstReadyTime: 0,
             initialProgressTimeoutLogged: false,
             noHealPointCount: 0,
             nextHealAllowedTime: 0,
@@ -92,6 +93,20 @@ const PlaybackStateTracker = (() => {
             }
         };
 
+        const markReady = (reason) => {
+            if (state.firstReadyTime) return;
+            const src = video.currentSrc || video.getAttribute('src') || '';
+            if (!src && video.readyState < 1) {
+                return;
+            }
+            state.firstReadyTime = Date.now();
+            logDebug('[HEALER:READY] Initial ready state observed', {
+                reason,
+                readyState: video.readyState,
+                currentSrc: src
+            });
+        };
+
         const markStallEvent = (reason) => {
             state.lastStallEventTime = Date.now();
             if (!state.pauseFromStall) {
@@ -148,8 +163,10 @@ const PlaybackStateTracker = (() => {
         const shouldSkipUntilProgress = () => {
             if (!state.hasProgress) {
                 const now = Date.now();
+                markReady('watchdog_ready_check');
                 const graceMs = CONFIG.stall.INIT_PROGRESS_GRACE_MS || CONFIG.stall.STALL_CONFIRM_MS;
-                const waitingForProgress = (now - state.firstSeenTime) < graceMs;
+                const baselineTime = state.firstReadyTime || state.firstSeenTime;
+                const waitingForProgress = (now - baselineTime) < graceMs;
 
                 if (waitingForProgress) {
                     if (!state.initLogEmitted) {
@@ -157,6 +174,7 @@ const PlaybackStateTracker = (() => {
                         logDebug('[HEALER:WATCHDOG] Awaiting initial progress', {
                             state: state.state,
                             graceMs,
+                            baseline: state.firstReadyTime ? 'ready' : 'seen',
                             videoState: VideoState.get(video, videoId)
                         });
                     }
@@ -167,8 +185,9 @@ const PlaybackStateTracker = (() => {
                     state.initialProgressTimeoutLogged = true;
                     logDebug('[HEALER:WATCHDOG] Initial progress timeout', {
                         state: state.state,
-                        waitedMs: now - state.firstSeenTime,
+                        waitedMs: now - baselineTime,
                         graceMs,
+                        baseline: state.firstReadyTime ? 'ready' : 'seen',
                         videoState: VideoState.get(video, videoId)
                     });
                 }
@@ -182,6 +201,7 @@ const PlaybackStateTracker = (() => {
             state,
             updateProgress,
             markStallEvent,
+            markReady,
             handleReset,
             shouldSkipUntilProgress
         };

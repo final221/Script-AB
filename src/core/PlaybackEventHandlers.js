@@ -30,6 +30,7 @@ const PlaybackEventHandlers = (() => {
                 }
             },
             playing: () => {
+                tracker.markReady('playing');
                 state.pauseFromStall = false;
                 state.lastTime = video.currentTime;
                 logDebug(`${LOG.EVENT} playing`, {
@@ -39,6 +40,27 @@ const PlaybackEventHandlers = (() => {
                 if (state.state !== 'HEALING') {
                     setState('PLAYING', 'playing');
                 }
+            },
+            loadedmetadata: () => {
+                tracker.markReady('loadedmetadata');
+                logDebug(`${LOG.EVENT} loadedmetadata`, {
+                    state: state.state,
+                    videoState: VideoState.get(video, videoId)
+                });
+            },
+            loadeddata: () => {
+                tracker.markReady('loadeddata');
+                logDebug(`${LOG.EVENT} loadeddata`, {
+                    state: state.state,
+                    videoState: VideoState.get(video, videoId)
+                });
+            },
+            canplay: () => {
+                tracker.markReady('canplay');
+                logDebug(`${LOG.EVENT} canplay`, {
+                    state: state.state,
+                    videoState: VideoState.get(video, videoId)
+                });
             },
             waiting: () => {
                 tracker.markStallEvent('waiting');
