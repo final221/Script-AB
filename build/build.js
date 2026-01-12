@@ -1,12 +1,14 @@
 const fs = require('fs');
 const path = require('path');
+const { execSync } = require('child_process');
 
 const CONFIG = {
     BASE: path.join(__dirname, '..'),
     OUT: path.join(__dirname, '..', 'dist', 'code.js'),
     HEADER: path.join(__dirname, 'header.js'),
     VERSION: path.join(__dirname, 'version.txt'),
-    MANIFEST: path.join(__dirname, 'manifest.json')
+    MANIFEST: path.join(__dirname, 'manifest.json'),
+    CHANGELOG: path.join(__dirname, '..', 'docs', 'CHANGELOG.md')
 };
 
 /**
@@ -79,7 +81,75 @@ const updateVersion = (type = 'patch') => {
         }
     }
 
+    updateChangelog(version, newVersion);
+
     return { old: version, new: newVersion };
+};
+
+const updateChangelog = (oldVersion, newVersion) => {
+    const changelogPath = CONFIG.CHANGELOG;
+    let existing = '';
+    let newline = '\n';
+    if (fs.existsSync(changelogPath)) {
+        existing = fs.readFileSync(changelogPath, 'utf8');
+        newline = existing.includes('\r\n') ? '\r\n' : '\n';
+    }
+
+    const header = '# Changelog';
+    if (!existing.trim()) {
+        existing = header + newline;
+    }
+
+    const match = existing.match(/Commit:\s+([0-9a-f]+)/i);
+    const lastHash = match ? match[1] : null;
+
+    const headHash = (() => {
+        try {
+            return execSync('git rev-parse --short HEAD', {
+                cwd: CONFIG.BASE,
+                stdio: ['ignore', 'pipe', 'ignore']
+            }).toString().trim();
+        } catch (e) {
+            return null;
+        }
+    })();
+
+    let commits = [];
+    try {
+        const range = lastHash ? `${lastHash}..HEAD` : 'HEAD';
+        const args = lastHash ? `${range}` : '-n 10';
+        const output = execSync(`git log ${args} --pretty=format:%s`, {
+            cwd: CONFIG.BASE,
+            stdio: ['ignore', 'pipe', 'ignore']
+        }).toString().trim();
+        commits = output ? output.split(/\r?\n/) : [];
+    } catch (e) {
+        commits = [];
+    }
+
+    const maxCommits = 20;
+    const hasMore = commits.length > maxCommits;
+    const commitLines = commits.slice(0, maxCommits).map(line => `- ${line}`);
+    if (hasMore) {
+        commitLines.push(`- ...and ${commits.length - maxCommits} more`);
+    }
+    if (commitLines.length === 0) {
+        commitLines.push('- No commits detected since last build');
+    }
+
+    const entryLines = [
+        `## ${newVersion} - ${new Date().toISOString()}`,
+        `Previous: ${oldVersion}`,
+        headHash ? `Commit: ${headHash}` : 'Commit: (git unavailable)',
+        'Changes:',
+        ...commitLines,
+        ''
+    ];
+    const entry = entryLines.join(newline);
+
+    const withoutHeader = existing.replace(new RegExp(`^${header}\\s*`, 'm'), '');
+    const updated = [header, '', entry, withoutHeader.trimStart()].join(newline).trimEnd() + newline;
+    fs.writeFileSync(changelogPath, updated);
 };
 
 (() => {
