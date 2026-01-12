@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.0.45
+// @version       4.0.46
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -38,6 +38,7 @@ const CONFIG = (() => {
             STALL_CONFIRM_MS: 2500,         // Required no-progress window before healing
             STALL_CONFIRM_BUFFER_OK_MS: 1500, // Extra delay when buffer is healthy
             PAUSED_STALL_GRACE_MS: 3000,    // Allow stall detection shortly after pause
+            INIT_PROGRESS_GRACE_MS: 5000,   // Wait for initial progress before treating as stalled
             RECOVERY_WINDOW_MS: 1500,       // Recent progress window to consider recovered
             RETRY_COOLDOWN_MS: 2000,        // Cooldown between heal attempts for same stall
             HEAL_POLL_INTERVAL_MS: 200,     // How often to poll for heal point
@@ -1008,6 +1009,8 @@ const PlaybackStateTracker = (() => {
             progressStreakMs: 0,
             progressEligible: false,
             hasProgress: false,
+            firstSeenTime: Date.now(),
+            initialProgressTimeoutLogged: false,
             noHealPointCount: 0,
             nextHealAllowedTime: 0,
             lastBackoffLogTime: 0,
@@ -1140,14 +1143,33 @@ const PlaybackStateTracker = (() => {
 
         const shouldSkipUntilProgress = () => {
             if (!state.hasProgress) {
-                if (!state.initLogEmitted) {
-                    state.initLogEmitted = true;
-                    logDebug('[HEALER:WATCHDOG] Awaiting initial progress', {
+                const now = Date.now();
+                const graceMs = CONFIG.stall.INIT_PROGRESS_GRACE_MS || CONFIG.stall.STALL_CONFIRM_MS;
+                const waitingForProgress = (now - state.firstSeenTime) < graceMs;
+
+                if (waitingForProgress) {
+                    if (!state.initLogEmitted) {
+                        state.initLogEmitted = true;
+                        logDebug('[HEALER:WATCHDOG] Awaiting initial progress', {
+                            state: state.state,
+                            graceMs,
+                            videoState: VideoState.get(video, videoId)
+                        });
+                    }
+                    return true;
+                }
+
+                if (!state.initialProgressTimeoutLogged) {
+                    state.initialProgressTimeoutLogged = true;
+                    logDebug('[HEALER:WATCHDOG] Initial progress timeout', {
                         state: state.state,
+                        waitedMs: now - state.firstSeenTime,
+                        graceMs,
                         videoState: VideoState.get(video, videoId)
                     });
                 }
-                return true;
+
+                return false;
             }
             return false;
         };
@@ -1371,7 +1393,8 @@ const PlaybackWatchdog = (() => {
                 state.lastSrc = currentSrc;
             }
 
-            const stalledForMs = now - state.lastProgressTime;
+            const lastProgressTime = state.lastProgressTime || state.firstSeenTime || now;
+            const stalledForMs = now - lastProgressTime;
             if (stalledForMs < CONFIG.stall.STALL_CONFIRM_MS) {
                 return;
             }

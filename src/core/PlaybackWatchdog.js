@@ -65,7 +65,8 @@ const PlaybackWatchdog = (() => {
                 state.lastSrc = currentSrc;
             }
 
-            const stalledForMs = now - state.lastProgressTime;
+            const lastProgressTime = state.lastProgressTime || state.firstSeenTime || now;
+            const stalledForMs = now - lastProgressTime;
             if (stalledForMs < CONFIG.stall.STALL_CONFIRM_MS) {
                 return;
             }

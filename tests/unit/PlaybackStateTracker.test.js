@@ -62,3 +62,21 @@ describe('PlaybackStateTracker.handleReset', () => {
         expect(onReset).not.toHaveBeenCalled();
     });
 });
+
+describe('PlaybackStateTracker.shouldSkipUntilProgress', () => {
+    it('skips until initial progress grace elapses', () => {
+        const video = createVideo();
+        const logDebug = vi.fn();
+        const tracker = PlaybackStateTracker.create(video, 'video-4', logDebug);
+        const graceMs = CONFIG.stall.INIT_PROGRESS_GRACE_MS || CONFIG.stall.STALL_CONFIRM_MS;
+
+        expect(tracker.shouldSkipUntilProgress()).toBe(true);
+
+        tracker.state.firstSeenTime = Date.now() - (graceMs + 1);
+        expect(tracker.shouldSkipUntilProgress()).toBe(false);
+
+        const messages = logDebug.mock.calls.map(call => call[0]);
+        expect(messages).toContain('[HEALER:WATCHDOG] Awaiting initial progress');
+        expect(messages).toContain('[HEALER:WATCHDOG] Initial progress timeout');
+    });
+});

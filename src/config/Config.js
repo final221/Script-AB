@@ -25,6 +25,7 @@ const CONFIG = (() => {
             STALL_CONFIRM_MS: 2500,         // Required no-progress window before healing
             STALL_CONFIRM_BUFFER_OK_MS: 1500, // Extra delay when buffer is healthy
             PAUSED_STALL_GRACE_MS: 3000,    // Allow stall detection shortly after pause
+            INIT_PROGRESS_GRACE_MS: 5000,   // Wait for initial progress before treating as stalled
             RECOVERY_WINDOW_MS: 1500,       // Recent progress window to consider recovered
             RETRY_COOLDOWN_MS: 2000,        // Cooldown between heal attempts for same stall
             HEAL_POLL_INTERVAL_MS: 200,     // How often to poll for heal point

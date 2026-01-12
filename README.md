@@ -79,6 +79,7 @@ Key settings in `Config.js`:
 | `stall.STALL_CONFIRM_MS` | 2500 | No-progress window before healing |
 | `stall.STALL_CONFIRM_BUFFER_OK_MS` | 1500 | Extra delay when buffer looks healthy |
 | `stall.PAUSED_STALL_GRACE_MS` | 3000 | Allow stall detection shortly after pause |
+| `stall.INIT_PROGRESS_GRACE_MS` | 5000 | Wait for initial progress before treating as stalled |
 | `stall.RETRY_COOLDOWN_MS` | 2000 | Cooldown between heal attempts |
 | `stall.HEAL_TIMEOUT_S` | 15 | Give up finding heal point after |
 | `stall.NO_HEAL_POINT_BACKOFF_BASE_MS` | 5000 | Base backoff after no heal point |
@@ -94,7 +95,7 @@ Key settings in `Config.js`:
 
 ## Version
 
-Current: **4.0.45**
+Current: **4.0.46**
 
 Version increments automatically on each build (patch).
 

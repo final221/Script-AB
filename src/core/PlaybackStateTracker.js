@@ -13,6 +13,8 @@ const PlaybackStateTracker = (() => {
             progressStreakMs: 0,
             progressEligible: false,
             hasProgress: false,
+            firstSeenTime: Date.now(),
+            initialProgressTimeoutLogged: false,
             noHealPointCount: 0,
             nextHealAllowedTime: 0,
             lastBackoffLogTime: 0,
@@ -145,14 +147,33 @@ const PlaybackStateTracker = (() => {
 
         const shouldSkipUntilProgress = () => {
             if (!state.hasProgress) {
-                if (!state.initLogEmitted) {
-                    state.initLogEmitted = true;
-                    logDebug('[HEALER:WATCHDOG] Awaiting initial progress', {
+                const now = Date.now();
+                const graceMs = CONFIG.stall.INIT_PROGRESS_GRACE_MS || CONFIG.stall.STALL_CONFIRM_MS;
+                const waitingForProgress = (now - state.firstSeenTime) < graceMs;
+
+                if (waitingForProgress) {
+                    if (!state.initLogEmitted) {
+                        state.initLogEmitted = true;
+                        logDebug('[HEALER:WATCHDOG] Awaiting initial progress', {
+                            state: state.state,
+                            graceMs,
+                            videoState: VideoState.get(video, videoId)
+                        });
+                    }
+                    return true;
+                }
+
+                if (!state.initialProgressTimeoutLogged) {
+                    state.initialProgressTimeoutLogged = true;
+                    logDebug('[HEALER:WATCHDOG] Initial progress timeout', {
                         state: state.state,
+                        waitedMs: now - state.firstSeenTime,
+                        graceMs,
                         videoState: VideoState.get(video, videoId)
                     });
                 }
-                return true;
+
+                return false;
             }
             return false;
         };

@@ -136,6 +136,7 @@ Script Logger.add() ────────┼──> Logger.getMergedTimeline(
   - `stall.STALL_CONFIRM_MS: 2500` - No-progress window before healing
   - `stall.STALL_CONFIRM_BUFFER_OK_MS: 1500` - Extra delay when buffer looks healthy
   - `stall.PAUSED_STALL_GRACE_MS: 3000` - Allow stall detection shortly after pause
+  - `stall.INIT_PROGRESS_GRACE_MS: 5000` - Wait for initial progress before treating as stalled
   - `stall.RETRY_COOLDOWN_MS: 2000` - Cooldown between heal attempts
   - `stall.HEAL_TIMEOUT_S: 15` - Max wait for heal point
   - `stall.NO_HEAL_POINT_BACKOFF_BASE_MS: 5000` - Base backoff after no heal point
