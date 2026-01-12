@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.0.38
+// @version       4.0.39
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -971,7 +971,7 @@ const PlaybackStateTracker = (() => {
             noHealPointCount: 0,
             nextHealAllowedTime: 0,
             lastBackoffLogTime: 0,
-            lastInitLogTime: 0,
+            initLogEmitted: false,
             state: 'PLAYING',
             lastHealAttemptTime: 0,
             lastWatchdogLogTime: 0,
@@ -1071,10 +1071,9 @@ const PlaybackStateTracker = (() => {
         };
 
         const shouldSkipUntilProgress = () => {
-            const now = Date.now();
             if (!state.hasProgress) {
-                if (now - state.lastInitLogTime > 5000) {
-                    state.lastInitLogTime = now;
+                if (!state.initLogEmitted) {
+                    state.initLogEmitted = true;
                     logDebug('[HEALER:WATCHDOG] Awaiting initial progress', {
                         state: state.state,
                         videoState: VideoState.get(video, videoId)
