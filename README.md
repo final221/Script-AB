@@ -32,6 +32,16 @@ exportTwitchAdLogs()      // Download merged timeline (script + console logs)
 ```
 See `docs/DEBUGGING.md` for log sequences and triage tips.
 
+### Tuning
+Quick knobs (see `docs/DEBUGGING.md` for full mapping):
+- `stall.INIT_PROGRESS_GRACE_MS` (initial progress grace window)
+- `stall.FAILOVER_*` (failover timing + cooldown)
+- `monitoring.CANDIDATE_*` (selection + scoring behavior)
+- `monitoring.TRUST_STALE_MS` (trust decay)
+
+### Contributing
+Run `npm test` and `npm run build` before committing changes.
+
 ## Project Structure
 
 ```
@@ -114,7 +124,7 @@ Key settings in `Config.js`:
 
 ## Version
 
-Current: **4.0.57**
+Current: **4.0.58**
 
 Version increments automatically on each build (patch).
 Changelog: `docs/CHANGELOG.md`

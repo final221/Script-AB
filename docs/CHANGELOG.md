@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.0.58 - 2026-01-12T23:09:58.884Z
+Previous: 4.0.57
+Commit: 9565ba8
+Changes:
+- Auto-update changelog on build
+
 ## 4.0.57 - 2026-01-12T23:02:49.050Z
 Previous: 4.0.56
 Commit: b29967d
