@@ -55,3 +55,16 @@ Look for:
 - Offline screen + `[HEALER:ASSET_HINT]` usually means Twitch swapped in an offline/processing element.
 - Stalls without `HEALER:START` likely indicate the video never became active or a failover lock is active.
 - Repeated `FAILOVER_REVERT` means candidates are present but not progressing; check readiness logs.
+
+## Tuning Cheat Sheet
+Use this mapping to connect config knobs to the log lines they influence.
+
+- `stall.INIT_PROGRESS_GRACE_MS`: `[HEALER:WATCHDOG] Awaiting initial progress`, `Initial progress timeout`
+- `stall.STALL_CONFIRM_MS` / `STALL_CONFIRM_BUFFER_OK_MS`: `[HEALER:WATCHDOG] No progress observed`
+- `stall.FAILOVER_*`: `[HEALER:FAILOVER_*]` entries
+- `monitoring.CANDIDATE_*`: `[HEALER:CANDIDATE]` switch/suppress logs
+- `monitoring.TRUST_STALE_MS`: candidate snapshot `trustReason: progress_stale`
+- `monitoring.PROBE_COOLDOWN_MS`: `[HEALER:PROBE_SKIP] Probe cooldown active`
+- `logging.ACTIVE_LOG_MS` / `NON_ACTIVE_LOG_MS`: `[HEALER:WATCHDOG] No progress observed`
+- `logging.CONSOLE_SIGNAL_THROTTLE_MS`: `[INSTRUMENT:CONSOLE_HINT]` frequency
+- `logging.RESOURCE_HINT_THROTTLE_MS`: `[INSTRUMENT:RESOURCE_HINT]` frequency
