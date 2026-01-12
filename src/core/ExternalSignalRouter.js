@@ -3,8 +3,6 @@
  * Handles console-based external signal hints for recovery actions.
  */
 const ExternalSignalRouter = (() => {
-    const PLAYHEAD_MATCH_WINDOW_S = 2;
-
     const create = (options = {}) => {
         const monitorsById = options.monitorsById;
         const candidateSelector = options.candidateSelector;
@@ -12,6 +10,11 @@ const ExternalSignalRouter = (() => {
         const logDebug = options.logDebug || (() => {});
         const onStallDetected = options.onStallDetected || (() => {});
         const onRescan = options.onRescan || (() => {});
+        const playheadAttribution = PlayheadAttribution.create({
+            monitorsById,
+            candidateSelector,
+            matchWindowSeconds: 2
+        });
 
         const formatSeconds = (value) => (
             Number.isFinite(value) ? Number(value.toFixed(3)) : null
@@ -27,65 +30,6 @@ const ExternalSignalRouter = (() => {
                 return { id: first.value[0], entry: first.value[1] };
             }
             return null;
-        };
-
-        const buildAttributionCandidates = (playheadSeconds) => {
-            const candidates = [];
-            for (const [videoId, entry] of monitorsById.entries()) {
-                const currentTime = entry.video?.currentTime;
-                if (!Number.isFinite(currentTime)) {
-                    continue;
-                }
-                const deltaSeconds = Math.abs(currentTime - playheadSeconds);
-                candidates.push({
-                    videoId,
-                    currentTime: formatSeconds(currentTime),
-                    deltaSeconds: formatSeconds(deltaSeconds)
-                });
-            }
-            candidates.sort((a, b) => a.deltaSeconds - b.deltaSeconds);
-            return candidates;
-        };
-
-        const resolvePlayheadTarget = (playheadSeconds) => {
-            const activeId = candidateSelector.getActiveId();
-            if (!Number.isFinite(playheadSeconds)) {
-                return {
-                    id: activeId || null,
-                    reason: activeId ? 'active_fallback' : 'no_active',
-                    playheadSeconds: null,
-                    activeId,
-                    candidates: []
-                };
-            }
-            const candidates = buildAttributionCandidates(playheadSeconds);
-            if (!candidates.length) {
-                return {
-                    id: null,
-                    reason: 'no_candidates',
-                    playheadSeconds: formatSeconds(playheadSeconds),
-                    activeId,
-                    candidates
-                };
-            }
-            const best = candidates[0];
-            if (best.deltaSeconds <= PLAYHEAD_MATCH_WINDOW_S) {
-                return {
-                    id: best.videoId,
-                    reason: best.videoId === activeId ? 'active_match' : 'closest_match',
-                    playheadSeconds: formatSeconds(playheadSeconds),
-                    activeId,
-                    match: best,
-                    candidates
-                };
-            }
-            return {
-                id: null,
-                reason: 'no_match',
-                playheadSeconds: formatSeconds(playheadSeconds),
-                activeId,
-                candidates
-            };
         };
 
         const logCandidateSnapshot = (reason) => {
@@ -119,7 +63,7 @@ const ExternalSignalRouter = (() => {
             const message = signal.message || '';
 
             if (type === 'playhead_stall') {
-                const attribution = resolvePlayheadTarget(signal.playheadSeconds);
+                const attribution = playheadAttribution.resolve(signal.playheadSeconds);
                 if (!attribution.id) {
                     Logger.add('[HEALER:STALL_HINT_UNATTRIBUTED] Console playhead stall warning', {
                         level,

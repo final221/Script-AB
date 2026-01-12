@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.0.48
+// @version       4.0.49
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -2854,38 +2854,23 @@ const HealPipeline = (() => {
     return { create };
 })();
 
-// --- ExternalSignalRouter ---
+// --- PlayheadAttribution ---
 /**
- * Handles console-based external signal hints for recovery actions.
+ * Resolves console playhead stall hints to a monitored video candidate.
  */
-const ExternalSignalRouter = (() => {
-    const PLAYHEAD_MATCH_WINDOW_S = 2;
-
+const PlayheadAttribution = (() => {
     const create = (options = {}) => {
         const monitorsById = options.monitorsById;
         const candidateSelector = options.candidateSelector;
-        const recoveryManager = options.recoveryManager;
-        const logDebug = options.logDebug || (() => {});
-        const onStallDetected = options.onStallDetected || (() => {});
-        const onRescan = options.onRescan || (() => {});
+        const matchWindowSeconds = Number.isFinite(options.matchWindowSeconds)
+            ? options.matchWindowSeconds
+            : 2;
 
         const formatSeconds = (value) => (
             Number.isFinite(value) ? Number(value.toFixed(3)) : null
         );
 
-        const getActiveEntry = () => {
-            const activeId = candidateSelector.getActiveId();
-            if (activeId && monitorsById.has(activeId)) {
-                return { id: activeId, entry: monitorsById.get(activeId) };
-            }
-            const first = monitorsById.entries().next();
-            if (!first.done) {
-                return { id: first.value[0], entry: first.value[1] };
-            }
-            return null;
-        };
-
-        const buildAttributionCandidates = (playheadSeconds) => {
+        const buildCandidates = (playheadSeconds) => {
             const candidates = [];
             for (const [videoId, entry] of monitorsById.entries()) {
                 const currentTime = entry.video?.currentTime;
@@ -2903,7 +2888,7 @@ const ExternalSignalRouter = (() => {
             return candidates;
         };
 
-        const resolvePlayheadTarget = (playheadSeconds) => {
+        const resolve = (playheadSeconds) => {
             const activeId = candidateSelector.getActiveId();
             if (!Number.isFinite(playheadSeconds)) {
                 return {
@@ -2914,7 +2899,7 @@ const ExternalSignalRouter = (() => {
                     candidates: []
                 };
             }
-            const candidates = buildAttributionCandidates(playheadSeconds);
+            const candidates = buildCandidates(playheadSeconds);
             if (!candidates.length) {
                 return {
                     id: null,
@@ -2925,7 +2910,7 @@ const ExternalSignalRouter = (() => {
                 };
             }
             const best = candidates[0];
-            if (best.deltaSeconds <= PLAYHEAD_MATCH_WINDOW_S) {
+            if (best.deltaSeconds <= matchWindowSeconds) {
                 return {
                     id: best.videoId,
                     reason: best.videoId === activeId ? 'active_match' : 'closest_match',
@@ -2942,6 +2927,46 @@ const ExternalSignalRouter = (() => {
                 activeId,
                 candidates
             };
+        };
+
+        return { resolve };
+    };
+
+    return { create };
+})();
+
+// --- ExternalSignalRouter ---
+/**
+ * Handles console-based external signal hints for recovery actions.
+ */
+const ExternalSignalRouter = (() => {
+    const create = (options = {}) => {
+        const monitorsById = options.monitorsById;
+        const candidateSelector = options.candidateSelector;
+        const recoveryManager = options.recoveryManager;
+        const logDebug = options.logDebug || (() => {});
+        const onStallDetected = options.onStallDetected || (() => {});
+        const onRescan = options.onRescan || (() => {});
+        const playheadAttribution = PlayheadAttribution.create({
+            monitorsById,
+            candidateSelector,
+            matchWindowSeconds: 2
+        });
+
+        const formatSeconds = (value) => (
+            Number.isFinite(value) ? Number(value.toFixed(3)) : null
+        );
+
+        const getActiveEntry = () => {
+            const activeId = candidateSelector.getActiveId();
+            if (activeId && monitorsById.has(activeId)) {
+                return { id: activeId, entry: monitorsById.get(activeId) };
+            }
+            const first = monitorsById.entries().next();
+            if (!first.done) {
+                return { id: first.value[0], entry: first.value[1] };
+            }
+            return null;
         };
 
         const logCandidateSnapshot = (reason) => {
@@ -2975,7 +3000,7 @@ const ExternalSignalRouter = (() => {
             const message = signal.message || '';
 
             if (type === 'playhead_stall') {
-                const attribution = resolvePlayheadTarget(signal.playheadSeconds);
+                const attribution = playheadAttribution.resolve(signal.playheadSeconds);
                 if (!attribution.id) {
                     Logger.add('[HEALER:STALL_HINT_UNATTRIBUTED] Console playhead stall warning', {
                         level,

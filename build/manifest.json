@@ -30,6 +30,7 @@
     "core/MonitorRegistry.js",
     "core/HealPointPoller.js",
     "core/HealPipeline.js",
+    "core/PlayheadAttribution.js",
     "core/ExternalSignalRouter.js",
     "core/StreamHealer.js"
   ],

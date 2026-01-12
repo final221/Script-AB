@@ -74,9 +74,10 @@ The build uses a priority list followed by auto-discovered modules, then the ent
 28. `core/MonitorRegistry.js`
 29. `core/HealPointPoller.js`
 30. `core/HealPipeline.js`
-31. `core/ExternalSignalRouter.js`
-32. `core/StreamHealer.js`
-33. `core/CoreOrchestrator.js`
+31. `core/PlayheadAttribution.js`
+32. `core/ExternalSignalRouter.js`
+33. `core/StreamHealer.js`
+34. `core/CoreOrchestrator.js`
 <!-- LOAD_ORDER_END -->
 
 
