@@ -24,6 +24,16 @@ const PlaybackStateTracker = (() => {
             lastHealAttemptTime: 0,
             lastWatchdogLogTime: 0,
             lastSrc: video.currentSrc || video.getAttribute('src') || '',
+            lastSrcAttr: video.getAttribute ? (video.getAttribute('src') || '') : '',
+            lastReadyState: video.readyState,
+            lastNetworkState: video.networkState,
+            lastBufferedLength: (() => {
+                try {
+                    return video.buffered ? video.buffered.length : 0;
+                } catch (error) {
+                    return 0;
+                }
+            })(),
             lastStallEventTime: 0,
             pauseFromStall: false
         };

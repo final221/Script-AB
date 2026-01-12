@@ -65,6 +65,51 @@ const PlaybackWatchdog = (() => {
                 state.lastSrc = currentSrc;
             }
 
+            const srcAttr = video.getAttribute ? (video.getAttribute('src') || '') : '';
+            if (srcAttr !== state.lastSrcAttr) {
+                logDebug('[HEALER:MEDIA_STATE] src attribute changed', {
+                    previous: state.lastSrcAttr,
+                    current: srcAttr,
+                    videoState: VideoState.getLite(video, videoId)
+                });
+                state.lastSrcAttr = srcAttr;
+            }
+
+            const readyState = video.readyState;
+            if (readyState !== state.lastReadyState) {
+                logDebug('[HEALER:MEDIA_STATE] readyState changed', {
+                    previous: state.lastReadyState,
+                    current: readyState,
+                    videoState: VideoState.getLite(video, videoId)
+                });
+                state.lastReadyState = readyState;
+            }
+
+            const networkState = video.networkState;
+            if (networkState !== state.lastNetworkState) {
+                logDebug('[HEALER:MEDIA_STATE] networkState changed', {
+                    previous: state.lastNetworkState,
+                    current: networkState,
+                    videoState: VideoState.getLite(video, videoId)
+                });
+                state.lastNetworkState = networkState;
+            }
+
+            let bufferedLength = 0;
+            try {
+                bufferedLength = video.buffered ? video.buffered.length : 0;
+            } catch (error) {
+                bufferedLength = state.lastBufferedLength;
+            }
+            if (bufferedLength !== state.lastBufferedLength) {
+                logDebug('[HEALER:MEDIA_STATE] buffered range count changed', {
+                    previous: state.lastBufferedLength,
+                    current: bufferedLength,
+                    videoState: VideoState.getLite(video, videoId)
+                });
+                state.lastBufferedLength = bufferedLength;
+            }
+
             const lastProgressTime = state.lastProgressTime || state.firstSeenTime || now;
             const stalledForMs = now - lastProgressTime;
             if (stalledForMs < CONFIG.stall.STALL_CONFIRM_MS) {

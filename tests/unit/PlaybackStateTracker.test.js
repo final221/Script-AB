@@ -79,4 +79,16 @@ describe('PlaybackStateTracker.shouldSkipUntilProgress', () => {
         expect(messages).toContain('[HEALER:WATCHDOG] Awaiting initial progress');
         expect(messages).toContain('[HEALER:WATCHDOG] Initial progress timeout');
     });
+
+    it('uses ready time as the baseline when available', () => {
+        const video = createVideo({ readyState: 1, currentSrc: 'blob:stream' });
+        const logDebug = vi.fn();
+        const tracker = PlaybackStateTracker.create(video, 'video-5', logDebug);
+        const graceMs = CONFIG.stall.INIT_PROGRESS_GRACE_MS || CONFIG.stall.STALL_CONFIRM_MS;
+
+        tracker.state.firstSeenTime = Date.now();
+        tracker.state.firstReadyTime = Date.now() - (graceMs + 1);
+
+        expect(tracker.shouldSkipUntilProgress()).toBe(false);
+    });
 });

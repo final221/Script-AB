@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.0.53
+// @version       4.0.54
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -1048,6 +1048,16 @@ const PlaybackStateTracker = (() => {
             lastHealAttemptTime: 0,
             lastWatchdogLogTime: 0,
             lastSrc: video.currentSrc || video.getAttribute('src') || '',
+            lastSrcAttr: video.getAttribute ? (video.getAttribute('src') || '') : '',
+            lastReadyState: video.readyState,
+            lastNetworkState: video.networkState,
+            lastBufferedLength: (() => {
+                try {
+                    return video.buffered ? video.buffered.length : 0;
+                } catch (error) {
+                    return 0;
+                }
+            })(),
             lastStallEventTime: 0,
             pauseFromStall: false
         };
@@ -1465,6 +1475,51 @@ const PlaybackWatchdog = (() => {
                     videoState: VideoState.get(video, videoId)
                 });
                 state.lastSrc = currentSrc;
+            }
+
+            const srcAttr = video.getAttribute ? (video.getAttribute('src') || '') : '';
+            if (srcAttr !== state.lastSrcAttr) {
+                logDebug('[HEALER:MEDIA_STATE] src attribute changed', {
+                    previous: state.lastSrcAttr,
+                    current: srcAttr,
+                    videoState: VideoState.getLite(video, videoId)
+                });
+                state.lastSrcAttr = srcAttr;
+            }
+
+            const readyState = video.readyState;
+            if (readyState !== state.lastReadyState) {
+                logDebug('[HEALER:MEDIA_STATE] readyState changed', {
+                    previous: state.lastReadyState,
+                    current: readyState,
+                    videoState: VideoState.getLite(video, videoId)
+                });
+                state.lastReadyState = readyState;
+            }
+
+            const networkState = video.networkState;
+            if (networkState !== state.lastNetworkState) {
+                logDebug('[HEALER:MEDIA_STATE] networkState changed', {
+                    previous: state.lastNetworkState,
+                    current: networkState,
+                    videoState: VideoState.getLite(video, videoId)
+                });
+                state.lastNetworkState = networkState;
+            }
+
+            let bufferedLength = 0;
+            try {
+                bufferedLength = video.buffered ? video.buffered.length : 0;
+            } catch (error) {
+                bufferedLength = state.lastBufferedLength;
+            }
+            if (bufferedLength !== state.lastBufferedLength) {
+                logDebug('[HEALER:MEDIA_STATE] buffered range count changed', {
+                    previous: state.lastBufferedLength,
+                    current: bufferedLength,
+                    videoState: VideoState.getLite(video, videoId)
+                });
+                state.lastBufferedLength = bufferedLength;
             }
 
             const lastProgressTime = state.lastProgressTime || state.firstSeenTime || now;
