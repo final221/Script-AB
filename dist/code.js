@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.0.44
+// @version       4.0.45
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -1098,13 +1098,41 @@ const PlaybackStateTracker = (() => {
 
         const handleReset = (reason, onReset) => {
             const vs = VideoState.get(video, videoId);
-            if (vs.currentSrc || vs.src || vs.readyState !== 0) {
+            const ranges = BufferGapFinder.getBufferRanges(video);
+            const hasBuffer = ranges.length > 0;
+            const hasSrc = Boolean(vs.currentSrc || vs.src);
+            const lowReadyState = vs.readyState <= 1;
+            const isHardReset = !hasSrc && lowReadyState;
+            const isSoftReset = lowReadyState
+                && !hasBuffer
+                && (vs.networkState === 0 || vs.networkState === 3);
+
+            logDebug('[HEALER:RESET_CHECK] Reset evaluation', {
+                reason,
+                hasSrc,
+                readyState: vs.readyState,
+                networkState: vs.networkState,
+                bufferRanges: BufferGapFinder.formatRanges(ranges),
+                lastSrc: state.lastSrc,
+                hardReset: isHardReset,
+                softReset: isSoftReset
+            });
+
+            if (!isHardReset && !isSoftReset) {
+                logDebug('[HEALER:RESET_SKIP] Reset suppressed', {
+                    reason,
+                    hasSrc,
+                    readyState: vs.readyState,
+                    networkState: vs.networkState,
+                    hasBuffer
+                });
                 return;
             }
 
             state.state = 'RESET';
             logDebug('[HEALER:RESET] Video reset', {
                 reason,
+                resetType: isHardReset ? 'hard' : 'soft',
                 videoState: vs
             });
             onReset({ reason, videoState: vs }, state);
