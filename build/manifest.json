@@ -31,6 +31,7 @@
     "core/HealPointPoller.js",
     "core/HealPipeline.js",
     "core/PlayheadAttribution.js",
+    "core/VideoDiscovery.js",
     "core/ExternalSignalRouter.js",
     "core/StreamHealer.js"
   ],

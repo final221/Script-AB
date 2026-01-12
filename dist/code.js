@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.0.49
+// @version       4.0.50
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -2935,6 +2935,72 @@ const PlayheadAttribution = (() => {
     return { create };
 })();
 
+// --- VideoDiscovery ---
+/**
+ * Scans the DOM for video elements and wires the mutation observer.
+ */
+const VideoDiscovery = (() => {
+    const collectVideos = (targetNode) => {
+        if (targetNode) {
+            if (targetNode.nodeName === 'VIDEO') {
+                return [targetNode];
+            }
+            if (targetNode.querySelectorAll) {
+                return Array.from(targetNode.querySelectorAll('video'));
+            }
+            return [];
+        }
+        return Array.from(document.querySelectorAll('video'));
+    };
+
+    const notifyVideos = (videos, onVideo) => {
+        if (!videos.length) {
+            return;
+        }
+        Logger.add('[CORE] New video detected in DOM', {
+            count: videos.length
+        });
+        Logger.add('[CORE] Video elements found, starting StreamHealer', {
+            count: videos.length
+        });
+        videos.forEach(video => onVideo(video));
+    };
+
+    const start = (onVideo) => {
+        if (!document?.querySelectorAll) {
+            return null;
+        }
+
+        const scan = (targetNode = null) => {
+            const videos = collectVideos(targetNode);
+            notifyVideos(videos, onVideo);
+        };
+
+        scan();
+
+        const observer = new MutationObserver((mutations) => {
+            for (const mutation of mutations) {
+                for (const node of mutation.addedNodes) {
+                    if (node.nodeName === 'VIDEO' ||
+                        (node.nodeName === 'DIV' && node.querySelector && node.querySelector('video'))) {
+                        scan(node);
+                    }
+                }
+            }
+        });
+
+        observer.observe(document.body, {
+            childList: true,
+            subtree: true
+        });
+
+        Logger.add('[CORE] DOM observer started');
+        return observer;
+    };
+
+    return { start };
+})();
+
 // --- ExternalSignalRouter ---
 /**
  * Handles console-based external signal hints for recovery actions.
@@ -3338,59 +3404,9 @@ const CoreOrchestrator = (() => {
 
             // Wait for DOM then start monitoring
             const startMonitoring = () => {
-                // Find video element and start StreamHealer
-                const collectVideos = (targetNode) => {
-                    if (targetNode) {
-                        if (targetNode.nodeName === 'VIDEO') {
-                            return [targetNode];
-                        }
-                        if (targetNode.querySelectorAll) {
-                            return Array.from(targetNode.querySelectorAll('video'));
-                        }
-                        return [];
-                    }
-                    return Array.from(document.querySelectorAll('video'));
-                };
-
-                const findAndMonitorVideo = (targetNode) => {
-                    // If targetNode is provided, scan its subtree. Otherwise scan document.
-                    const videos = collectVideos(targetNode);
-                    if (!videos.length) {
-                        return;
-                    }
-
-                    Logger.add('[CORE] New video detected in DOM', {
-                        count: videos.length
-                    });
-                    Logger.add('[CORE] Video elements found, starting StreamHealer', {
-                        count: videos.length
-                    });
-                    videos.forEach(video => StreamHealer.monitor(video));
-                };
-
-                // Try immediately (initial page load)
-                findAndMonitorVideo();
-
-                // Also observe for new videos
-                const observer = new MutationObserver((mutations) => {
-                    for (const mutation of mutations) {
-                        for (const node of mutation.addedNodes) {
-                            // Only check relevant nodes
-                            if (node.nodeName === 'VIDEO' ||
-                                (node.nodeName === 'DIV' && node.querySelector && node.querySelector('video'))) {
-                                // Pass the specific node to avoid global lookup of existing video
-                                findAndMonitorVideo(node);
-                            }
-                        }
-                    }
+                VideoDiscovery.start((video) => {
+                    StreamHealer.monitor(video);
                 });
-
-                observer.observe(document.body, {
-                    childList: true,
-                    subtree: true
-                });
-
-                Logger.add('[CORE] DOM observer started');
             };
 
             if (document.body) {
