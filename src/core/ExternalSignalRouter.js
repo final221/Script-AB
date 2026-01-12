@@ -19,6 +19,9 @@ const ExternalSignalRouter = (() => {
         const formatSeconds = (value) => (
             Number.isFinite(value) ? Number(value.toFixed(3)) : null
         );
+        const truncateMessage = (message) => (
+            String(message).substring(0, CONFIG.logging.LOG_MESSAGE_MAX_LEN)
+        );
 
         const getActiveEntry = () => {
             const activeId = candidateSelector.getActiveId();
@@ -67,7 +70,7 @@ const ExternalSignalRouter = (() => {
                 if (!attribution.id) {
                     Logger.add('[HEALER:STALL_HINT_UNATTRIBUTED] Console playhead stall warning', {
                         level,
-                        message: message.substring(0, 300),
+                        message: truncateMessage(message),
                         playheadSeconds: attribution.playheadSeconds,
                         bufferEndSeconds: formatSeconds(signal.bufferEndSeconds),
                         activeVideoId: attribution.activeId,
@@ -87,7 +90,7 @@ const ExternalSignalRouter = (() => {
                 Logger.add('[HEALER:STALL_HINT] Console playhead stall warning', {
                     videoId: attribution.id,
                     level,
-                    message: message.substring(0, 300),
+                    message: truncateMessage(message),
                     playheadSeconds: attribution.playheadSeconds,
                     bufferEndSeconds: formatSeconds(signal.bufferEndSeconds),
                     attribution: attribution.reason,
@@ -117,11 +120,11 @@ const ExternalSignalRouter = (() => {
             if (type === 'processing_asset') {
                 Logger.add('[HEALER:ASSET_HINT] Processing/offline asset detected', {
                     level,
-                    message: message.substring(0, 300)
+                    message: truncateMessage(message)
                 });
 
                 logCandidateSnapshot('processing_asset');
-                onRescan('processing_asset', { level, message: message.substring(0, 300) });
+                onRescan('processing_asset', { level, message: truncateMessage(message) });
 
                 if (recoveryManager.isFailoverActive()) {
                     logDebug('[HEALER:ASSET_HINT_SKIP] Failover in progress', {
@@ -179,7 +182,7 @@ const ExternalSignalRouter = (() => {
             Logger.add('[HEALER:EXTERNAL] Unhandled external signal', {
                 type,
                 level,
-                message: message.substring(0, 300)
+                message: truncateMessage(message)
             });
         };
 

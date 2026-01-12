@@ -43,7 +43,7 @@ const BackoffManager = (() => {
         const shouldSkip = (videoId, monitorState) => {
             const now = Date.now();
             if (monitorState?.nextHealAllowedTime && now < monitorState.nextHealAllowedTime) {
-                if (now - (monitorState.lastBackoffLogTime || 0) > 5000) {
+                if (now - (monitorState.lastBackoffLogTime || 0) > CONFIG.logging.BACKOFF_LOG_INTERVAL_MS) {
                     monitorState.lastBackoffLogTime = now;
                     logDebug('[HEALER:BACKOFF] Stall skipped due to backoff', {
                         videoId,

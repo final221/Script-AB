@@ -129,8 +129,8 @@ const PlaybackWatchdog = (() => {
             }
 
             const logIntervalMs = isActive()
-                ? 5000
-                : (CONFIG.logging.NON_ACTIVE_LOG_MS || 60000);
+                ? CONFIG.logging.ACTIVE_LOG_MS
+                : CONFIG.logging.NON_ACTIVE_LOG_MS;
             if (now - state.lastWatchdogLogTime > logIntervalMs) {
                 state.lastWatchdogLogTime = now;
                 logDebug(`${LOG.WATCHDOG} No progress observed`, {

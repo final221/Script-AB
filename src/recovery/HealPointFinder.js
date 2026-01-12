@@ -3,7 +3,7 @@
  * Finds heal points in buffered ranges.
  */
 const HealPointFinder = (() => {
-    const MIN_HEAL_BUFFER_S = 2;
+    const MIN_HEAL_BUFFER_S = CONFIG.recovery.MIN_HEAL_BUFFER_S;
 
     const findHealPoint = (video, options = {}) => {
         if (!video) {

@@ -34,6 +34,8 @@
     "core/PlayheadAttribution.js",
     "core/VideoDiscovery.js",
     "core/ExternalSignalRouter.js",
+    "core/MonitoringOrchestrator.js",
+    "core/RecoveryOrchestrator.js",
     "core/StreamHealer.js"
   ],
   "entry": "core/CoreOrchestrator.js"

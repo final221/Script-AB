@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.0.54
+// @version       4.0.55
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -56,13 +56,31 @@ const CONFIG = (() => {
             CANDIDATE_SWITCH_DELTA: 2,      // Min score delta before switching active video
             CANDIDATE_MIN_PROGRESS_MS: 5000, // Require sustained progress before switching to new video
             PROGRESS_STREAK_RESET_MS: 2500, // Reset progress streak after this long without progress
+            PROGRESS_RECENT_MS: 2000,       // "Recent progress" threshold for scoring
+            PROGRESS_STALE_MS: 5000,        // "Stale progress" threshold for scoring
             TRUST_STALE_MS: 8000,           // Trust expires if progress is older than this
             PROBE_COOLDOWN_MS: 5000,        // Min time between probe attempts per candidate
         },
 
+        recovery: {
+            MIN_HEAL_BUFFER_S: 2,           // Minimum buffered seconds needed to heal
+            SEEK_SETTLE_MS: 100,            // Wait after seek before validation
+            PLAYBACK_VERIFY_MS: 200,        // Wait after play to verify playback
+        },
+
         logging: {
             LOG_CSP_WARNINGS: true,
-            NON_ACTIVE_LOG_MS: 300000,
+            NON_ACTIVE_LOG_MS: 300000,      // Non-active candidate log interval
+            ACTIVE_LOG_MS: 5000,            // Active candidate log interval
+            BACKOFF_LOG_INTERVAL_MS: 5000,  // Backoff skip log interval
+            CONSOLE_SIGNAL_THROTTLE_MS: 2000, // Throttle console hint signals
+            RESOURCE_HINT_THROTTLE_MS: 2000,  // Throttle resource hint signals
+            LOG_MESSAGE_MAX_LEN: 300,       // Max length for log messages
+            LOG_REASON_MAX_LEN: 200,        // Max length for error reasons
+            LOG_URL_MAX_LEN: 200,           // Max length for logged URLs
+            CONSOLE_CAPTURE_MAX_LEN: 500,   // Max length for captured console lines
+            MAX_LOGS: 5000,                 // Max in-memory script logs
+            MAX_CONSOLE_LOGS: 2000,         // Max in-memory console logs
         },
     };
 
@@ -208,7 +226,7 @@ const BufferRanges = (() => {
  * Finds heal points in buffered ranges.
  */
 const HealPointFinder = (() => {
-    const MIN_HEAL_BUFFER_S = 2;
+    const MIN_HEAL_BUFFER_S = CONFIG.recovery.MIN_HEAL_BUFFER_S;
 
     const findHealPoint = (video, options = {}) => {
         if (!video) {
@@ -398,7 +416,7 @@ const LiveEdgeSeeker = (() => {
             video.currentTime = target;
 
             // Brief wait for seek to settle
-            await Fn.sleep(100);
+            await Fn.sleep(CONFIG.recovery.SEEK_SETTLE_MS);
 
             Logger.add('[HEALER:SEEKED] Seek completed', {
                 newTime: video.currentTime.toFixed(3),
@@ -419,7 +437,7 @@ const LiveEdgeSeeker = (() => {
                 await video.play();
 
                 // Verify playback started
-                await Fn.sleep(200);
+                await Fn.sleep(CONFIG.recovery.PLAYBACK_VERIFY_MS);
 
                 if (!video.paused && video.readyState >= 3) {
                     const duration = (performance.now() - startTime).toFixed(0);
@@ -497,8 +515,6 @@ const ErrorClassifier = (() => {
 const Logger = (() => {
     const logs = [];
     const consoleLogs = [];
-    const MAX_LOGS = 5000;
-    const MAX_CONSOLE_LOGS = 2000;
 
     /**
      * Add an internal log entry.
@@ -506,7 +522,7 @@ const Logger = (() => {
      * @param {Object|null} detail - Optional structured data
      */
     const add = (message, detail = null) => {
-        if (logs.length >= MAX_LOGS) logs.shift();
+        if (logs.length >= CONFIG.logging.MAX_LOGS) logs.shift();
         logs.push({
             timestamp: new Date().toISOString(),
             type: 'internal',
@@ -522,7 +538,7 @@ const Logger = (() => {
      * @param {any[]} args - Console arguments
      */
     const captureConsole = (level, args) => {
-        if (consoleLogs.length >= MAX_CONSOLE_LOGS) consoleLogs.shift();
+        if (consoleLogs.length >= CONFIG.logging.MAX_CONSOLE_LOGS) consoleLogs.shift();
 
         let message;
         try {
@@ -532,8 +548,8 @@ const Logger = (() => {
                 try { return JSON.stringify(arg); } catch { return String(arg); }
             }).join(' ');
 
-            if (message.length > 500) {
-                message = message.substring(0, 500) + '... [truncated]';
+            if (message.length > CONFIG.logging.CONSOLE_CAPTURE_MAX_LEN) {
+                message = message.substring(0, CONFIG.logging.CONSOLE_CAPTURE_MAX_LEN) + '... [truncated]';
             }
         } catch {
             message = '[Unable to stringify console args]';
@@ -732,7 +748,6 @@ const ConsoleInterceptor = (() => {
  * Detects console messages that hint at playback issues.
  */
 const ConsoleSignalDetector = (() => {
-    const SIGNAL_THROTTLE_MS = 2000;
     const SIGNAL_PATTERNS = {
         PLAYHEAD_STALL: /playhead stalling at/i,
         PROCESSING_ASSET: /404_processing_640x360\.png/i,
@@ -759,14 +774,14 @@ const ConsoleSignalDetector = (() => {
         const maybeEmit = (type, message, level, detail = null) => {
             const now = Date.now();
             const lastTime = lastSignalTimes[type] || 0;
-            if (now - lastTime < SIGNAL_THROTTLE_MS) {
+            if (now - lastTime < CONFIG.logging.CONSOLE_SIGNAL_THROTTLE_MS) {
                 return;
             }
             lastSignalTimes[type] = now;
             Logger.add('[INSTRUMENT:CONSOLE_HINT] Console signal detected', {
                 type,
                 level,
-                message: message.substring(0, 300),
+                message: message.substring(0, CONFIG.logging.LOG_MESSAGE_MAX_LEN),
                 ...(detail || {})
             });
             emitSignal({
@@ -806,6 +821,9 @@ const Instrumentation = (() => {
     let signalDetector = null;
     const PROCESSING_ASSET_PATTERN = /404_processing_640x360\.png/i;
     let lastResourceHintTime = 0;
+    const truncateMessage = (message, maxLen) => (
+        String(message).substring(0, maxLen)
+    );
 
     // Helper to capture video state for logging
     const getVideoState = () => {
@@ -849,7 +867,9 @@ const Instrumentation = (() => {
 
         window.addEventListener('unhandledrejection', (event) => {
             Logger.add('[INSTRUMENT:REJECTION] Unhandled promise rejection', {
-                reason: event.reason ? String(event.reason).substring(0, 200) : 'Unknown',
+                reason: event.reason
+                    ? truncateMessage(event.reason, CONFIG.logging.LOG_REASON_MAX_LEN)
+                    : 'Unknown',
                 severity: 'MEDIUM',
                 videoState: getVideoState()
             });
@@ -871,17 +891,17 @@ const Instrumentation = (() => {
 
     const maybeEmitProcessingAsset = (url) => {
         const now = Date.now();
-        if (now - lastResourceHintTime < 2000) {
+        if (now - lastResourceHintTime < CONFIG.logging.RESOURCE_HINT_THROTTLE_MS) {
             return;
         }
         lastResourceHintTime = now;
         Logger.add('[INSTRUMENT:RESOURCE_HINT] Processing asset requested', {
-            url: String(url).substring(0, 200)
+            url: truncateMessage(url, CONFIG.logging.LOG_URL_MAX_LEN)
         });
         emitExternalSignal({
             type: 'processing_asset',
             level: 'resource',
-            message: String(url),
+            message: truncateMessage(url, CONFIG.logging.LOG_URL_MAX_LEN),
             timestamp: new Date().toISOString()
         });
     };
@@ -916,7 +936,7 @@ const Instrumentation = (() => {
             const classification = classifyError(null, msg);
 
             Logger.add('[INSTRUMENT:CONSOLE_ERROR] Console error intercepted', {
-                message: msg.substring(0, 300),
+                message: truncateMessage(msg, CONFIG.logging.LOG_MESSAGE_MAX_LEN),
                 severity: classification.severity,
                 action: classification.action
             });
@@ -940,7 +960,7 @@ const Instrumentation = (() => {
 
             if (CONFIG.logging.LOG_CSP_WARNINGS && msg.includes('Content-Security-Policy')) {
                 Logger.add('[INSTRUMENT:CSP] CSP warning', {
-                    message: msg.substring(0, 200),
+                    message: truncateMessage(msg, CONFIG.logging.LOG_REASON_MAX_LEN),
                     severity: 'LOW'
                 });
             }
@@ -1541,8 +1561,8 @@ const PlaybackWatchdog = (() => {
             }
 
             const logIntervalMs = isActive()
-                ? 5000
-                : (CONFIG.logging.NON_ACTIVE_LOG_MS || 60000);
+                ? CONFIG.logging.ACTIVE_LOG_MS
+                : CONFIG.logging.NON_ACTIVE_LOG_MS;
             if (now - state.lastWatchdogLogTime > logIntervalMs) {
                 state.lastWatchdogLogTime = now;
                 logDebug(`${LOG.WATCHDOG} No progress observed`, {
@@ -1750,10 +1770,10 @@ const CandidateScorer = (() => {
             if (progressAgoMs === null) {
                 score -= 2;
                 reasons.push('no_progress');
-            } else if (progressAgoMs < 2000) {
+            } else if (progressAgoMs < CONFIG.monitoring.PROGRESS_RECENT_MS) {
                 score += 3;
                 reasons.push('recent_progress');
-            } else if (progressAgoMs < 5000) {
+            } else if (progressAgoMs < CONFIG.monitoring.PROGRESS_STALE_MS) {
                 score += 1;
                 reasons.push('stale_progress');
             } else {
@@ -2167,7 +2187,7 @@ const BackoffManager = (() => {
         const shouldSkip = (videoId, monitorState) => {
             const now = Date.now();
             if (monitorState?.nextHealAllowedTime && now < monitorState.nextHealAllowedTime) {
-                if (now - (monitorState.lastBackoffLogTime || 0) > 5000) {
+                if (now - (monitorState.lastBackoffLogTime || 0) > CONFIG.logging.BACKOFF_LOG_INTERVAL_MS) {
                     monitorState.lastBackoffLogTime = now;
                     logDebug('[HEALER:BACKOFF] Stall skipped due to backoff', {
                         videoId,
@@ -2439,7 +2459,7 @@ const FailoverManager = (() => {
                 }
 
                 const now = Date.now();
-                const cooldownMs = CONFIG.monitoring.PROBE_COOLDOWN_MS || 5000;
+                const cooldownMs = CONFIG.monitoring.PROBE_COOLDOWN_MS;
                 const lastProbeTime = state.lastProbeTimes.get(videoId) || 0;
                 if (lastProbeTime > 0 && now - lastProbeTime < cooldownMs) {
                     logDebug('[HEALER:PROBE_SKIP] Probe cooldown active', {
@@ -3148,6 +3168,9 @@ const ExternalSignalRouter = (() => {
         const formatSeconds = (value) => (
             Number.isFinite(value) ? Number(value.toFixed(3)) : null
         );
+        const truncateMessage = (message) => (
+            String(message).substring(0, CONFIG.logging.LOG_MESSAGE_MAX_LEN)
+        );
 
         const getActiveEntry = () => {
             const activeId = candidateSelector.getActiveId();
@@ -3196,7 +3219,7 @@ const ExternalSignalRouter = (() => {
                 if (!attribution.id) {
                     Logger.add('[HEALER:STALL_HINT_UNATTRIBUTED] Console playhead stall warning', {
                         level,
-                        message: message.substring(0, 300),
+                        message: truncateMessage(message),
                         playheadSeconds: attribution.playheadSeconds,
                         bufferEndSeconds: formatSeconds(signal.bufferEndSeconds),
                         activeVideoId: attribution.activeId,
@@ -3216,7 +3239,7 @@ const ExternalSignalRouter = (() => {
                 Logger.add('[HEALER:STALL_HINT] Console playhead stall warning', {
                     videoId: attribution.id,
                     level,
-                    message: message.substring(0, 300),
+                    message: truncateMessage(message),
                     playheadSeconds: attribution.playheadSeconds,
                     bufferEndSeconds: formatSeconds(signal.bufferEndSeconds),
                     attribution: attribution.reason,
@@ -3246,11 +3269,11 @@ const ExternalSignalRouter = (() => {
             if (type === 'processing_asset') {
                 Logger.add('[HEALER:ASSET_HINT] Processing/offline asset detected', {
                     level,
-                    message: message.substring(0, 300)
+                    message: truncateMessage(message)
                 });
 
                 logCandidateSnapshot('processing_asset');
-                onRescan('processing_asset', { level, message: message.substring(0, 300) });
+                onRescan('processing_asset', { level, message: truncateMessage(message) });
 
                 if (recoveryManager.isFailoverActive()) {
                     logDebug('[HEALER:ASSET_HINT_SKIP] Failover in progress', {
@@ -3308,11 +3331,209 @@ const ExternalSignalRouter = (() => {
             Logger.add('[HEALER:EXTERNAL] Unhandled external signal', {
                 type,
                 level,
-                message: message.substring(0, 300)
+                message: truncateMessage(message)
             });
         };
 
         return { handleSignal };
+    };
+
+    return { create };
+})();
+
+// --- MonitoringOrchestrator ---
+/**
+ * Sets up monitoring, candidate scoring, and recovery helpers.
+ */
+const MonitoringOrchestrator = (() => {
+    const create = (options = {}) => {
+        const logDebug = options.logDebug || (() => {});
+        const isHealing = options.isHealing || (() => false);
+        const isFallbackSource = options.isFallbackSource || (() => false);
+        let stallHandler = options.onStall || (() => {});
+
+        const monitorRegistry = MonitorRegistry.create({
+            logDebug,
+            isHealing,
+            onStall: (video, details, state) => stallHandler(video, details, state)
+        });
+
+        const monitorsById = monitorRegistry.monitorsById;
+        const getVideoId = monitorRegistry.getVideoId;
+
+        const candidateSelector = CandidateSelector.create({
+            monitorsById,
+            getVideoId,
+            logDebug,
+            maxMonitors: CONFIG.monitoring.MAX_VIDEO_MONITORS,
+            minProgressMs: CONFIG.monitoring.CANDIDATE_MIN_PROGRESS_MS,
+            switchDelta: CONFIG.monitoring.CANDIDATE_SWITCH_DELTA,
+            isFallbackSource
+        });
+        const recoveryManager = RecoveryManager.create({
+            monitorsById,
+            candidateSelector,
+            getVideoId,
+            logDebug
+        });
+        candidateSelector.setLockChecker(recoveryManager.isFailoverActive);
+        monitorRegistry.bind({ candidateSelector, recoveryManager });
+
+        const setStallHandler = (fn) => {
+            stallHandler = typeof fn === 'function' ? fn : (() => {});
+        };
+
+        const scanForVideos = (reason, detail = {}) => {
+            if (!document?.querySelectorAll) {
+                return;
+            }
+            const beforeCount = monitorsById.size;
+            const videos = Array.from(document.querySelectorAll('video'));
+            Logger.add('[HEALER:SCAN] Video rescan requested', {
+                reason,
+                found: videos.length,
+                ...detail
+            });
+            for (const video of videos) {
+                const videoId = getVideoId(video);
+                logDebug('[HEALER:SCAN_ITEM] Video discovered', {
+                    reason,
+                    videoId,
+                    alreadyMonitored: monitorsById.has(videoId),
+                    videoState: VideoState.get(video, videoId)
+                });
+            }
+            for (const video of videos) {
+                monitorRegistry.monitor(video);
+            }
+            candidateSelector.evaluateCandidates(`scan_${reason || 'manual'}`);
+            candidateSelector.getActiveId();
+            const afterCount = monitorsById.size;
+            Logger.add('[HEALER:SCAN] Video rescan complete', {
+                reason,
+                found: videos.length,
+                newMonitors: Math.max(afterCount - beforeCount, 0),
+                totalMonitors: afterCount
+            });
+        };
+
+        return {
+            monitor: monitorRegistry.monitor,
+            stopMonitoring: monitorRegistry.stopMonitoring,
+            monitorsById,
+            getVideoId,
+            candidateSelector,
+            recoveryManager,
+            scanForVideos,
+            setStallHandler,
+            getMonitoredCount: () => monitorRegistry.getMonitoredCount()
+        };
+    };
+
+    return { create };
+})();
+
+// --- RecoveryOrchestrator ---
+/**
+ * Coordinates stall handling, healing, and external signal recovery.
+ */
+const RecoveryOrchestrator = (() => {
+    const create = (options = {}) => {
+        const monitoring = options.monitoring;
+        const logWithState = options.logWithState;
+        const logDebug = options.logDebug || (() => {});
+
+        const monitorsById = monitoring.monitorsById;
+        const candidateSelector = monitoring.candidateSelector;
+        const recoveryManager = monitoring.recoveryManager;
+        const getVideoId = monitoring.getVideoId;
+
+        const stallSkipLogTimes = new Map();
+
+        const healPipeline = HealPipeline.create({
+            getVideoId,
+            logWithState,
+            logDebug,
+            recoveryManager,
+            onDetached: (video, reason) => {
+                monitoring.scanForVideos('detached', {
+                    reason,
+                    videoId: getVideoId(video)
+                });
+            }
+        });
+
+        const onStallDetected = (video, details = {}, state = null) => {
+            const now = Date.now();
+            const videoId = getVideoId(video);
+
+            if (recoveryManager.shouldSkipStall(videoId, state)) {
+                return;
+            }
+
+            if (state) {
+                const progressedSinceAttempt = state.lastProgressTime > state.lastHealAttemptTime;
+                if (progressedSinceAttempt && now - state.lastHealAttemptTime < CONFIG.stall.RETRY_COOLDOWN_MS) {
+                    logDebug('[HEALER:DEBOUNCE]', {
+                        cooldownMs: CONFIG.stall.RETRY_COOLDOWN_MS,
+                        lastHealAttemptAgoMs: now - state.lastHealAttemptTime,
+                        state: state.state,
+                        videoId
+                    });
+                    return;
+                }
+            }
+            if (state) {
+                state.lastHealAttemptTime = now;
+            }
+
+            candidateSelector.evaluateCandidates('stall');
+            const activeCandidateId = candidateSelector.getActiveId();
+            if (activeCandidateId && activeCandidateId !== videoId) {
+                if (!state?.progressEligible) {
+                    recoveryManager.probeCandidate(videoId, 'stall_non_active');
+                }
+                const lastLog = stallSkipLogTimes.get(videoId) || 0;
+                const logIntervalMs = CONFIG.logging.NON_ACTIVE_LOG_MS;
+                if (now - lastLog >= logIntervalMs) {
+                    stallSkipLogTimes.set(videoId, now);
+                    logDebug('[HEALER:STALL_SKIP] Stall on non-active video', {
+                        videoId,
+                        activeVideoId: activeCandidateId,
+                        stalledFor: details.stalledFor
+                    });
+                }
+                return;
+            }
+
+            logWithState('[STALL:DETECTED]', video, {
+                ...details,
+                lastProgressAgoMs: state ? (Date.now() - state.lastProgressTime) : undefined,
+                videoId
+            });
+
+            Metrics.increment('stalls_detected');
+            healPipeline.attemptHeal(video, state);
+        };
+
+        monitoring.setStallHandler(onStallDetected);
+
+        const externalSignalRouter = ExternalSignalRouter.create({
+            monitorsById,
+            candidateSelector,
+            recoveryManager,
+            logDebug,
+            onStallDetected,
+            onRescan: (reason, detail) => monitoring.scanForVideos(reason, detail)
+        });
+
+        return {
+            onStallDetected,
+            attemptHeal: (video, state) => healPipeline.attemptHeal(video, state),
+            handleExternalSignal: (signal = {}) => externalSignalRouter.handleSignal(signal),
+            isHealing: () => healPipeline.isHealing(),
+            getAttempts: () => healPipeline.getAttempts()
+        };
     };
 
     return { create };
@@ -3326,184 +3547,48 @@ const ExternalSignalRouter = (() => {
 const StreamHealer = (() => {
     const FALLBACK_SOURCE_PATTERN = /(404_processing|_404\/404_processing|_404_processing|_404)/i;
 
-    const LOG = {
-        DEBOUNCE: '[HEALER:DEBOUNCE]',
-        STALL_DETECTED: '[STALL:DETECTED]'
-    };
-
     const logDebug = (message, detail) => {
         if (CONFIG.debug) {
             Logger.add(message, detail);
         }
     };
 
-    let healPipeline = null;
-    let onStallDetected = null;
-    const stallSkipLogTimes = new Map();
+    const isFallbackSource = (src) => src && FALLBACK_SOURCE_PATTERN.test(src);
 
-    const monitorRegistry = MonitorRegistry.create({
+    let recovery = {
+        isHealing: () => false
+    };
+
+    const monitoring = MonitoringOrchestrator.create({
         logDebug,
-        isHealing: () => (healPipeline ? healPipeline.isHealing() : false),
-        onStall: (video, details, state) => {
-            if (onStallDetected) {
-                onStallDetected(video, details, state);
-            }
-        }
+        isHealing: () => recovery.isHealing(),
+        isFallbackSource
     });
-
-    const monitorsById = monitorRegistry.monitorsById;
-    const getVideoId = monitorRegistry.getVideoId;
 
     const logWithState = (message, video, detail = {}) => {
         Logger.add(message, {
             ...detail,
-            videoState: VideoState.get(video, getVideoId(video))
+            videoState: VideoState.get(video, monitoring.getVideoId(video))
         });
     };
 
-    const isFallbackSource = (src) => src && FALLBACK_SOURCE_PATTERN.test(src);
-    const candidateSelector = CandidateSelector.create({
-        monitorsById,
-        getVideoId,
-        logDebug,
-        maxMonitors: CONFIG.monitoring.MAX_VIDEO_MONITORS,
-        minProgressMs: CONFIG.monitoring.CANDIDATE_MIN_PROGRESS_MS,
-        switchDelta: CONFIG.monitoring.CANDIDATE_SWITCH_DELTA,
-        isFallbackSource
-    });
-    const recoveryManager = RecoveryManager.create({
-        monitorsById,
-        candidateSelector,
-        getVideoId,
+    recovery = RecoveryOrchestrator.create({
+        monitoring,
+        logWithState,
         logDebug
     });
-    candidateSelector.setLockChecker(recoveryManager.isFailoverActive);
-    monitorRegistry.bind({ candidateSelector, recoveryManager });
-
-    const scanForVideos = (reason, detail = {}) => {
-        if (!document?.querySelectorAll) {
-            return;
-        }
-        const beforeCount = monitorsById.size;
-        const videos = Array.from(document.querySelectorAll('video'));
-        Logger.add('[HEALER:SCAN] Video rescan requested', {
-            reason,
-            found: videos.length,
-            ...detail
-        });
-        for (const video of videos) {
-            const videoId = getVideoId(video);
-            logDebug('[HEALER:SCAN_ITEM] Video discovered', {
-                reason,
-                videoId,
-                alreadyMonitored: monitorsById.has(videoId),
-                videoState: VideoState.get(video, videoId)
-            });
-        }
-        for (const video of videos) {
-            monitorRegistry.monitor(video);
-        }
-        candidateSelector.evaluateCandidates(`scan_${reason || 'manual'}`);
-        candidateSelector.getActiveId();
-        const afterCount = monitorsById.size;
-        Logger.add('[HEALER:SCAN] Video rescan complete', {
-            reason,
-            found: videos.length,
-            newMonitors: Math.max(afterCount - beforeCount, 0),
-            totalMonitors: afterCount
-        });
-    };
-
-    healPipeline = HealPipeline.create({
-        getVideoId,
-        logWithState,
-        logDebug,
-        recoveryManager,
-        onDetached: (video, reason) => {
-            scanForVideos('detached', {
-                reason,
-                videoId: getVideoId(video)
-            });
-        }
-    });
-
-    onStallDetected = (video, details = {}, state = null) => {
-        const now = Date.now();
-        const videoId = getVideoId(video);
-
-        if (recoveryManager.shouldSkipStall(videoId, state)) {
-            return;
-        }
-
-        if (state) {
-            const progressedSinceAttempt = state.lastProgressTime > state.lastHealAttemptTime;
-            if (progressedSinceAttempt && now - state.lastHealAttemptTime < CONFIG.stall.RETRY_COOLDOWN_MS) {
-                logDebug(LOG.DEBOUNCE, {
-                    cooldownMs: CONFIG.stall.RETRY_COOLDOWN_MS,
-                    lastHealAttemptAgoMs: now - state.lastHealAttemptTime,
-                    state: state.state,
-                    videoId
-                });
-                return;
-            }
-        }
-        if (state) {
-            state.lastHealAttemptTime = now;
-        }
-
-        candidateSelector.evaluateCandidates('stall');
-        const activeCandidateId = candidateSelector.getActiveId();
-        if (activeCandidateId && activeCandidateId !== videoId) {
-            if (!state?.progressEligible) {
-                recoveryManager.probeCandidate(videoId, 'stall_non_active');
-            }
-            const now = Date.now();
-            const lastLog = stallSkipLogTimes.get(videoId) || 0;
-            const logIntervalMs = CONFIG.logging.NON_ACTIVE_LOG_MS || 60000;
-            if (now - lastLog >= logIntervalMs) {
-                stallSkipLogTimes.set(videoId, now);
-                logDebug('[HEALER:STALL_SKIP] Stall on non-active video', {
-                    videoId,
-                    activeVideoId: activeCandidateId,
-                    stalledFor: details.stalledFor
-                });
-            }
-            return;
-        }
-
-        logWithState(LOG.STALL_DETECTED, video, {
-            ...details,
-            lastProgressAgoMs: state ? (Date.now() - state.lastProgressTime) : undefined,
-            videoId
-        });
-
-        Metrics.increment('stalls_detected');
-        healPipeline.attemptHeal(video, state);
-    };
-    const externalSignalRouter = ExternalSignalRouter.create({
-        monitorsById,
-        candidateSelector,
-        recoveryManager,
-        logDebug,
-        onStallDetected,
-        onRescan: (reason, detail) => scanForVideos(reason, detail)
-    });
-
-    const handleExternalSignal = (signal = {}) => {
-        externalSignalRouter.handleSignal(signal);
-    };
 
     return {
-        monitor: monitorRegistry.monitor,
-        stopMonitoring: monitorRegistry.stopMonitoring,
-        onStallDetected,
-        attemptHeal: (video, state) => healPipeline.attemptHeal(video, state),
-        handleExternalSignal,
-        scanForVideos,
+        monitor: monitoring.monitor,
+        stopMonitoring: monitoring.stopMonitoring,
+        onStallDetected: recovery.onStallDetected,
+        attemptHeal: (video, state) => recovery.attemptHeal(video, state),
+        handleExternalSignal: (signal) => recovery.handleExternalSignal(signal),
+        scanForVideos: monitoring.scanForVideos,
         getStats: () => ({
-            healAttempts: healPipeline.getAttempts(),
-            isHealing: healPipeline.isHealing(),
-            monitoredCount: monitorRegistry.getMonitoredCount()
+            healAttempts: recovery.getAttempts(),
+            isHealing: recovery.isHealing(),
+            monitoredCount: monitoring.getMonitoredCount()
         })
     };
 })();

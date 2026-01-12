@@ -194,7 +194,7 @@ const FailoverManager = (() => {
                 }
 
                 const now = Date.now();
-                const cooldownMs = CONFIG.monitoring.PROBE_COOLDOWN_MS || 5000;
+                const cooldownMs = CONFIG.monitoring.PROBE_COOLDOWN_MS;
                 const lastProbeTime = state.lastProbeTimes.get(videoId) || 0;
                 if (lastProbeTime > 0 && now - lastProbeTime < cooldownMs) {
                     logDebug('[HEALER:PROBE_SKIP] Probe cooldown active', {

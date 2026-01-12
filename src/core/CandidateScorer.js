@@ -71,10 +71,10 @@ const CandidateScorer = (() => {
             if (progressAgoMs === null) {
                 score -= 2;
                 reasons.push('no_progress');
-            } else if (progressAgoMs < 2000) {
+            } else if (progressAgoMs < CONFIG.monitoring.PROGRESS_RECENT_MS) {
                 score += 3;
                 reasons.push('recent_progress');
-            } else if (progressAgoMs < 5000) {
+            } else if (progressAgoMs < CONFIG.monitoring.PROGRESS_STALE_MS) {
                 score += 1;
                 reasons.push('stale_progress');
             } else {

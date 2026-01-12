@@ -10,6 +10,9 @@ const Instrumentation = (() => {
     let signalDetector = null;
     const PROCESSING_ASSET_PATTERN = /404_processing_640x360\.png/i;
     let lastResourceHintTime = 0;
+    const truncateMessage = (message, maxLen) => (
+        String(message).substring(0, maxLen)
+    );
 
     // Helper to capture video state for logging
     const getVideoState = () => {
@@ -53,7 +56,9 @@ const Instrumentation = (() => {
 
         window.addEventListener('unhandledrejection', (event) => {
             Logger.add('[INSTRUMENT:REJECTION] Unhandled promise rejection', {
-                reason: event.reason ? String(event.reason).substring(0, 200) : 'Unknown',
+                reason: event.reason
+                    ? truncateMessage(event.reason, CONFIG.logging.LOG_REASON_MAX_LEN)
+                    : 'Unknown',
                 severity: 'MEDIUM',
                 videoState: getVideoState()
             });
@@ -75,17 +80,17 @@ const Instrumentation = (() => {
 
     const maybeEmitProcessingAsset = (url) => {
         const now = Date.now();
-        if (now - lastResourceHintTime < 2000) {
+        if (now - lastResourceHintTime < CONFIG.logging.RESOURCE_HINT_THROTTLE_MS) {
             return;
         }
         lastResourceHintTime = now;
         Logger.add('[INSTRUMENT:RESOURCE_HINT] Processing asset requested', {
-            url: String(url).substring(0, 200)
+            url: truncateMessage(url, CONFIG.logging.LOG_URL_MAX_LEN)
         });
         emitExternalSignal({
             type: 'processing_asset',
             level: 'resource',
-            message: String(url),
+            message: truncateMessage(url, CONFIG.logging.LOG_URL_MAX_LEN),
             timestamp: new Date().toISOString()
         });
     };
@@ -120,7 +125,7 @@ const Instrumentation = (() => {
             const classification = classifyError(null, msg);
 
             Logger.add('[INSTRUMENT:CONSOLE_ERROR] Console error intercepted', {
-                message: msg.substring(0, 300),
+                message: truncateMessage(msg, CONFIG.logging.LOG_MESSAGE_MAX_LEN),
                 severity: classification.severity,
                 action: classification.action
             });
@@ -144,7 +149,7 @@ const Instrumentation = (() => {
 
             if (CONFIG.logging.LOG_CSP_WARNINGS && msg.includes('Content-Security-Policy')) {
                 Logger.add('[INSTRUMENT:CSP] CSP warning', {
-                    message: msg.substring(0, 200),
+                    message: truncateMessage(msg, CONFIG.logging.LOG_REASON_MAX_LEN),
                     severity: 'LOW'
                 });
             }

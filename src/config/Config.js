@@ -43,13 +43,31 @@ const CONFIG = (() => {
             CANDIDATE_SWITCH_DELTA: 2,      // Min score delta before switching active video
             CANDIDATE_MIN_PROGRESS_MS: 5000, // Require sustained progress before switching to new video
             PROGRESS_STREAK_RESET_MS: 2500, // Reset progress streak after this long without progress
+            PROGRESS_RECENT_MS: 2000,       // "Recent progress" threshold for scoring
+            PROGRESS_STALE_MS: 5000,        // "Stale progress" threshold for scoring
             TRUST_STALE_MS: 8000,           // Trust expires if progress is older than this
             PROBE_COOLDOWN_MS: 5000,        // Min time between probe attempts per candidate
         },
 
+        recovery: {
+            MIN_HEAL_BUFFER_S: 2,           // Minimum buffered seconds needed to heal
+            SEEK_SETTLE_MS: 100,            // Wait after seek before validation
+            PLAYBACK_VERIFY_MS: 200,        // Wait after play to verify playback
+        },
+
         logging: {
             LOG_CSP_WARNINGS: true,
-            NON_ACTIVE_LOG_MS: 300000,
+            NON_ACTIVE_LOG_MS: 300000,      // Non-active candidate log interval
+            ACTIVE_LOG_MS: 5000,            // Active candidate log interval
+            BACKOFF_LOG_INTERVAL_MS: 5000,  // Backoff skip log interval
+            CONSOLE_SIGNAL_THROTTLE_MS: 2000, // Throttle console hint signals
+            RESOURCE_HINT_THROTTLE_MS: 2000,  // Throttle resource hint signals
+            LOG_MESSAGE_MAX_LEN: 300,       // Max length for log messages
+            LOG_REASON_MAX_LEN: 200,        // Max length for error reasons
+            LOG_URL_MAX_LEN: 200,           // Max length for logged URLs
+            CONSOLE_CAPTURE_MAX_LEN: 500,   // Max length for captured console lines
+            MAX_LOGS: 5000,                 // Max in-memory script logs
+            MAX_CONSOLE_LOGS: 2000,         // Max in-memory console logs
         },
     };
 

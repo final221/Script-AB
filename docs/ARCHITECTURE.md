@@ -78,8 +78,10 @@ The build uses a priority list followed by auto-discovered modules, then the ent
 32. `core/PlayheadAttribution.js`
 33. `core/VideoDiscovery.js`
 34. `core/ExternalSignalRouter.js`
-35. `core/StreamHealer.js`
-36. `core/CoreOrchestrator.js`
+35. `core/MonitoringOrchestrator.js`
+36. `core/RecoveryOrchestrator.js`
+37. `core/StreamHealer.js`
+38. `core/CoreOrchestrator.js`
 <!-- LOAD_ORDER_END -->
 
 
@@ -152,7 +154,24 @@ Script Logger.add() ────────┼──> Logger.getMergedTimeline(
   - `monitoring.CANDIDATE_SWITCH_DELTA: 2` - Score delta required to switch active video
   - `monitoring.CANDIDATE_MIN_PROGRESS_MS: 5000` - Minimum sustained progress before switching to new video
   - `monitoring.PROGRESS_STREAK_RESET_MS: 2500` - Reset progress streak after this long without progress
+  - `monitoring.PROGRESS_RECENT_MS: 2000` - "Recent progress" scoring threshold
+  - `monitoring.PROGRESS_STALE_MS: 5000` - "Stale progress" scoring threshold
   - `monitoring.TRUST_STALE_MS: 8000` - Trust expires if progress is older than this
+  - `monitoring.PROBE_COOLDOWN_MS: 5000` - Min time between probe attempts per candidate
+  - `recovery.MIN_HEAL_BUFFER_S: 2` - Minimum buffered seconds needed to heal
+  - `recovery.SEEK_SETTLE_MS: 100` - Wait after seek before validation
+  - `recovery.PLAYBACK_VERIFY_MS: 200` - Wait after play to verify playback
+  - `logging.ACTIVE_LOG_MS: 5000` - Active candidate log interval
+  - `logging.NON_ACTIVE_LOG_MS: 300000` - Non-active candidate log interval
+  - `logging.BACKOFF_LOG_INTERVAL_MS: 5000` - Backoff skip log interval
+  - `logging.CONSOLE_SIGNAL_THROTTLE_MS: 2000` - Throttle console hint signals
+  - `logging.RESOURCE_HINT_THROTTLE_MS: 2000` - Throttle resource hint signals
+  - `logging.LOG_MESSAGE_MAX_LEN: 300` - Max length for log messages
+  - `logging.LOG_REASON_MAX_LEN: 200` - Max length for error reasons
+  - `logging.LOG_URL_MAX_LEN: 200` - Max length for logged URLs
+  - `logging.CONSOLE_CAPTURE_MAX_LEN: 500` - Max length for captured console lines
+  - `logging.MAX_LOGS: 5000` - Max in-memory script logs
+  - `logging.MAX_CONSOLE_LOGS: 2000` - Max in-memory console logs
 
 ### Utility Layer
 - **Utils.js (Fn)** - Pure utility functions (pipe, debounce, sleep, tryCatch)

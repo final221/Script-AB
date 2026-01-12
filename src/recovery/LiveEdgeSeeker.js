@@ -41,7 +41,7 @@ const LiveEdgeSeeker = (() => {
             video.currentTime = target;
 
             // Brief wait for seek to settle
-            await Fn.sleep(100);
+            await Fn.sleep(CONFIG.recovery.SEEK_SETTLE_MS);
 
             Logger.add('[HEALER:SEEKED] Seek completed', {
                 newTime: video.currentTime.toFixed(3),
@@ -62,7 +62,7 @@ const LiveEdgeSeeker = (() => {
                 await video.play();
 
                 // Verify playback started
-                await Fn.sleep(200);
+                await Fn.sleep(CONFIG.recovery.PLAYBACK_VERIFY_MS);
 
                 if (!video.paused && video.readyState >= 3) {
                     const duration = (performance.now() - startTime).toFixed(0);

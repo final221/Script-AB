@@ -6,8 +6,6 @@
 const Logger = (() => {
     const logs = [];
     const consoleLogs = [];
-    const MAX_LOGS = 5000;
-    const MAX_CONSOLE_LOGS = 2000;
 
     /**
      * Add an internal log entry.
@@ -15,7 +13,7 @@ const Logger = (() => {
      * @param {Object|null} detail - Optional structured data
      */
     const add = (message, detail = null) => {
-        if (logs.length >= MAX_LOGS) logs.shift();
+        if (logs.length >= CONFIG.logging.MAX_LOGS) logs.shift();
         logs.push({
             timestamp: new Date().toISOString(),
             type: 'internal',
@@ -31,7 +29,7 @@ const Logger = (() => {
      * @param {any[]} args - Console arguments
      */
     const captureConsole = (level, args) => {
-        if (consoleLogs.length >= MAX_CONSOLE_LOGS) consoleLogs.shift();
+        if (consoleLogs.length >= CONFIG.logging.MAX_CONSOLE_LOGS) consoleLogs.shift();
 
         let message;
         try {
@@ -41,8 +39,8 @@ const Logger = (() => {
                 try { return JSON.stringify(arg); } catch { return String(arg); }
             }).join(' ');
 
-            if (message.length > 500) {
-                message = message.substring(0, 500) + '... [truncated]';
+            if (message.length > CONFIG.logging.CONSOLE_CAPTURE_MAX_LEN) {
+                message = message.substring(0, CONFIG.logging.CONSOLE_CAPTURE_MAX_LEN) + '... [truncated]';
             }
         } catch {
             message = '[Unable to stringify console args]';

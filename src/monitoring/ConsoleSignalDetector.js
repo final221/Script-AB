@@ -3,7 +3,6 @@
  * Detects console messages that hint at playback issues.
  */
 const ConsoleSignalDetector = (() => {
-    const SIGNAL_THROTTLE_MS = 2000;
     const SIGNAL_PATTERNS = {
         PLAYHEAD_STALL: /playhead stalling at/i,
         PROCESSING_ASSET: /404_processing_640x360\.png/i,
@@ -30,14 +29,14 @@ const ConsoleSignalDetector = (() => {
         const maybeEmit = (type, message, level, detail = null) => {
             const now = Date.now();
             const lastTime = lastSignalTimes[type] || 0;
-            if (now - lastTime < SIGNAL_THROTTLE_MS) {
+            if (now - lastTime < CONFIG.logging.CONSOLE_SIGNAL_THROTTLE_MS) {
                 return;
             }
             lastSignalTimes[type] = now;
             Logger.add('[INSTRUMENT:CONSOLE_HINT] Console signal detected', {
                 type,
                 level,
-                message: message.substring(0, 300),
+                message: message.substring(0, CONFIG.logging.LOG_MESSAGE_MAX_LEN),
                 ...(detail || {})
             });
             emitSignal({
