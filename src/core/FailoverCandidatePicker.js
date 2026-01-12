@@ -18,12 +18,13 @@ const FailoverCandidatePicker = (() => {
             return !badReasons.some(reason => result.reasons.includes(reason));
         };
 
-        const selectPreferred = (excludeId) => {
+        const selectPreferred = (excludeId, excludeIds = null) => {
+            const excluded = excludeIds instanceof Set ? excludeIds : new Set();
             if (typeof scoreVideo === 'function') {
                 let best = null;
                 let bestTrusted = null;
                 for (const [videoId, entry] of monitorsById.entries()) {
-                    if (videoId === excludeId) continue;
+                    if (videoId === excludeId || excluded.has(videoId)) continue;
                     const result = scoreVideo(entry.video, entry.monitor, videoId);
                     const candidate = { id: videoId, entry, score: result.score, result };
 
@@ -34,13 +35,13 @@ const FailoverCandidatePicker = (() => {
                         bestTrusted = candidate;
                     }
                 }
-                return bestTrusted || best;
+                return bestTrusted || null;
             }
 
             let newest = null;
             let newestIndex = -1;
             for (const [videoId, entry] of monitorsById.entries()) {
-                if (videoId === excludeId) continue;
+                if (videoId === excludeId || excluded.has(videoId)) continue;
                 const idx = getVideoIndex(videoId);
                 if (idx > newestIndex) {
                     newestIndex = idx;

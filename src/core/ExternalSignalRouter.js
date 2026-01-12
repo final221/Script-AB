@@ -187,8 +187,11 @@ const ExternalSignalRouter = (() => {
 
                 const best = candidateSelector.evaluateCandidates('processing_asset');
                 let activeId = candidateSelector.getActiveId();
+                const activeEntry = activeId ? monitorsById.get(activeId) : null;
+                const activeState = activeEntry ? activeEntry.monitor.state.state : null;
+                const activeIsStalled = !activeEntry || ['STALLED', 'RESET', 'ERROR'].includes(activeState);
 
-                if (best && best.id && activeId && best.id !== activeId && best.progressEligible) {
+                if (best && best.id && activeId && best.id !== activeId && best.progressEligible && activeIsStalled) {
                     const fromId = activeId;
                     activeId = best.id;
                     candidateSelector.setActiveId(activeId);
@@ -197,13 +200,21 @@ const ExternalSignalRouter = (() => {
                         to: activeId,
                         bestScore: best.score,
                         progressStreakMs: best.progressStreakMs,
-                        progressEligible: best.progressEligible
+                        progressEligible: best.progressEligible,
+                        activeState
+                    });
+                } else if (best && best.id && best.id !== activeId) {
+                    logDebug('[HEALER:CANDIDATE] Processing asset switch suppressed', {
+                        from: activeId,
+                        to: best.id,
+                        progressEligible: best.progressEligible,
+                        activeState
                     });
                 }
 
-                const activeEntry = activeId ? monitorsById.get(activeId) : null;
-                if (activeEntry) {
-                    const playPromise = activeEntry.video?.play?.();
+                const activeEntryForPlay = activeId ? monitorsById.get(activeId) : null;
+                if (activeEntryForPlay) {
+                    const playPromise = activeEntryForPlay.video?.play?.();
                     if (playPromise && typeof playPromise.catch === 'function') {
                         playPromise.catch((err) => {
                             Logger.add('[HEALER:ASSET_HINT_PLAY] Play rejected', {

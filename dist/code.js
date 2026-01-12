@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.0.39
+// @version       4.0.40
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -801,6 +801,8 @@ const Instrumentation = (() => {
     const classifyError = ErrorClassifier.classify;
     let externalSignalHandler = null;
     let signalDetector = null;
+    const PROCESSING_ASSET_PATTERN = /404_processing_640x360\.png/i;
+    let lastResourceHintTime = 0;
 
     // Helper to capture video state for logging
     const getVideoState = () => {
@@ -864,6 +866,42 @@ const Instrumentation = (() => {
         }
     };
 
+    const maybeEmitProcessingAsset = (url) => {
+        const now = Date.now();
+        if (now - lastResourceHintTime < 2000) {
+            return;
+        }
+        lastResourceHintTime = now;
+        Logger.add('[INSTRUMENT:RESOURCE_HINT] Processing asset requested', {
+            url: String(url).substring(0, 200)
+        });
+        emitExternalSignal({
+            type: 'processing_asset',
+            level: 'resource',
+            message: String(url),
+            timestamp: new Date().toISOString()
+        });
+    };
+
+    const setupResourceObserver = () => {
+        if (typeof window === 'undefined' || !window.PerformanceObserver) return;
+        try {
+            const observer = new PerformanceObserver((list) => {
+                for (const entry of list.getEntries()) {
+                    if (entry?.name && PROCESSING_ASSET_PATTERN.test(entry.name)) {
+                        maybeEmitProcessingAsset(entry.name);
+                    }
+                }
+            });
+            observer.observe({ type: 'resource', buffered: true });
+        } catch (error) {
+            Logger.add('[INSTRUMENT:RESOURCE_ERROR] Resource observer failed', {
+                error: error?.name,
+                message: error?.message
+            });
+        }
+    };
+
     const consoleInterceptor = ConsoleInterceptor.create({
         onLog: (args) => {
             Logger.captureConsole('log', args);
@@ -920,6 +958,7 @@ const Instrumentation = (() => {
                 externalSignals: Boolean(externalSignalHandler)
             });
             setupGlobalErrorHandlers();
+            setupResourceObserver();
             consoleInterceptor.attach();
         },
     };
@@ -1709,7 +1748,12 @@ const CandidateSelector = (() => {
 
             if (activeCandidateId && monitorsById.has(activeCandidateId)) {
                 const entry = monitorsById.get(activeCandidateId);
-                current = { id: activeCandidateId, ...scoreVideo(entry.video, entry.monitor, activeCandidateId) };
+                const result = scoreVideo(entry.video, entry.monitor, activeCandidateId);
+                current = {
+                    id: activeCandidateId,
+                    state: entry.monitor.state.state,
+                    ...result
+                };
                 current.trusted = isTrustedCandidate(current);
             }
 
@@ -1725,6 +1769,7 @@ const CandidateSelector = (() => {
                     paused: result.vs.paused,
                     readyState: result.vs.readyState,
                     currentSrc: result.vs.currentSrc,
+                    state: entry.monitor.state.state,
                     reasons: result.reasons,
                     trusted
                 });
@@ -1760,6 +1805,33 @@ const CandidateSelector = (() => {
             }
 
             if (preferred && preferred.id !== activeCandidateId) {
+                const activeState = current ? current.state : null;
+                const activeIsStalled = !current || ['STALLED', 'RESET', 'ERROR'].includes(activeState);
+
+                if (!preferred.progressEligible) {
+                    logDebug('[HEALER:CANDIDATE] Switch suppressed', {
+                        from: activeCandidateId,
+                        to: preferred.id,
+                        reason,
+                        cause: 'preferred_not_progress_eligible',
+                        activeState,
+                        scores
+                    });
+                    return preferred;
+                }
+
+                if (!activeIsStalled) {
+                    logDebug('[HEALER:CANDIDATE] Switch suppressed', {
+                        from: activeCandidateId,
+                        to: preferred.id,
+                        reason,
+                        cause: 'active_not_stalled',
+                        activeState,
+                        scores
+                    });
+                    return preferred;
+                }
+
                 const currentTrusted = current ? current.trusted : false;
                 if (currentTrusted && !preferred.trusted) {
                     logDebug('[HEALER:CANDIDATE] Switch blocked by trust', {
@@ -1916,12 +1988,13 @@ const FailoverCandidatePicker = (() => {
             return !badReasons.some(reason => result.reasons.includes(reason));
         };
 
-        const selectPreferred = (excludeId) => {
+        const selectPreferred = (excludeId, excludeIds = null) => {
+            const excluded = excludeIds instanceof Set ? excludeIds : new Set();
             if (typeof scoreVideo === 'function') {
                 let best = null;
                 let bestTrusted = null;
                 for (const [videoId, entry] of monitorsById.entries()) {
-                    if (videoId === excludeId) continue;
+                    if (videoId === excludeId || excluded.has(videoId)) continue;
                     const result = scoreVideo(entry.video, entry.monitor, videoId);
                     const candidate = { id: videoId, entry, score: result.score, result };
 
@@ -1932,13 +2005,13 @@ const FailoverCandidatePicker = (() => {
                         bestTrusted = candidate;
                     }
                 }
-                return bestTrusted || best;
+                return bestTrusted || null;
             }
 
             let newest = null;
             let newestIndex = -1;
             for (const [videoId, entry] of monitorsById.entries()) {
-                if (videoId === excludeId) continue;
+                if (videoId === excludeId || excluded.has(videoId)) continue;
                 const idx = getVideoIndex(videoId);
                 if (idx > newestIndex) {
                     newestIndex = idx;
@@ -1977,7 +2050,8 @@ const FailoverManager = (() => {
             fromId: null,
             toId: null,
             startTime: 0,
-            baselineProgressTime: 0
+            baselineProgressTime: 0,
+            recentFailures: new Map()
         };
 
         const resetFailover = (reason) => {
@@ -2018,11 +2092,21 @@ const FailoverManager = (() => {
                 return false;
             }
 
-            const candidate = picker.selectPreferred(fromVideoId);
+            const excluded = new Set();
+            for (const [videoId, failedAt] of state.recentFailures.entries()) {
+                if (now - failedAt < CONFIG.stall.FAILOVER_COOLDOWN_MS) {
+                    excluded.add(videoId);
+                } else {
+                    state.recentFailures.delete(videoId);
+                }
+            }
+
+            const candidate = picker.selectPreferred(fromVideoId, excluded);
             if (!candidate) {
-                logDebug('[HEALER:FAILOVER_SKIP] No candidate available', {
+                Logger.add('[HEALER:FAILOVER_SKIP] No trusted candidate available', {
                     from: fromVideoId,
-                    reason
+                    reason,
+                    excluded: Array.from(excluded)
                 });
                 return false;
             }
@@ -2079,6 +2163,7 @@ const FailoverManager = (() => {
                         candidateState: VideoState.get(currentEntry.video, toId)
                     });
                     resetBackoff(currentEntry.monitor.state, 'failover_success');
+                    state.recentFailures.delete(toId);
                 } else {
                     Logger.add('[HEALER:FAILOVER_REVERT] Candidate did not progress', {
                         from: fromVideoId,
@@ -2087,6 +2172,7 @@ const FailoverManager = (() => {
                         progressObserved: Boolean(currentEntry?.monitor.state.hasProgress),
                         candidateState: currentEntry ? VideoState.get(currentEntry.video, toId) : null
                     });
+                    state.recentFailures.set(toId, Date.now());
                     if (fromEntry) {
                         candidateSelector.setActiveId(fromVideoId);
                     }
@@ -2808,8 +2894,11 @@ const ExternalSignalRouter = (() => {
 
                 const best = candidateSelector.evaluateCandidates('processing_asset');
                 let activeId = candidateSelector.getActiveId();
+                const activeEntry = activeId ? monitorsById.get(activeId) : null;
+                const activeState = activeEntry ? activeEntry.monitor.state.state : null;
+                const activeIsStalled = !activeEntry || ['STALLED', 'RESET', 'ERROR'].includes(activeState);
 
-                if (best && best.id && activeId && best.id !== activeId && best.progressEligible) {
+                if (best && best.id && activeId && best.id !== activeId && best.progressEligible && activeIsStalled) {
                     const fromId = activeId;
                     activeId = best.id;
                     candidateSelector.setActiveId(activeId);
@@ -2818,13 +2907,21 @@ const ExternalSignalRouter = (() => {
                         to: activeId,
                         bestScore: best.score,
                         progressStreakMs: best.progressStreakMs,
-                        progressEligible: best.progressEligible
+                        progressEligible: best.progressEligible,
+                        activeState
+                    });
+                } else if (best && best.id && best.id !== activeId) {
+                    logDebug('[HEALER:CANDIDATE] Processing asset switch suppressed', {
+                        from: activeId,
+                        to: best.id,
+                        progressEligible: best.progressEligible,
+                        activeState
                     });
                 }
 
-                const activeEntry = activeId ? monitorsById.get(activeId) : null;
-                if (activeEntry) {
-                    const playPromise = activeEntry.video?.play?.();
+                const activeEntryForPlay = activeId ? monitorsById.get(activeId) : null;
+                if (activeEntryForPlay) {
+                    const playPromise = activeEntryForPlay.video?.play?.();
                     if (playPromise && typeof playPromise.catch === 'function') {
                         playPromise.catch((err) => {
                             Logger.add('[HEALER:ASSET_HINT_PLAY] Play rejected', {

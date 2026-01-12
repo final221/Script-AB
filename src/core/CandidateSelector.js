@@ -73,7 +73,12 @@ const CandidateSelector = (() => {
 
             if (activeCandidateId && monitorsById.has(activeCandidateId)) {
                 const entry = monitorsById.get(activeCandidateId);
-                current = { id: activeCandidateId, ...scoreVideo(entry.video, entry.monitor, activeCandidateId) };
+                const result = scoreVideo(entry.video, entry.monitor, activeCandidateId);
+                current = {
+                    id: activeCandidateId,
+                    state: entry.monitor.state.state,
+                    ...result
+                };
                 current.trusted = isTrustedCandidate(current);
             }
 
@@ -89,6 +94,7 @@ const CandidateSelector = (() => {
                     paused: result.vs.paused,
                     readyState: result.vs.readyState,
                     currentSrc: result.vs.currentSrc,
+                    state: entry.monitor.state.state,
                     reasons: result.reasons,
                     trusted
                 });
@@ -124,6 +130,33 @@ const CandidateSelector = (() => {
             }
 
             if (preferred && preferred.id !== activeCandidateId) {
+                const activeState = current ? current.state : null;
+                const activeIsStalled = !current || ['STALLED', 'RESET', 'ERROR'].includes(activeState);
+
+                if (!preferred.progressEligible) {
+                    logDebug('[HEALER:CANDIDATE] Switch suppressed', {
+                        from: activeCandidateId,
+                        to: preferred.id,
+                        reason,
+                        cause: 'preferred_not_progress_eligible',
+                        activeState,
+                        scores
+                    });
+                    return preferred;
+                }
+
+                if (!activeIsStalled) {
+                    logDebug('[HEALER:CANDIDATE] Switch suppressed', {
+                        from: activeCandidateId,
+                        to: preferred.id,
+                        reason,
+                        cause: 'active_not_stalled',
+                        activeState,
+                        scores
+                    });
+                    return preferred;
+                }
+
                 const currentTrusted = current ? current.trusted : false;
                 if (currentTrusted && !preferred.trusted) {
                     logDebug('[HEALER:CANDIDATE] Switch blocked by trust', {

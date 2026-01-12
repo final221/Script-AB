@@ -21,7 +21,8 @@ const FailoverManager = (() => {
             fromId: null,
             toId: null,
             startTime: 0,
-            baselineProgressTime: 0
+            baselineProgressTime: 0,
+            recentFailures: new Map()
         };
 
         const resetFailover = (reason) => {
@@ -62,11 +63,21 @@ const FailoverManager = (() => {
                 return false;
             }
 
-            const candidate = picker.selectPreferred(fromVideoId);
+            const excluded = new Set();
+            for (const [videoId, failedAt] of state.recentFailures.entries()) {
+                if (now - failedAt < CONFIG.stall.FAILOVER_COOLDOWN_MS) {
+                    excluded.add(videoId);
+                } else {
+                    state.recentFailures.delete(videoId);
+                }
+            }
+
+            const candidate = picker.selectPreferred(fromVideoId, excluded);
             if (!candidate) {
-                logDebug('[HEALER:FAILOVER_SKIP] No candidate available', {
+                Logger.add('[HEALER:FAILOVER_SKIP] No trusted candidate available', {
                     from: fromVideoId,
-                    reason
+                    reason,
+                    excluded: Array.from(excluded)
                 });
                 return false;
             }
@@ -123,6 +134,7 @@ const FailoverManager = (() => {
                         candidateState: VideoState.get(currentEntry.video, toId)
                     });
                     resetBackoff(currentEntry.monitor.state, 'failover_success');
+                    state.recentFailures.delete(toId);
                 } else {
                     Logger.add('[HEALER:FAILOVER_REVERT] Candidate did not progress', {
                         from: fromVideoId,
@@ -131,6 +143,7 @@ const FailoverManager = (() => {
                         progressObserved: Boolean(currentEntry?.monitor.state.hasProgress),
                         candidateState: currentEntry ? VideoState.get(currentEntry.video, toId) : null
                     });
+                    state.recentFailures.set(toId, Date.now());
                     if (fromEntry) {
                         candidateSelector.setActiveId(fromVideoId);
                     }
