@@ -94,7 +94,7 @@ Key settings in `Config.js`:
 
 ## Version
 
-Current: **4.0.43**
+Current: **4.0.44**
 
 Version increments automatically on each build (patch).
 

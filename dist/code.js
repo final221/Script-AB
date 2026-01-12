@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.0.43
+// @version       4.0.44
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -3235,26 +3235,33 @@ const CoreOrchestrator = (() => {
             // Wait for DOM then start monitoring
             const startMonitoring = () => {
                 // Find video element and start StreamHealer
-                const findAndMonitorVideo = (targetNode) => {
-                    // If targetNode is provided, use it. Otherwise search document.
-                    // But critical: only monitor if it is/contains a video
-                    let video = null;
-
+                const collectVideos = (targetNode) => {
                     if (targetNode) {
                         if (targetNode.nodeName === 'VIDEO') {
-                            video = targetNode;
-                        } else if (targetNode.querySelector) {
-                            video = targetNode.querySelector('video');
+                            return [targetNode];
                         }
-                    } else {
-                        video = document.querySelector('video');
+                        if (targetNode.querySelectorAll) {
+                            return Array.from(targetNode.querySelectorAll('video'));
+                        }
+                        return [];
+                    }
+                    return Array.from(document.querySelectorAll('video'));
+                };
+
+                const findAndMonitorVideo = (targetNode) => {
+                    // If targetNode is provided, scan its subtree. Otherwise scan document.
+                    const videos = collectVideos(targetNode);
+                    if (!videos.length) {
+                        return;
                     }
 
-                    if (video) {
-                        Logger.add('[CORE] New video detected in DOM');
-                        Logger.add('[CORE] Video element found, starting StreamHealer');
-                        StreamHealer.monitor(video);
-                    }
+                    Logger.add('[CORE] New video detected in DOM', {
+                        count: videos.length
+                    });
+                    Logger.add('[CORE] Video elements found, starting StreamHealer', {
+                        count: videos.length
+                    });
+                    videos.forEach(video => StreamHealer.monitor(video));
                 };
 
                 // Try immediately (initial page load)
