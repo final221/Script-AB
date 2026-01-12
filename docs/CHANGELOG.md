@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.1.0 - 2026-01-12T23:11:56.963Z
+Previous: 4.0.58
+Commit: f40377f
+Changes:
+- Document tuning and contribution basics
+
 ## 4.0.58 - 2026-01-12T23:09:58.884Z
 Previous: 4.0.57
 Commit: 9565ba8
