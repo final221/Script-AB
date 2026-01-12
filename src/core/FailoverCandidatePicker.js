@@ -12,12 +12,6 @@ const FailoverCandidatePicker = (() => {
             return match ? Number(match[1]) : -1;
         };
 
-        const isTrusted = (result) => {
-            if (!result.progressEligible) return false;
-            const badReasons = ['fallback_src', 'ended', 'not_in_dom', 'reset', 'error_state', 'error'];
-            return !badReasons.some(reason => result.reasons.includes(reason));
-        };
-
         const selectPreferred = (excludeId, excludeIds = null) => {
             const excluded = excludeIds instanceof Set ? excludeIds : new Set();
             if (typeof scoreVideo === 'function') {
@@ -31,7 +25,7 @@ const FailoverCandidatePicker = (() => {
                     if (!best || result.score > best.score) {
                         best = candidate;
                     }
-                    if (isTrusted(result) && (!bestTrusted || result.score > bestTrusted.score)) {
+                    if (CandidateTrust.isTrusted(result) && (!bestTrusted || result.score > bestTrusted.score)) {
                         bestTrusted = candidate;
                     }
                 }

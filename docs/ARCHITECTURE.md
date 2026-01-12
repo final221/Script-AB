@@ -66,19 +66,20 @@ The build uses a priority list followed by auto-discovered modules, then the ent
 20. `core/PlaybackMonitor.js`
 21. `core/CandidateScorer.js`
 22. `core/CandidateSwitchPolicy.js`
-23. `core/CandidateSelector.js`
-24. `core/BackoffManager.js`
-25. `core/FailoverCandidatePicker.js`
-26. `core/FailoverManager.js`
-27. `core/RecoveryManager.js`
-28. `core/MonitorRegistry.js`
-29. `core/HealPointPoller.js`
-30. `core/HealPipeline.js`
-31. `core/PlayheadAttribution.js`
-32. `core/VideoDiscovery.js`
-33. `core/ExternalSignalRouter.js`
-34. `core/StreamHealer.js`
-35. `core/CoreOrchestrator.js`
+23. `core/CandidateTrust.js`
+24. `core/CandidateSelector.js`
+25. `core/BackoffManager.js`
+26. `core/FailoverCandidatePicker.js`
+27. `core/FailoverManager.js`
+28. `core/RecoveryManager.js`
+29. `core/MonitorRegistry.js`
+30. `core/HealPointPoller.js`
+31. `core/HealPipeline.js`
+32. `core/PlayheadAttribution.js`
+33. `core/VideoDiscovery.js`
+34. `core/ExternalSignalRouter.js`
+35. `core/StreamHealer.js`
+36. `core/CoreOrchestrator.js`
 <!-- LOAD_ORDER_END -->
 
 

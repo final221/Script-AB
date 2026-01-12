@@ -45,12 +45,6 @@ const CandidateSelector = (() => {
         };
 
         const scoreVideo = (video, monitor, videoId) => scorer.score(video, monitor, videoId);
-        const isTrustedCandidate = (result) => {
-            if (!result.progressEligible) return false;
-            const badReasons = ['fallback_src', 'ended', 'not_in_dom', 'reset', 'error_state', 'error'];
-            return !badReasons.some(reason => result.reasons.includes(reason));
-        };
-
         const evaluateCandidates = (reason) => {
             if (lockChecker && lockChecker()) {
                 logDebug('[HEALER:CANDIDATE] Failover lock active', {
@@ -79,12 +73,12 @@ const CandidateSelector = (() => {
                     state: entry.monitor.state.state,
                     ...result
                 };
-                current.trusted = isTrustedCandidate(current);
+                current.trusted = CandidateTrust.isTrusted(current);
             }
 
             for (const [videoId, entry] of monitorsById.entries()) {
                 const result = scoreVideo(entry.video, entry.monitor, videoId);
-                const trusted = isTrustedCandidate(result);
+                const trusted = CandidateTrust.isTrusted(result);
                 scores.push({
                     id: videoId,
                     score: result.score,

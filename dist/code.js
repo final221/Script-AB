@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.0.50
+// @version       4.0.51
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -1752,6 +1752,22 @@ const CandidateSwitchPolicy = (() => {
     return { create };
 })();
 
+// --- CandidateTrust ---
+/**
+ * Determines whether a candidate is trusted for switching/failover.
+ */
+const CandidateTrust = (() => {
+    const BAD_REASONS = ['fallback_src', 'ended', 'not_in_dom', 'reset', 'error_state', 'error'];
+
+    const isTrusted = (result) => {
+        if (!result || !result.progressEligible) return false;
+        const reasons = Array.isArray(result.reasons) ? result.reasons : [];
+        return !BAD_REASONS.some(reason => reasons.includes(reason));
+    };
+
+    return { isTrusted };
+})();
+
 // --- CandidateSelector ---
 /**
  * Scores and selects the best video candidate for healing.
@@ -1799,12 +1815,6 @@ const CandidateSelector = (() => {
         };
 
         const scoreVideo = (video, monitor, videoId) => scorer.score(video, monitor, videoId);
-        const isTrustedCandidate = (result) => {
-            if (!result.progressEligible) return false;
-            const badReasons = ['fallback_src', 'ended', 'not_in_dom', 'reset', 'error_state', 'error'];
-            return !badReasons.some(reason => result.reasons.includes(reason));
-        };
-
         const evaluateCandidates = (reason) => {
             if (lockChecker && lockChecker()) {
                 logDebug('[HEALER:CANDIDATE] Failover lock active', {
@@ -1833,12 +1843,12 @@ const CandidateSelector = (() => {
                     state: entry.monitor.state.state,
                     ...result
                 };
-                current.trusted = isTrustedCandidate(current);
+                current.trusted = CandidateTrust.isTrusted(current);
             }
 
             for (const [videoId, entry] of monitorsById.entries()) {
                 const result = scoreVideo(entry.video, entry.monitor, videoId);
-                const trusted = isTrustedCandidate(result);
+                const trusted = CandidateTrust.isTrusted(result);
                 scores.push({
                     id: videoId,
                     score: result.score,
@@ -2072,12 +2082,6 @@ const FailoverCandidatePicker = (() => {
             return match ? Number(match[1]) : -1;
         };
 
-        const isTrusted = (result) => {
-            if (!result.progressEligible) return false;
-            const badReasons = ['fallback_src', 'ended', 'not_in_dom', 'reset', 'error_state', 'error'];
-            return !badReasons.some(reason => result.reasons.includes(reason));
-        };
-
         const selectPreferred = (excludeId, excludeIds = null) => {
             const excluded = excludeIds instanceof Set ? excludeIds : new Set();
             if (typeof scoreVideo === 'function') {
@@ -2091,7 +2095,7 @@ const FailoverCandidatePicker = (() => {
                     if (!best || result.score > best.score) {
                         best = candidate;
                     }
-                    if (isTrusted(result) && (!bestTrusted || result.score > bestTrusted.score)) {
+                    if (CandidateTrust.isTrusted(result) && (!bestTrusted || result.score > bestTrusted.score)) {
                         bestTrusted = candidate;
                     }
                 }

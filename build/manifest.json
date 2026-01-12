@@ -22,6 +22,7 @@
     "core/PlaybackMonitor.js",
     "core/CandidateScorer.js",
     "core/CandidateSwitchPolicy.js",
+    "core/CandidateTrust.js",
     "core/CandidateSelector.js",
     "core/BackoffManager.js",
     "core/FailoverCandidatePicker.js",
