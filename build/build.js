@@ -69,6 +69,16 @@ const updateVersion = (type = 'patch') => {
         fs.writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2));
     }
 
+    // Sync README current version
+    const readmePath = path.join(CONFIG.BASE, 'README.md');
+    if (fs.existsSync(readmePath)) {
+        const readme = fs.readFileSync(readmePath, 'utf8');
+        const updated = readme.replace(/Current:\s+\*\*\d+\.\d+\.\d+\*\*/g, `Current: **${newVersion}**`);
+        if (updated !== readme) {
+            fs.writeFileSync(readmePath, updated);
+        }
+    }
+
     return { old: version, new: newVersion };
 };
 
