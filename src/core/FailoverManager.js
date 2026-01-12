@@ -180,6 +180,27 @@ const FailoverManager = (() => {
             isActive: () => state.inProgress,
             resetFailover,
             attemptFailover,
+            probeCandidate: (videoId, reason) => {
+                const entry = monitorsById.get(videoId);
+                if (!entry) return false;
+                const promise = entry.video?.play?.();
+                Logger.add('[HEALER:PROBE] Probing candidate playback', {
+                    videoId,
+                    reason,
+                    state: entry.monitor.state.state
+                });
+                if (promise && typeof promise.catch === 'function') {
+                    promise.catch((err) => {
+                        Logger.add('[HEALER:PROBE_PLAY] Play rejected', {
+                            videoId,
+                            reason,
+                            error: err?.name,
+                            message: err?.message
+                        });
+                    });
+                }
+                return true;
+            },
             shouldIgnoreStall,
             onMonitorRemoved
         };

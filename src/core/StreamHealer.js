@@ -134,6 +134,9 @@ const StreamHealer = (() => {
         candidateSelector.evaluateCandidates('stall');
         const activeCandidateId = candidateSelector.getActiveId();
         if (activeCandidateId && activeCandidateId !== videoId) {
+            if (!state?.progressEligible) {
+                recoveryManager.probeCandidate(videoId, 'stall_non_active');
+            }
             const now = Date.now();
             const lastLog = stallSkipLogTimes.get(videoId) || 0;
             const logIntervalMs = CONFIG.logging.NON_ACTIVE_LOG_MS || 60000;

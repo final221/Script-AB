@@ -17,6 +17,7 @@ const RecoveryManager = (() => {
             logDebug,
             resetBackoff: backoffManager.resetBackoff
         });
+        const probeCandidate = failoverManager.probeCandidate;
 
         const handleNoHealPoint = (video, monitorState, reason) => {
             const videoId = getVideoId(video);
@@ -50,6 +51,7 @@ const RecoveryManager = (() => {
             resetBackoff: backoffManager.resetBackoff,
             handleNoHealPoint,
             shouldSkipStall,
+            probeCandidate,
             onMonitorRemoved: failoverManager.onMonitorRemoved
         };
     };

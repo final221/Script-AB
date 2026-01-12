@@ -210,6 +210,9 @@ const ExternalSignalRouter = (() => {
                         progressEligible: best.progressEligible,
                         activeState
                     });
+                    if (activeIsStalled) {
+                        recoveryManager.probeCandidate(best.id, 'processing_asset');
+                    }
                 }
 
                 const activeEntryForPlay = activeId ? monitorsById.get(activeId) : null;

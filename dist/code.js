@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.0.40
+// @version       4.0.41
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -51,7 +51,7 @@ const CONFIG = (() => {
         },
 
         monitoring: {
-            MAX_VIDEO_MONITORS: 3,          // Max concurrent video elements to monitor
+            MAX_VIDEO_MONITORS: 8,          // Max concurrent video elements to monitor
             CANDIDATE_SWITCH_DELTA: 2,      // Min score delta before switching active video
             CANDIDATE_MIN_PROGRESS_MS: 5000, // Require sustained progress before switching to new video
             PROGRESS_STREAK_RESET_MS: 2500, // Reset progress streak after this long without progress
@@ -2209,6 +2209,27 @@ const FailoverManager = (() => {
             isActive: () => state.inProgress,
             resetFailover,
             attemptFailover,
+            probeCandidate: (videoId, reason) => {
+                const entry = monitorsById.get(videoId);
+                if (!entry) return false;
+                const promise = entry.video?.play?.();
+                Logger.add('[HEALER:PROBE] Probing candidate playback', {
+                    videoId,
+                    reason,
+                    state: entry.monitor.state.state
+                });
+                if (promise && typeof promise.catch === 'function') {
+                    promise.catch((err) => {
+                        Logger.add('[HEALER:PROBE_PLAY] Play rejected', {
+                            videoId,
+                            reason,
+                            error: err?.name,
+                            message: err?.message
+                        });
+                    });
+                }
+                return true;
+            },
             shouldIgnoreStall,
             onMonitorRemoved
         };
@@ -2236,6 +2257,7 @@ const RecoveryManager = (() => {
             logDebug,
             resetBackoff: backoffManager.resetBackoff
         });
+        const probeCandidate = failoverManager.probeCandidate;
 
         const handleNoHealPoint = (video, monitorState, reason) => {
             const videoId = getVideoId(video);
@@ -2269,6 +2291,7 @@ const RecoveryManager = (() => {
             resetBackoff: backoffManager.resetBackoff,
             handleNoHealPoint,
             shouldSkipStall,
+            probeCandidate,
             onMonitorRemoved: failoverManager.onMonitorRemoved
         };
     };
@@ -2917,6 +2940,9 @@ const ExternalSignalRouter = (() => {
                         progressEligible: best.progressEligible,
                         activeState
                     });
+                    if (activeIsStalled) {
+                        recoveryManager.probeCandidate(best.id, 'processing_asset');
+                    }
                 }
 
                 const activeEntryForPlay = activeId ? monitorsById.get(activeId) : null;
@@ -3084,6 +3110,9 @@ const StreamHealer = (() => {
         candidateSelector.evaluateCandidates('stall');
         const activeCandidateId = candidateSelector.getActiveId();
         if (activeCandidateId && activeCandidateId !== videoId) {
+            if (!state?.progressEligible) {
+                recoveryManager.probeCandidate(videoId, 'stall_non_active');
+            }
             const now = Date.now();
             const lastLog = stallSkipLogTimes.get(videoId) || 0;
             const logIntervalMs = CONFIG.logging.NON_ACTIVE_LOG_MS || 60000;
