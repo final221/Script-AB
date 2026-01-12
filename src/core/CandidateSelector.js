@@ -193,9 +193,14 @@ const CandidateSelector = (() => {
         const pruneMonitors = (excludeId, stopMonitoring) => {
             if (monitorsById.size <= maxMonitors) return;
 
+            const protectedIds = new Set();
+            if (activeCandidateId) protectedIds.add(activeCandidateId);
+            if (lastGoodCandidateId) protectedIds.add(lastGoodCandidateId);
+
             let worst = null;
             for (const [videoId, entry] of monitorsById.entries()) {
                 if (videoId === excludeId) continue;
+                if (protectedIds.has(videoId)) continue;
                 const result = scoreVideo(entry.video, entry.monitor, videoId);
                 if (!worst || result.score < worst.score) {
                     worst = { id: videoId, entry, score: result.score };
@@ -209,6 +214,12 @@ const CandidateSelector = (() => {
                     maxMonitors
                 });
                 stopMonitoring(worst.entry.video);
+            } else {
+                logDebug('[HEALER:PRUNE_SKIP] All candidates protected', {
+                    protected: Array.from(protectedIds),
+                    maxMonitors,
+                    totalMonitors: monitorsById.size
+                });
             }
         };
 

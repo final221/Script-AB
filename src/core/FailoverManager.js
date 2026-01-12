@@ -22,7 +22,8 @@ const FailoverManager = (() => {
             toId: null,
             startTime: 0,
             baselineProgressTime: 0,
-            recentFailures: new Map()
+            recentFailures: new Map(),
+            lastProbeTimes: new Map()
         };
 
         const resetFailover = (reason) => {
@@ -183,12 +184,47 @@ const FailoverManager = (() => {
             probeCandidate: (videoId, reason) => {
                 const entry = monitorsById.get(videoId);
                 if (!entry) return false;
-                const promise = entry.video?.play?.();
+                const video = entry.video;
+                if (!document.contains(video)) {
+                    logDebug('[HEALER:PROBE_SKIP] Candidate not in DOM', {
+                        videoId,
+                        reason
+                    });
+                    return false;
+                }
+
+                const now = Date.now();
+                const cooldownMs = CONFIG.monitoring.PROBE_COOLDOWN_MS || 5000;
+                const lastProbeTime = state.lastProbeTimes.get(videoId) || 0;
+                if (lastProbeTime > 0 && now - lastProbeTime < cooldownMs) {
+                    logDebug('[HEALER:PROBE_SKIP] Probe cooldown active', {
+                        videoId,
+                        reason,
+                        remainingMs: cooldownMs - (now - lastProbeTime)
+                    });
+                    return false;
+                }
+
+                const currentSrc = video.currentSrc || (video.getAttribute ? (video.getAttribute('src') || '') : '');
+                const readyState = video.readyState;
+                if (!currentSrc && readyState < 2) {
+                    logDebug('[HEALER:PROBE_SKIP] Candidate not ready', {
+                        videoId,
+                        reason,
+                        readyState
+                    });
+                    return false;
+                }
+
+                state.lastProbeTimes.set(videoId, now);
                 Logger.add('[HEALER:PROBE] Probing candidate playback', {
                     videoId,
                     reason,
-                    state: entry.monitor.state.state
+                    state: entry.monitor.state.state,
+                    readyState,
+                    hasSrc: Boolean(currentSrc)
                 });
+                const promise = video?.play?.();
                 if (promise && typeof promise.catch === 'function') {
                     promise.catch((err) => {
                         Logger.add('[HEALER:PROBE_PLAY] Play rejected', {

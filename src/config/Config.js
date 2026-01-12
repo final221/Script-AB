@@ -42,6 +42,7 @@ const CONFIG = (() => {
             CANDIDATE_SWITCH_DELTA: 2,      // Min score delta before switching active video
             CANDIDATE_MIN_PROGRESS_MS: 5000, // Require sustained progress before switching to new video
             PROGRESS_STREAK_RESET_MS: 2500, // Reset progress streak after this long without progress
+            PROBE_COOLDOWN_MS: 5000,        // Min time between probe attempts per candidate
         },
 
         logging: {
