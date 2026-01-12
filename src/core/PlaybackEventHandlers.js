@@ -82,6 +82,10 @@ const PlaybackEventHandlers = (() => {
                     state: state.state,
                     videoState: VideoState.get(video, videoId)
                 });
+                Logger.add('[HEALER:ENDED] Video ended', {
+                    videoId,
+                    videoState: VideoState.get(video, videoId)
+                });
                 setState('ENDED', 'ended');
             },
             error: () => {

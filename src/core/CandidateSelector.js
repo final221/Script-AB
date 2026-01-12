@@ -125,7 +125,7 @@ const CandidateSelector = (() => {
 
             if (preferred && preferred.id !== activeCandidateId) {
                 const activeState = current ? current.state : null;
-                const activeIsStalled = !current || ['STALLED', 'RESET', 'ERROR'].includes(activeState);
+                const activeIsStalled = !current || ['STALLED', 'RESET', 'ERROR', 'ENDED'].includes(activeState);
 
                 if (!preferred.progressEligible) {
                     logDebug('[HEALER:CANDIDATE] Switch suppressed', {

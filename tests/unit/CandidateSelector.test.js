@@ -55,4 +55,48 @@ describe('CandidateSelector', () => {
         expect(stopMonitoring).toHaveBeenCalledTimes(1);
         expect(stopMonitoring).toHaveBeenCalledWith(video3);
     });
+
+    it('switches away from an active ENDED candidate', () => {
+        const CandidateSelector = window.CandidateSelector;
+        const monitorsById = new Map();
+        const selector = CandidateSelector.create({
+            monitorsById,
+            logDebug: () => {},
+            maxMonitors: 3,
+            minProgressMs: 5000,
+            switchDelta: 2,
+            isFallbackSource: () => false
+        });
+
+        const now = Date.now();
+        const endedVideo = makeVideo({
+            paused: true,
+            readyState: 1,
+            currentTime: 10,
+            currentSrc: 'blob:ended'
+        });
+        defineProp(endedVideo, 'ended', true);
+
+        const goodVideo = makeVideo({
+            paused: false,
+            readyState: 4,
+            currentTime: 100,
+            currentSrc: 'blob:live',
+            buffered: { length: 1, start: () => 90, end: () => 110 }
+        });
+
+        monitorsById.set('video-1', {
+            video: endedVideo,
+            monitor: { state: { state: 'ENDED', hasProgress: true, lastProgressTime: now - 10000, progressStreakMs: 0, progressEligible: false } }
+        });
+        monitorsById.set('video-2', {
+            video: goodVideo,
+            monitor: { state: { state: 'PLAYING', hasProgress: true, lastProgressTime: now, progressStreakMs: 8000, progressEligible: true } }
+        });
+
+        selector.setActiveId('video-1');
+        selector.evaluateCandidates('test');
+
+        expect(selector.getActiveId()).toBe('video-2');
+    });
 });
