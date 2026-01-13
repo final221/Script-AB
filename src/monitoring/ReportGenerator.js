@@ -16,7 +16,7 @@ Errors: ${metricsSummary.errors}
 
 [LEGEND]
 🔧 = Script internal log
-📋 = Console.log
+📋 = Console.log/info/debug
 ⚠️ = Console.warn
 ❌ = Console.error
 
@@ -73,3 +73,4 @@ Total entries: ${logs.length}
         },
     };
 })();
+

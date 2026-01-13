@@ -25,7 +25,7 @@ const Logger = (() => {
     /**
      * Capture console output for timeline correlation.
      * Called by Instrumentation module.
-     * @param {'log'|'warn'|'error'} level
+     * @param {'log'|'info'|'debug'|'warn'|'error'} level
      * @param {any[]} args - Console arguments
      */
     const captureConsole = (level, args) => {

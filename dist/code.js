@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.1.12
+// @version       4.1.13
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -653,7 +653,7 @@ const Logger = (() => {
     /**
      * Capture console output for timeline correlation.
      * Called by Instrumentation module.
-     * @param {'log'|'warn'|'error'} level
+     * @param {'log'|'info'|'debug'|'warn'|'error'} level
      * @param {any[]} args - Console arguments
      */
     const captureConsole = (level, args) => {
@@ -770,7 +770,7 @@ Errors: ${metricsSummary.errors}
 
 [LEGEND]
 🔧 = Script internal log
-📋 = Console.log
+📋 = Console.log/info/debug
 ⚠️ = Console.warn
 ❌ = Console.error
 
@@ -828,6 +828,7 @@ Total entries: ${logs.length}
     };
 })();
 
+
 // --- ConsoleInterceptor ---
 /**
  * Captures console output and forwards to callbacks.
@@ -835,6 +836,8 @@ Total entries: ${logs.length}
 const ConsoleInterceptor = (() => {
     const create = (options = {}) => {
         const onLog = options.onLog || (() => {});
+        const onInfo = options.onInfo || (() => {});
+        const onDebug = options.onDebug || (() => {});
         const onWarn = options.onWarn || (() => {});
         const onError = options.onError || (() => {});
 
@@ -852,6 +855,8 @@ const ConsoleInterceptor = (() => {
 
         const attach = () => {
             intercept('log', onLog);
+            intercept('info', onInfo);
+            intercept('debug', onDebug);
             intercept('warn', onWarn);
             intercept('error', onError);
         };
@@ -1047,6 +1052,24 @@ const Instrumentation = (() => {
     const consoleInterceptor = ConsoleInterceptor.create({
         onLog: (args) => {
             Logger.captureConsole('log', args);
+            const msg = args.map(String).join(' ');
+            if (signalDetector) {
+                signalDetector.detect('log', msg);
+            }
+        },
+        onInfo: (args) => {
+            Logger.captureConsole('info', args);
+            const msg = args.map(String).join(' ');
+            if (signalDetector) {
+                signalDetector.detect('info', msg);
+            }
+        },
+        onDebug: (args) => {
+            Logger.captureConsole('debug', args);
+            const msg = args.map(String).join(' ');
+            if (signalDetector) {
+                signalDetector.detect('debug', msg);
+            }
         },
         onError: (args) => {
             Logger.captureConsole('error', args);
@@ -1095,7 +1118,7 @@ const Instrumentation = (() => {
                 emitSignal: emitExternalSignal
             });
             Logger.add('[INSTRUMENT:INIT] Instrumentation initialized', {
-                features: ['globalErrors', 'consoleLogs', 'consoleErrors', 'consoleWarns'],
+                features: ['globalErrors', 'consoleLogs', 'consoleInfo', 'consoleDebug', 'consoleErrors', 'consoleWarns'],
                 consoleCapture: true,
                 externalSignals: Boolean(externalSignalHandler)
             });

@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.1.13 - 2026-01-13T19:20:30.071Z
+Previous: 4.1.12
+Commit: c7dd009
+Changes:
+- Handle play-failure loops with probation
+
 ## 4.1.12 - 2026-01-13T18:51:19.113Z
 Previous: 4.1.11
 Commit: 56921fd

@@ -5,6 +5,8 @@
 const ConsoleInterceptor = (() => {
     const create = (options = {}) => {
         const onLog = options.onLog || (() => {});
+        const onInfo = options.onInfo || (() => {});
+        const onDebug = options.onDebug || (() => {});
         const onWarn = options.onWarn || (() => {});
         const onError = options.onError || (() => {});
 
@@ -22,6 +24,8 @@ const ConsoleInterceptor = (() => {
 
         const attach = () => {
             intercept('log', onLog);
+            intercept('info', onInfo);
+            intercept('debug', onDebug);
             intercept('warn', onWarn);
             intercept('error', onError);
         };

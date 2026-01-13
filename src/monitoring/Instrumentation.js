@@ -117,6 +117,24 @@ const Instrumentation = (() => {
     const consoleInterceptor = ConsoleInterceptor.create({
         onLog: (args) => {
             Logger.captureConsole('log', args);
+            const msg = args.map(String).join(' ');
+            if (signalDetector) {
+                signalDetector.detect('log', msg);
+            }
+        },
+        onInfo: (args) => {
+            Logger.captureConsole('info', args);
+            const msg = args.map(String).join(' ');
+            if (signalDetector) {
+                signalDetector.detect('info', msg);
+            }
+        },
+        onDebug: (args) => {
+            Logger.captureConsole('debug', args);
+            const msg = args.map(String).join(' ');
+            if (signalDetector) {
+                signalDetector.detect('debug', msg);
+            }
         },
         onError: (args) => {
             Logger.captureConsole('error', args);
@@ -165,7 +183,7 @@ const Instrumentation = (() => {
                 emitSignal: emitExternalSignal
             });
             Logger.add('[INSTRUMENT:INIT] Instrumentation initialized', {
-                features: ['globalErrors', 'consoleLogs', 'consoleErrors', 'consoleWarns'],
+                features: ['globalErrors', 'consoleLogs', 'consoleInfo', 'consoleDebug', 'consoleErrors', 'consoleWarns'],
                 consoleCapture: true,
                 externalSignals: Boolean(externalSignalHandler)
             });
