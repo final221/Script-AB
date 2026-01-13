@@ -21,8 +21,36 @@ const PlaybackEventHandlers = (() => {
 
         const logEvent = (event, detail = {}) => {
             if (!CONFIG.debug) return;
-            if (ALWAYS_LOG_EVENTS.has(event) || isActive()) {
+            const now = Date.now();
+
+            if (ALWAYS_LOG_EVENTS.has(event)) {
                 logDebug(`${LOG.EVENT} ${event}`, detail);
+                return;
+            }
+
+            if (isActive()) {
+                const counts = state.activeEventCounts || {};
+                counts[event] = (counts[event] || 0) + 1;
+                state.activeEventCounts = counts;
+
+                const lastActive = state.lastActiveEventLogTime || 0;
+                if (now - lastActive >= CONFIG.logging.ACTIVE_EVENT_LOG_MS) {
+                    state.lastActiveEventLogTime = now;
+                    logDebug(`${LOG.EVENT} ${event}`, detail);
+                }
+
+                const lastSummary = state.lastActiveEventSummaryTime || 0;
+                if (now - lastSummary >= CONFIG.logging.ACTIVE_EVENT_SUMMARY_MS) {
+                    state.lastActiveEventSummaryTime = now;
+                    const summary = { ...counts };
+                    state.activeEventCounts = {};
+                    logDebug('[HEALER:EVENT_SUMMARY] Active event summary', {
+                        events: summary,
+                        sinceMs: lastSummary ? (now - lastSummary) : null,
+                        state: state.state,
+                        videoState: VideoState.get(video, videoId)
+                    });
+                }
                 return;
             }
 
@@ -30,7 +58,6 @@ const PlaybackEventHandlers = (() => {
             counts[event] = (counts[event] || 0) + 1;
             state.nonActiveEventCounts = counts;
 
-            const now = Date.now();
             const lastLog = state.lastNonActiveEventLogTime || 0;
             if (now - lastLog < CONFIG.logging.NON_ACTIVE_LOG_MS) {
                 return;

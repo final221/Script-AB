@@ -83,6 +83,8 @@ const CONFIG = (() => {
             LOG_CSP_WARNINGS: true,
             NON_ACTIVE_LOG_MS: 300000,      // Non-active candidate log interval
             ACTIVE_LOG_MS: 5000,            // Active candidate log interval
+            ACTIVE_EVENT_LOG_MS: 2000,      // Active video event log throttle
+            ACTIVE_EVENT_SUMMARY_MS: 180000, // Active video event summary interval
             SUPPRESSION_LOG_MS: 300000,     // Suppressed switch log interval
             SYNC_LOG_MS: 300000,            // Playback drift log interval
             BACKOFF_LOG_INTERVAL_MS: 5000,  // Backoff skip log interval

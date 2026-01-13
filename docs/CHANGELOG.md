@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.1.15 - 2026-01-13T22:12:07.268Z
+Previous: 4.1.14
+Commit: 22050bb
+Changes:
+- Mirror global errors into console log stream
+
 ## 4.1.14 - 2026-01-13T19:23:14.135Z
 Previous: 4.1.13
 Commit: d4144e5
