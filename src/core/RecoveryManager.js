@@ -21,28 +21,36 @@ const RecoveryManager = (() => {
         const probeCandidate = failoverManager.probeCandidate;
         let lastProbationRescanAt = 0;
 
-        const maybeTriggerProbation = (videoId, monitorState, trigger) => {
-            if (!monitorState) return;
-            if (monitorState.noHealPointCount < CONFIG.stall.PROBATION_AFTER_NO_HEAL_POINTS) {
-                return;
+        const maybeTriggerProbation = (videoId, monitorState, trigger, count, threshold) => {
+            if (!monitorState) return false;
+            if (count < threshold) {
+                return false;
             }
             const now = Date.now();
             if (now - lastProbationRescanAt < CONFIG.stall.PROBATION_RESCAN_COOLDOWN_MS) {
-                return;
+                return false;
             }
             lastProbationRescanAt = now;
-            candidateSelector.activateProbation(trigger || 'no_heal_point');
-            onRescan('no_heal_point', {
+            const reason = trigger || 'probation';
+            candidateSelector.activateProbation(reason);
+            onRescan(reason, {
                 videoId,
-                count: monitorState.noHealPointCount,
-                trigger
+                count,
+                trigger: reason
             });
+            return true;
         };
 
         const handleNoHealPoint = (video, monitorState, reason) => {
             const videoId = getVideoId(video);
             backoffManager.applyBackoff(videoId, monitorState, reason);
-            maybeTriggerProbation(videoId, monitorState, reason);
+            maybeTriggerProbation(
+                videoId,
+                monitorState,
+                reason,
+                monitorState?.noHealPointCount || 0,
+                CONFIG.stall.PROBATION_AFTER_NO_HEAL_POINTS
+            );
 
             const stalledForMs = monitorState?.lastProgressTime
                 ? (Date.now() - monitorState.lastProgressTime)
@@ -56,11 +64,119 @@ const RecoveryManager = (() => {
             }
         };
 
+        const resetPlayError = (monitorState, reason) => {
+            if (!monitorState) return;
+            if (monitorState.playErrorCount > 0 || monitorState.nextPlayHealAllowedTime > 0) {
+                logDebug('[HEALER:PLAY_BACKOFF] Reset', {
+                    reason,
+                    previousPlayErrors: monitorState.playErrorCount,
+                    previousNextPlayAllowedMs: monitorState.nextPlayHealAllowedTime
+                        ? Math.max(monitorState.nextPlayHealAllowedTime - Date.now(), 0)
+                        : 0,
+                    previousHealPointRepeats: monitorState.healPointRepeatCount
+                });
+            }
+            monitorState.playErrorCount = 0;
+            monitorState.nextPlayHealAllowedTime = 0;
+            monitorState.lastPlayErrorTime = 0;
+            monitorState.lastPlayBackoffLogTime = 0;
+            monitorState.lastHealPointKey = null;
+            monitorState.healPointRepeatCount = 0;
+        };
+
+        const handlePlayFailure = (video, monitorState, detail = {}) => {
+            if (!monitorState) return;
+            const videoId = getVideoId(video);
+            const now = Date.now();
+            const lastErrorTime = monitorState.lastPlayErrorTime || 0;
+            if (lastErrorTime > 0 && (now - lastErrorTime) > CONFIG.stall.PLAY_ERROR_DECAY_MS) {
+                monitorState.playErrorCount = 0;
+            }
+
+            const count = (monitorState.playErrorCount || 0) + 1;
+            const base = CONFIG.stall.PLAY_ERROR_BACKOFF_BASE_MS;
+            const max = CONFIG.stall.PLAY_ERROR_BACKOFF_MAX_MS;
+            const backoffMs = Math.min(base * count, max);
+
+            monitorState.playErrorCount = count;
+            monitorState.lastPlayErrorTime = now;
+            monitorState.nextPlayHealAllowedTime = now + backoffMs;
+
+            Logger.add('[HEALER:PLAY_BACKOFF] Play failed', {
+                videoId,
+                reason: detail.reason,
+                error: detail.error,
+                errorName: detail.errorName,
+                playErrorCount: count,
+                backoffMs,
+                nextHealAllowedInMs: backoffMs,
+                healRange: detail.healRange || null,
+                healPointRepeatCount: detail.healPointRepeatCount || 0
+            });
+
+            const repeatCount = detail.healPointRepeatCount || 0;
+            const repeatStuck = repeatCount >= CONFIG.stall.HEALPOINT_REPEAT_FAILOVER_COUNT;
+            if (repeatStuck) {
+                Logger.add('[HEALER:HEALPOINT_STUCK] Repeated heal point loop', {
+                    videoId,
+                    healRange: detail.healRange || null,
+                    repeatCount,
+                    errorName: detail.errorName,
+                    error: detail.error
+                });
+            }
+
+            const probationTriggered = maybeTriggerProbation(
+                videoId,
+                monitorState,
+                detail.reason || 'play_error',
+                count,
+                CONFIG.stall.PROBATION_AFTER_PLAY_ERRORS
+            );
+
+            if (repeatStuck && !probationTriggered) {
+                const nowMs = Date.now();
+                if (nowMs - lastProbationRescanAt >= CONFIG.stall.PROBATION_RESCAN_COOLDOWN_MS) {
+                    lastProbationRescanAt = nowMs;
+                    candidateSelector.activateProbation('healpoint_stuck');
+                    onRescan('healpoint_stuck', {
+                        videoId,
+                        count: repeatCount,
+                        trigger: 'healpoint_stuck'
+                    });
+                }
+            }
+
+            const shouldFailover = monitorsById.size > 1
+                && (count >= CONFIG.stall.FAILOVER_AFTER_PLAY_ERRORS || repeatStuck);
+
+            if (probationTriggered || repeatStuck || shouldFailover) {
+                const beforeActive = candidateSelector.getActiveId();
+                candidateSelector.evaluateCandidates('play_error');
+                const afterActive = candidateSelector.getActiveId();
+                if (shouldFailover && afterActive === beforeActive) {
+                    failoverManager.attemptFailover(videoId, detail.reason || 'play_error', monitorState);
+                }
+            }
+        };
+
         const shouldSkipStall = (videoId, monitorState) => {
+            const now = Date.now();
             if (failoverManager.shouldIgnoreStall(videoId)) {
                 return true;
             }
             if (backoffManager.shouldSkip(videoId, monitorState)) {
+                return true;
+            }
+            if (monitorState?.nextPlayHealAllowedTime && now < monitorState.nextPlayHealAllowedTime) {
+                if (now - (monitorState.lastPlayBackoffLogTime || 0) > CONFIG.logging.BACKOFF_LOG_INTERVAL_MS) {
+                    monitorState.lastPlayBackoffLogTime = now;
+                    logDebug('[HEALER:PLAY_BACKOFF] Stall skipped due to play backoff', {
+                        videoId,
+                        remainingMs: monitorState.nextPlayHealAllowedTime - now,
+                        playErrorCount: monitorState.playErrorCount
+                    });
+                }
                 return true;
             }
             return false;
@@ -70,7 +186,9 @@ const RecoveryManager = (() => {
             isFailoverActive: () => failoverManager.isActive(),
             resetFailover: failoverManager.resetFailover,
             resetBackoff: backoffManager.resetBackoff,
+            resetPlayError,
             handleNoHealPoint,
+            handlePlayFailure,
             shouldSkipStall,
             probeCandidate,
             onMonitorRemoved: failoverManager.onMonitorRemoved

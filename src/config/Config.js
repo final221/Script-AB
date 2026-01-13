@@ -33,11 +33,17 @@ const CONFIG = (() => {
             HEAL_TIMEOUT_S: 15,             // Give up after this many seconds
             NO_HEAL_POINT_BACKOFF_BASE_MS: 5000, // Base backoff after no heal point
             NO_HEAL_POINT_BACKOFF_MAX_MS: 60000, // Max backoff after repeated no heal points
+            PLAY_ERROR_BACKOFF_BASE_MS: 2000, // Base backoff after play failures (Abort/PLAY_STUCK)
+            PLAY_ERROR_BACKOFF_MAX_MS: 20000, // Max backoff after repeated play failures
+            PLAY_ERROR_DECAY_MS: 15000,    // Reset play-error count after this idle window
             FAILOVER_AFTER_NO_HEAL_POINTS: 3, // Failover after this many consecutive no-heal points
+            FAILOVER_AFTER_PLAY_ERRORS: 3, // Failover after this many consecutive play failures
             FAILOVER_AFTER_STALL_MS: 30000,  // Failover after this long stuck without progress
+            HEALPOINT_REPEAT_FAILOVER_COUNT: 3, // Failover after repeated identical heal points
             FAILOVER_PROGRESS_TIMEOUT_MS: 8000, // Trial time for failover candidate to progress
             FAILOVER_COOLDOWN_MS: 30000,     // Minimum time between failover attempts
             PROBATION_AFTER_NO_HEAL_POINTS: 2, // Open probation after this many no-heal points
+            PROBATION_AFTER_PLAY_ERRORS: 2, // Open probation after this many play failures
             PROBATION_RESCAN_COOLDOWN_MS: 15000, // Min time between probation rescans
         },
 
@@ -47,6 +53,7 @@ const CONFIG = (() => {
             CANDIDATE_MIN_PROGRESS_MS: 5000, // Require sustained progress before switching to new video
             PROBATION_WINDOW_MS: 10000,     // Window to allow untrusted candidate switching
             PROBATION_READY_STATE: 2,       // Minimum readyState to allow probation override
+            PROBATION_MIN_PROGRESS_MS: 500, // Require brief progress before probation takeover
             PROGRESS_STREAK_RESET_MS: 2500, // Reset progress streak after this long without progress
             PROGRESS_RECENT_MS: 2000,       // "Recent progress" threshold for scoring
             PROGRESS_STALE_MS: 5000,        // "Stale progress" threshold for scoring

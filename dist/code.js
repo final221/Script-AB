@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.1.11
+// @version       4.1.12
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -46,11 +46,17 @@ const CONFIG = (() => {
             HEAL_TIMEOUT_S: 15,             // Give up after this many seconds
             NO_HEAL_POINT_BACKOFF_BASE_MS: 5000, // Base backoff after no heal point
             NO_HEAL_POINT_BACKOFF_MAX_MS: 60000, // Max backoff after repeated no heal points
+            PLAY_ERROR_BACKOFF_BASE_MS: 2000, // Base backoff after play failures (Abort/PLAY_STUCK)
+            PLAY_ERROR_BACKOFF_MAX_MS: 20000, // Max backoff after repeated play failures
+            PLAY_ERROR_DECAY_MS: 15000,    // Reset play-error count after this idle window
             FAILOVER_AFTER_NO_HEAL_POINTS: 3, // Failover after this many consecutive no-heal points
+            FAILOVER_AFTER_PLAY_ERRORS: 3, // Failover after this many consecutive play failures
             FAILOVER_AFTER_STALL_MS: 30000,  // Failover after this long stuck without progress
+            HEALPOINT_REPEAT_FAILOVER_COUNT: 3, // Failover after repeated identical heal points
             FAILOVER_PROGRESS_TIMEOUT_MS: 8000, // Trial time for failover candidate to progress
             FAILOVER_COOLDOWN_MS: 30000,     // Minimum time between failover attempts
             PROBATION_AFTER_NO_HEAL_POINTS: 2, // Open probation after this many no-heal points
+            PROBATION_AFTER_PLAY_ERRORS: 2, // Open probation after this many play failures
             PROBATION_RESCAN_COOLDOWN_MS: 15000, // Min time between probation rescans
         },
 
@@ -60,6 +66,7 @@ const CONFIG = (() => {
             CANDIDATE_MIN_PROGRESS_MS: 5000, // Require sustained progress before switching to new video
             PROBATION_WINDOW_MS: 10000,     // Window to allow untrusted candidate switching
             PROBATION_READY_STATE: 2,       // Minimum readyState to allow probation override
+            PROBATION_MIN_PROGRESS_MS: 500, // Require brief progress before probation takeover
             PROGRESS_STREAK_RESET_MS: 2500, // Reset progress streak after this long without progress
             PROGRESS_RECENT_MS: 2000,       // "Recent progress" threshold for scoring
             PROGRESS_STALE_MS: 5000,        // "Stale progress" threshold for scoring
@@ -1174,6 +1181,12 @@ const PlaybackStateTracker = (() => {
             initialProgressTimeoutLogged: false,
             noHealPointCount: 0,
             nextHealAllowedTime: 0,
+            playErrorCount: 0,
+            nextPlayHealAllowedTime: 0,
+            lastPlayErrorTime: 0,
+            lastPlayBackoffLogTime: 0,
+            lastHealPointKey: null,
+            healPointRepeatCount: 0,
             lastBackoffLogTime: 0,
             initLogEmitted: false,
             state: 'PLAYING',
@@ -1313,6 +1326,23 @@ const PlaybackStateTracker = (() => {
                 });
                 state.noHealPointCount = 0;
                 state.nextHealAllowedTime = 0;
+            }
+
+            if (state.playErrorCount > 0 || state.nextPlayHealAllowedTime > 0 || state.healPointRepeatCount > 0) {
+                logDebug('[HEALER:PLAY_BACKOFF] Cleared after progress', {
+                    reason,
+                    previousPlayErrors: state.playErrorCount,
+                    previousNextPlayAllowedMs: state.nextPlayHealAllowedTime
+                        ? (state.nextPlayHealAllowedTime - now)
+                        : 0,
+                    previousHealPointRepeats: state.healPointRepeatCount
+                });
+                state.playErrorCount = 0;
+                state.nextPlayHealAllowedTime = 0;
+                state.lastPlayErrorTime = 0;
+                state.lastPlayBackoffLogTime = 0;
+                state.lastHealPointKey = null;
+                state.healPointRepeatCount = 0;
             }
         };
 
@@ -2438,7 +2468,9 @@ const CandidateSelector = (() => {
                 const activeState = current ? current.state : null;
                 const activeIsStalled = !current || ['STALLED', 'RESET', 'ERROR', 'ENDED'].includes(activeState);
                 const probationActive = isProbationActive();
+                const probationProgressOk = preferred.progressStreakMs >= CONFIG.monitoring.PROBATION_MIN_PROGRESS_MS;
                 const probationReady = probationActive
+                    && probationProgressOk
                     && (preferred.vs.readyState >= CONFIG.monitoring.PROBATION_READY_STATE
                         || preferred.vs.currentSrc);
 
@@ -2546,7 +2578,10 @@ const CandidateSelector = (() => {
                     return preferred;
                 }
 
-                const decision = switchPolicy.shouldSwitch(current, preferred, scores, reason);
+                const preferredForPolicy = probationReady
+                    ? { ...preferred, progressEligible: true }
+                    : preferred;
+                const decision = switchPolicy.shouldSwitch(current, preferredForPolicy, scores, reason);
                 if (decision.allow) {
                     const fromId = activeCandidateId;
                     Logger.add('[HEALER:CANDIDATE] Active video switched', {
@@ -3092,28 +3127,36 @@ const RecoveryManager = (() => {
         const probeCandidate = failoverManager.probeCandidate;
         let lastProbationRescanAt = 0;
 
-        const maybeTriggerProbation = (videoId, monitorState, trigger) => {
-            if (!monitorState) return;
-            if (monitorState.noHealPointCount < CONFIG.stall.PROBATION_AFTER_NO_HEAL_POINTS) {
-                return;
+        const maybeTriggerProbation = (videoId, monitorState, trigger, count, threshold) => {
+            if (!monitorState) return false;
+            if (count < threshold) {
+                return false;
             }
             const now = Date.now();
             if (now - lastProbationRescanAt < CONFIG.stall.PROBATION_RESCAN_COOLDOWN_MS) {
-                return;
+                return false;
             }
             lastProbationRescanAt = now;
-            candidateSelector.activateProbation(trigger || 'no_heal_point');
-            onRescan('no_heal_point', {
+            const reason = trigger || 'probation';
+            candidateSelector.activateProbation(reason);
+            onRescan(reason, {
                 videoId,
-                count: monitorState.noHealPointCount,
-                trigger
+                count,
+                trigger: reason
             });
+            return true;
         };
 
         const handleNoHealPoint = (video, monitorState, reason) => {
             const videoId = getVideoId(video);
             backoffManager.applyBackoff(videoId, monitorState, reason);
-            maybeTriggerProbation(videoId, monitorState, reason);
+            maybeTriggerProbation(
+                videoId,
+                monitorState,
+                reason,
+                monitorState?.noHealPointCount || 0,
+                CONFIG.stall.PROBATION_AFTER_NO_HEAL_POINTS
+            );
 
             const stalledForMs = monitorState?.lastProgressTime
                 ? (Date.now() - monitorState.lastProgressTime)
@@ -3127,11 +3170,119 @@ const RecoveryManager = (() => {
             }
         };
 
+        const resetPlayError = (monitorState, reason) => {
+            if (!monitorState) return;
+            if (monitorState.playErrorCount > 0 || monitorState.nextPlayHealAllowedTime > 0) {
+                logDebug('[HEALER:PLAY_BACKOFF] Reset', {
+                    reason,
+                    previousPlayErrors: monitorState.playErrorCount,
+                    previousNextPlayAllowedMs: monitorState.nextPlayHealAllowedTime
+                        ? Math.max(monitorState.nextPlayHealAllowedTime - Date.now(), 0)
+                        : 0,
+                    previousHealPointRepeats: monitorState.healPointRepeatCount
+                });
+            }
+            monitorState.playErrorCount = 0;
+            monitorState.nextPlayHealAllowedTime = 0;
+            monitorState.lastPlayErrorTime = 0;
+            monitorState.lastPlayBackoffLogTime = 0;
+            monitorState.lastHealPointKey = null;
+            monitorState.healPointRepeatCount = 0;
+        };
+
+        const handlePlayFailure = (video, monitorState, detail = {}) => {
+            if (!monitorState) return;
+            const videoId = getVideoId(video);
+            const now = Date.now();
+            const lastErrorTime = monitorState.lastPlayErrorTime || 0;
+            if (lastErrorTime > 0 && (now - lastErrorTime) > CONFIG.stall.PLAY_ERROR_DECAY_MS) {
+                monitorState.playErrorCount = 0;
+            }
+
+            const count = (monitorState.playErrorCount || 0) + 1;
+            const base = CONFIG.stall.PLAY_ERROR_BACKOFF_BASE_MS;
+            const max = CONFIG.stall.PLAY_ERROR_BACKOFF_MAX_MS;
+            const backoffMs = Math.min(base * count, max);
+
+            monitorState.playErrorCount = count;
+            monitorState.lastPlayErrorTime = now;
+            monitorState.nextPlayHealAllowedTime = now + backoffMs;
+
+            Logger.add('[HEALER:PLAY_BACKOFF] Play failed', {
+                videoId,
+                reason: detail.reason,
+                error: detail.error,
+                errorName: detail.errorName,
+                playErrorCount: count,
+                backoffMs,
+                nextHealAllowedInMs: backoffMs,
+                healRange: detail.healRange || null,
+                healPointRepeatCount: detail.healPointRepeatCount || 0
+            });
+
+            const repeatCount = detail.healPointRepeatCount || 0;
+            const repeatStuck = repeatCount >= CONFIG.stall.HEALPOINT_REPEAT_FAILOVER_COUNT;
+            if (repeatStuck) {
+                Logger.add('[HEALER:HEALPOINT_STUCK] Repeated heal point loop', {
+                    videoId,
+                    healRange: detail.healRange || null,
+                    repeatCount,
+                    errorName: detail.errorName,
+                    error: detail.error
+                });
+            }
+
+            const probationTriggered = maybeTriggerProbation(
+                videoId,
+                monitorState,
+                detail.reason || 'play_error',
+                count,
+                CONFIG.stall.PROBATION_AFTER_PLAY_ERRORS
+            );
+
+            if (repeatStuck && !probationTriggered) {
+                const nowMs = Date.now();
+                if (nowMs - lastProbationRescanAt >= CONFIG.stall.PROBATION_RESCAN_COOLDOWN_MS) {
+                    lastProbationRescanAt = nowMs;
+                    candidateSelector.activateProbation('healpoint_stuck');
+                    onRescan('healpoint_stuck', {
+                        videoId,
+                        count: repeatCount,
+                        trigger: 'healpoint_stuck'
+                    });
+                }
+            }
+
+            const shouldFailover = monitorsById.size > 1
+                && (count >= CONFIG.stall.FAILOVER_AFTER_PLAY_ERRORS || repeatStuck);
+
+            if (probationTriggered || repeatStuck || shouldFailover) {
+                const beforeActive = candidateSelector.getActiveId();
+                candidateSelector.evaluateCandidates('play_error');
+                const afterActive = candidateSelector.getActiveId();
+                if (shouldFailover && afterActive === beforeActive) {
+                    failoverManager.attemptFailover(videoId, detail.reason || 'play_error', monitorState);
+                }
+            }
+        };
+
         const shouldSkipStall = (videoId, monitorState) => {
+            const now = Date.now();
             if (failoverManager.shouldIgnoreStall(videoId)) {
                 return true;
             }
             if (backoffManager.shouldSkip(videoId, monitorState)) {
+                return true;
+            }
+            if (monitorState?.nextPlayHealAllowedTime && now < monitorState.nextPlayHealAllowedTime) {
+                if (now - (monitorState.lastPlayBackoffLogTime || 0) > CONFIG.logging.BACKOFF_LOG_INTERVAL_MS) {
+                    monitorState.lastPlayBackoffLogTime = now;
+                    logDebug('[HEALER:PLAY_BACKOFF] Stall skipped due to play backoff', {
+                        videoId,
+                        remainingMs: monitorState.nextPlayHealAllowedTime - now,
+                        playErrorCount: monitorState.playErrorCount
+                    });
+                }
                 return true;
             }
             return false;
@@ -3141,7 +3292,9 @@ const RecoveryManager = (() => {
             isFailoverActive: () => failoverManager.isActive(),
             resetFailover: failoverManager.resetFailover,
             resetBackoff: backoffManager.resetBackoff,
+            resetPlayError,
             handleNoHealPoint,
+            handlePlayFailure,
             shouldSkipStall,
             probeCandidate,
             onMonitorRemoved: failoverManager.onMonitorRemoved
@@ -3587,6 +3740,9 @@ const HealPipeline = (() => {
                             finalState: VideoState.get(video, getVideoId(video))
                         });
                         recoveryManager.resetBackoff(monitorState, 'self_recovered');
+                        if (recoveryManager.resetPlayError) {
+                            recoveryManager.resetPlayError(monitorState, 'self_recovered');
+                        }
                         return;
                     }
 
@@ -3599,6 +3755,10 @@ const HealPipeline = (() => {
                     });
                     Metrics.increment('heals_failed');
                     recoveryManager.handleNoHealPoint(video, monitorState, 'no_heal_point');
+                    if (monitorState) {
+                        monitorState.lastHealPointKey = null;
+                        monitorState.healPointRepeatCount = 0;
+                    }
                     return;
                 }
 
@@ -3618,6 +3778,9 @@ const HealPipeline = (() => {
                             duration: (performance.now() - healStartTime).toFixed(0) + 'ms'
                         });
                         recoveryManager.resetBackoff(monitorState, 'stale_recovered');
+                        if (recoveryManager.resetPlayError) {
+                            recoveryManager.resetPlayError(monitorState, 'stale_recovered');
+                        }
                         return;
                     }
                     Logger.add('[HEALER:STALE_GONE] Heal point disappeared before seek', {
@@ -3626,6 +3789,10 @@ const HealPipeline = (() => {
                     });
                     Metrics.increment('heals_failed');
                     recoveryManager.handleNoHealPoint(video, monitorState, 'stale_gone');
+                    if (monitorState) {
+                        monitorState.lastHealPointKey = null;
+                        monitorState.healPointRepeatCount = 0;
+                    }
                     return;
                 }
 
@@ -3651,6 +3818,28 @@ const HealPipeline = (() => {
                     result?.errorName === 'AbortError'
                     || (typeof result?.error === 'string' && result.error.includes('aborted'))
                 );
+
+                const isPlayFailure = (result) => (
+                    isAbortError(result)
+                    || result?.errorName === 'PLAY_STUCK'
+                );
+
+                const updateHealPointRepeat = (monitorStateRef, point, succeeded) => {
+                    if (!monitorStateRef) return 0;
+                    if (succeeded || !point) {
+                        monitorStateRef.lastHealPointKey = null;
+                        monitorStateRef.healPointRepeatCount = 0;
+                        return 0;
+                    }
+                    const key = `${point.start.toFixed(2)}-${point.end.toFixed(2)}`;
+                    if (monitorStateRef.lastHealPointKey === key) {
+                        monitorStateRef.healPointRepeatCount = (monitorStateRef.healPointRepeatCount || 0) + 1;
+                    } else {
+                        monitorStateRef.lastHealPointKey = key;
+                        monitorStateRef.healPointRepeatCount = 1;
+                    }
+                    return monitorStateRef.healPointRepeatCount;
+                };
 
                 const attemptSeekAndPlay = async (point, label) => {
                     if (label) {
@@ -3694,8 +3883,12 @@ const HealPipeline = (() => {
                     });
                     Metrics.increment('heals_successful');
                     recoveryManager.resetBackoff(monitorState, 'heal_success');
+                    if (recoveryManager.resetPlayError) {
+                        recoveryManager.resetPlayError(monitorState, 'heal_success');
+                    }
                     scheduleCatchUp(video, monitorState, 'post_heal');
                 } else {
+                    const repeatCount = updateHealPointRepeat(monitorState, finalPoint, false);
                     Logger.add('[HEALER:FAILED] Heal attempt failed', {
                         duration: duration + 'ms',
                         error: result.error,
@@ -3706,6 +3899,17 @@ const HealPipeline = (() => {
                         finalState: VideoState.get(video, getVideoId(video))
                     });
                     Metrics.increment('heals_failed');
+                    if (monitorState && recoveryManager.handlePlayFailure
+                        && (isPlayFailure(result)
+                            || repeatCount >= CONFIG.stall.HEALPOINT_REPEAT_FAILOVER_COUNT)) {
+                        recoveryManager.handlePlayFailure(video, monitorState, {
+                            reason: isPlayFailure(result) ? 'play_error' : 'healpoint_repeat',
+                            error: result.error,
+                            errorName: result.errorName,
+                            healRange: finalPoint ? `${finalPoint.start.toFixed(2)}-${finalPoint.end.toFixed(2)}` : null,
+                            healPointRepeatCount: repeatCount
+                        });
+                    }
                 }
             } catch (e) {
                 Logger.add('[HEALER:ERROR] Unexpected error during heal', {

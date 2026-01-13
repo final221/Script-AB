@@ -124,3 +124,24 @@ describe('PlaybackStateTracker.shouldSkipUntilProgress', () => {
         expect(tracker.shouldSkipUntilProgress()).toBe(false);
     });
 });
+
+describe('PlaybackStateTracker.updateProgress', () => {
+    it('clears play-error backoff when progress resumes', () => {
+        const video = createVideo({ currentTime: 0, paused: false, readyState: 4, currentSrc: 'blob:stream' });
+        const logDebug = vi.fn();
+        const tracker = PlaybackStateTracker.create(video, 'video-6', logDebug);
+
+        tracker.state.playErrorCount = 2;
+        tracker.state.nextPlayHealAllowedTime = Date.now() + 10000;
+        tracker.state.healPointRepeatCount = 2;
+        tracker.state.lastHealPointKey = '1.00-2.00';
+
+        defineVideoProps(video, { currentTime: 1 });
+        tracker.updateProgress('timeupdate');
+
+        expect(tracker.state.playErrorCount).toBe(0);
+        expect(tracker.state.nextPlayHealAllowedTime).toBe(0);
+        expect(tracker.state.healPointRepeatCount).toBe(0);
+        expect(tracker.state.lastHealPointKey).toBe(null);
+    });
+});

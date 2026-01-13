@@ -192,6 +192,9 @@ const HealPipeline = (() => {
                             finalState: VideoState.get(video, getVideoId(video))
                         });
                         recoveryManager.resetBackoff(monitorState, 'self_recovered');
+                        if (recoveryManager.resetPlayError) {
+                            recoveryManager.resetPlayError(monitorState, 'self_recovered');
+                        }
                         return;
                     }
 
@@ -204,6 +207,10 @@ const HealPipeline = (() => {
                     });
                     Metrics.increment('heals_failed');
                     recoveryManager.handleNoHealPoint(video, monitorState, 'no_heal_point');
+                    if (monitorState) {
+                        monitorState.lastHealPointKey = null;
+                        monitorState.healPointRepeatCount = 0;
+                    }
                     return;
                 }
 
@@ -223,6 +230,9 @@ const HealPipeline = (() => {
                             duration: (performance.now() - healStartTime).toFixed(0) + 'ms'
                         });
                         recoveryManager.resetBackoff(monitorState, 'stale_recovered');
+                        if (recoveryManager.resetPlayError) {
+                            recoveryManager.resetPlayError(monitorState, 'stale_recovered');
+                        }
                         return;
                     }
                     Logger.add('[HEALER:STALE_GONE] Heal point disappeared before seek', {
@@ -231,6 +241,10 @@ const HealPipeline = (() => {
                     });
                     Metrics.increment('heals_failed');
                     recoveryManager.handleNoHealPoint(video, monitorState, 'stale_gone');
+                    if (monitorState) {
+                        monitorState.lastHealPointKey = null;
+                        monitorState.healPointRepeatCount = 0;
+                    }
                     return;
                 }
 
@@ -256,6 +270,28 @@ const HealPipeline = (() => {
                     result?.errorName === 'AbortError'
                     || (typeof result?.error === 'string' && result.error.includes('aborted'))
                 );
+
+                const isPlayFailure = (result) => (
+                    isAbortError(result)
+                    || result?.errorName === 'PLAY_STUCK'
+                );
+
+                const updateHealPointRepeat = (monitorStateRef, point, succeeded) => {
+                    if (!monitorStateRef) return 0;
+                    if (succeeded || !point) {
+                        monitorStateRef.lastHealPointKey = null;
+                        monitorStateRef.healPointRepeatCount = 0;
+                        return 0;
+                    }
+                    const key = `${point.start.toFixed(2)}-${point.end.toFixed(2)}`;
+                    if (monitorStateRef.lastHealPointKey === key) {
+                        monitorStateRef.healPointRepeatCount = (monitorStateRef.healPointRepeatCount || 0) + 1;
+                    } else {
+                        monitorStateRef.lastHealPointKey = key;
+                        monitorStateRef.healPointRepeatCount = 1;
+                    }
+                    return monitorStateRef.healPointRepeatCount;
+                };
 
                 const attemptSeekAndPlay = async (point, label) => {
                     if (label) {
@@ -299,8 +335,12 @@ const HealPipeline = (() => {
                     });
                     Metrics.increment('heals_successful');
                     recoveryManager.resetBackoff(monitorState, 'heal_success');
+                    if (recoveryManager.resetPlayError) {
+                        recoveryManager.resetPlayError(monitorState, 'heal_success');
+                    }
                     scheduleCatchUp(video, monitorState, 'post_heal');
                 } else {
+                    const repeatCount = updateHealPointRepeat(monitorState, finalPoint, false);
                     Logger.add('[HEALER:FAILED] Heal attempt failed', {
                         duration: duration + 'ms',
                         error: result.error,
@@ -311,6 +351,17 @@ const HealPipeline = (() => {
                         finalState: VideoState.get(video, getVideoId(video))
                     });
                     Metrics.increment('heals_failed');
+                    if (monitorState && recoveryManager.handlePlayFailure
+                        && (isPlayFailure(result)
+                            || repeatCount >= CONFIG.stall.HEALPOINT_REPEAT_FAILOVER_COUNT)) {
+                        recoveryManager.handlePlayFailure(video, monitorState, {
+                            reason: isPlayFailure(result) ? 'play_error' : 'healpoint_repeat',
+                            error: result.error,
+                            errorName: result.errorName,
+                            healRange: finalPoint ? `${finalPoint.start.toFixed(2)}-${finalPoint.end.toFixed(2)}` : null,
+                            healPointRepeatCount: repeatCount
+                        });
+                    }
                 }
             } catch (e) {
                 Logger.add('[HEALER:ERROR] Unexpected error during heal', {

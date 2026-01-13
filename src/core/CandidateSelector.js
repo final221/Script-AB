@@ -212,7 +212,9 @@ const CandidateSelector = (() => {
                 const activeState = current ? current.state : null;
                 const activeIsStalled = !current || ['STALLED', 'RESET', 'ERROR', 'ENDED'].includes(activeState);
                 const probationActive = isProbationActive();
+                const probationProgressOk = preferred.progressStreakMs >= CONFIG.monitoring.PROBATION_MIN_PROGRESS_MS;
                 const probationReady = probationActive
+                    && probationProgressOk
                     && (preferred.vs.readyState >= CONFIG.monitoring.PROBATION_READY_STATE
                         || preferred.vs.currentSrc);
 
@@ -320,7 +322,10 @@ const CandidateSelector = (() => {
                     return preferred;
                 }
 
-                const decision = switchPolicy.shouldSwitch(current, preferred, scores, reason);
+                const preferredForPolicy = probationReady
+                    ? { ...preferred, progressEligible: true }
+                    : preferred;
+                const decision = switchPolicy.shouldSwitch(current, preferredForPolicy, scores, reason);
                 if (decision.allow) {
                     const fromId = activeCandidateId;
                     Logger.add('[HEALER:CANDIDATE] Active video switched', {

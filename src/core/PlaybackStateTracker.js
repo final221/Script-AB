@@ -18,6 +18,12 @@ const PlaybackStateTracker = (() => {
             initialProgressTimeoutLogged: false,
             noHealPointCount: 0,
             nextHealAllowedTime: 0,
+            playErrorCount: 0,
+            nextPlayHealAllowedTime: 0,
+            lastPlayErrorTime: 0,
+            lastPlayBackoffLogTime: 0,
+            lastHealPointKey: null,
+            healPointRepeatCount: 0,
             lastBackoffLogTime: 0,
             initLogEmitted: false,
             state: 'PLAYING',
@@ -157,6 +163,23 @@ const PlaybackStateTracker = (() => {
                 });
                 state.noHealPointCount = 0;
                 state.nextHealAllowedTime = 0;
+            }
+
+            if (state.playErrorCount > 0 || state.nextPlayHealAllowedTime > 0 || state.healPointRepeatCount > 0) {
+                logDebug('[HEALER:PLAY_BACKOFF] Cleared after progress', {
+                    reason,
+                    previousPlayErrors: state.playErrorCount,
+                    previousNextPlayAllowedMs: state.nextPlayHealAllowedTime
+                        ? (state.nextPlayHealAllowedTime - now)
+                        : 0,
+                    previousHealPointRepeats: state.healPointRepeatCount
+                });
+                state.playErrorCount = 0;
+                state.nextPlayHealAllowedTime = 0;
+                state.lastPlayErrorTime = 0;
+                state.lastPlayBackoffLogTime = 0;
+                state.lastHealPointKey = null;
+                state.healPointRepeatCount = 0;
             }
         };
 

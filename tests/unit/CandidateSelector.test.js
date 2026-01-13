@@ -146,4 +146,52 @@ describe('CandidateSelector', () => {
 
         expect(selector.getActiveId()).toBe('video-2');
     });
+
+    it('requires probation progress before switching', () => {
+        const CandidateSelector = window.CandidateSelector;
+        const monitorsById = new Map();
+        const selector = CandidateSelector.create({
+            monitorsById,
+            logDebug: () => {},
+            maxMonitors: 3,
+            minProgressMs: 5000,
+            switchDelta: 2,
+            isFallbackSource: () => false
+        });
+
+        const now = Date.now();
+        const stalledVideo = makeVideo({
+            paused: true,
+            readyState: 0,
+            currentTime: 0,
+            currentSrc: ''
+        });
+        const candidateVideo = makeVideo({
+            paused: false,
+            readyState: 4,
+            currentTime: 1,
+            currentSrc: 'blob:alt',
+            buffered: { length: 1, start: () => 0, end: () => 10 }
+        });
+
+        monitorsById.set('video-1', {
+            video: stalledVideo,
+            monitor: { state: { state: 'STALLED', hasProgress: false, lastProgressTime: 0, progressStreakMs: 0, progressEligible: false } }
+        });
+        monitorsById.set('video-2', {
+            video: candidateVideo,
+            monitor: { state: { state: 'PLAYING', hasProgress: true, lastProgressTime: now, progressStreakMs: 200, progressEligible: false } }
+        });
+
+        selector.setActiveId('video-1');
+        selector.activateProbation('play_error');
+        selector.evaluateCandidates('play_error');
+
+        expect(selector.getActiveId()).toBe('video-1');
+
+        monitorsById.get('video-2').monitor.state.progressStreakMs = CONFIG.monitoring.PROBATION_MIN_PROGRESS_MS + 100;
+        selector.evaluateCandidates('play_error');
+
+        expect(selector.getActiveId()).toBe('video-2');
+    });
 });

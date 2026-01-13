@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.1.12 - 2026-01-13T18:51:19.113Z
+Previous: 4.1.11
+Commit: 56921fd
+Changes:
+- Add playback drift proxy logging
+
 ## 4.1.11 - 2026-01-13T18:00:53.362Z
 Previous: 4.1.10
 Commit: 1bbab13
