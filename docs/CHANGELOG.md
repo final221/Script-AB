@@ -1,5 +1,17 @@
 # Changelog
 
+## 4.1.9 - 2026-01-13T16:36:44.545Z
+Previous: 4.1.8
+Commit: 075b541
+Changes:
+- No commits detected since last build
+
+## 4.1.8 - 2026-01-13T16:36:31.397Z
+Previous: 4.1.7
+Commit: 075b541
+Changes:
+- Revert report legend changes
+
 ## 4.1.7 - 2026-01-13T16:35:18.566Z
 Previous: 4.1.6
 Commit: eb4dbc5
