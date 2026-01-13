@@ -1,15 +1,11 @@
 # Changelog
 
-## 4.1.8 - 2026-01-13T16:31:21.301Z
-Previous: 4.1.7
-Commit: b1b0c5f
-Changes:
-- Clarify report legend markers
-
-## 4.1.7 - 2026-01-13T16:24:32.864Z
+## 4.1.7 - 2026-01-13T16:35:18.566Z
 Previous: 4.1.6
-Commit: a59c429
+Commit: eb4dbc5
 Changes:
+- Refresh log legend icons
+- Clarify report legend markers
 - Add emergency heal points and probation rescan
 
 ## 4.1.6 - 2026-01-13T15:43:39.906Z
