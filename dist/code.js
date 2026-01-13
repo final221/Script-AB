@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.1.1
+// @version       4.1.2
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -1111,11 +1111,17 @@ const PlaybackStateTracker = (() => {
         const clearResetPending = (reason, vs) => {
             if (!state.resetPendingAt) return false;
             const now = Date.now();
+            const snapshot = vs || VideoState.get(video, videoId);
             logDebug('[HEALER:RESET_CLEAR] Reset pending cleared', {
                 reason,
                 pendingForMs: now - state.resetPendingAt,
+                graceMs: CONFIG.stall.RESET_GRACE_MS,
                 resetType: state.resetPendingType,
-                videoState: vs || VideoState.get(video, videoId)
+                hasSrc: Boolean(snapshot.currentSrc || snapshot.src),
+                readyState: snapshot.readyState,
+                networkState: snapshot.networkState,
+                buffered: snapshot.buffered || BufferGapFinder.formatRanges(BufferGapFinder.getBufferRanges(video)),
+                videoState: snapshot
             });
             state.resetPendingAt = 0;
             state.resetPendingReason = null;
@@ -1290,6 +1296,7 @@ const PlaybackStateTracker = (() => {
                 reason: pendingReason,
                 resetType: pendingType,
                 pendingForMs,
+                graceMs: CONFIG.stall.RESET_GRACE_MS,
                 videoState: vs
             });
 
@@ -1968,7 +1975,8 @@ const CandidateSwitchPolicy = (() => {
             return {
                 allow,
                 delta,
-                currentScore
+                currentScore,
+                suppression
             };
         };
 
@@ -2028,6 +2036,7 @@ const CandidateSelector = (() => {
         let lastGoodCandidateId = null;
         let probationUntil = 0;
         let probationReason = null;
+        let lastDecisionLogTime = 0;
         const scorer = CandidateScorer.create({ minProgressMs, isFallbackSource });
         const switchPolicy = CandidateSwitchPolicy.create({
             switchDelta,
@@ -2060,6 +2069,17 @@ const CandidateSelector = (() => {
             probationUntil = 0;
             probationReason = null;
             return false;
+        };
+
+        const shouldLogDecision = (reason) => (
+            reason !== 'interval'
+            || (Date.now() - lastDecisionLogTime) >= CONFIG.logging.ACTIVE_LOG_MS
+        );
+
+        const logDecision = (detail) => {
+            if (!detail || !shouldLogDecision(detail.reason)) return;
+            lastDecisionLogTime = Date.now();
+            Logger.add('[HEALER:CANDIDATE_DECISION] Selection summary', detail);
         };
 
         const getActiveId = () => {
@@ -2178,6 +2198,18 @@ const CandidateSelector = (() => {
                         activeState,
                         scores
                     });
+                    logDecision({
+                        reason,
+                        action: 'stay',
+                        suppression: 'preferred_not_progress_eligible',
+                        activeId: activeCandidateId,
+                        activeState,
+                        preferredId: preferred.id,
+                        preferredScore: preferred.score,
+                        preferredProgressEligible: preferred.progressEligible,
+                        preferredTrusted: preferred.trusted,
+                        probationActive
+                    });
                     return preferred;
                 }
 
@@ -2189,6 +2221,18 @@ const CandidateSelector = (() => {
                         cause: 'active_not_stalled',
                         activeState,
                         scores
+                    });
+                    logDecision({
+                        reason,
+                        action: 'stay',
+                        suppression: 'active_not_stalled',
+                        activeId: activeCandidateId,
+                        activeState,
+                        preferredId: preferred.id,
+                        preferredScore: preferred.score,
+                        preferredProgressEligible: preferred.progressEligible,
+                        preferredTrusted: preferred.trusted,
+                        probationActive
                     });
                     return preferred;
                 }
@@ -2203,6 +2247,18 @@ const CandidateSelector = (() => {
                         preferredTrusted: preferred.trusted,
                         scores
                     });
+                    logDecision({
+                        reason,
+                        action: 'stay',
+                        suppression: 'trusted_active_blocks_untrusted',
+                        activeId: activeCandidateId,
+                        activeState,
+                        preferredId: preferred.id,
+                        preferredScore: preferred.score,
+                        preferredProgressEligible: preferred.progressEligible,
+                        preferredTrusted: preferred.trusted,
+                        probationActive
+                    });
                     return preferred;
                 }
 
@@ -2215,11 +2271,24 @@ const CandidateSelector = (() => {
                         probationActive,
                         scores
                     });
+                    logDecision({
+                        reason,
+                        action: 'stay',
+                        suppression: 'untrusted_outside_probation',
+                        activeId: activeCandidateId,
+                        activeState,
+                        preferredId: preferred.id,
+                        preferredScore: preferred.score,
+                        preferredProgressEligible: preferred.progressEligible,
+                        preferredTrusted: preferred.trusted,
+                        probationActive
+                    });
                     return preferred;
                 }
 
                 const decision = switchPolicy.shouldSwitch(current, preferred, scores, reason);
                 if (decision.allow) {
+                    const fromId = activeCandidateId;
                     Logger.add('[HEALER:CANDIDATE] Active video switched', {
                         from: activeCandidateId,
                         to: preferred.id,
@@ -2233,6 +2302,30 @@ const CandidateSelector = (() => {
                         scores
                     });
                     activeCandidateId = preferred.id;
+                    logDecision({
+                        reason,
+                        action: 'switch',
+                        from: fromId,
+                        to: activeCandidateId,
+                        activeState,
+                        preferredScore: preferred.score,
+                        preferredProgressEligible: preferred.progressEligible,
+                        preferredTrusted: preferred.trusted,
+                        probationActive
+                    });
+                } else {
+                    logDecision({
+                        reason,
+                        action: 'stay',
+                        suppression: decision.suppression || 'score_delta',
+                        activeId: activeCandidateId,
+                        activeState,
+                        preferredId: preferred.id,
+                        preferredScore: preferred.score,
+                        preferredProgressEligible: preferred.progressEligible,
+                        preferredTrusted: preferred.trusted,
+                        probationActive
+                    });
                 }
             }
 

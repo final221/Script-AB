@@ -65,11 +65,17 @@ const PlaybackStateTracker = (() => {
         const clearResetPending = (reason, vs) => {
             if (!state.resetPendingAt) return false;
             const now = Date.now();
+            const snapshot = vs || VideoState.get(video, videoId);
             logDebug('[HEALER:RESET_CLEAR] Reset pending cleared', {
                 reason,
                 pendingForMs: now - state.resetPendingAt,
+                graceMs: CONFIG.stall.RESET_GRACE_MS,
                 resetType: state.resetPendingType,
-                videoState: vs || VideoState.get(video, videoId)
+                hasSrc: Boolean(snapshot.currentSrc || snapshot.src),
+                readyState: snapshot.readyState,
+                networkState: snapshot.networkState,
+                buffered: snapshot.buffered || BufferGapFinder.formatRanges(BufferGapFinder.getBufferRanges(video)),
+                videoState: snapshot
             });
             state.resetPendingAt = 0;
             state.resetPendingReason = null;
@@ -244,6 +250,7 @@ const PlaybackStateTracker = (() => {
                 reason: pendingReason,
                 resetType: pendingType,
                 pendingForMs,
+                graceMs: CONFIG.stall.RESET_GRACE_MS,
                 videoState: vs
             });
 

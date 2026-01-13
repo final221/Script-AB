@@ -49,7 +49,8 @@ const CandidateSwitchPolicy = (() => {
             return {
                 allow,
                 delta,
-                currentScore
+                currentScore,
+                suppression
             };
         };
 

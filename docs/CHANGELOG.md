@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.1.2 - 2026-01-13T11:37:18.155Z
+Previous: 4.1.1
+Commit: 8e8cf89
+Changes:
+- Add reset grace and probation switching
+
 ## 4.1.1 - 2026-01-13T11:32:25.046Z
 Previous: 4.1.0
 Commit: ca57e00
