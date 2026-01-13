@@ -37,6 +37,8 @@ const CONFIG = (() => {
             FAILOVER_AFTER_STALL_MS: 30000,  // Failover after this long stuck without progress
             FAILOVER_PROGRESS_TIMEOUT_MS: 8000, // Trial time for failover candidate to progress
             FAILOVER_COOLDOWN_MS: 30000,     // Minimum time between failover attempts
+            PROBATION_AFTER_NO_HEAL_POINTS: 2, // Open probation after this many no-heal points
+            PROBATION_RESCAN_COOLDOWN_MS: 15000, // Min time between probation rescans
         },
 
         monitoring: {
@@ -44,6 +46,7 @@ const CONFIG = (() => {
             CANDIDATE_SWITCH_DELTA: 2,      // Min score delta before switching active video
             CANDIDATE_MIN_PROGRESS_MS: 5000, // Require sustained progress before switching to new video
             PROBATION_WINDOW_MS: 10000,     // Window to allow untrusted candidate switching
+            PROBATION_READY_STATE: 2,       // Minimum readyState to allow probation override
             PROGRESS_STREAK_RESET_MS: 2500, // Reset progress streak after this long without progress
             PROGRESS_RECENT_MS: 2000,       // "Recent progress" threshold for scoring
             PROGRESS_STALE_MS: 5000,        // "Stale progress" threshold for scoring
@@ -53,6 +56,7 @@ const CONFIG = (() => {
 
         recovery: {
             MIN_HEAL_BUFFER_S: 2,           // Minimum buffered seconds needed to heal
+            MIN_HEAL_BUFFER_EMERGENCY_S: 0.5, // Minimum buffer for emergency/rewind heal
             HEAL_NUDGE_S: 0.5,              // How far to nudge into buffer for contiguous ranges
             HEAL_EDGE_GUARD_S: 0.35,        // Avoid seeking too close to buffer end
             HEAL_RETRY_DELAY_MS: 200,       // Delay before retrying heal after AbortError
@@ -64,6 +68,7 @@ const CONFIG = (() => {
             LOG_CSP_WARNINGS: true,
             NON_ACTIVE_LOG_MS: 300000,      // Non-active candidate log interval
             ACTIVE_LOG_MS: 5000,            // Active candidate log interval
+            SUPPRESSION_LOG_MS: 300000,     // Suppressed switch log interval
             BACKOFF_LOG_INTERVAL_MS: 5000,  // Backoff skip log interval
             CONSOLE_SIGNAL_THROTTLE_MS: 2000, // Throttle console hint signals
             RESOURCE_HINT_THROTTLE_MS: 2000,  // Throttle resource hint signals

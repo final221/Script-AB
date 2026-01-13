@@ -39,6 +39,11 @@ const CandidateScorer = (() => {
                 reasons.push('reset');
             }
 
+            if (state.resetPendingAt) {
+                score -= 3;
+                reasons.push('reset_pending');
+            }
+
             if (state.state === 'ERROR') {
                 score -= 2;
                 reasons.push('error_state');

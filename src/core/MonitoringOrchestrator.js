@@ -27,14 +27,6 @@ const MonitoringOrchestrator = (() => {
             switchDelta: CONFIG.monitoring.CANDIDATE_SWITCH_DELTA,
             isFallbackSource
         });
-        const recoveryManager = RecoveryManager.create({
-            monitorsById,
-            candidateSelector,
-            getVideoId,
-            logDebug
-        });
-        candidateSelector.setLockChecker(recoveryManager.isFailoverActive);
-        monitorRegistry.bind({ candidateSelector, recoveryManager });
 
         const setStallHandler = (fn) => {
             stallHandler = typeof fn === 'function' ? fn : (() => {});
@@ -73,6 +65,16 @@ const MonitoringOrchestrator = (() => {
                 totalMonitors: afterCount
             });
         };
+
+        const recoveryManager = RecoveryManager.create({
+            monitorsById,
+            candidateSelector,
+            getVideoId,
+            logDebug,
+            onRescan: scanForVideos
+        });
+        candidateSelector.setLockChecker(recoveryManager.isFailoverActive);
+        monitorRegistry.bind({ candidateSelector, recoveryManager });
 
         return {
             monitor: monitorRegistry.monitor,

@@ -72,7 +72,7 @@ describe('BufferGapFinder', () => {
         expect(result.end).toBe(10);
     });
 
-    it('skips heal point if buffer is too small', () => {
+    it('falls back to emergency heal point if buffer is too small', () => {
         const BufferGapFinder = window.BufferGapFinder;
         // Mock buffered ranges: [0-5.5] - Current 5, so 0.5s ahead (too small for nudge which needs gap > MIN_HEAL_BUFFER_S)
         Object.defineProperty(video, 'buffered', {
@@ -86,7 +86,9 @@ describe('BufferGapFinder', () => {
         video.currentTime = 5;
 
         const result = BufferGapFinder.findHealPoint(video, { silent: true });
-        expect(result).toBeNull(); // Too small
+        expect(result).not.toBeNull();
+        expect(result.start).toBeGreaterThanOrEqual(0);
+        expect(result.end).toBe(5.5);
     });
 
     it('prefers contiguous nudge over distant gap', () => {

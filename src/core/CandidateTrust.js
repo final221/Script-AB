@@ -3,7 +3,7 @@
  * Determines whether a candidate is trusted for switching/failover.
  */
 const CandidateTrust = (() => {
-    const BAD_REASONS = ['fallback_src', 'ended', 'not_in_dom', 'reset', 'error_state', 'error'];
+    const BAD_REASONS = ['fallback_src', 'ended', 'not_in_dom', 'reset', 'reset_pending', 'error_state', 'error'];
 
     const getTrustInfo = (result) => {
         if (!result || !result.progressEligible) {

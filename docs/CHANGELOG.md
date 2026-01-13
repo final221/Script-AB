@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.1.6 - 2026-01-13T15:43:39.906Z
+Previous: 4.1.5
+Commit: cb20b12
+Changes:
+- Improve heal point selection and logging
+
 ## 4.1.5 - 2026-01-13T13:54:06.644Z
 Previous: 4.1.4
 Commit: 4a02c76

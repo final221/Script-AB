@@ -17,6 +17,11 @@ const CandidateSelector = (() => {
         let probationUntil = 0;
         let probationReason = null;
         let lastDecisionLogTime = 0;
+        let suppressionSummary = {
+            lastLogTime: Date.now(),
+            counts: {},
+            lastSample: null
+        };
         const scorer = CandidateScorer.create({ minProgressMs, isFallbackSource });
         const switchPolicy = CandidateSwitchPolicy.create({
             switchDelta,
@@ -60,6 +65,45 @@ const CandidateSelector = (() => {
             if (!detail || !shouldLogDecision(detail.reason)) return;
             lastDecisionLogTime = Date.now();
             Logger.add('[HEALER:CANDIDATE_DECISION] Selection summary', detail);
+        };
+
+        const logSuppression = (detail) => {
+            if (!detail) return;
+            if (detail.reason !== 'interval') {
+                logDebug('[HEALER:CANDIDATE] Switch suppressed', detail);
+                return;
+            }
+            const cause = detail.cause || 'unknown';
+            suppressionSummary.counts[cause] = (suppressionSummary.counts[cause] || 0) + 1;
+            suppressionSummary.lastSample = {
+                from: detail.from,
+                to: detail.to,
+                cause,
+                reason: detail.reason,
+                activeState: detail.activeState,
+                probationActive: detail.probationActive
+            };
+
+            const now = Date.now();
+            const windowMs = now - suppressionSummary.lastLogTime;
+            if (windowMs < CONFIG.logging.SUPPRESSION_LOG_MS) {
+                return;
+            }
+            const total = Object.values(suppressionSummary.counts)
+                .reduce((sum, count) => sum + count, 0);
+            if (total > 0) {
+                Logger.add('[HEALER:SUPPRESSION_SUMMARY] Switch suppressed summary', {
+                    windowMs,
+                    total,
+                    byCause: suppressionSummary.counts,
+                    lastSample: suppressionSummary.lastSample
+                });
+            }
+            suppressionSummary = {
+                lastLogTime: now,
+                counts: {},
+                lastSample: null
+            };
         };
 
         const getActiveId = () => {
@@ -168,14 +212,18 @@ const CandidateSelector = (() => {
                 const activeState = current ? current.state : null;
                 const activeIsStalled = !current || ['STALLED', 'RESET', 'ERROR', 'ENDED'].includes(activeState);
                 const probationActive = isProbationActive();
+                const probationReady = probationActive
+                    && (preferred.vs.readyState >= CONFIG.monitoring.PROBATION_READY_STATE
+                        || preferred.vs.currentSrc);
 
-                if (!preferred.progressEligible) {
-                    logDebug('[HEALER:CANDIDATE] Switch suppressed', {
+                if (!preferred.progressEligible && !probationReady) {
+                    logSuppression({
                         from: activeCandidateId,
                         to: preferred.id,
                         reason,
                         cause: 'preferred_not_progress_eligible',
                         activeState,
+                        probationActive,
                         scores
                     });
                     logDecision({
@@ -188,18 +236,20 @@ const CandidateSelector = (() => {
                         preferredScore: preferred.score,
                         preferredProgressEligible: preferred.progressEligible,
                         preferredTrusted: preferred.trusted,
-                        probationActive
+                        probationActive,
+                        probationReady
                     });
                     return preferred;
                 }
 
                 if (!activeIsStalled) {
-                    logDebug('[HEALER:CANDIDATE] Switch suppressed', {
+                    logSuppression({
                         from: activeCandidateId,
                         to: preferred.id,
                         reason,
                         cause: 'active_not_stalled',
                         activeState,
+                        probationActive,
                         scores
                     });
                     logDecision({
@@ -219,10 +269,13 @@ const CandidateSelector = (() => {
 
                 const currentTrusted = current ? current.trusted : false;
                 if (currentTrusted && !preferred.trusted) {
-                    logDebug('[HEALER:CANDIDATE] Switch blocked by trust', {
+                    logSuppression({
                         from: activeCandidateId,
                         to: preferred.id,
                         reason,
+                        cause: 'trusted_active_blocks_untrusted',
+                        activeState,
+                        probationActive,
                         currentTrusted,
                         preferredTrusted: preferred.trusted,
                         scores
@@ -243,11 +296,12 @@ const CandidateSelector = (() => {
                 }
 
                 if (!preferred.trusted && !probationActive) {
-                    logDebug('[HEALER:CANDIDATE] Switch suppressed', {
+                    logSuppression({
                         from: activeCandidateId,
                         to: preferred.id,
                         reason,
                         cause: 'untrusted_outside_probation',
+                        activeState,
                         probationActive,
                         scores
                     });

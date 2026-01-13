@@ -8,6 +8,7 @@ const RecoveryManager = (() => {
         const candidateSelector = options.candidateSelector;
         const getVideoId = options.getVideoId;
         const logDebug = options.logDebug;
+        const onRescan = options.onRescan || (() => {});
 
         const backoffManager = BackoffManager.create({ logDebug });
         const failoverManager = FailoverManager.create({
@@ -18,10 +19,30 @@ const RecoveryManager = (() => {
             resetBackoff: backoffManager.resetBackoff
         });
         const probeCandidate = failoverManager.probeCandidate;
+        let lastProbationRescanAt = 0;
+
+        const maybeTriggerProbation = (videoId, monitorState, trigger) => {
+            if (!monitorState) return;
+            if (monitorState.noHealPointCount < CONFIG.stall.PROBATION_AFTER_NO_HEAL_POINTS) {
+                return;
+            }
+            const now = Date.now();
+            if (now - lastProbationRescanAt < CONFIG.stall.PROBATION_RESCAN_COOLDOWN_MS) {
+                return;
+            }
+            lastProbationRescanAt = now;
+            candidateSelector.activateProbation(trigger || 'no_heal_point');
+            onRescan('no_heal_point', {
+                videoId,
+                count: monitorState.noHealPointCount,
+                trigger
+            });
+        };
 
         const handleNoHealPoint = (video, monitorState, reason) => {
             const videoId = getVideoId(video);
             backoffManager.applyBackoff(videoId, monitorState, reason);
+            maybeTriggerProbation(videoId, monitorState, reason);
 
             const stalledForMs = monitorState?.lastProgressTime
                 ? (Date.now() - monitorState.lastProgressTime)

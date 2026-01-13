@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.1.5
+// @version       4.1.6
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -50,6 +50,8 @@ const CONFIG = (() => {
             FAILOVER_AFTER_STALL_MS: 30000,  // Failover after this long stuck without progress
             FAILOVER_PROGRESS_TIMEOUT_MS: 8000, // Trial time for failover candidate to progress
             FAILOVER_COOLDOWN_MS: 30000,     // Minimum time between failover attempts
+            PROBATION_AFTER_NO_HEAL_POINTS: 2, // Open probation after this many no-heal points
+            PROBATION_RESCAN_COOLDOWN_MS: 15000, // Min time between probation rescans
         },
 
         monitoring: {
@@ -57,6 +59,7 @@ const CONFIG = (() => {
             CANDIDATE_SWITCH_DELTA: 2,      // Min score delta before switching active video
             CANDIDATE_MIN_PROGRESS_MS: 5000, // Require sustained progress before switching to new video
             PROBATION_WINDOW_MS: 10000,     // Window to allow untrusted candidate switching
+            PROBATION_READY_STATE: 2,       // Minimum readyState to allow probation override
             PROGRESS_STREAK_RESET_MS: 2500, // Reset progress streak after this long without progress
             PROGRESS_RECENT_MS: 2000,       // "Recent progress" threshold for scoring
             PROGRESS_STALE_MS: 5000,        // "Stale progress" threshold for scoring
@@ -66,6 +69,7 @@ const CONFIG = (() => {
 
         recovery: {
             MIN_HEAL_BUFFER_S: 2,           // Minimum buffered seconds needed to heal
+            MIN_HEAL_BUFFER_EMERGENCY_S: 0.5, // Minimum buffer for emergency/rewind heal
             HEAL_NUDGE_S: 0.5,              // How far to nudge into buffer for contiguous ranges
             HEAL_EDGE_GUARD_S: 0.35,        // Avoid seeking too close to buffer end
             HEAL_RETRY_DELAY_MS: 200,       // Delay before retrying heal after AbortError
@@ -77,6 +81,7 @@ const CONFIG = (() => {
             LOG_CSP_WARNINGS: true,
             NON_ACTIVE_LOG_MS: 300000,      // Non-active candidate log interval
             ACTIVE_LOG_MS: 5000,            // Active candidate log interval
+            SUPPRESSION_LOG_MS: 300000,     // Suppressed switch log interval
             BACKOFF_LOG_INTERVAL_MS: 5000,  // Backoff skip log interval
             CONSOLE_SIGNAL_THROTTLE_MS: 2000, // Throttle console hint signals
             RESOURCE_HINT_THROTTLE_MS: 2000,  // Throttle resource hint signals
@@ -232,8 +237,23 @@ const BufferRanges = (() => {
  */
 const HealPointFinder = (() => {
     const MIN_HEAL_BUFFER_S = CONFIG.recovery.MIN_HEAL_BUFFER_S;
+    const MIN_HEAL_BUFFER_EMERGENCY_S = CONFIG.recovery.MIN_HEAL_BUFFER_EMERGENCY_S;
     const NUDGE_S = CONFIG.recovery.HEAL_NUDGE_S;
     const EDGE_GUARD_S = CONFIG.recovery.HEAL_EDGE_GUARD_S;
+
+    const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
+
+    const getEmergencyStart = (range, currentTime) => {
+        const rangeSize = range.end - range.start;
+        if (rangeSize <= 0) {
+            return range.start;
+        }
+        if (rangeSize <= EDGE_GUARD_S * 2) {
+            return range.start + (rangeSize * 0.5);
+        }
+        const desired = Math.min(currentTime + NUDGE_S, range.end - EDGE_GUARD_S);
+        return clamp(desired, range.start + EDGE_GUARD_S, range.end - EDGE_GUARD_S);
+    };
 
     const findHealPoint = (video, options = {}) => {
         if (!video) {
@@ -255,13 +275,26 @@ const HealPointFinder = (() => {
         }
 
         const candidates = [];
+        const emergencyCandidates = [];
 
         for (let i = 0; i < ranges.length; i++) {
             const range = ranges[i];
+            const rangeSize = range.end - range.start;
             const effectiveStart = Math.max(range.start, currentTime);
             const contentAhead = range.end - effectiveStart;
 
             if (contentAhead <= MIN_HEAL_BUFFER_S) {
+                if (rangeSize >= MIN_HEAL_BUFFER_EMERGENCY_S) {
+                    const start = getEmergencyStart(range, currentTime);
+                    emergencyCandidates.push({
+                        start,
+                        end: range.end,
+                        gapSize: start - currentTime,
+                        headroom: range.end - start,
+                        inRange: currentTime >= range.start && currentTime <= range.end,
+                        rangeIndex: i
+                    });
+                }
                 continue;
             }
 
@@ -312,6 +345,30 @@ const HealPointFinder = (() => {
                     healPoint: `${healPoint.start.toFixed(3)}-${healPoint.end.toFixed(3)}`,
                     gapSize: healPoint.gapSize.toFixed(2) + 's',
                     headroom: healPoint.headroom.toFixed(2) + 's',
+                    edgeGuard: EDGE_GUARD_S
+                });
+            }
+
+            return healPoint;
+        }
+
+        if (emergencyCandidates.length > 0) {
+            emergencyCandidates.sort((a, b) => {
+                if (a.inRange !== b.inRange) return a.inRange ? -1 : 1;
+                const gapAbsA = Math.abs(a.gapSize);
+                const gapAbsB = Math.abs(b.gapSize);
+                if (gapAbsA !== gapAbsB) return gapAbsA - gapAbsB;
+                return b.headroom - a.headroom;
+            });
+
+            const healPoint = emergencyCandidates[0];
+            if (!options.silent) {
+                Logger.add('[HEALER:EMERGENCY] Emergency heal point selected', {
+                    healPoint: `${healPoint.start.toFixed(3)}-${healPoint.end.toFixed(3)}`,
+                    gapSize: healPoint.gapSize.toFixed(2) + 's',
+                    headroom: healPoint.headroom.toFixed(2) + 's',
+                    inRange: healPoint.inRange,
+                    minRequired: MIN_HEAL_BUFFER_EMERGENCY_S + 's',
                     edgeGuard: EDGE_GUARD_S
                 });
             }
@@ -1928,6 +1985,11 @@ const CandidateScorer = (() => {
                 reasons.push('reset');
             }
 
+            if (state.resetPendingAt) {
+                score -= 3;
+                reasons.push('reset_pending');
+            }
+
             if (state.state === 'ERROR') {
                 score -= 2;
                 reasons.push('error_state');
@@ -2070,7 +2132,7 @@ const CandidateSwitchPolicy = (() => {
  * Determines whether a candidate is trusted for switching/failover.
  */
 const CandidateTrust = (() => {
-    const BAD_REASONS = ['fallback_src', 'ended', 'not_in_dom', 'reset', 'error_state', 'error'];
+    const BAD_REASONS = ['fallback_src', 'ended', 'not_in_dom', 'reset', 'reset_pending', 'error_state', 'error'];
 
     const getTrustInfo = (result) => {
         if (!result || !result.progressEligible) {
@@ -2116,6 +2178,11 @@ const CandidateSelector = (() => {
         let probationUntil = 0;
         let probationReason = null;
         let lastDecisionLogTime = 0;
+        let suppressionSummary = {
+            lastLogTime: Date.now(),
+            counts: {},
+            lastSample: null
+        };
         const scorer = CandidateScorer.create({ minProgressMs, isFallbackSource });
         const switchPolicy = CandidateSwitchPolicy.create({
             switchDelta,
@@ -2159,6 +2226,45 @@ const CandidateSelector = (() => {
             if (!detail || !shouldLogDecision(detail.reason)) return;
             lastDecisionLogTime = Date.now();
             Logger.add('[HEALER:CANDIDATE_DECISION] Selection summary', detail);
+        };
+
+        const logSuppression = (detail) => {
+            if (!detail) return;
+            if (detail.reason !== 'interval') {
+                logDebug('[HEALER:CANDIDATE] Switch suppressed', detail);
+                return;
+            }
+            const cause = detail.cause || 'unknown';
+            suppressionSummary.counts[cause] = (suppressionSummary.counts[cause] || 0) + 1;
+            suppressionSummary.lastSample = {
+                from: detail.from,
+                to: detail.to,
+                cause,
+                reason: detail.reason,
+                activeState: detail.activeState,
+                probationActive: detail.probationActive
+            };
+
+            const now = Date.now();
+            const windowMs = now - suppressionSummary.lastLogTime;
+            if (windowMs < CONFIG.logging.SUPPRESSION_LOG_MS) {
+                return;
+            }
+            const total = Object.values(suppressionSummary.counts)
+                .reduce((sum, count) => sum + count, 0);
+            if (total > 0) {
+                Logger.add('[HEALER:SUPPRESSION_SUMMARY] Switch suppressed summary', {
+                    windowMs,
+                    total,
+                    byCause: suppressionSummary.counts,
+                    lastSample: suppressionSummary.lastSample
+                });
+            }
+            suppressionSummary = {
+                lastLogTime: now,
+                counts: {},
+                lastSample: null
+            };
         };
 
         const getActiveId = () => {
@@ -2267,14 +2373,18 @@ const CandidateSelector = (() => {
                 const activeState = current ? current.state : null;
                 const activeIsStalled = !current || ['STALLED', 'RESET', 'ERROR', 'ENDED'].includes(activeState);
                 const probationActive = isProbationActive();
+                const probationReady = probationActive
+                    && (preferred.vs.readyState >= CONFIG.monitoring.PROBATION_READY_STATE
+                        || preferred.vs.currentSrc);
 
-                if (!preferred.progressEligible) {
-                    logDebug('[HEALER:CANDIDATE] Switch suppressed', {
+                if (!preferred.progressEligible && !probationReady) {
+                    logSuppression({
                         from: activeCandidateId,
                         to: preferred.id,
                         reason,
                         cause: 'preferred_not_progress_eligible',
                         activeState,
+                        probationActive,
                         scores
                     });
                     logDecision({
@@ -2287,18 +2397,20 @@ const CandidateSelector = (() => {
                         preferredScore: preferred.score,
                         preferredProgressEligible: preferred.progressEligible,
                         preferredTrusted: preferred.trusted,
-                        probationActive
+                        probationActive,
+                        probationReady
                     });
                     return preferred;
                 }
 
                 if (!activeIsStalled) {
-                    logDebug('[HEALER:CANDIDATE] Switch suppressed', {
+                    logSuppression({
                         from: activeCandidateId,
                         to: preferred.id,
                         reason,
                         cause: 'active_not_stalled',
                         activeState,
+                        probationActive,
                         scores
                     });
                     logDecision({
@@ -2318,10 +2430,13 @@ const CandidateSelector = (() => {
 
                 const currentTrusted = current ? current.trusted : false;
                 if (currentTrusted && !preferred.trusted) {
-                    logDebug('[HEALER:CANDIDATE] Switch blocked by trust', {
+                    logSuppression({
                         from: activeCandidateId,
                         to: preferred.id,
                         reason,
+                        cause: 'trusted_active_blocks_untrusted',
+                        activeState,
+                        probationActive,
                         currentTrusted,
                         preferredTrusted: preferred.trusted,
                         scores
@@ -2342,11 +2457,12 @@ const CandidateSelector = (() => {
                 }
 
                 if (!preferred.trusted && !probationActive) {
-                    logDebug('[HEALER:CANDIDATE] Switch suppressed', {
+                    logSuppression({
                         from: activeCandidateId,
                         to: preferred.id,
                         reason,
                         cause: 'untrusted_outside_probation',
+                        activeState,
                         probationActive,
                         scores
                     });
@@ -2898,6 +3014,7 @@ const RecoveryManager = (() => {
         const candidateSelector = options.candidateSelector;
         const getVideoId = options.getVideoId;
         const logDebug = options.logDebug;
+        const onRescan = options.onRescan || (() => {});
 
         const backoffManager = BackoffManager.create({ logDebug });
         const failoverManager = FailoverManager.create({
@@ -2908,10 +3025,30 @@ const RecoveryManager = (() => {
             resetBackoff: backoffManager.resetBackoff
         });
         const probeCandidate = failoverManager.probeCandidate;
+        let lastProbationRescanAt = 0;
+
+        const maybeTriggerProbation = (videoId, monitorState, trigger) => {
+            if (!monitorState) return;
+            if (monitorState.noHealPointCount < CONFIG.stall.PROBATION_AFTER_NO_HEAL_POINTS) {
+                return;
+            }
+            const now = Date.now();
+            if (now - lastProbationRescanAt < CONFIG.stall.PROBATION_RESCAN_COOLDOWN_MS) {
+                return;
+            }
+            lastProbationRescanAt = now;
+            candidateSelector.activateProbation(trigger || 'no_heal_point');
+            onRescan('no_heal_point', {
+                videoId,
+                count: monitorState.noHealPointCount,
+                trigger
+            });
+        };
 
         const handleNoHealPoint = (video, monitorState, reason) => {
             const videoId = getVideoId(video);
             backoffManager.applyBackoff(videoId, monitorState, reason);
+            maybeTriggerProbation(videoId, monitorState, reason);
 
             const stalledForMs = monitorState?.lastProgressTime
                 ? (Date.now() - monitorState.lastProgressTime)
@@ -3815,14 +3952,6 @@ const MonitoringOrchestrator = (() => {
             switchDelta: CONFIG.monitoring.CANDIDATE_SWITCH_DELTA,
             isFallbackSource
         });
-        const recoveryManager = RecoveryManager.create({
-            monitorsById,
-            candidateSelector,
-            getVideoId,
-            logDebug
-        });
-        candidateSelector.setLockChecker(recoveryManager.isFailoverActive);
-        monitorRegistry.bind({ candidateSelector, recoveryManager });
 
         const setStallHandler = (fn) => {
             stallHandler = typeof fn === 'function' ? fn : (() => {});
@@ -3861,6 +3990,16 @@ const MonitoringOrchestrator = (() => {
                 totalMonitors: afterCount
             });
         };
+
+        const recoveryManager = RecoveryManager.create({
+            monitorsById,
+            candidateSelector,
+            getVideoId,
+            logDebug,
+            onRescan: scanForVideos
+        });
+        candidateSelector.setLockChecker(recoveryManager.isFailoverActive);
+        monitorRegistry.bind({ candidateSelector, recoveryManager });
 
         return {
             monitor: monitorRegistry.monitor,
