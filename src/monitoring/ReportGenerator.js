@@ -15,10 +15,10 @@ Heal Rate: ${metricsSummary.heal_rate}
 Errors: ${metricsSummary.errors}
 
 [LEGEND]
-🔧 = Script internal log
-📋 = Console.log
-⚠️ = Console.warn
-❌ = Console.error
+[SCRIPT] = Script internal log
+[C.LOG]  = Console.log
+[C.WARN] = Console.warn
+[C.ERR]  = Console.error
 
 [TIMELINE - Merged script + console logs]
 `;
@@ -29,12 +29,12 @@ Errors: ${metricsSummary.errors}
 
             if (l.source === 'CONSOLE' || l.type === 'console') {
                 // Console log entry
-                const icon = l.level === 'error' ? '❌' : l.level === 'warn' ? '⚠️' : '📋';
+                const icon = l.level === 'error' ? '[C.ERR]' : l.level === 'warn' ? '[C.WARN]' : '[C.LOG]';
                 return `[${time}] ${icon} ${l.message}`;
             } else {
                 // Internal script log
                 const detail = l.detail ? ' | ' + JSON.stringify(l.detail) : '';
-                return `[${time}] 🔧 ${l.message}${detail}`;
+                return `[${time}] [SCRIPT] ${l.message}${detail}`;
             }
         }).join('\n');
 

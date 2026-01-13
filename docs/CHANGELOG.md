@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.1.7 - 2026-01-13T16:24:32.864Z
+Previous: 4.1.6
+Commit: a59c429
+Changes:
+- Add emergency heal points and probation rescan
+
 ## 4.1.6 - 2026-01-13T15:43:39.906Z
 Previous: 4.1.5
 Commit: cb20b12
