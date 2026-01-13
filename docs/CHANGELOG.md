@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.1.10 - 2026-01-13T17:56:22.882Z
+Previous: 4.1.9
+Commit: b35ccb0
+Changes:
+- Bump version to 4.1.9
+
 ## 4.1.9 - 2026-01-13T16:36:44.545Z
 Previous: 4.1.8
 Commit: 075b541

@@ -62,6 +62,11 @@ const CONFIG = (() => {
             HEAL_RETRY_DELAY_MS: 200,       // Delay before retrying heal after AbortError
             SEEK_SETTLE_MS: 100,            // Wait after seek before validation
             PLAYBACK_VERIFY_MS: 200,        // Wait after play to verify playback
+            CATCH_UP_MIN_S: 2,              // Minimum lag behind live edge before catching up
+            CATCH_UP_DELAY_MS: 3000,        // Delay after a heal before attempting catch-up
+            CATCH_UP_STABLE_MS: 5000,       // Require this long without stalls before catch-up
+            CATCH_UP_RETRY_MS: 5000,        // Delay before retrying deferred catch-up
+            CATCH_UP_MAX_ATTEMPTS: 3,       // Max catch-up attempts per heal
         },
 
         logging: {
