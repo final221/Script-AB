@@ -36,13 +36,16 @@ const SeekTargetCalculator = (() => {
     const calculateSafeTarget = (healPoint) => {
         const { start, end } = healPoint;
         const bufferSize = end - start;
+        const edgeGuard = CONFIG.recovery.HEAL_EDGE_GUARD_S;
 
         if (bufferSize < 1) {
-            return start + (bufferSize * 0.5);
+            const target = start + (bufferSize * 0.5);
+            return Math.min(target, Math.max(start, end - edgeGuard));
         }
 
         const offset = Math.min(0.5, bufferSize - 1);
-        return start + offset;
+        const target = start + offset;
+        return Math.min(target, Math.max(start, end - edgeGuard));
     };
 
     return {

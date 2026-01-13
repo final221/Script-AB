@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.1.5 - 2026-01-13T13:54:06.644Z
+Previous: 4.1.4
+Commit: 4a02c76
+Changes:
+- Summarize probe logging
+
 ## 4.1.4 - 2026-01-13T13:43:21.046Z
 Previous: 4.1.3
 Commit: f22513e

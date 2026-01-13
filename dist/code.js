@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.1.4
+// @version       4.1.5
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -66,6 +66,9 @@ const CONFIG = (() => {
 
         recovery: {
             MIN_HEAL_BUFFER_S: 2,           // Minimum buffered seconds needed to heal
+            HEAL_NUDGE_S: 0.5,              // How far to nudge into buffer for contiguous ranges
+            HEAL_EDGE_GUARD_S: 0.35,        // Avoid seeking too close to buffer end
+            HEAL_RETRY_DELAY_MS: 200,       // Delay before retrying heal after AbortError
             SEEK_SETTLE_MS: 100,            // Wait after seek before validation
             PLAYBACK_VERIFY_MS: 200,        // Wait after play to verify playback
         },
@@ -229,6 +232,8 @@ const BufferRanges = (() => {
  */
 const HealPointFinder = (() => {
     const MIN_HEAL_BUFFER_S = CONFIG.recovery.MIN_HEAL_BUFFER_S;
+    const NUDGE_S = CONFIG.recovery.HEAL_NUDGE_S;
+    const EDGE_GUARD_S = CONFIG.recovery.HEAL_EDGE_GUARD_S;
 
     const findHealPoint = (video, options = {}) => {
         if (!video) {
@@ -249,44 +254,69 @@ const HealPointFinder = (() => {
             });
         }
 
+        const candidates = [];
+
         for (let i = 0; i < ranges.length; i++) {
             const range = ranges[i];
             const effectiveStart = Math.max(range.start, currentTime);
             const contentAhead = range.end - effectiveStart;
 
-            if (contentAhead > MIN_HEAL_BUFFER_S) {
-                let healStart = range.start;
-                let isNudge = false;
+            if (contentAhead <= MIN_HEAL_BUFFER_S) {
+                continue;
+            }
 
-                if (range.start <= currentTime) {
-                    healStart = currentTime + 0.5;
-                    isNudge = true;
+            let healStart = range.start + EDGE_GUARD_S;
+            let isNudge = false;
 
-                    if (healStart >= range.end - 0.1) {
-                        if (!options.silent) {
-                            Logger.add('[HEALER:SKIP] Nudge target too close to buffer end');
-                        }
-                        continue;
-                    }
-                }
+            if (range.start <= currentTime && currentTime <= range.end) {
+                healStart = currentTime + NUDGE_S;
+                isNudge = true;
+            }
 
-                const healPoint = {
-                    start: healStart,
-                    end: range.end,
-                    gapSize: healStart - currentTime,
-                    isNudge: isNudge
-                };
-
+            if (healStart >= range.end - EDGE_GUARD_S) {
                 if (!options.silent) {
-                    Logger.add(isNudge ? '[HEALER:NUDGE] Contiguous buffer found' : '[HEALER:FOUND] Heal point identified', {
-                        healPoint: `${healStart.toFixed(3)}-${range.end.toFixed(3)}`,
-                        gapSize: healPoint.gapSize.toFixed(2) + 's',
-                        bufferAhead: contentAhead.toFixed(2) + 's'
+                    Logger.add('[HEALER:SKIP] Heal target too close to buffer end', {
+                        healStart: healStart.toFixed(3),
+                        rangeEnd: range.end.toFixed(3),
+                        edgeGuard: EDGE_GUARD_S
                     });
                 }
-
-                return healPoint;
+                continue;
             }
+
+            const headroom = range.end - healStart;
+            const gapSize = healStart - currentTime;
+            candidates.push({
+                start: healStart,
+                end: range.end,
+                gapSize,
+                headroom,
+                isNudge,
+                rangeIndex: i
+            });
+        }
+
+        if (candidates.length > 0) {
+            candidates.sort((a, b) => {
+                if (a.isNudge !== b.isNudge) return a.isNudge ? -1 : 1;
+                if (a.gapSize !== b.gapSize) return a.gapSize - b.gapSize;
+                return b.headroom - a.headroom;
+            });
+
+            const healPoint = candidates[0];
+
+            if (!options.silent) {
+                Logger.add(healPoint.isNudge
+                    ? '[HEALER:NUDGE] Contiguous buffer found'
+                    : '[HEALER:FOUND] Heal point identified', {
+                    healPoint: `${healPoint.start.toFixed(3)}-${healPoint.end.toFixed(3)}`,
+                    gapSize: healPoint.gapSize.toFixed(2) + 's',
+                    headroom: healPoint.headroom.toFixed(2) + 's',
+                    edgeGuard: EDGE_GUARD_S
+                });
+            }
+
+            return healPoint;
         }
 
         if (!options.silent) {
@@ -360,13 +390,16 @@ const SeekTargetCalculator = (() => {
     const calculateSafeTarget = (healPoint) => {
         const { start, end } = healPoint;
         const bufferSize = end - start;
+        const edgeGuard = CONFIG.recovery.HEAL_EDGE_GUARD_S;
 
         if (bufferSize < 1) {
-            return start + (bufferSize * 0.5);
+            const target = start + (bufferSize * 0.5);
+            return Math.min(target, Math.max(start, end - edgeGuard));
         }
 
         const offset = Math.min(0.5, bufferSize - 1);
-        return start + offset;
+        const target = start + offset;
+        return Math.min(target, Math.max(start, end - edgeGuard));
     };
 
     return {
@@ -396,21 +429,24 @@ const LiveEdgeSeeker = (() => {
         const target = SeekTargetCalculator.calculateSafeTarget(healPoint);
 
         const validation = SeekTargetCalculator.validateSeekTarget(video, target);
+        const bufferRanges = BufferGapFinder.formatRanges(BufferGapFinder.getBufferRanges(video));
 
         Logger.add('[HEALER:SEEK] Attempting seek', {
             from: fromTime.toFixed(3),
             to: target.toFixed(3),
             healRange: `${healPoint.start.toFixed(2)}-${healPoint.end.toFixed(2)}`,
             valid: validation.valid,
-            headroom: validation.headroom?.toFixed(2)
+            headroom: validation.headroom?.toFixed(2),
+            bufferRanges
         });
 
         if (!validation.valid) {
             Logger.add('[HEALER:SEEK_ABORT] Invalid seek target', {
                 target: target.toFixed(3),
-                reason: validation.reason
+                reason: validation.reason,
+                bufferRanges
             });
-            return { success: false, error: validation.reason };
+            return { success: false, error: validation.reason, errorName: 'INVALID_TARGET' };
         }
 
         // Perform seek
@@ -427,9 +463,10 @@ const LiveEdgeSeeker = (() => {
         } catch (e) {
             Logger.add('[HEALER:SEEK_ERROR] Seek failed', {
                 error: e.name,
-                message: e.message
+                message: e.message,
+                bufferRanges
             });
-            return { success: false, error: e.message };
+            return { success: false, error: e.message, errorName: e.name };
         }
 
         // Attempt playback
@@ -452,16 +489,23 @@ const LiveEdgeSeeker = (() => {
                 } else {
                     Logger.add('[HEALER:PLAY_STUCK] Play returned but not playing', {
                         paused: video.paused,
-                        readyState: video.readyState
+                        readyState: video.readyState,
+                        networkState: video.networkState,
+                        currentSrc: video.currentSrc || '',
+                        bufferRanges
                     });
-                    return { success: false, error: 'Play did not resume' };
+                    return { success: false, error: 'Play did not resume', errorName: 'PLAY_STUCK' };
                 }
             } catch (e) {
                 Logger.add('[HEALER:PLAY_ERROR] Play failed', {
                     error: e.name,
-                    message: e.message
+                    message: e.message,
+                    networkState: video.networkState,
+                    readyState: video.readyState,
+                    currentSrc: video.currentSrc || '',
+                    bufferRanges
                 });
-                return { success: false, error: e.message };
+                return { success: false, error: e.message, errorName: e.name };
             }
         } else {
             // Video already playing
@@ -3231,6 +3275,8 @@ const HealPipeline = (() => {
                     Logger.add('[HEALER:NO_HEAL_POINT] Could not find heal point', {
                         duration: (performance.now() - healStartTime).toFixed(0) + 'ms',
                         suggestion: 'User may need to refresh page',
+                        currentTime: video.currentTime?.toFixed(3),
+                        bufferRanges: BufferGapFinder.formatRanges(BufferGapFinder.getBufferRanges(video)),
                         finalState: VideoState.get(video, getVideoId(video))
                     });
                     Metrics.increment('heals_failed');
@@ -3283,7 +3329,40 @@ const HealPipeline = (() => {
                     });
                 }
 
-                const result = await LiveEdgeSeeker.seekAndPlay(video, targetPoint);
+                const isAbortError = (result) => (
+                    result?.errorName === 'AbortError'
+                    || (typeof result?.error === 'string' && result.error.includes('aborted'))
+                );
+
+                const attemptSeekAndPlay = async (point, label) => {
+                    if (label) {
+                        Logger.add('[HEALER:RETRY] Retrying heal', {
+                            attempt: label,
+                            healRange: `${point.start.toFixed(2)}-${point.end.toFixed(2)}`,
+                            gapSize: point.gapSize?.toFixed(2),
+                            isNudge: point.isNudge
+                        });
+                    }
+                    return LiveEdgeSeeker.seekAndPlay(video, point);
+                };
+
+                let result = await attemptSeekAndPlay(targetPoint, null);
+                let finalPoint = targetPoint;
+
+                if (!result.success && isAbortError(result)) {
+                    await Fn.sleep(CONFIG.recovery.HEAL_RETRY_DELAY_MS);
+                    const retryPoint = BufferGapFinder.findHealPoint(video, { silent: true });
+                    if (retryPoint) {
+                        finalPoint = retryPoint;
+                        result = await attemptSeekAndPlay(retryPoint, 'abort_error');
+                    } else {
+                        Logger.add('[HEALER:RETRY_SKIP] Retry skipped, no heal point available', {
+                            reason: 'abort_error',
+                            currentTime: video.currentTime?.toFixed(3),
+                            bufferRanges: BufferGapFinder.formatRanges(BufferGapFinder.getBufferRanges(video))
+                        });
+                    }
+                }
 
                 const duration = (performance.now() - healStartTime).toFixed(0);
 
@@ -3299,6 +3378,10 @@ const HealPipeline = (() => {
                     Logger.add('[HEALER:FAILED] Heal attempt failed', {
                         duration: duration + 'ms',
                         error: result.error,
+                        errorName: result.errorName,
+                        healRange: finalPoint ? `${finalPoint.start.toFixed(2)}-${finalPoint.end.toFixed(2)}` : null,
+                        isNudge: finalPoint?.isNudge,
+                        gapSize: finalPoint?.gapSize?.toFixed(2),
                         finalState: VideoState.get(video, getVideoId(video))
                     });
                     Metrics.increment('heals_failed');

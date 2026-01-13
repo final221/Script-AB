@@ -53,6 +53,9 @@ const CONFIG = (() => {
 
         recovery: {
             MIN_HEAL_BUFFER_S: 2,           // Minimum buffered seconds needed to heal
+            HEAL_NUDGE_S: 0.5,              // How far to nudge into buffer for contiguous ranges
+            HEAL_EDGE_GUARD_S: 0.35,        // Avoid seeking too close to buffer end
+            HEAL_RETRY_DELAY_MS: 200,       // Delay before retrying heal after AbortError
             SEEK_SETTLE_MS: 100,            // Wait after seek before validation
             PLAYBACK_VERIFY_MS: 200,        // Wait after play to verify playback
         },

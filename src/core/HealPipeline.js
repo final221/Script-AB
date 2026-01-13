@@ -82,6 +82,8 @@ const HealPipeline = (() => {
                     Logger.add('[HEALER:NO_HEAL_POINT] Could not find heal point', {
                         duration: (performance.now() - healStartTime).toFixed(0) + 'ms',
                         suggestion: 'User may need to refresh page',
+                        currentTime: video.currentTime?.toFixed(3),
+                        bufferRanges: BufferGapFinder.formatRanges(BufferGapFinder.getBufferRanges(video)),
                         finalState: VideoState.get(video, getVideoId(video))
                     });
                     Metrics.increment('heals_failed');
@@ -134,7 +136,40 @@ const HealPipeline = (() => {
                     });
                 }
 
-                const result = await LiveEdgeSeeker.seekAndPlay(video, targetPoint);
+                const isAbortError = (result) => (
+                    result?.errorName === 'AbortError'
+                    || (typeof result?.error === 'string' && result.error.includes('aborted'))
+                );
+
+                const attemptSeekAndPlay = async (point, label) => {
+                    if (label) {
+                        Logger.add('[HEALER:RETRY] Retrying heal', {
+                            attempt: label,
+                            healRange: `${point.start.toFixed(2)}-${point.end.toFixed(2)}`,
+                            gapSize: point.gapSize?.toFixed(2),
+                            isNudge: point.isNudge
+                        });
+                    }
+                    return LiveEdgeSeeker.seekAndPlay(video, point);
+                };
+
+                let result = await attemptSeekAndPlay(targetPoint, null);
+                let finalPoint = targetPoint;
+
+                if (!result.success && isAbortError(result)) {
+                    await Fn.sleep(CONFIG.recovery.HEAL_RETRY_DELAY_MS);
+                    const retryPoint = BufferGapFinder.findHealPoint(video, { silent: true });
+                    if (retryPoint) {
+                        finalPoint = retryPoint;
+                        result = await attemptSeekAndPlay(retryPoint, 'abort_error');
+                    } else {
+                        Logger.add('[HEALER:RETRY_SKIP] Retry skipped, no heal point available', {
+                            reason: 'abort_error',
+                            currentTime: video.currentTime?.toFixed(3),
+                            bufferRanges: BufferGapFinder.formatRanges(BufferGapFinder.getBufferRanges(video))
+                        });
+                    }
+                }
 
                 const duration = (performance.now() - healStartTime).toFixed(0);
 
@@ -150,6 +185,10 @@ const HealPipeline = (() => {
                     Logger.add('[HEALER:FAILED] Heal attempt failed', {
                         duration: duration + 'ms',
                         error: result.error,
+                        errorName: result.errorName,
+                        healRange: finalPoint ? `${finalPoint.start.toFixed(2)}-${finalPoint.end.toFixed(2)}` : null,
+                        isNudge: finalPoint?.isNudge,
+                        gapSize: finalPoint?.gapSize?.toFixed(2),
                         finalState: VideoState.get(video, getVideoId(video))
                     });
                     Metrics.increment('heals_failed');

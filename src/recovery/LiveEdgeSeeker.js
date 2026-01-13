@@ -19,21 +19,24 @@ const LiveEdgeSeeker = (() => {
         const target = SeekTargetCalculator.calculateSafeTarget(healPoint);
 
         const validation = SeekTargetCalculator.validateSeekTarget(video, target);
+        const bufferRanges = BufferGapFinder.formatRanges(BufferGapFinder.getBufferRanges(video));
 
         Logger.add('[HEALER:SEEK] Attempting seek', {
             from: fromTime.toFixed(3),
             to: target.toFixed(3),
             healRange: `${healPoint.start.toFixed(2)}-${healPoint.end.toFixed(2)}`,
             valid: validation.valid,
-            headroom: validation.headroom?.toFixed(2)
+            headroom: validation.headroom?.toFixed(2),
+            bufferRanges
         });
 
         if (!validation.valid) {
             Logger.add('[HEALER:SEEK_ABORT] Invalid seek target', {
                 target: target.toFixed(3),
-                reason: validation.reason
+                reason: validation.reason,
+                bufferRanges
             });
-            return { success: false, error: validation.reason };
+            return { success: false, error: validation.reason, errorName: 'INVALID_TARGET' };
         }
 
         // Perform seek
@@ -50,9 +53,10 @@ const LiveEdgeSeeker = (() => {
         } catch (e) {
             Logger.add('[HEALER:SEEK_ERROR] Seek failed', {
                 error: e.name,
-                message: e.message
+                message: e.message,
+                bufferRanges
             });
-            return { success: false, error: e.message };
+            return { success: false, error: e.message, errorName: e.name };
         }
 
         // Attempt playback
@@ -75,16 +79,23 @@ const LiveEdgeSeeker = (() => {
                 } else {
                     Logger.add('[HEALER:PLAY_STUCK] Play returned but not playing', {
                         paused: video.paused,
-                        readyState: video.readyState
+                        readyState: video.readyState,
+                        networkState: video.networkState,
+                        currentSrc: video.currentSrc || '',
+                        bufferRanges
                     });
-                    return { success: false, error: 'Play did not resume' };
+                    return { success: false, error: 'Play did not resume', errorName: 'PLAY_STUCK' };
                 }
             } catch (e) {
                 Logger.add('[HEALER:PLAY_ERROR] Play failed', {
                     error: e.name,
-                    message: e.message
+                    message: e.message,
+                    networkState: video.networkState,
+                    readyState: video.readyState,
+                    currentSrc: video.currentSrc || '',
+                    bufferRanges
                 });
-                return { success: false, error: e.message };
+                return { success: false, error: e.message, errorName: e.name };
             }
         } else {
             // Video already playing
