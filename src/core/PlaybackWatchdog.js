@@ -115,6 +115,8 @@ const PlaybackWatchdog = (() => {
                 state.lastBufferedLength = bufferedLength;
             }
 
+            tracker.logSyncStatus();
+
             const lastProgressTime = state.lastProgressTime || state.firstSeenTime || now;
             const stalledForMs = now - lastProgressTime;
             if (stalledForMs < CONFIG.stall.STALL_CONFIRM_MS) {

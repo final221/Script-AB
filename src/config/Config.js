@@ -52,6 +52,9 @@ const CONFIG = (() => {
             PROGRESS_STALE_MS: 5000,        // "Stale progress" threshold for scoring
             TRUST_STALE_MS: 8000,           // Trust expires if progress is older than this
             PROBE_COOLDOWN_MS: 5000,        // Min time between probe attempts per candidate
+            SYNC_SAMPLE_MS: 5000,           // Sample window for drift detection
+            SYNC_DRIFT_MAX_MS: 1000,        // Log if drift exceeds this threshold
+            SYNC_RATE_MIN: 0.9,             // Log if playback rate falls below this ratio
         },
 
         recovery: {
@@ -74,6 +77,7 @@ const CONFIG = (() => {
             NON_ACTIVE_LOG_MS: 300000,      // Non-active candidate log interval
             ACTIVE_LOG_MS: 5000,            // Active candidate log interval
             SUPPRESSION_LOG_MS: 300000,     // Suppressed switch log interval
+            SYNC_LOG_MS: 300000,            // Playback drift log interval
             BACKOFF_LOG_INTERVAL_MS: 5000,  // Backoff skip log interval
             CONSOLE_SIGNAL_THROTTLE_MS: 2000, // Throttle console hint signals
             RESOURCE_HINT_THROTTLE_MS: 2000,  // Throttle resource hint signals

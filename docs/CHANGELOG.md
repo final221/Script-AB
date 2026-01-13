@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.1.11 - 2026-01-13T18:00:53.362Z
+Previous: 4.1.10
+Commit: 1bbab13
+Changes:
+- Defer catch-up to live edge after stable recovery
+
 ## 4.1.10 - 2026-01-13T17:56:22.882Z
 Previous: 4.1.9
 Commit: b35ccb0

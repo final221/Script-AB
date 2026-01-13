@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.1.10
+// @version       4.1.11
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -65,6 +65,9 @@ const CONFIG = (() => {
             PROGRESS_STALE_MS: 5000,        // "Stale progress" threshold for scoring
             TRUST_STALE_MS: 8000,           // Trust expires if progress is older than this
             PROBE_COOLDOWN_MS: 5000,        // Min time between probe attempts per candidate
+            SYNC_SAMPLE_MS: 5000,           // Sample window for drift detection
+            SYNC_DRIFT_MAX_MS: 1000,        // Log if drift exceeds this threshold
+            SYNC_RATE_MIN: 0.9,             // Log if playback rate falls below this ratio
         },
 
         recovery: {
@@ -87,6 +90,7 @@ const CONFIG = (() => {
             NON_ACTIVE_LOG_MS: 300000,      // Non-active candidate log interval
             ACTIVE_LOG_MS: 5000,            // Active candidate log interval
             SUPPRESSION_LOG_MS: 300000,     // Suppressed switch log interval
+            SYNC_LOG_MS: 300000,            // Playback drift log interval
             BACKOFF_LOG_INTERVAL_MS: 5000,  // Backoff skip log interval
             CONSOLE_SIGNAL_THROTTLE_MS: 2000, // Throttle console hint signals
             RESOURCE_HINT_THROTTLE_MS: 2000,  // Throttle resource hint signals
@@ -1190,6 +1194,9 @@ const PlaybackStateTracker = (() => {
             })(),
             lastStallEventTime: 0,
             pauseFromStall: false,
+            lastSyncWallTime: 0,
+            lastSyncMediaTime: 0,
+            lastSyncLogTime: 0,
             catchUpTimeoutId: null,
             catchUpAttempts: 0,
             lastCatchUpTime: 0,
@@ -1466,6 +1473,53 @@ const PlaybackStateTracker = (() => {
             return false;
         };
 
+        const logSyncStatus = () => {
+            const now = Date.now();
+            if (video.paused || video.readyState < 2) {
+                return;
+            }
+            if (!state.lastSyncWallTime) {
+                state.lastSyncWallTime = now;
+                state.lastSyncMediaTime = video.currentTime;
+                return;
+            }
+            const wallDelta = now - state.lastSyncWallTime;
+            if (wallDelta < CONFIG.monitoring.SYNC_SAMPLE_MS) {
+                return;
+            }
+            const mediaDelta = (video.currentTime - state.lastSyncMediaTime) * 1000;
+            state.lastSyncWallTime = now;
+            state.lastSyncMediaTime = video.currentTime;
+
+            if (wallDelta <= 0) {
+                return;
+            }
+
+            const rate = mediaDelta / wallDelta;
+            const driftMs = wallDelta - mediaDelta;
+            const ranges = BufferGapFinder.getBufferRanges(video);
+            const bufferEndDelta = ranges.length
+                ? (ranges[ranges.length - 1].end - video.currentTime)
+                : null;
+
+            const shouldLog = (now - state.lastSyncLogTime >= CONFIG.logging.SYNC_LOG_MS)
+                || driftMs >= CONFIG.monitoring.SYNC_DRIFT_MAX_MS
+                || rate <= CONFIG.monitoring.SYNC_RATE_MIN;
+
+            if (!shouldLog) {
+                return;
+            }
+            state.lastSyncLogTime = now;
+            logDebug('[HEALER:SYNC] Playback drift sample', {
+                wallDeltaMs: wallDelta,
+                mediaDeltaMs: Math.round(mediaDelta),
+                driftMs: Math.round(driftMs),
+                rate: Number.isFinite(rate) ? rate.toFixed(3) : null,
+                bufferEndDelta: bufferEndDelta !== null ? bufferEndDelta.toFixed(2) + 's' : null,
+                videoState: VideoState.getLite(video, videoId)
+            });
+        };
+
         return {
             state,
             updateProgress,
@@ -1474,7 +1528,8 @@ const PlaybackStateTracker = (() => {
             handleReset,
             shouldSkipUntilProgress,
             evaluateResetPending,
-            clearResetPending
+            clearResetPending,
+            logSyncStatus
         };
     };
 
@@ -1795,6 +1850,8 @@ const PlaybackWatchdog = (() => {
                 });
                 state.lastBufferedLength = bufferedLength;
             }
+
+            tracker.logSyncStatus();
 
             const lastProgressTime = state.lastProgressTime || state.firstSeenTime || now;
             const stalledForMs = now - lastProgressTime;
