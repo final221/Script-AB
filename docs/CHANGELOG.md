@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.1.1 - 2026-01-13T11:32:25.046Z
+Previous: 4.1.0
+Commit: ca57e00
+Changes:
+- Bump minor version to 4.1.0
+
 ## 4.1.0 - 2026-01-12T23:11:56.963Z
 Previous: 4.0.58
 Commit: f40377f

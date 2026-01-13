@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.1.0
+// @version       4.1.1
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -39,6 +39,7 @@ const CONFIG = (() => {
             STALL_CONFIRM_BUFFER_OK_MS: 1500, // Extra delay when buffer is healthy
             PAUSED_STALL_GRACE_MS: 3000,    // Allow stall detection shortly after pause
             INIT_PROGRESS_GRACE_MS: 5000,   // Wait for initial progress before treating as stalled
+            RESET_GRACE_MS: 2000,           // Delay before confirming reset (abort/emptied)
             RECOVERY_WINDOW_MS: 1500,       // Recent progress window to consider recovered
             RETRY_COOLDOWN_MS: 2000,        // Cooldown between heal attempts for same stall
             HEAL_POLL_INTERVAL_MS: 200,     // How often to poll for heal point
@@ -55,6 +56,7 @@ const CONFIG = (() => {
             MAX_VIDEO_MONITORS: 8,          // Max concurrent video elements to monitor
             CANDIDATE_SWITCH_DELTA: 2,      // Min score delta before switching active video
             CANDIDATE_MIN_PROGRESS_MS: 5000, // Require sustained progress before switching to new video
+            PROBATION_WINDOW_MS: 10000,     // Window to allow untrusted candidate switching
             PROGRESS_STREAK_RESET_MS: 2500, // Reset progress streak after this long without progress
             PROGRESS_RECENT_MS: 2000,       // "Recent progress" threshold for scoring
             PROGRESS_STALE_MS: 5000,        // "Stale progress" threshold for scoring
@@ -1079,7 +1081,47 @@ const PlaybackStateTracker = (() => {
                 }
             })(),
             lastStallEventTime: 0,
-            pauseFromStall: false
+            pauseFromStall: false,
+            resetPendingAt: 0,
+            resetPendingReason: null,
+            resetPendingType: null,
+            resetPendingCallback: null
+        };
+
+        const evaluateResetState = (vs) => {
+            const ranges = BufferGapFinder.getBufferRanges(video);
+            const hasBuffer = ranges.length > 0;
+            const hasSrc = Boolean(vs.currentSrc || vs.src);
+            const lowReadyState = vs.readyState <= 1;
+            const isHardReset = !hasSrc && lowReadyState;
+            const isSoftReset = lowReadyState
+                && !hasBuffer
+                && (vs.networkState === 0 || vs.networkState === 3);
+
+            return {
+                ranges,
+                hasBuffer,
+                hasSrc,
+                lowReadyState,
+                isHardReset,
+                isSoftReset
+            };
+        };
+
+        const clearResetPending = (reason, vs) => {
+            if (!state.resetPendingAt) return false;
+            const now = Date.now();
+            logDebug('[HEALER:RESET_CLEAR] Reset pending cleared', {
+                reason,
+                pendingForMs: now - state.resetPendingAt,
+                resetType: state.resetPendingType,
+                videoState: vs || VideoState.get(video, videoId)
+            });
+            state.resetPendingAt = 0;
+            state.resetPendingReason = null;
+            state.resetPendingType = null;
+            state.resetPendingCallback = null;
+            return true;
         };
 
         const updateProgress = (reason) => {
@@ -1114,6 +1156,9 @@ const PlaybackStateTracker = (() => {
 
             state.lastProgressTime = now;
             state.pauseFromStall = false;
+            if (state.resetPendingAt) {
+                clearResetPending('progress', VideoState.get(video, videoId));
+            }
 
             if (!state.progressEligible
                 && state.progressStreakMs >= CONFIG.monitoring.CANDIDATE_MIN_PROGRESS_MS) {
@@ -1159,6 +1204,13 @@ const PlaybackStateTracker = (() => {
                 readyState: video.readyState,
                 currentSrc: src
             });
+            if (state.resetPendingAt) {
+                const vs = VideoState.get(video, videoId);
+                const resetState = evaluateResetState(vs);
+                if (!resetState.isHardReset && !resetState.isSoftReset) {
+                    clearResetPending('ready', vs);
+                }
+            }
         };
 
         const markStallEvent = (reason) => {
@@ -1174,44 +1226,89 @@ const PlaybackStateTracker = (() => {
 
         const handleReset = (reason, onReset) => {
             const vs = VideoState.get(video, videoId);
-            const ranges = BufferGapFinder.getBufferRanges(video);
-            const hasBuffer = ranges.length > 0;
-            const hasSrc = Boolean(vs.currentSrc || vs.src);
-            const lowReadyState = vs.readyState <= 1;
-            const isHardReset = !hasSrc && lowReadyState;
-            const isSoftReset = lowReadyState
-                && !hasBuffer
-                && (vs.networkState === 0 || vs.networkState === 3);
+            const resetState = evaluateResetState(vs);
 
             logDebug('[HEALER:RESET_CHECK] Reset evaluation', {
                 reason,
-                hasSrc,
+                hasSrc: resetState.hasSrc,
                 readyState: vs.readyState,
                 networkState: vs.networkState,
-                bufferRanges: BufferGapFinder.formatRanges(ranges),
+                bufferRanges: BufferGapFinder.formatRanges(resetState.ranges),
                 lastSrc: state.lastSrc,
-                hardReset: isHardReset,
-                softReset: isSoftReset
+                hardReset: resetState.isHardReset,
+                softReset: resetState.isSoftReset
             });
 
-            if (!isHardReset && !isSoftReset) {
+            if (!resetState.isHardReset && !resetState.isSoftReset) {
                 logDebug('[HEALER:RESET_SKIP] Reset suppressed', {
                     reason,
-                    hasSrc,
+                    hasSrc: resetState.hasSrc,
                     readyState: vs.readyState,
                     networkState: vs.networkState,
-                    hasBuffer
+                    hasBuffer: resetState.hasBuffer
                 });
                 return;
             }
 
+            if (!state.resetPendingAt) {
+                state.resetPendingAt = Date.now();
+                state.resetPendingReason = reason;
+                state.resetPendingType = resetState.isHardReset ? 'hard' : 'soft';
+                logDebug('[HEALER:RESET_PENDING] Reset pending', {
+                    reason,
+                    resetType: state.resetPendingType,
+                    graceMs: CONFIG.stall.RESET_GRACE_MS,
+                    videoState: vs
+                });
+            }
+            state.resetPendingCallback = onReset;
+        };
+
+        const evaluateResetPending = (trigger) => {
+            if (!state.resetPendingAt) {
+                return false;
+            }
+            const now = Date.now();
+            const vs = VideoState.get(video, videoId);
+            const resetState = evaluateResetState(vs);
+
+            if (!resetState.isHardReset && !resetState.isSoftReset) {
+                clearResetPending(trigger || 'recovered', vs);
+                return false;
+            }
+
+            const pendingForMs = now - state.resetPendingAt;
+            if (pendingForMs < CONFIG.stall.RESET_GRACE_MS) {
+                return true;
+            }
+
+            const pendingReason = state.resetPendingReason || trigger;
+            const pendingType = state.resetPendingType || (resetState.isHardReset ? 'hard' : 'soft');
+
             state.state = 'RESET';
             logDebug('[HEALER:RESET] Video reset', {
-                reason,
-                resetType: isHardReset ? 'hard' : 'soft',
+                reason: pendingReason,
+                resetType: pendingType,
+                pendingForMs,
                 videoState: vs
             });
-            onReset({ reason, videoState: vs }, state);
+
+            const callback = state.resetPendingCallback;
+            state.resetPendingAt = 0;
+            state.resetPendingReason = null;
+            state.resetPendingType = null;
+            state.resetPendingCallback = null;
+
+            if (typeof callback === 'function') {
+                callback({
+                    reason: pendingReason,
+                    resetType: pendingType,
+                    pendingForMs,
+                    videoState: vs
+                }, state);
+            }
+
+            return true;
         };
 
         const shouldSkipUntilProgress = () => {
@@ -1257,7 +1354,9 @@ const PlaybackStateTracker = (() => {
             markStallEvent,
             markReady,
             handleReset,
-            shouldSkipUntilProgress
+            shouldSkipUntilProgress,
+            evaluateResetPending,
+            clearResetPending
         };
     };
 
@@ -1460,6 +1559,11 @@ const PlaybackWatchdog = (() => {
                     videoId
                 });
                 onRemoved();
+                return;
+            }
+
+            tracker.evaluateResetPending('watchdog');
+            if (state.resetPendingAt) {
                 return;
             }
 
@@ -1922,6 +2026,8 @@ const CandidateSelector = (() => {
         let activeCandidateId = null;
         let lockChecker = null;
         let lastGoodCandidateId = null;
+        let probationUntil = 0;
+        let probationReason = null;
         const scorer = CandidateScorer.create({ minProgressMs, isFallbackSource });
         const switchPolicy = CandidateSwitchPolicy.create({
             switchDelta,
@@ -1931,6 +2037,29 @@ const CandidateSelector = (() => {
 
         const setLockChecker = (fn) => {
             lockChecker = fn;
+        };
+
+        const activateProbation = (reason) => {
+            const windowMs = CONFIG.monitoring.PROBATION_WINDOW_MS;
+            probationUntil = Date.now() + windowMs;
+            probationReason = reason || 'unknown';
+            Logger.add('[HEALER:PROBATION] Window started', {
+                reason: probationReason,
+                windowMs
+            });
+        };
+
+        const isProbationActive = () => {
+            if (!probationUntil) return false;
+            if (Date.now() <= probationUntil) {
+                return true;
+            }
+            Logger.add('[HEALER:PROBATION] Window ended', {
+                reason: probationReason
+            });
+            probationUntil = 0;
+            probationReason = null;
+            return false;
         };
 
         const getActiveId = () => {
@@ -2038,6 +2167,7 @@ const CandidateSelector = (() => {
             if (preferred && preferred.id !== activeCandidateId) {
                 const activeState = current ? current.state : null;
                 const activeIsStalled = !current || ['STALLED', 'RESET', 'ERROR', 'ENDED'].includes(activeState);
+                const probationActive = isProbationActive();
 
                 if (!preferred.progressEligible) {
                     logDebug('[HEALER:CANDIDATE] Switch suppressed', {
@@ -2076,6 +2206,18 @@ const CandidateSelector = (() => {
                     return preferred;
                 }
 
+                if (!preferred.trusted && !probationActive) {
+                    logDebug('[HEALER:CANDIDATE] Switch suppressed', {
+                        from: activeCandidateId,
+                        to: preferred.id,
+                        reason,
+                        cause: 'untrusted_outside_probation',
+                        probationActive,
+                        scores
+                    });
+                    return preferred;
+                }
+
                 const decision = switchPolicy.shouldSwitch(current, preferred, scores, reason);
                 if (decision.allow) {
                     Logger.add('[HEALER:CANDIDATE] Active video switched', {
@@ -2087,6 +2229,7 @@ const CandidateSelector = (() => {
                         bestScore: preferred.score,
                         bestProgressStreakMs: preferred.progressStreakMs,
                         bestProgressEligible: preferred.progressEligible,
+                        probationActive,
                         scores
                     });
                     activeCandidateId = preferred.id;
@@ -2135,7 +2278,9 @@ const CandidateSelector = (() => {
             scoreVideo,
             getActiveId,
             setActiveId,
-            setLockChecker
+            setLockChecker,
+            activateProbation,
+            isProbationActive
         };
     };
 
@@ -3207,6 +3352,26 @@ const ExternalSignalRouter = (() => {
             });
         };
 
+        const probeCandidates = (reason, excludeId = null) => {
+            if (!recoveryManager || typeof recoveryManager.probeCandidate !== 'function') {
+                return;
+            }
+            const attempts = [];
+            let attemptedCount = 0;
+            for (const [videoId] of monitorsById.entries()) {
+                if (videoId === excludeId) continue;
+                const attempted = recoveryManager.probeCandidate(videoId, reason);
+                attempts.push({ videoId, attempted });
+                if (attempted) attemptedCount += 1;
+            }
+            Logger.add('[HEALER:PROBE_BURST] Probing candidates', {
+                reason,
+                excludeId,
+                attemptedCount,
+                attempts
+            });
+        };
+
         const handleSignal = (signal = {}) => {
             if (!signal || monitorsById.size === 0) return;
 
@@ -3272,6 +3437,10 @@ const ExternalSignalRouter = (() => {
                     message: truncateMessage(message)
                 });
 
+                if (candidateSelector && typeof candidateSelector.activateProbation === 'function') {
+                    candidateSelector.activateProbation('processing_asset');
+                }
+
                 logCandidateSnapshot('processing_asset');
                 onRescan('processing_asset', { level, message: truncateMessage(message) });
 
@@ -3310,6 +3479,10 @@ const ExternalSignalRouter = (() => {
                     if (activeIsStalled) {
                         recoveryManager.probeCandidate(best.id, 'processing_asset');
                     }
+                }
+
+                if (activeIsStalled) {
+                    probeCandidates('processing_asset', activeId);
                 }
 
                 const activeEntryForPlay = activeId ? monitorsById.get(activeId) : null;

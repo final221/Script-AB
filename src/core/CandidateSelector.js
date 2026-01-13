@@ -14,6 +14,8 @@ const CandidateSelector = (() => {
         let activeCandidateId = null;
         let lockChecker = null;
         let lastGoodCandidateId = null;
+        let probationUntil = 0;
+        let probationReason = null;
         const scorer = CandidateScorer.create({ minProgressMs, isFallbackSource });
         const switchPolicy = CandidateSwitchPolicy.create({
             switchDelta,
@@ -23,6 +25,29 @@ const CandidateSelector = (() => {
 
         const setLockChecker = (fn) => {
             lockChecker = fn;
+        };
+
+        const activateProbation = (reason) => {
+            const windowMs = CONFIG.monitoring.PROBATION_WINDOW_MS;
+            probationUntil = Date.now() + windowMs;
+            probationReason = reason || 'unknown';
+            Logger.add('[HEALER:PROBATION] Window started', {
+                reason: probationReason,
+                windowMs
+            });
+        };
+
+        const isProbationActive = () => {
+            if (!probationUntil) return false;
+            if (Date.now() <= probationUntil) {
+                return true;
+            }
+            Logger.add('[HEALER:PROBATION] Window ended', {
+                reason: probationReason
+            });
+            probationUntil = 0;
+            probationReason = null;
+            return false;
         };
 
         const getActiveId = () => {
@@ -130,6 +155,7 @@ const CandidateSelector = (() => {
             if (preferred && preferred.id !== activeCandidateId) {
                 const activeState = current ? current.state : null;
                 const activeIsStalled = !current || ['STALLED', 'RESET', 'ERROR', 'ENDED'].includes(activeState);
+                const probationActive = isProbationActive();
 
                 if (!preferred.progressEligible) {
                     logDebug('[HEALER:CANDIDATE] Switch suppressed', {
@@ -168,6 +194,18 @@ const CandidateSelector = (() => {
                     return preferred;
                 }
 
+                if (!preferred.trusted && !probationActive) {
+                    logDebug('[HEALER:CANDIDATE] Switch suppressed', {
+                        from: activeCandidateId,
+                        to: preferred.id,
+                        reason,
+                        cause: 'untrusted_outside_probation',
+                        probationActive,
+                        scores
+                    });
+                    return preferred;
+                }
+
                 const decision = switchPolicy.shouldSwitch(current, preferred, scores, reason);
                 if (decision.allow) {
                     Logger.add('[HEALER:CANDIDATE] Active video switched', {
@@ -179,6 +217,7 @@ const CandidateSelector = (() => {
                         bestScore: preferred.score,
                         bestProgressStreakMs: preferred.progressStreakMs,
                         bestProgressEligible: preferred.progressEligible,
+                        probationActive,
                         scores
                     });
                     activeCandidateId = preferred.id;
@@ -227,7 +266,9 @@ const CandidateSelector = (() => {
             scoreVideo,
             getActiveId,
             setActiveId,
-            setLockChecker
+            setLockChecker,
+            activateProbation,
+            isProbationActive
         };
     };
 

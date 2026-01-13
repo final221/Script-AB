@@ -99,4 +99,51 @@ describe('CandidateSelector', () => {
 
         expect(selector.getActiveId()).toBe('video-2');
     });
+
+    it('keeps untrusted candidates unless probation is active', () => {
+        const CandidateSelector = window.CandidateSelector;
+        const monitorsById = new Map();
+        const selector = CandidateSelector.create({
+            monitorsById,
+            logDebug: () => {},
+            maxMonitors: 3,
+            minProgressMs: 5000,
+            switchDelta: 2,
+            isFallbackSource: (src) => src.includes('fallback')
+        });
+
+        const now = Date.now();
+        const stalledVideo = makeVideo({
+            paused: true,
+            readyState: 0,
+            currentTime: 0,
+            currentSrc: ''
+        });
+        const fallbackVideo = makeVideo({
+            paused: false,
+            readyState: 4,
+            currentTime: 42,
+            currentSrc: 'blob:fallback',
+            buffered: { length: 1, start: () => 40, end: () => 50 }
+        });
+
+        monitorsById.set('video-1', {
+            video: stalledVideo,
+            monitor: { state: { state: 'STALLED', hasProgress: false, lastProgressTime: 0, progressStreakMs: 0, progressEligible: false } }
+        });
+        monitorsById.set('video-2', {
+            video: fallbackVideo,
+            monitor: { state: { state: 'PLAYING', hasProgress: true, lastProgressTime: now, progressStreakMs: 6000, progressEligible: true } }
+        });
+
+        selector.setActiveId('video-1');
+        selector.evaluateCandidates('test');
+
+        expect(selector.getActiveId()).toBe('video-1');
+
+        selector.activateProbation('processing_asset');
+        selector.evaluateCandidates('processing_asset');
+
+        expect(selector.getActiveId()).toBe('video-2');
+    });
 });

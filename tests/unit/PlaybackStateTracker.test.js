@@ -26,7 +26,7 @@ const createVideo = (overrides = {}) => {
 };
 
 describe('PlaybackStateTracker.handleReset', () => {
-    it('marks RESET on hard reset (empty src + low readyState)', () => {
+    it('defers hard reset until grace window expires', () => {
         const video = createVideo({ readyState: 0, networkState: 0, currentSrc: '' });
         const logDebug = vi.fn();
         const tracker = PlaybackStateTracker.create(video, 'video-1', logDebug);
@@ -34,17 +34,31 @@ describe('PlaybackStateTracker.handleReset', () => {
 
         tracker.handleReset('emptied', onReset);
 
+        expect(tracker.state.state).not.toBe('RESET');
+        expect(tracker.state.resetPendingAt).toBeGreaterThan(0);
+        expect(onReset).not.toHaveBeenCalled();
+
+        tracker.state.resetPendingAt = Date.now() - (CONFIG.stall.RESET_GRACE_MS + 1);
+        tracker.evaluateResetPending('test');
+
         expect(tracker.state.state).toBe('RESET');
         expect(onReset).toHaveBeenCalledOnce();
     });
 
-    it('marks RESET on soft reset (no buffer + low readyState + no source network)', () => {
+    it('defers soft reset until grace window expires', () => {
         const video = createVideo({ readyState: 1, networkState: 3, currentSrc: 'blob:stream' });
         const logDebug = vi.fn();
         const tracker = PlaybackStateTracker.create(video, 'video-2', logDebug);
         const onReset = vi.fn();
 
         tracker.handleReset('abort', onReset);
+
+        expect(tracker.state.state).not.toBe('RESET');
+        expect(tracker.state.resetPendingAt).toBeGreaterThan(0);
+        expect(onReset).not.toHaveBeenCalled();
+
+        tracker.state.resetPendingAt = Date.now() - (CONFIG.stall.RESET_GRACE_MS + 1);
+        tracker.evaluateResetPending('test');
 
         expect(tracker.state.state).toBe('RESET');
         expect(onReset).toHaveBeenCalledOnce();
@@ -58,6 +72,24 @@ describe('PlaybackStateTracker.handleReset', () => {
 
         tracker.handleReset('emptied', onReset);
 
+        expect(tracker.state.state).not.toBe('RESET');
+        expect(tracker.state.resetPendingAt).toBe(0);
+        expect(onReset).not.toHaveBeenCalled();
+    });
+
+    it('clears pending reset when video recovers', () => {
+        const video = createVideo({ readyState: 0, networkState: 0, currentSrc: '' });
+        const logDebug = vi.fn();
+        const tracker = PlaybackStateTracker.create(video, 'video-4', logDebug);
+        const onReset = vi.fn();
+
+        tracker.handleReset('emptied', onReset);
+        expect(tracker.state.resetPendingAt).toBeGreaterThan(0);
+
+        defineVideoProps(video, { readyState: 2, networkState: 1, currentSrc: 'blob:stream' });
+        tracker.evaluateResetPending('test');
+
+        expect(tracker.state.resetPendingAt).toBe(0);
         expect(tracker.state.state).not.toBe('RESET');
         expect(onReset).not.toHaveBeenCalled();
     });

@@ -58,6 +58,26 @@ const ExternalSignalRouter = (() => {
             });
         };
 
+        const probeCandidates = (reason, excludeId = null) => {
+            if (!recoveryManager || typeof recoveryManager.probeCandidate !== 'function') {
+                return;
+            }
+            const attempts = [];
+            let attemptedCount = 0;
+            for (const [videoId] of monitorsById.entries()) {
+                if (videoId === excludeId) continue;
+                const attempted = recoveryManager.probeCandidate(videoId, reason);
+                attempts.push({ videoId, attempted });
+                if (attempted) attemptedCount += 1;
+            }
+            Logger.add('[HEALER:PROBE_BURST] Probing candidates', {
+                reason,
+                excludeId,
+                attemptedCount,
+                attempts
+            });
+        };
+
         const handleSignal = (signal = {}) => {
             if (!signal || monitorsById.size === 0) return;
 
@@ -123,6 +143,10 @@ const ExternalSignalRouter = (() => {
                     message: truncateMessage(message)
                 });
 
+                if (candidateSelector && typeof candidateSelector.activateProbation === 'function') {
+                    candidateSelector.activateProbation('processing_asset');
+                }
+
                 logCandidateSnapshot('processing_asset');
                 onRescan('processing_asset', { level, message: truncateMessage(message) });
 
@@ -161,6 +185,10 @@ const ExternalSignalRouter = (() => {
                     if (activeIsStalled) {
                         recoveryManager.probeCandidate(best.id, 'processing_asset');
                     }
+                }
+
+                if (activeIsStalled) {
+                    probeCandidates('processing_asset', activeId);
                 }
 
                 const activeEntryForPlay = activeId ? monitorsById.get(activeId) : null;

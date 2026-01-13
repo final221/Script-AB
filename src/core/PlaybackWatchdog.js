@@ -31,6 +31,11 @@ const PlaybackWatchdog = (() => {
                 return;
             }
 
+            tracker.evaluateResetPending('watchdog');
+            if (state.resetPendingAt) {
+                return;
+            }
+
             if (isHealing()) {
                 return;
             }

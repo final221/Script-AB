@@ -35,7 +35,47 @@ const PlaybackStateTracker = (() => {
                 }
             })(),
             lastStallEventTime: 0,
-            pauseFromStall: false
+            pauseFromStall: false,
+            resetPendingAt: 0,
+            resetPendingReason: null,
+            resetPendingType: null,
+            resetPendingCallback: null
+        };
+
+        const evaluateResetState = (vs) => {
+            const ranges = BufferGapFinder.getBufferRanges(video);
+            const hasBuffer = ranges.length > 0;
+            const hasSrc = Boolean(vs.currentSrc || vs.src);
+            const lowReadyState = vs.readyState <= 1;
+            const isHardReset = !hasSrc && lowReadyState;
+            const isSoftReset = lowReadyState
+                && !hasBuffer
+                && (vs.networkState === 0 || vs.networkState === 3);
+
+            return {
+                ranges,
+                hasBuffer,
+                hasSrc,
+                lowReadyState,
+                isHardReset,
+                isSoftReset
+            };
+        };
+
+        const clearResetPending = (reason, vs) => {
+            if (!state.resetPendingAt) return false;
+            const now = Date.now();
+            logDebug('[HEALER:RESET_CLEAR] Reset pending cleared', {
+                reason,
+                pendingForMs: now - state.resetPendingAt,
+                resetType: state.resetPendingType,
+                videoState: vs || VideoState.get(video, videoId)
+            });
+            state.resetPendingAt = 0;
+            state.resetPendingReason = null;
+            state.resetPendingType = null;
+            state.resetPendingCallback = null;
+            return true;
         };
 
         const updateProgress = (reason) => {
@@ -70,6 +110,9 @@ const PlaybackStateTracker = (() => {
 
             state.lastProgressTime = now;
             state.pauseFromStall = false;
+            if (state.resetPendingAt) {
+                clearResetPending('progress', VideoState.get(video, videoId));
+            }
 
             if (!state.progressEligible
                 && state.progressStreakMs >= CONFIG.monitoring.CANDIDATE_MIN_PROGRESS_MS) {
@@ -115,6 +158,13 @@ const PlaybackStateTracker = (() => {
                 readyState: video.readyState,
                 currentSrc: src
             });
+            if (state.resetPendingAt) {
+                const vs = VideoState.get(video, videoId);
+                const resetState = evaluateResetState(vs);
+                if (!resetState.isHardReset && !resetState.isSoftReset) {
+                    clearResetPending('ready', vs);
+                }
+            }
         };
 
         const markStallEvent = (reason) => {
@@ -130,44 +180,89 @@ const PlaybackStateTracker = (() => {
 
         const handleReset = (reason, onReset) => {
             const vs = VideoState.get(video, videoId);
-            const ranges = BufferGapFinder.getBufferRanges(video);
-            const hasBuffer = ranges.length > 0;
-            const hasSrc = Boolean(vs.currentSrc || vs.src);
-            const lowReadyState = vs.readyState <= 1;
-            const isHardReset = !hasSrc && lowReadyState;
-            const isSoftReset = lowReadyState
-                && !hasBuffer
-                && (vs.networkState === 0 || vs.networkState === 3);
+            const resetState = evaluateResetState(vs);
 
             logDebug('[HEALER:RESET_CHECK] Reset evaluation', {
                 reason,
-                hasSrc,
+                hasSrc: resetState.hasSrc,
                 readyState: vs.readyState,
                 networkState: vs.networkState,
-                bufferRanges: BufferGapFinder.formatRanges(ranges),
+                bufferRanges: BufferGapFinder.formatRanges(resetState.ranges),
                 lastSrc: state.lastSrc,
-                hardReset: isHardReset,
-                softReset: isSoftReset
+                hardReset: resetState.isHardReset,
+                softReset: resetState.isSoftReset
             });
 
-            if (!isHardReset && !isSoftReset) {
+            if (!resetState.isHardReset && !resetState.isSoftReset) {
                 logDebug('[HEALER:RESET_SKIP] Reset suppressed', {
                     reason,
-                    hasSrc,
+                    hasSrc: resetState.hasSrc,
                     readyState: vs.readyState,
                     networkState: vs.networkState,
-                    hasBuffer
+                    hasBuffer: resetState.hasBuffer
                 });
                 return;
             }
 
+            if (!state.resetPendingAt) {
+                state.resetPendingAt = Date.now();
+                state.resetPendingReason = reason;
+                state.resetPendingType = resetState.isHardReset ? 'hard' : 'soft';
+                logDebug('[HEALER:RESET_PENDING] Reset pending', {
+                    reason,
+                    resetType: state.resetPendingType,
+                    graceMs: CONFIG.stall.RESET_GRACE_MS,
+                    videoState: vs
+                });
+            }
+            state.resetPendingCallback = onReset;
+        };
+
+        const evaluateResetPending = (trigger) => {
+            if (!state.resetPendingAt) {
+                return false;
+            }
+            const now = Date.now();
+            const vs = VideoState.get(video, videoId);
+            const resetState = evaluateResetState(vs);
+
+            if (!resetState.isHardReset && !resetState.isSoftReset) {
+                clearResetPending(trigger || 'recovered', vs);
+                return false;
+            }
+
+            const pendingForMs = now - state.resetPendingAt;
+            if (pendingForMs < CONFIG.stall.RESET_GRACE_MS) {
+                return true;
+            }
+
+            const pendingReason = state.resetPendingReason || trigger;
+            const pendingType = state.resetPendingType || (resetState.isHardReset ? 'hard' : 'soft');
+
             state.state = 'RESET';
             logDebug('[HEALER:RESET] Video reset', {
-                reason,
-                resetType: isHardReset ? 'hard' : 'soft',
+                reason: pendingReason,
+                resetType: pendingType,
+                pendingForMs,
                 videoState: vs
             });
-            onReset({ reason, videoState: vs }, state);
+
+            const callback = state.resetPendingCallback;
+            state.resetPendingAt = 0;
+            state.resetPendingReason = null;
+            state.resetPendingType = null;
+            state.resetPendingCallback = null;
+
+            if (typeof callback === 'function') {
+                callback({
+                    reason: pendingReason,
+                    resetType: pendingType,
+                    pendingForMs,
+                    videoState: vs
+                }, state);
+            }
+
+            return true;
         };
 
         const shouldSkipUntilProgress = () => {
@@ -213,7 +308,9 @@ const PlaybackStateTracker = (() => {
             markStallEvent,
             markReady,
             handleReset,
-            shouldSkipUntilProgress
+            shouldSkipUntilProgress,
+            evaluateResetPending,
+            clearResetPending
         };
     };
 
