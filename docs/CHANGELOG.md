@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.1.8 - 2026-01-13T16:31:21.301Z
+Previous: 4.1.7
+Commit: b1b0c5f
+Changes:
+- Clarify report legend markers
+
 ## 4.1.7 - 2026-01-13T16:24:32.864Z
 Previous: 4.1.6
 Commit: a59c429
