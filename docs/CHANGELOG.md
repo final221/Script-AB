@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.1.14 - 2026-01-13T19:23:14.135Z
+Previous: 4.1.13
+Commit: d4144e5
+Changes:
+- Capture console info/debug and signals
+
 ## 4.1.13 - 2026-01-13T19:20:30.071Z
 Previous: 4.1.12
 Commit: c7dd009

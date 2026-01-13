@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.1.13
+// @version       4.1.14
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -974,6 +974,12 @@ const Instrumentation = (() => {
     const setupGlobalErrorHandlers = () => {
         window.addEventListener('error', (event) => {
             const classification = classifyError(event.error, event.message || '');
+            Logger.captureConsole('error', [
+                `GlobalError: ${truncateMessage(event.message || 'Unknown error', CONFIG.logging.LOG_REASON_MAX_LEN)}`,
+                event.filename ? `(source: ${event.filename.split('/').pop()})` : '',
+                Number.isFinite(event.lineno) ? `(line: ${event.lineno})` : '',
+                Number.isFinite(event.colno) ? `(col: ${event.colno})` : ''
+            ].filter(Boolean).join(' '));
 
             Logger.add('[INSTRUMENT:ERROR] Global error caught', {
                 message: event.message,
@@ -990,10 +996,15 @@ const Instrumentation = (() => {
         });
 
         window.addEventListener('unhandledrejection', (event) => {
+            const reason = event.reason
+                ? truncateMessage(event.reason, CONFIG.logging.LOG_REASON_MAX_LEN)
+                : 'Unknown';
+            Logger.captureConsole('error', [
+                'UnhandledRejection:',
+                reason
+            ]);
             Logger.add('[INSTRUMENT:REJECTION] Unhandled promise rejection', {
-                reason: event.reason
-                    ? truncateMessage(event.reason, CONFIG.logging.LOG_REASON_MAX_LEN)
-                    : 'Unknown',
+                reason,
                 severity: 'MEDIUM',
                 videoState: getVideoState()
             });
