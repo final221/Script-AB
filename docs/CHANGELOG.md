@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.1.4 - 2026-01-13T13:43:21.046Z
+Previous: 4.1.3
+Commit: f22513e
+Changes:
+- Throttle non-active event logging
+
 ## 4.1.3 - 2026-01-13T12:41:03.819Z
 Previous: 4.1.2
 Commit: c5e8fe8
