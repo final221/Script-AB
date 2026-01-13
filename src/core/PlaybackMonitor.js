@@ -53,7 +53,8 @@ const PlaybackMonitor = (() => {
             tracker,
             state,
             setState,
-            onReset
+            onReset,
+            isActive
         });
 
         const watchdog = PlaybackWatchdog.create({

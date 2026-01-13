@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.1.3 - 2026-01-13T12:41:03.819Z
+Previous: 4.1.2
+Commit: c5e8fe8
+Changes:
+- Improve reset and candidate decision logs
+
 ## 4.1.2 - 2026-01-13T11:37:18.155Z
 Previous: 4.1.1
 Commit: 8e8cf89

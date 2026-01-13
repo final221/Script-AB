@@ -23,6 +23,8 @@ const PlaybackStateTracker = (() => {
             state: 'PLAYING',
             lastHealAttemptTime: 0,
             lastWatchdogLogTime: 0,
+            lastNonActiveEventLogTime: 0,
+            nonActiveEventCounts: {},
             lastSrc: video.currentSrc || video.getAttribute('src') || '',
             lastSrcAttr: video.getAttribute ? (video.getAttribute('src') || '') : '',
             lastReadyState: video.readyState,

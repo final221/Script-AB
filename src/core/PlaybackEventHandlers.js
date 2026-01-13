@@ -15,12 +15,44 @@ const PlaybackEventHandlers = (() => {
         const state = options.state;
         const setState = options.setState;
         const onReset = options.onReset || (() => {});
+        const isActive = options.isActive || (() => true);
+
+        const ALWAYS_LOG_EVENTS = new Set(['abort', 'emptied', 'error', 'ended']);
+
+        const logEvent = (event, detail = {}) => {
+            if (!CONFIG.debug) return;
+            if (ALWAYS_LOG_EVENTS.has(event) || isActive()) {
+                logDebug(`${LOG.EVENT} ${event}`, detail);
+                return;
+            }
+
+            const counts = state.nonActiveEventCounts || {};
+            counts[event] = (counts[event] || 0) + 1;
+            state.nonActiveEventCounts = counts;
+
+            const now = Date.now();
+            const lastLog = state.lastNonActiveEventLogTime || 0;
+            if (now - lastLog < CONFIG.logging.NON_ACTIVE_LOG_MS) {
+                return;
+            }
+
+            state.lastNonActiveEventLogTime = now;
+            const summary = { ...counts };
+            state.nonActiveEventCounts = {};
+
+            logDebug('[HEALER:EVENT_SUMMARY] Non-active event summary', {
+                events: summary,
+                sinceMs: lastLog ? (now - lastLog) : null,
+                state: state.state,
+                videoState: VideoState.get(video, videoId)
+            });
+        };
 
         const handlers = {
             timeupdate: () => {
                 tracker.updateProgress('timeupdate');
                 if (state.state !== 'PLAYING') {
-                    logDebug(`${LOG.EVENT} timeupdate`, {
+                    logEvent('timeupdate', {
                         state: state.state,
                         videoState: VideoState.get(video, videoId)
                     });
@@ -33,7 +65,7 @@ const PlaybackEventHandlers = (() => {
                 tracker.markReady('playing');
                 state.pauseFromStall = false;
                 state.lastTime = video.currentTime;
-                logDebug(`${LOG.EVENT} playing`, {
+                logEvent('playing', {
                     state: state.state,
                     videoState: VideoState.get(video, videoId)
                 });
@@ -43,28 +75,28 @@ const PlaybackEventHandlers = (() => {
             },
             loadedmetadata: () => {
                 tracker.markReady('loadedmetadata');
-                logDebug(`${LOG.EVENT} loadedmetadata`, {
+                logEvent('loadedmetadata', {
                     state: state.state,
                     videoState: VideoState.get(video, videoId)
                 });
             },
             loadeddata: () => {
                 tracker.markReady('loadeddata');
-                logDebug(`${LOG.EVENT} loadeddata`, {
+                logEvent('loadeddata', {
                     state: state.state,
                     videoState: VideoState.get(video, videoId)
                 });
             },
             canplay: () => {
                 tracker.markReady('canplay');
-                logDebug(`${LOG.EVENT} canplay`, {
+                logEvent('canplay', {
                     state: state.state,
                     videoState: VideoState.get(video, videoId)
                 });
             },
             waiting: () => {
                 tracker.markStallEvent('waiting');
-                logDebug(`${LOG.EVENT} waiting`, {
+                logEvent('waiting', {
                     state: state.state,
                     videoState: VideoState.get(video, videoId)
                 });
@@ -74,7 +106,7 @@ const PlaybackEventHandlers = (() => {
             },
             stalled: () => {
                 tracker.markStallEvent('stalled');
-                logDebug(`${LOG.EVENT} stalled`, {
+                logEvent('stalled', {
                     state: state.state,
                     videoState: VideoState.get(video, videoId)
                 });
@@ -84,7 +116,7 @@ const PlaybackEventHandlers = (() => {
             },
             pause: () => {
                 const bufferExhausted = BufferGapFinder.isBufferExhausted(video);
-                logDebug(`${LOG.EVENT} pause`, {
+                logEvent('pause', {
                     state: state.state,
                     bufferExhausted,
                     videoState: VideoState.get(video, videoId)
@@ -100,7 +132,7 @@ const PlaybackEventHandlers = (() => {
             },
             ended: () => {
                 state.pauseFromStall = false;
-                logDebug(`${LOG.EVENT} ended`, {
+                logEvent('ended', {
                     state: state.state,
                     videoState: VideoState.get(video, videoId)
                 });
@@ -112,7 +144,7 @@ const PlaybackEventHandlers = (() => {
             },
             error: () => {
                 state.pauseFromStall = false;
-                logDebug(`${LOG.EVENT} error`, {
+                logEvent('error', {
                     state: state.state,
                     videoState: VideoState.get(video, videoId)
                 });
@@ -120,7 +152,7 @@ const PlaybackEventHandlers = (() => {
             },
             abort: () => {
                 state.pauseFromStall = false;
-                logDebug(`${LOG.EVENT} abort`, {
+                logEvent('abort', {
                     state: state.state,
                     videoState: VideoState.get(video, videoId)
                 });
@@ -129,14 +161,14 @@ const PlaybackEventHandlers = (() => {
             },
             emptied: () => {
                 state.pauseFromStall = false;
-                logDebug(`${LOG.EVENT} emptied`, {
+                logEvent('emptied', {
                     state: state.state,
                     videoState: VideoState.get(video, videoId)
                 });
                 tracker.handleReset('emptied', onReset);
             },
             suspend: () => {
-                logDebug(`${LOG.EVENT} suspend`, {
+                logEvent('suspend', {
                     state: state.state,
                     videoState: VideoState.get(video, videoId)
                 });
