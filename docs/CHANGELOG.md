@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.1.19 - 2026-01-14T14:05:31.624Z
+Previous: 4.1.18
+Commit: 52df8dd
+Changes:
+- Fix refresh helper reference
+
 ## 4.1.18 - 2026-01-14T12:46:43.301Z
 Previous: 4.1.17
 Commit: dfa1a9b
