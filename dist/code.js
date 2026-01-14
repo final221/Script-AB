@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.1.15
+// @version       4.1.16
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -37,6 +37,10 @@ const CONFIG = (() => {
             WATCHDOG_INTERVAL_MS: 1000,     // Watchdog interval for stall checks
             STALL_CONFIRM_MS: 2500,         // Required no-progress window before healing
             STALL_CONFIRM_BUFFER_OK_MS: 1500, // Extra delay when buffer is healthy
+            BUFFER_STARVE_THRESHOLD_S: 0.75, // Buffer headroom below this is considered starving
+            BUFFER_STARVE_CONFIRM_MS: 2000, // Time buffer must stay low before starve mode
+            BUFFER_STARVE_BACKOFF_MS: 3000, // Delay heal attempts while starving
+            BUFFER_STARVE_RESCAN_COOLDOWN_MS: 15000, // Min time between starvation rescans
             PAUSED_STALL_GRACE_MS: 3000,    // Allow stall detection shortly after pause
             INIT_PROGRESS_GRACE_MS: 5000,   // Wait for initial progress before treating as stalled
             RESET_GRACE_MS: 2000,           // Delay before confirming reset (abort/emptied)
@@ -80,6 +84,7 @@ const CONFIG = (() => {
         recovery: {
             MIN_HEAL_BUFFER_S: 2,           // Minimum buffered seconds needed to heal
             MIN_HEAL_BUFFER_EMERGENCY_S: 0.5, // Minimum buffer for emergency/rewind heal
+            MIN_HEAL_HEADROOM_S: 0.75,      // Minimum headroom required to attempt a heal
             HEAL_NUDGE_S: 0.5,              // How far to nudge into buffer for contiguous ranges
             HEAL_EDGE_GUARD_S: 0.35,        // Avoid seeking too close to buffer end
             HEAL_RETRY_DELAY_MS: 200,       // Delay before retrying heal after AbortError
@@ -101,6 +106,8 @@ const CONFIG = (() => {
             SUPPRESSION_LOG_MS: 300000,     // Suppressed switch log interval
             SYNC_LOG_MS: 300000,            // Playback drift log interval
             BACKOFF_LOG_INTERVAL_MS: 5000,  // Backoff skip log interval
+            HEAL_DEFER_LOG_MS: 5000,        // Heal deferral log interval
+            STARVE_LOG_MS: 10000,           // Buffer starvation log interval
             CONSOLE_SIGNAL_THROTTLE_MS: 2000, // Throttle console hint signals
             RESOURCE_HINT_THROTTLE_MS: 2000,  // Throttle resource hint signals
             LOG_MESSAGE_MAX_LEN: 300,       // Max length for log messages
@@ -207,6 +214,38 @@ const BufferRanges = (() => {
         return ranges.map(r => `[${r.start.toFixed(2)}-${r.end.toFixed(2)}]`).join(', ');
     };
 
+    const getBufferAhead = (video) => {
+        const ranges = getBufferRanges(video);
+        if (!ranges.length) {
+            return {
+                bufferAhead: null,
+                rangeStart: null,
+                rangeEnd: null,
+                hasBuffer: false
+            };
+        }
+
+        const currentTime = video.currentTime;
+        for (let i = 0; i < ranges.length; i++) {
+            const range = ranges[i];
+            if (currentTime >= range.start && currentTime <= range.end) {
+                return {
+                    bufferAhead: range.end - currentTime,
+                    rangeStart: range.start,
+                    rangeEnd: range.end,
+                    hasBuffer: true
+                };
+            }
+        }
+
+        return {
+            bufferAhead: null,
+            rangeStart: null,
+            rangeEnd: null,
+            hasBuffer: true
+        };
+    };
+
     const isBufferExhausted = (video) => {
         const buffered = video?.buffered;
         if (!buffered || buffered.length === 0) {
@@ -245,6 +284,7 @@ const BufferRanges = (() => {
     return {
         getBufferRanges,
         formatRanges,
+        getBufferAhead,
         isBufferExhausted
     };
 })();
@@ -422,6 +462,7 @@ const BufferGapFinder = (() => {
         findHealPoint: HealPointFinder.findHealPoint,
         isBufferExhausted: BufferRanges.isBufferExhausted,
         getBufferRanges: BufferRanges.getBufferRanges,
+        getBufferAhead: BufferRanges.getBufferAhead,
         formatRanges: BufferRanges.formatRanges,
         MIN_HEAL_BUFFER_S: HealPointFinder.MIN_HEAL_BUFFER_S
     };
@@ -1255,7 +1296,15 @@ const PlaybackStateTracker = (() => {
             resetPendingAt: 0,
             resetPendingReason: null,
             resetPendingType: null,
-            resetPendingCallback: null
+            resetPendingCallback: null,
+            bufferStarvedSince: 0,
+            bufferStarved: false,
+            bufferStarveUntil: 0,
+            lastBufferStarveLogTime: 0,
+            lastBufferStarveSkipLogTime: 0,
+            lastBufferStarveRescanTime: 0,
+            lastBufferAhead: null,
+            lastHealDeferralLogTime: 0
         };
 
         const evaluateResetState = (vs) => {
@@ -1382,6 +1431,21 @@ const PlaybackStateTracker = (() => {
                 state.lastPlayBackoffLogTime = 0;
                 state.lastHealPointKey = null;
                 state.healPointRepeatCount = 0;
+            }
+
+            if (state.bufferStarved || state.bufferStarvedSince) {
+                logDebug('[HEALER:STARVE_CLEAR] Buffer starvation cleared by progress', {
+                    reason,
+                    bufferStarvedSinceMs: state.bufferStarvedSince
+                        ? (now - state.bufferStarvedSince)
+                        : null,
+                    videoState: VideoState.get(video, videoId)
+                });
+                state.bufferStarved = false;
+                state.bufferStarvedSince = 0;
+                state.bufferStarveUntil = 0;
+                state.lastBufferStarveLogTime = 0;
+                state.lastBufferStarveSkipLogTime = 0;
             }
         };
 
@@ -1589,6 +1653,75 @@ const PlaybackStateTracker = (() => {
             });
         };
 
+        const updateBufferStarvation = (bufferInfo, reason, nowOverride) => {
+            const now = Number.isFinite(nowOverride) ? nowOverride : Date.now();
+            if (!bufferInfo) return false;
+
+            let bufferAhead = bufferInfo.bufferAhead;
+            if (!Number.isFinite(bufferAhead)) {
+                if (bufferInfo.hasBuffer) {
+                    bufferAhead = 0;
+                } else {
+                    state.lastBufferAhead = null;
+                    return false;
+                }
+            }
+
+            state.lastBufferAhead = bufferAhead;
+
+            if (bufferAhead <= CONFIG.stall.BUFFER_STARVE_THRESHOLD_S) {
+                if (!state.bufferStarvedSince) {
+                    state.bufferStarvedSince = now;
+                }
+
+                const starvedForMs = now - state.bufferStarvedSince;
+                if (!state.bufferStarved && starvedForMs >= CONFIG.stall.BUFFER_STARVE_CONFIRM_MS) {
+                    state.bufferStarved = true;
+                    state.bufferStarveUntil = now + CONFIG.stall.BUFFER_STARVE_BACKOFF_MS;
+                    state.lastBufferStarveLogTime = now;
+                    logDebug('[HEALER:STARVE] Buffer starvation detected', {
+                        reason,
+                        bufferAhead: bufferAhead.toFixed(3),
+                        threshold: CONFIG.stall.BUFFER_STARVE_THRESHOLD_S,
+                        confirmMs: CONFIG.stall.BUFFER_STARVE_CONFIRM_MS,
+                        backoffMs: CONFIG.stall.BUFFER_STARVE_BACKOFF_MS,
+                        videoState: VideoState.getLite(video, videoId)
+                    });
+                } else if (state.bufferStarved
+                    && (now - state.lastBufferStarveLogTime) >= CONFIG.logging.STARVE_LOG_MS) {
+                    state.lastBufferStarveLogTime = now;
+                    if (now >= state.bufferStarveUntil) {
+                        state.bufferStarveUntil = now + CONFIG.stall.BUFFER_STARVE_BACKOFF_MS;
+                    }
+                    logDebug('[HEALER:STARVE] Buffer starvation persists', {
+                        reason,
+                        bufferAhead: bufferAhead.toFixed(3),
+                        starvedForMs,
+                        nextHealAllowedInMs: Math.max(state.bufferStarveUntil - now, 0),
+                        videoState: VideoState.getLite(video, videoId)
+                    });
+                }
+                return state.bufferStarved;
+            }
+
+            if (state.bufferStarved || state.bufferStarvedSince) {
+                const starvedForMs = state.bufferStarvedSince ? (now - state.bufferStarvedSince) : null;
+                state.bufferStarved = false;
+                state.bufferStarvedSince = 0;
+                state.bufferStarveUntil = 0;
+                state.lastBufferStarveLogTime = 0;
+                state.lastBufferStarveSkipLogTime = 0;
+                logDebug('[HEALER:STARVE_CLEAR] Buffer starvation cleared', {
+                    reason,
+                    starvedForMs,
+                    bufferAhead: bufferAhead.toFixed(3),
+                    videoState: VideoState.getLite(video, videoId)
+                });
+            }
+
+            return false;
+        };
+
         return {
             state,
             updateProgress,
@@ -1598,7 +1731,8 @@ const PlaybackStateTracker = (() => {
             shouldSkipUntilProgress,
             evaluateResetPending,
             clearResetPending,
-            logSyncStatus
+            logSyncStatus,
+            updateBufferStarvation
         };
     };
 
@@ -1890,6 +2024,11 @@ const PlaybackWatchdog = (() => {
 
             if (tracker.shouldSkipUntilProgress()) {
                 return;
+            }
+
+            if (isActive()) {
+                const bufferInfo = BufferGapFinder.getBufferAhead(video);
+                tracker.updateBufferStarvation(bufferInfo, 'watchdog');
             }
 
             const currentSrc = video.currentSrc || video.getAttribute('src') || '';
@@ -3340,6 +3479,19 @@ const RecoveryManager = (() => {
             if (backoffManager.shouldSkip(videoId, monitorState)) {
                 return true;
             }
+            if (monitorState?.bufferStarveUntil && now < monitorState.bufferStarveUntil) {
+                if (now - (monitorState.lastBufferStarveSkipLogTime || 0) > CONFIG.logging.STARVE_LOG_MS) {
+                    monitorState.lastBufferStarveSkipLogTime = now;
+                    logDebug('[HEALER:STARVE_SKIP] Stall skipped due to buffer starvation', {
+                        videoId,
+                        remainingMs: monitorState.bufferStarveUntil - now,
+                        bufferAhead: monitorState.lastBufferAhead !== null
+                            ? monitorState.lastBufferAhead.toFixed(3)
+                            : null
+                    });
+                }
+                return true;
+            }
             if (monitorState?.nextPlayHealAllowedTime && now < monitorState.nextPlayHealAllowedTime) {
                 if (now - (monitorState.lastPlayBackoffLogTime || 0) > CONFIG.logging.BACKOFF_LOG_INTERVAL_MS) {
                     monitorState.lastPlayBackoffLogTime = now;
@@ -3567,12 +3719,28 @@ const HealPointPoller = (() => {
                 const healPoint = BufferGapFinder.findHealPoint(video, { silent: true });
 
                 if (healPoint) {
+                    const headroom = healPoint.end - healPoint.start;
+                    if (headroom < CONFIG.recovery.MIN_HEAL_HEADROOM_S) {
+                        const now = Date.now();
+                        if (monitorState && now - (monitorState.lastHealDeferralLogTime || 0) >= CONFIG.logging.HEAL_DEFER_LOG_MS) {
+                            monitorState.lastHealDeferralLogTime = now;
+                            logDebug('[HEALER:DEFER] Heal deferred, buffer headroom too small', {
+                                bufferHeadroom: headroom.toFixed(2) + 's',
+                                minRequired: CONFIG.recovery.MIN_HEAL_HEADROOM_S + 's',
+                                healPoint: `${healPoint.start.toFixed(2)}-${healPoint.end.toFixed(2)}`,
+                                buffers: BufferGapFinder.formatRanges(BufferGapFinder.getBufferRanges(video))
+                            });
+                        }
+                        await Fn.sleep(CONFIG.stall.HEAL_POLL_INTERVAL_MS);
+                        continue;
+                    }
+
                     Logger.add(LOG.POLL_SUCCESS, {
                         attempts: pollCount,
                         type: healPoint.isNudge ? 'NUDGE' : 'GAP',
                         elapsed: (Date.now() - startTime) + 'ms',
                         healPoint: `${healPoint.start.toFixed(2)}-${healPoint.end.toFixed(2)}`,
-                        bufferSize: (healPoint.end - healPoint.start).toFixed(2) + 's'
+                        bufferSize: headroom.toFixed(2) + 's'
                     });
                     return {
                         healPoint,
@@ -4317,10 +4485,15 @@ const ExternalSignalRouter = (() => {
                 const best = candidateSelector.evaluateCandidates('processing_asset');
                 let activeId = candidateSelector.getActiveId();
                 const activeEntry = activeId ? monitorsById.get(activeId) : null;
-                const activeState = activeEntry ? activeEntry.monitor.state.state : null;
+                const activeMonitorState = activeEntry ? activeEntry.monitor.state : null;
+                const activeState = activeMonitorState ? activeMonitorState.state : null;
                 const activeIsStalled = !activeEntry || ['STALLED', 'RESET', 'ERROR'].includes(activeState);
+                const activeIsSevere = activeIsStalled
+                    && (activeState === 'RESET'
+                        || activeState === 'ERROR'
+                        || activeMonitorState?.bufferStarved);
 
-                if (best && best.id && activeId && best.id !== activeId && best.progressEligible && activeIsStalled) {
+                if (best && best.id && activeId && best.id !== activeId && best.progressEligible && activeIsSevere) {
                     const fromId = activeId;
                     activeId = best.id;
                     candidateSelector.setActiveId(activeId);
@@ -4330,14 +4503,17 @@ const ExternalSignalRouter = (() => {
                         bestScore: best.score,
                         progressStreakMs: best.progressStreakMs,
                         progressEligible: best.progressEligible,
-                        activeState
+                        activeState,
+                        bufferStarved: activeMonitorState?.bufferStarved || false
                     });
                 } else if (best && best.id && best.id !== activeId) {
                     logDebug('[HEALER:CANDIDATE] Processing asset switch suppressed', {
                         from: activeId,
                         to: best.id,
                         progressEligible: best.progressEligible,
-                        activeState
+                        activeState,
+                        bufferStarved: activeMonitorState?.bufferStarved || false,
+                        activeIsSevere
                     });
                     if (activeIsStalled) {
                         recoveryManager.probeCandidate(best.id, 'processing_asset');
@@ -4523,6 +4699,20 @@ const RecoveryOrchestrator = (() => {
             }
             if (state) {
                 state.lastHealAttemptTime = now;
+            }
+
+            if (state?.bufferStarved) {
+                const lastRescan = state.lastBufferStarveRescanTime || 0;
+                if (now - lastRescan >= CONFIG.stall.BUFFER_STARVE_RESCAN_COOLDOWN_MS) {
+                    state.lastBufferStarveRescanTime = now;
+                    candidateSelector.activateProbation('buffer_starved');
+                    const bufferInfo = BufferGapFinder.getBufferAhead(video);
+                    monitoring.scanForVideos('buffer_starved', {
+                        videoId,
+                        bufferAhead: bufferInfo?.bufferAhead ?? null,
+                        hasBuffer: bufferInfo?.hasBuffer ?? null
+                    });
+                }
             }
 
             candidateSelector.evaluateCandidates('stall');

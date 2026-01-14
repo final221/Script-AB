@@ -160,10 +160,15 @@ const ExternalSignalRouter = (() => {
                 const best = candidateSelector.evaluateCandidates('processing_asset');
                 let activeId = candidateSelector.getActiveId();
                 const activeEntry = activeId ? monitorsById.get(activeId) : null;
-                const activeState = activeEntry ? activeEntry.monitor.state.state : null;
+                const activeMonitorState = activeEntry ? activeEntry.monitor.state : null;
+                const activeState = activeMonitorState ? activeMonitorState.state : null;
                 const activeIsStalled = !activeEntry || ['STALLED', 'RESET', 'ERROR'].includes(activeState);
+                const activeIsSevere = activeIsStalled
+                    && (activeState === 'RESET'
+                        || activeState === 'ERROR'
+                        || activeMonitorState?.bufferStarved);
 
-                if (best && best.id && activeId && best.id !== activeId && best.progressEligible && activeIsStalled) {
+                if (best && best.id && activeId && best.id !== activeId && best.progressEligible && activeIsSevere) {
                     const fromId = activeId;
                     activeId = best.id;
                     candidateSelector.setActiveId(activeId);
@@ -173,14 +178,17 @@ const ExternalSignalRouter = (() => {
                         bestScore: best.score,
                         progressStreakMs: best.progressStreakMs,
                         progressEligible: best.progressEligible,
-                        activeState
+                        activeState,
+                        bufferStarved: activeMonitorState?.bufferStarved || false
                     });
                 } else if (best && best.id && best.id !== activeId) {
                     logDebug('[HEALER:CANDIDATE] Processing asset switch suppressed', {
                         from: activeId,
                         to: best.id,
                         progressEligible: best.progressEligible,
-                        activeState
+                        activeState,
+                        bufferStarved: activeMonitorState?.bufferStarved || false,
+                        activeIsSevere
                     });
                     if (activeIsStalled) {
                         recoveryManager.probeCandidate(best.id, 'processing_asset');

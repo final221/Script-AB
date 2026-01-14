@@ -9,6 +9,7 @@ const BufferGapFinder = (() => {
         findHealPoint: HealPointFinder.findHealPoint,
         isBufferExhausted: BufferRanges.isBufferExhausted,
         getBufferRanges: BufferRanges.getBufferRanges,
+        getBufferAhead: BufferRanges.getBufferAhead,
         formatRanges: BufferRanges.formatRanges,
         MIN_HEAL_BUFFER_S: HealPointFinder.MIN_HEAL_BUFFER_S
     };

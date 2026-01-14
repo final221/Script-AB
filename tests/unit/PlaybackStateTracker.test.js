@@ -145,3 +145,45 @@ describe('PlaybackStateTracker.updateProgress', () => {
         expect(tracker.state.lastHealPointKey).toBe(null);
     });
 });
+
+describe('PlaybackStateTracker.updateBufferStarvation', () => {
+    it('marks starvation after confirm window elapses', () => {
+        const video = createVideo({ readyState: 4, currentSrc: 'blob:stream' });
+        const logDebug = vi.fn();
+        const tracker = PlaybackStateTracker.create(video, 'video-7', logDebug);
+        const now = Date.now();
+        const lowBuffer = CONFIG.stall.BUFFER_STARVE_THRESHOLD_S - 0.1;
+
+        tracker.updateBufferStarvation({ bufferAhead: lowBuffer, hasBuffer: true }, 'test', now);
+        expect(tracker.state.bufferStarved).toBe(false);
+
+        tracker.updateBufferStarvation(
+            { bufferAhead: lowBuffer, hasBuffer: true },
+            'test',
+            now + CONFIG.stall.BUFFER_STARVE_CONFIRM_MS + 1
+        );
+        expect(tracker.state.bufferStarved).toBe(true);
+        expect(tracker.state.bufferStarveUntil).toBeGreaterThan(now);
+    });
+
+    it('clears starvation when buffer recovers', () => {
+        const video = createVideo({ readyState: 4, currentSrc: 'blob:stream' });
+        const logDebug = vi.fn();
+        const tracker = PlaybackStateTracker.create(video, 'video-8', logDebug);
+        const now = Date.now();
+
+        tracker.state.bufferStarved = true;
+        tracker.state.bufferStarvedSince = now - (CONFIG.stall.BUFFER_STARVE_CONFIRM_MS + 5);
+        tracker.state.bufferStarveUntil = now + 1000;
+
+        tracker.updateBufferStarvation(
+            { bufferAhead: CONFIG.stall.BUFFER_STARVE_THRESHOLD_S + 1, hasBuffer: true },
+            'test',
+            now + 1
+        );
+
+        expect(tracker.state.bufferStarved).toBe(false);
+        expect(tracker.state.bufferStarvedSince).toBe(0);
+        expect(tracker.state.bufferStarveUntil).toBe(0);
+    });
+});

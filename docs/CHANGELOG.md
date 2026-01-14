@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.1.16 - 2026-01-14T10:22:28.578Z
+Previous: 4.1.15
+Commit: 99a3085
+Changes:
+- Throttle active events with summaries
+
 ## 4.1.15 - 2026-01-13T22:12:07.268Z
 Previous: 4.1.14
 Commit: 22050bb

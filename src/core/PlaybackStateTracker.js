@@ -56,7 +56,15 @@ const PlaybackStateTracker = (() => {
             resetPendingAt: 0,
             resetPendingReason: null,
             resetPendingType: null,
-            resetPendingCallback: null
+            resetPendingCallback: null,
+            bufferStarvedSince: 0,
+            bufferStarved: false,
+            bufferStarveUntil: 0,
+            lastBufferStarveLogTime: 0,
+            lastBufferStarveSkipLogTime: 0,
+            lastBufferStarveRescanTime: 0,
+            lastBufferAhead: null,
+            lastHealDeferralLogTime: 0
         };
 
         const evaluateResetState = (vs) => {
@@ -183,6 +191,21 @@ const PlaybackStateTracker = (() => {
                 state.lastPlayBackoffLogTime = 0;
                 state.lastHealPointKey = null;
                 state.healPointRepeatCount = 0;
+            }
+
+            if (state.bufferStarved || state.bufferStarvedSince) {
+                logDebug('[HEALER:STARVE_CLEAR] Buffer starvation cleared by progress', {
+                    reason,
+                    bufferStarvedSinceMs: state.bufferStarvedSince
+                        ? (now - state.bufferStarvedSince)
+                        : null,
+                    videoState: VideoState.get(video, videoId)
+                });
+                state.bufferStarved = false;
+                state.bufferStarvedSince = 0;
+                state.bufferStarveUntil = 0;
+                state.lastBufferStarveLogTime = 0;
+                state.lastBufferStarveSkipLogTime = 0;
             }
         };
 
@@ -390,6 +413,75 @@ const PlaybackStateTracker = (() => {
             });
         };
 
+        const updateBufferStarvation = (bufferInfo, reason, nowOverride) => {
+            const now = Number.isFinite(nowOverride) ? nowOverride : Date.now();
+            if (!bufferInfo) return false;
+
+            let bufferAhead = bufferInfo.bufferAhead;
+            if (!Number.isFinite(bufferAhead)) {
+                if (bufferInfo.hasBuffer) {
+                    bufferAhead = 0;
+                } else {
+                    state.lastBufferAhead = null;
+                    return false;
+                }
+            }
+
+            state.lastBufferAhead = bufferAhead;
+
+            if (bufferAhead <= CONFIG.stall.BUFFER_STARVE_THRESHOLD_S) {
+                if (!state.bufferStarvedSince) {
+                    state.bufferStarvedSince = now;
+                }
+
+                const starvedForMs = now - state.bufferStarvedSince;
+                if (!state.bufferStarved && starvedForMs >= CONFIG.stall.BUFFER_STARVE_CONFIRM_MS) {
+                    state.bufferStarved = true;
+                    state.bufferStarveUntil = now + CONFIG.stall.BUFFER_STARVE_BACKOFF_MS;
+                    state.lastBufferStarveLogTime = now;
+                    logDebug('[HEALER:STARVE] Buffer starvation detected', {
+                        reason,
+                        bufferAhead: bufferAhead.toFixed(3),
+                        threshold: CONFIG.stall.BUFFER_STARVE_THRESHOLD_S,
+                        confirmMs: CONFIG.stall.BUFFER_STARVE_CONFIRM_MS,
+                        backoffMs: CONFIG.stall.BUFFER_STARVE_BACKOFF_MS,
+                        videoState: VideoState.getLite(video, videoId)
+                    });
+                } else if (state.bufferStarved
+                    && (now - state.lastBufferStarveLogTime) >= CONFIG.logging.STARVE_LOG_MS) {
+                    state.lastBufferStarveLogTime = now;
+                    if (now >= state.bufferStarveUntil) {
+                        state.bufferStarveUntil = now + CONFIG.stall.BUFFER_STARVE_BACKOFF_MS;
+                    }
+                    logDebug('[HEALER:STARVE] Buffer starvation persists', {
+                        reason,
+                        bufferAhead: bufferAhead.toFixed(3),
+                        starvedForMs,
+                        nextHealAllowedInMs: Math.max(state.bufferStarveUntil - now, 0),
+                        videoState: VideoState.getLite(video, videoId)
+                    });
+                }
+                return state.bufferStarved;
+            }
+
+            if (state.bufferStarved || state.bufferStarvedSince) {
+                const starvedForMs = state.bufferStarvedSince ? (now - state.bufferStarvedSince) : null;
+                state.bufferStarved = false;
+                state.bufferStarvedSince = 0;
+                state.bufferStarveUntil = 0;
+                state.lastBufferStarveLogTime = 0;
+                state.lastBufferStarveSkipLogTime = 0;
+                logDebug('[HEALER:STARVE_CLEAR] Buffer starvation cleared', {
+                    reason,
+                    starvedForMs,
+                    bufferAhead: bufferAhead.toFixed(3),
+                    videoState: VideoState.getLite(video, videoId)
+                });
+            }
+
+            return false;
+        };
+
         return {
             state,
             updateProgress,
@@ -399,7 +491,8 @@ const PlaybackStateTracker = (() => {
             shouldSkipUntilProgress,
             evaluateResetPending,
             clearResetPending,
-            logSyncStatus
+            logSyncStatus,
+            updateBufferStarvation
         };
     };
 

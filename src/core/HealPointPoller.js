@@ -56,12 +56,28 @@ const HealPointPoller = (() => {
                 const healPoint = BufferGapFinder.findHealPoint(video, { silent: true });
 
                 if (healPoint) {
+                    const headroom = healPoint.end - healPoint.start;
+                    if (headroom < CONFIG.recovery.MIN_HEAL_HEADROOM_S) {
+                        const now = Date.now();
+                        if (monitorState && now - (monitorState.lastHealDeferralLogTime || 0) >= CONFIG.logging.HEAL_DEFER_LOG_MS) {
+                            monitorState.lastHealDeferralLogTime = now;
+                            logDebug('[HEALER:DEFER] Heal deferred, buffer headroom too small', {
+                                bufferHeadroom: headroom.toFixed(2) + 's',
+                                minRequired: CONFIG.recovery.MIN_HEAL_HEADROOM_S + 's',
+                                healPoint: `${healPoint.start.toFixed(2)}-${healPoint.end.toFixed(2)}`,
+                                buffers: BufferGapFinder.formatRanges(BufferGapFinder.getBufferRanges(video))
+                            });
+                        }
+                        await Fn.sleep(CONFIG.stall.HEAL_POLL_INTERVAL_MS);
+                        continue;
+                    }
+
                     Logger.add(LOG.POLL_SUCCESS, {
                         attempts: pollCount,
                         type: healPoint.isNudge ? 'NUDGE' : 'GAP',
                         elapsed: (Date.now() - startTime) + 'ms',
                         healPoint: `${healPoint.start.toFixed(2)}-${healPoint.end.toFixed(2)}`,
-                        bufferSize: (healPoint.end - healPoint.start).toFixed(2) + 's'
+                        bufferSize: headroom.toFixed(2) + 's'
                     });
                     return {
                         healPoint,

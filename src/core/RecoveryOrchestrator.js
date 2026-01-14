@@ -52,6 +52,20 @@ const RecoveryOrchestrator = (() => {
                 state.lastHealAttemptTime = now;
             }
 
+            if (state?.bufferStarved) {
+                const lastRescan = state.lastBufferStarveRescanTime || 0;
+                if (now - lastRescan >= CONFIG.stall.BUFFER_STARVE_RESCAN_COOLDOWN_MS) {
+                    state.lastBufferStarveRescanTime = now;
+                    candidateSelector.activateProbation('buffer_starved');
+                    const bufferInfo = BufferGapFinder.getBufferAhead(video);
+                    monitoring.scanForVideos('buffer_starved', {
+                        videoId,
+                        bufferAhead: bufferInfo?.bufferAhead ?? null,
+                        hasBuffer: bufferInfo?.hasBuffer ?? null
+                    });
+                }
+            }
+
             candidateSelector.evaluateCandidates('stall');
             const activeCandidateId = candidateSelector.getActiveId();
             if (activeCandidateId && activeCandidateId !== videoId) {

@@ -60,6 +60,11 @@ const PlaybackWatchdog = (() => {
                 return;
             }
 
+            if (isActive()) {
+                const bufferInfo = BufferGapFinder.getBufferAhead(video);
+                tracker.updateBufferStarvation(bufferInfo, 'watchdog');
+            }
+
             const currentSrc = video.currentSrc || video.getAttribute('src') || '';
             if (currentSrc !== state.lastSrc) {
                 logDebug('[HEALER:SRC] Source changed', {

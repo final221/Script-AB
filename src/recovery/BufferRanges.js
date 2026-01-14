@@ -34,6 +34,38 @@ const BufferRanges = (() => {
         return ranges.map(r => `[${r.start.toFixed(2)}-${r.end.toFixed(2)}]`).join(', ');
     };
 
+    const getBufferAhead = (video) => {
+        const ranges = getBufferRanges(video);
+        if (!ranges.length) {
+            return {
+                bufferAhead: null,
+                rangeStart: null,
+                rangeEnd: null,
+                hasBuffer: false
+            };
+        }
+
+        const currentTime = video.currentTime;
+        for (let i = 0; i < ranges.length; i++) {
+            const range = ranges[i];
+            if (currentTime >= range.start && currentTime <= range.end) {
+                return {
+                    bufferAhead: range.end - currentTime,
+                    rangeStart: range.start,
+                    rangeEnd: range.end,
+                    hasBuffer: true
+                };
+            }
+        }
+
+        return {
+            bufferAhead: null,
+            rangeStart: null,
+            rangeEnd: null,
+            hasBuffer: true
+        };
+    };
+
     const isBufferExhausted = (video) => {
         const buffered = video?.buffered;
         if (!buffered || buffered.length === 0) {
@@ -72,6 +104,7 @@ const BufferRanges = (() => {
     return {
         getBufferRanges,
         formatRanges,
+        getBufferAhead,
         isBufferExhausted
     };
 })();

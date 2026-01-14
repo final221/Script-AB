@@ -24,6 +24,10 @@ const CONFIG = (() => {
             WATCHDOG_INTERVAL_MS: 1000,     // Watchdog interval for stall checks
             STALL_CONFIRM_MS: 2500,         // Required no-progress window before healing
             STALL_CONFIRM_BUFFER_OK_MS: 1500, // Extra delay when buffer is healthy
+            BUFFER_STARVE_THRESHOLD_S: 0.75, // Buffer headroom below this is considered starving
+            BUFFER_STARVE_CONFIRM_MS: 2000, // Time buffer must stay low before starve mode
+            BUFFER_STARVE_BACKOFF_MS: 3000, // Delay heal attempts while starving
+            BUFFER_STARVE_RESCAN_COOLDOWN_MS: 15000, // Min time between starvation rescans
             PAUSED_STALL_GRACE_MS: 3000,    // Allow stall detection shortly after pause
             INIT_PROGRESS_GRACE_MS: 5000,   // Wait for initial progress before treating as stalled
             RESET_GRACE_MS: 2000,           // Delay before confirming reset (abort/emptied)
@@ -67,6 +71,7 @@ const CONFIG = (() => {
         recovery: {
             MIN_HEAL_BUFFER_S: 2,           // Minimum buffered seconds needed to heal
             MIN_HEAL_BUFFER_EMERGENCY_S: 0.5, // Minimum buffer for emergency/rewind heal
+            MIN_HEAL_HEADROOM_S: 0.75,      // Minimum headroom required to attempt a heal
             HEAL_NUDGE_S: 0.5,              // How far to nudge into buffer for contiguous ranges
             HEAL_EDGE_GUARD_S: 0.35,        // Avoid seeking too close to buffer end
             HEAL_RETRY_DELAY_MS: 200,       // Delay before retrying heal after AbortError
@@ -88,6 +93,8 @@ const CONFIG = (() => {
             SUPPRESSION_LOG_MS: 300000,     // Suppressed switch log interval
             SYNC_LOG_MS: 300000,            // Playback drift log interval
             BACKOFF_LOG_INTERVAL_MS: 5000,  // Backoff skip log interval
+            HEAL_DEFER_LOG_MS: 5000,        // Heal deferral log interval
+            STARVE_LOG_MS: 10000,           // Buffer starvation log interval
             CONSOLE_SIGNAL_THROTTLE_MS: 2000, // Throttle console hint signals
             RESOURCE_HINT_THROTTLE_MS: 2000,  // Throttle resource hint signals
             LOG_MESSAGE_MAX_LEN: 300,       // Max length for log messages

@@ -168,6 +168,19 @@ const RecoveryManager = (() => {
             if (backoffManager.shouldSkip(videoId, monitorState)) {
                 return true;
             }
+            if (monitorState?.bufferStarveUntil && now < monitorState.bufferStarveUntil) {
+                if (now - (monitorState.lastBufferStarveSkipLogTime || 0) > CONFIG.logging.STARVE_LOG_MS) {
+                    monitorState.lastBufferStarveSkipLogTime = now;
+                    logDebug('[HEALER:STARVE_SKIP] Stall skipped due to buffer starvation', {
+                        videoId,
+                        remainingMs: monitorState.bufferStarveUntil - now,
+                        bufferAhead: monitorState.lastBufferAhead !== null
+                            ? monitorState.lastBufferAhead.toFixed(3)
+                            : null
+                    });
+                }
+                return true;
+            }
             if (monitorState?.nextPlayHealAllowedTime && now < monitorState.nextPlayHealAllowedTime) {
                 if (now - (monitorState.lastPlayBackoffLogTime || 0) > CONFIG.logging.BACKOFF_LOG_INTERVAL_MS) {
                     monitorState.lastPlayBackoffLogTime = now;
