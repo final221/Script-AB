@@ -9,6 +9,7 @@ const RecoveryManager = (() => {
         const getVideoId = options.getVideoId;
         const logDebug = options.logDebug;
         const onRescan = options.onRescan || (() => {});
+        const onPersistentFailure = options.onPersistentFailure || (() => {});
 
         const backoffManager = BackoffManager.create({ logDebug });
         const failoverManager = FailoverManager.create({
@@ -41,6 +42,32 @@ const RecoveryManager = (() => {
             return true;
         };
 
+        const maybeTriggerRefresh = (videoId, monitorState, reason) => {
+            if (!monitorState) return false;
+            const now = Date.now();
+            if ((monitorState.noHealPointCount || 0) < CONFIG.stall.REFRESH_AFTER_NO_HEAL_POINTS) {
+                return false;
+            }
+            const nextAllowed = monitorState.lastRefreshAt
+                ? (monitorState.lastRefreshAt + CONFIG.stall.REFRESH_COOLDOWN_MS)
+                : 0;
+            if (now < nextAllowed) {
+                return false;
+            }
+            monitorState.lastRefreshAt = now;
+            logDebug('[HEALER:REFRESH] Refreshing video after repeated no-heal points', {
+                videoId,
+                reason,
+                noHealPointCount: monitorState.noHealPointCount
+            });
+            monitorState.noHealPointCount = 0;
+            onPersistentFailure(videoId, {
+                reason,
+                detail: 'no_heal_point'
+            });
+            return true;
+        };
+
         const handleNoHealPoint = (video, monitorState, reason) => {
             const videoId = getVideoId(video);
             backoffManager.applyBackoff(videoId, monitorState, reason);
@@ -61,6 +88,10 @@ const RecoveryManager = (() => {
 
             if (shouldFailover) {
                 failoverManager.attemptFailover(videoId, reason, monitorState);
+            }
+
+            if (maybeTriggerRefresh(videoId, monitorState, reason)) {
+                return;
             }
         };
 

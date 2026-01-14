@@ -64,7 +64,8 @@ const PlaybackStateTracker = (() => {
             lastBufferStarveSkipLogTime: 0,
             lastBufferStarveRescanTime: 0,
             lastBufferAhead: null,
-            lastHealDeferralLogTime: 0
+            lastHealDeferralLogTime: 0,
+            lastRefreshAt: 0
         };
 
         const evaluateResetState = (vs) => {

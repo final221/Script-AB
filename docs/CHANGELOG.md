@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.1.17 - 2026-01-14T12:00:12.378Z
+Previous: 4.1.16
+Commit: e02bd88
+Changes:
+- Defer heals on tiny buffer headroom
+
 ## 4.1.16 - 2026-01-14T10:22:28.578Z
 Previous: 4.1.15
 Commit: 99a3085

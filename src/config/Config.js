@@ -49,6 +49,8 @@ const CONFIG = (() => {
             PROBATION_AFTER_NO_HEAL_POINTS: 2, // Open probation after this many no-heal points
             PROBATION_AFTER_PLAY_ERRORS: 2, // Open probation after this many play failures
             PROBATION_RESCAN_COOLDOWN_MS: 15000, // Min time between probation rescans
+            REFRESH_AFTER_NO_HEAL_POINTS: 3, // Force refresh after repeated no-heal cycles
+            REFRESH_COOLDOWN_MS: 120000,     // Minimum time between forced refreshes
         },
 
         monitoring: {

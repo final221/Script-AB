@@ -73,6 +73,11 @@ const MonitorRegistry = (() => {
             });
         };
 
+        const resetVideoId = (video) => {
+            if (!video) return;
+            videoIds.delete(video);
+        };
+
         const monitor = (video) => {
             if (!video) return;
 
@@ -127,6 +132,7 @@ const MonitorRegistry = (() => {
         return {
             monitor,
             stopMonitoring,
+            resetVideoId,
             getVideoId,
             bind,
             monitorsById,

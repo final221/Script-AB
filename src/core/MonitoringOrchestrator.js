@@ -66,12 +66,32 @@ const MonitoringOrchestrator = (() => {
             });
         };
 
+        const refreshVideo = (videoId, detail = {}) => {
+            const entry = monitorsById.get(videoId);
+            if (!entry) return false;
+            const { video } = entry;
+            Logger.add('[HEALER:REFRESH] Refreshing video to escape stale state', {
+                videoId,
+                detail
+            });
+            stopMonitoring(video);
+            monitorRegistry.resetVideoId(video);
+            setTimeout(() => {
+                scanForVideos('refresh', {
+                    videoId,
+                    ...detail
+                });
+            }, 100);
+            return true;
+        };
+
         const recoveryManager = RecoveryManager.create({
             monitorsById,
             candidateSelector,
             getVideoId,
             logDebug,
-            onRescan: scanForVideos
+            onRescan: scanForVideos,
+            onPersistentFailure: (videoId, detail = {}) => refreshVideo(videoId, detail)
         });
         candidateSelector.setLockChecker(recoveryManager.isFailoverActive);
         monitorRegistry.bind({ candidateSelector, recoveryManager });

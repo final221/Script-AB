@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.1.16
+// @version       4.1.17
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -62,6 +62,8 @@ const CONFIG = (() => {
             PROBATION_AFTER_NO_HEAL_POINTS: 2, // Open probation after this many no-heal points
             PROBATION_AFTER_PLAY_ERRORS: 2, // Open probation after this many play failures
             PROBATION_RESCAN_COOLDOWN_MS: 15000, // Min time between probation rescans
+            REFRESH_AFTER_NO_HEAL_POINTS: 3, // Force refresh after repeated no-heal cycles
+            REFRESH_COOLDOWN_MS: 120000,     // Minimum time between forced refreshes
         },
 
         monitoring: {
@@ -1304,7 +1306,8 @@ const PlaybackStateTracker = (() => {
             lastBufferStarveSkipLogTime: 0,
             lastBufferStarveRescanTime: 0,
             lastBufferAhead: null,
-            lastHealDeferralLogTime: 0
+            lastHealDeferralLogTime: 0,
+            lastRefreshAt: 0
         };
 
         const evaluateResetState = (vs) => {
@@ -3320,6 +3323,7 @@ const RecoveryManager = (() => {
         const getVideoId = options.getVideoId;
         const logDebug = options.logDebug;
         const onRescan = options.onRescan || (() => {});
+        const onPersistentFailure = options.onPersistentFailure || (() => {});
 
         const backoffManager = BackoffManager.create({ logDebug });
         const failoverManager = FailoverManager.create({
@@ -3352,6 +3356,32 @@ const RecoveryManager = (() => {
             return true;
         };
 
+        const maybeTriggerRefresh = (videoId, monitorState, reason) => {
+            if (!monitorState) return false;
+            const now = Date.now();
+            if ((monitorState.noHealPointCount || 0) < CONFIG.stall.REFRESH_AFTER_NO_HEAL_POINTS) {
+                return false;
+            }
+            const nextAllowed = monitorState.lastRefreshAt
+                ? (monitorState.lastRefreshAt + CONFIG.stall.REFRESH_COOLDOWN_MS)
+                : 0;
+            if (now < nextAllowed) {
+                return false;
+            }
+            monitorState.lastRefreshAt = now;
+            logDebug('[HEALER:REFRESH] Refreshing video after repeated no-heal points', {
+                videoId,
+                reason,
+                noHealPointCount: monitorState.noHealPointCount
+            });
+            monitorState.noHealPointCount = 0;
+            onPersistentFailure(videoId, {
+                reason,
+                detail: 'no_heal_point'
+            });
+            return true;
+        };
+
         const handleNoHealPoint = (video, monitorState, reason) => {
             const videoId = getVideoId(video);
             backoffManager.applyBackoff(videoId, monitorState, reason);
@@ -3372,6 +3402,10 @@ const RecoveryManager = (() => {
 
             if (shouldFailover) {
                 failoverManager.attemptFailover(videoId, reason, monitorState);
+            }
+
+            if (maybeTriggerRefresh(videoId, monitorState, reason)) {
+                return;
             }
         };
 
@@ -3597,6 +3631,11 @@ const MonitorRegistry = (() => {
             });
         };
 
+        const resetVideoId = (video) => {
+            if (!video) return;
+            videoIds.delete(video);
+        };
+
         const monitor = (video) => {
             if (!video) return;
 
@@ -3651,6 +3690,7 @@ const MonitorRegistry = (() => {
         return {
             monitor,
             stopMonitoring,
+            resetVideoId,
             getVideoId,
             bind,
             monitorsById,
@@ -4621,12 +4661,32 @@ const MonitoringOrchestrator = (() => {
             });
         };
 
+        const refreshVideo = (videoId, detail = {}) => {
+            const entry = monitorsById.get(videoId);
+            if (!entry) return false;
+            const { video } = entry;
+            Logger.add('[HEALER:REFRESH] Refreshing video to escape stale state', {
+                videoId,
+                detail
+            });
+            stopMonitoring(video);
+            monitorRegistry.resetVideoId(video);
+            setTimeout(() => {
+                scanForVideos('refresh', {
+                    videoId,
+                    ...detail
+                });
+            }, 100);
+            return true;
+        };
+
         const recoveryManager = RecoveryManager.create({
             monitorsById,
             candidateSelector,
             getVideoId,
             logDebug,
-            onRescan: scanForVideos
+            onRescan: scanForVideos,
+            onPersistentFailure: (videoId, detail = {}) => refreshVideo(videoId, detail)
         });
         candidateSelector.setLockChecker(recoveryManager.isFailoverActive);
         monitorRegistry.bind({ candidateSelector, recoveryManager });
