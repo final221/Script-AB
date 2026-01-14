@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.1.18 - 2026-01-14T12:46:43.301Z
+Previous: 4.1.17
+Commit: dfa1a9b
+Changes:
+- Force refresh after persistent heals
+
 ## 4.1.17 - 2026-01-14T12:00:12.378Z
 Previous: 4.1.16
 Commit: e02bd88

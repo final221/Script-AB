@@ -74,7 +74,7 @@ const MonitoringOrchestrator = (() => {
                 videoId,
                 detail
             });
-            stopMonitoring(video);
+            monitorRegistry.stopMonitoring(video);
             monitorRegistry.resetVideoId(video);
             setTimeout(() => {
                 scanForVideos('refresh', {
