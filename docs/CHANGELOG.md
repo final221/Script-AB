@@ -1,5 +1,17 @@
 # Changelog
 
+## 4.1.77 - 2026-01-24T20:05:23.979Z
+Previous: 4.1.76
+Commit: ff62bef
+Changes:
+- No commits detected since last build
+
+## 4.1.76 - 2026-01-24T20:03:59.659Z
+Previous: 4.1.75
+Commit: ff62bef
+Changes:
+- refactor: extract candidate eval and catch-up
+
 ## 4.1.75 - 2026-01-24T19:58:28.831Z
 Previous: 4.1.74
 Commit: 9ca2738

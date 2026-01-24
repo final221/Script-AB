@@ -12,6 +12,11 @@ const PlaybackProgressLogic = (() => {
         const getCurrentTime = options.getCurrentTime || (() => null);
         const clearResetPending = options.clearResetPending || (() => {});
         const evaluateResetState = options.evaluateResetState || (() => ({}));
+        const progressReset = PlaybackProgressReset.create({
+            state,
+            logDebugLazy,
+            getCurrentTime
+        });
 
         const updateProgress = (reason) => {
             const now = Date.now();
@@ -79,53 +84,10 @@ const PlaybackProgressLogic = (() => {
                 }));
             }
 
-            if (state.noHealPointCount > 0 || state.nextHealAllowedTime > 0) {
-                logDebugLazy(LogEvents.tagged('BACKOFF', 'Cleared after progress'), () => ({
-                    reason,
-                    previousNoHealPoints: state.noHealPointCount,
-                    previousNextHealAllowedMs: state.nextHealAllowedTime
-                        ? (state.nextHealAllowedTime - now)
-                        : 0
-                }));
-                state.noHealPointCount = 0;
-                state.nextHealAllowedTime = 0;
-                state.noHealPointRefreshUntil = 0;
-            }
-
-            if (state.playErrorCount > 0 || state.nextPlayHealAllowedTime > 0 || state.healPointRepeatCount > 0) {
-                logDebugLazy(LogEvents.tagged('PLAY_BACKOFF', 'Cleared after progress'), () => ({
-                    reason,
-                    previousPlayErrors: state.playErrorCount,
-                    previousNextPlayAllowedMs: state.nextPlayHealAllowedTime
-                        ? (state.nextPlayHealAllowedTime - now)
-                        : 0,
-                    previousHealPointRepeats: state.healPointRepeatCount
-                }));
-                state.playErrorCount = 0;
-                state.nextPlayHealAllowedTime = 0;
-                state.lastPlayErrorTime = 0;
-                state.lastPlayBackoffLogTime = 0;
-                state.lastHealPointKey = null;
-                state.healPointRepeatCount = 0;
-            }
-
-            if (state.lastEmergencySwitchAt) {
-                state.lastEmergencySwitchAt = 0;
-            }
-
-            if (state.bufferStarved || state.bufferStarvedSince) {
-                logDebugLazy(LogEvents.tagged('STARVE_CLEAR', 'Buffer starvation cleared by progress'), () => ({
-                    reason,
-                    bufferStarvedSinceMs: state.bufferStarvedSince
-                        ? (now - state.bufferStarvedSince)
-                        : null
-                }));
-                state.bufferStarved = false;
-                state.bufferStarvedSince = 0;
-                state.bufferStarveUntil = 0;
-                state.lastBufferStarveLogTime = 0;
-                state.lastBufferStarveSkipLogTime = 0;
-            }
+            progressReset.clearBackoffOnProgress(reason, now);
+            progressReset.clearPlayBackoffOnProgress(reason, now);
+            progressReset.clearEmergencySwitch();
+            progressReset.clearStarveOnProgress(reason, now);
         };
 
         const markReady = (reason) => {
