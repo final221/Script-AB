@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.1.39
+// @version       4.1.40
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -142,7 +142,7 @@ const CONFIG = (() => {
  * Build metadata helpers (version injected at build time).
  */
 const BuildInfo = (() => {
-    const VERSION = '4.1.39';
+    const VERSION = '4.1.40';
 
     const getVersion = () => {
         const gmVersion = (typeof GM_info !== 'undefined' && GM_info?.script?.version)
@@ -153,7 +153,7 @@ const BuildInfo = (() => {
             ? unsafeWindow.GM_info.script.version
             : null;
         if (unsafeVersion) return unsafeVersion;
-        if (VERSION && VERSION !== '4.1.39') return VERSION;
+        if (VERSION && VERSION !== '4.1.40') return VERSION;
         return null;
     };
 
@@ -1211,6 +1211,19 @@ const ReportGenerator = (() => {
 
         // Header with metrics
         const versionLine = BuildInfo.getVersionLine();
+        const DETAIL_COLUMN = 110;
+        const formatTime = (timestamp) => {
+            const parsed = new Date(timestamp);
+            if (Number.isNaN(parsed.getTime())) return timestamp;
+            return parsed.toISOString().slice(11, 23);
+        };
+        const formatLine = (prefix, message, detail) => {
+            const base = `${prefix}${message}`;
+            if (!detail) return base;
+            const padLen = Math.max(1, DETAIL_COLUMN - base.length);
+            return base + " ".repeat(padLen) + "| " + detail;
+        };
+
         const header = `[STREAM HEALER METRICS]
 ${versionLine}Uptime: ${(metricsSummary.uptime_ms / 1000).toFixed(1)}s
 Stalls Detected: ${metricsSummary.stalls_detected}
@@ -1291,19 +1304,19 @@ ${stallSummaryLine}${stallRecentLine}${healerLine}
         };
 
         const logContent = logs.map(l => {
-            const time = l.timestamp;
+            const time = formatTime(l.timestamp);
 
             if (l.source === 'CONSOLE' || l.type === 'console') {
                 // Console log entry
                 const icon = l.level === 'error' ? '❌' : l.level === 'warn' ? '⚠️' : '📋';
-                return `[${time}] ${icon} ${l.message}`;
+                return formatLine(`[${time}] ${icon} `, l.message, null);
             } else {
                 // Internal script log
                 const sanitized = sanitizeDetail(l.detail, l.message);
                 const detail = sanitized && Object.keys(sanitized).length > 0
-                    ? ' | ' + JSON.stringify(sanitized)
+                    ? JSON.stringify(sanitized)
                     : '';
-                return `[${time}] 🔧 ${l.message}${detail}`;
+                return formatLine(`[${time}] 🔧 `, l.message, detail);
             }
         }).join('\n');
 

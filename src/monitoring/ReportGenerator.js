@@ -27,6 +27,19 @@ const ReportGenerator = (() => {
 
         // Header with metrics
         const versionLine = BuildInfo.getVersionLine();
+        const DETAIL_COLUMN = 110;
+        const formatTime = (timestamp) => {
+            const parsed = new Date(timestamp);
+            if (Number.isNaN(parsed.getTime())) return timestamp;
+            return parsed.toISOString().slice(11, 23);
+        };
+        const formatLine = (prefix, message, detail) => {
+            const base = `${prefix}${message}`;
+            if (!detail) return base;
+            const padLen = Math.max(1, DETAIL_COLUMN - base.length);
+            return base + " ".repeat(padLen) + "| " + detail;
+        };
+
         const header = `[STREAM HEALER METRICS]
 ${versionLine}Uptime: ${(metricsSummary.uptime_ms / 1000).toFixed(1)}s
 Stalls Detected: ${metricsSummary.stalls_detected}
@@ -107,19 +120,19 @@ ${stallSummaryLine}${stallRecentLine}${healerLine}
         };
 
         const logContent = logs.map(l => {
-            const time = l.timestamp;
+            const time = formatTime(l.timestamp);
 
             if (l.source === 'CONSOLE' || l.type === 'console') {
                 // Console log entry
                 const icon = l.level === 'error' ? '❌' : l.level === 'warn' ? '⚠️' : '📋';
-                return `[${time}] ${icon} ${l.message}`;
+                return formatLine(`[${time}] ${icon} `, l.message, null);
             } else {
                 // Internal script log
                 const sanitized = sanitizeDetail(l.detail, l.message);
                 const detail = sanitized && Object.keys(sanitized).length > 0
-                    ? ' | ' + JSON.stringify(sanitized)
+                    ? JSON.stringify(sanitized)
                     : '';
-                return `[${time}] 🔧 ${l.message}${detail}`;
+                return formatLine(`[${time}] 🔧 `, l.message, detail);
             }
         }).join('\n');
 

@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.1.40 - 2026-01-24T14:44:56.533Z
+Previous: 4.1.39
+Commit: 4d13e57
+Changes:
+- Fast-switch away from healing dead-ends
+
 ## 4.1.39 - 2026-01-24T14:24:54.530Z
 Previous: 4.1.38
 Commit: bd24d14
