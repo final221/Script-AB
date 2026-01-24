@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.1.68 - 2026-01-24T19:25:49.984Z
+Previous: 4.1.67
+Commit: 37e6f11
+Changes:
+- split playback state tracker logic
+
 ## 4.1.67 - 2026-01-24T19:07:23.945Z
 Previous: 4.1.66
 Commit: d352a08
