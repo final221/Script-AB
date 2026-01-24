@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.1.33
+// @version       4.1.34
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -140,7 +140,7 @@ const CONFIG = (() => {
  * Build metadata helpers (version injected at build time).
  */
 const BuildInfo = (() => {
-    const VERSION = '4.1.33';
+    const VERSION = '4.1.34';
 
     const getVersion = () => {
         const gmVersion = (typeof GM_info !== 'undefined' && GM_info?.script?.version)
@@ -151,7 +151,7 @@ const BuildInfo = (() => {
             ? unsafeWindow.GM_info.script.version
             : null;
         if (unsafeVersion) return unsafeVersion;
-        if (VERSION && VERSION !== '4.1.33') return VERSION;
+        if (VERSION && VERSION !== '4.1.34') return VERSION;
         return null;
     };
 
@@ -1830,7 +1830,8 @@ const PlaybackStateTracker = (() => {
                     } catch (error) {
                         return 0;
                     }
-                })()
+                })(),
+                mediaStateVerboseLogged: false
             },
             stall: {
                 lastStallEventTime: 0,
@@ -1906,6 +1907,7 @@ const PlaybackStateTracker = (() => {
             lastNetworkStateChangeTime: ['media', 'lastNetworkStateChangeTime'],
             lastBufferedLengthChangeTime: ['media', 'lastBufferedLengthChangeTime'],
             lastBufferedLength: ['media', 'lastBufferedLength'],
+            mediaStateVerboseLogged: ['media', 'mediaStateVerboseLogged'],
             lastStallEventTime: ['stall', 'lastStallEventTime'],
             pauseFromStall: ['stall', 'pauseFromStall'],
             stallStartTime: ['stall', 'stallStartTime'],
@@ -2679,6 +2681,33 @@ const PlaybackWatchdog = (() => {
 
         let intervalId;
 
+        const formatMediaValue = (value) => {
+            if (typeof value === 'string') {
+                if (!value) return '""';
+                const maxLen = 80;
+                if (value.length > maxLen) {
+                    return `"${value.slice(0, maxLen - 3)}..."`;
+                }
+                return `"${value}"`;
+            }
+            if (value === null) return 'null';
+            if (value === undefined) return 'undefined';
+            return value;
+        };
+
+        const logMediaStateChange = (label, previous, current, snapshot) => {
+            if (!state.mediaStateVerboseLogged) {
+                logDebug(`[HEALER:MEDIA_STATE] ${label} changed`, {
+                    previous,
+                    current,
+                    videoState: snapshot
+                });
+                state.mediaStateVerboseLogged = true;
+                return;
+            }
+            logDebug(`[HEALER:MEDIA_STATE] ${label} changed ${formatMediaValue(previous)} -> ${formatMediaValue(current)}`);
+        };
+
         const tick = () => {
             const now = Date.now();
             if (!document.contains(video)) {
@@ -2736,32 +2765,20 @@ const PlaybackWatchdog = (() => {
 
             const srcAttr = video.getAttribute ? (video.getAttribute('src') || '') : '';
             if (srcAttr !== state.lastSrcAttr) {
-                logDebug('[HEALER:MEDIA_STATE] src attribute changed', {
-                    previous: state.lastSrcAttr,
-                    current: srcAttr,
-                    videoState: VideoState.getLite(video, videoId)
-                });
+                logMediaStateChange('src attribute', state.lastSrcAttr, srcAttr, VideoState.getLite(video, videoId));
                 state.lastSrcAttr = srcAttr;
             }
 
             const readyState = video.readyState;
             if (readyState !== state.lastReadyState) {
-                logDebug('[HEALER:MEDIA_STATE] readyState changed', {
-                    previous: state.lastReadyState,
-                    current: readyState,
-                    videoState: VideoState.getLite(video, videoId)
-                });
+                logMediaStateChange('readyState', state.lastReadyState, readyState, VideoState.getLite(video, videoId));
                 state.lastReadyState = readyState;
                 state.lastReadyStateChangeTime = now;
             }
 
             const networkState = video.networkState;
             if (networkState !== state.lastNetworkState) {
-                logDebug('[HEALER:MEDIA_STATE] networkState changed', {
-                    previous: state.lastNetworkState,
-                    current: networkState,
-                    videoState: VideoState.getLite(video, videoId)
-                });
+                logMediaStateChange('networkState', state.lastNetworkState, networkState, VideoState.getLite(video, videoId));
                 state.lastNetworkState = networkState;
                 state.lastNetworkStateChangeTime = now;
             }
@@ -2773,11 +2790,7 @@ const PlaybackWatchdog = (() => {
                 bufferedLength = state.lastBufferedLength;
             }
             if (bufferedLength !== state.lastBufferedLength) {
-                logDebug('[HEALER:MEDIA_STATE] buffered range count changed', {
-                    previous: state.lastBufferedLength,
-                    current: bufferedLength,
-                    videoState: VideoState.getLite(video, videoId)
-                });
+                logMediaStateChange('buffered range count', state.lastBufferedLength, bufferedLength, VideoState.getLite(video, videoId));
                 state.lastBufferedLength = bufferedLength;
                 state.lastBufferedLengthChangeTime = now;
             }

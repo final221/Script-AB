@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.1.34 - 2026-01-24T12:19:29.428Z
+Previous: 4.1.33
+Commit: 481a830
+Changes:
+- Add version line to log downloads
+
 ## 4.1.33 - 2026-01-24T12:08:15.796Z
 Previous: 4.1.32
 Commit: bca39a9

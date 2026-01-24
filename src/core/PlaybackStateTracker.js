@@ -77,7 +77,8 @@ const PlaybackStateTracker = (() => {
                     } catch (error) {
                         return 0;
                     }
-                })()
+                })(),
+                mediaStateVerboseLogged: false
             },
             stall: {
                 lastStallEventTime: 0,
@@ -153,6 +154,7 @@ const PlaybackStateTracker = (() => {
             lastNetworkStateChangeTime: ['media', 'lastNetworkStateChangeTime'],
             lastBufferedLengthChangeTime: ['media', 'lastBufferedLengthChangeTime'],
             lastBufferedLength: ['media', 'lastBufferedLength'],
+            mediaStateVerboseLogged: ['media', 'mediaStateVerboseLogged'],
             lastStallEventTime: ['stall', 'lastStallEventTime'],
             pauseFromStall: ['stall', 'pauseFromStall'],
             stallStartTime: ['stall', 'stallStartTime'],
