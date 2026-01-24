@@ -33,11 +33,12 @@ const ReportGenerator = (() => {
             if (Number.isNaN(parsed.getTime())) return timestamp;
             return parsed.toISOString().slice(11, 23);
         };
-        const formatLine = (prefix, message, detail) => {
+        const formatLine = (prefix, message, detail, forceDetail = false) => {
             const base = `${prefix}${message}`;
-            if (!detail) return base;
+            if (!forceDetail && (detail === null || detail === undefined || detail === '')) return base;
             const padLen = Math.max(1, DETAIL_COLUMN - base.length);
-            return base + " ".repeat(padLen) + "| " + detail;
+            const detailText = detail || '';
+            return base + " ".repeat(padLen) + "| " + detailText;
         };
 
         const header = `[STREAM HEALER METRICS]
@@ -188,13 +189,18 @@ ${stallSummaryLine}${stallRecentLine}${healerLine}
         };
 
 
+        const stripConsoleTimestamp = (message) => (
+            message.replace(/^\s*\d{2}:\d{2}:\d{2}\s*-\s*/, '')
+        );
+
         const logContent = logs.map(l => {
             const time = formatTime(l.timestamp);
 
             if (l.source === 'CONSOLE' || l.type === 'console') {
                 // Console log entry
                 const icon = l.level === 'error' ? '\u274C' : l.level === 'warn' ? '\u26A0\uFE0F' : '\uD83D\uDCCB';
-                return formatLine(`[${time}] ${icon} `, l.message, null);
+                const message = stripConsoleTimestamp(l.message);
+                return formatLine(`[${time}] ${icon} `, message, '', true);
             } else {
                 // Internal script log
                 const sanitized = sanitizeDetail(l.detail, l.message);

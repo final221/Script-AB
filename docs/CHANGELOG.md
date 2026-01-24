@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.1.47 - 2026-01-24T16:06:19.216Z
+Previous: 4.1.46
+Commit: de689fa
+Changes:
+- Trim watchdog summary
+
 ## 4.1.46 - 2026-01-24T16:00:28.942Z
 Previous: 4.1.45
 Commit: afa57f7
