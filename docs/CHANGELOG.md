@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.1.56 - 2026-01-24T16:59:50.111Z
+Previous: 4.1.55
+Commit: a6f5dd0
+Changes:
+- Allow first src detail per video
+
 ## 4.1.55 - 2026-01-24T16:54:33.784Z
 Previous: 4.1.54
 Commit: d3ef2cc

@@ -33,6 +33,7 @@ const ReportGenerator = (() => {
             if (Number.isNaN(parsed.getTime())) return timestamp;
             return parsed.toISOString().slice(11, 23);
         };
+        const MESSAGE_COLUMN = 28;
         const formatLine = (prefix, message, detail, forceDetail = false) => {
             const base = `${prefix}${message}`;
             if (!forceDetail && (detail === null || detail === undefined || detail === '')) return base;
@@ -250,6 +251,14 @@ ${stallSummaryLine}${stallRecentLine}${healerLine}
             return { ...inlinePairs, ...existing };
         };
 
+        const formatDetailColumns = (messageText, jsonText) => {
+            if (messageText && jsonText) {
+                const padLen = Math.max(1, MESSAGE_COLUMN - messageText.length);
+                return messageText + " ".repeat(padLen) + "| " + jsonText;
+            }
+            return messageText || jsonText || '';
+        };
+
         const seenSrcByVideo = new Set();
 
         const logContent = logs.map(l => {
@@ -282,10 +291,7 @@ ${stallSummaryLine}${stallRecentLine}${healerLine}
                     const jsonDetail = mergedDetail && Object.keys(mergedDetail).length > 0
                         ? JSON.stringify(mergedDetail)
                         : '';
-                    if (messageText && jsonDetail) {
-                        return `${messageText} | ${jsonDetail}`;
-                    }
-                    return messageText || jsonDetail;
+                    return formatDetailColumns(messageText, jsonDetail);
                 })();
                 return formatLine(`[${time}] ${formatted.icon} `, formatted.text, detail);
             }

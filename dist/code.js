@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.1.55
+// @version       4.1.56
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -142,7 +142,7 @@ const CONFIG = (() => {
  * Build metadata helpers (version injected at build time).
  */
 const BuildInfo = (() => {
-    const VERSION = '4.1.55';
+    const VERSION = '4.1.56';
 
     const getVersion = () => {
         const gmVersion = (typeof GM_info !== 'undefined' && GM_info?.script?.version)
@@ -153,7 +153,7 @@ const BuildInfo = (() => {
             ? unsafeWindow.GM_info.script.version
             : null;
         if (unsafeVersion) return unsafeVersion;
-        if (VERSION && VERSION !== '4.1.55') return VERSION;
+        if (VERSION && VERSION !== '4.1.56') return VERSION;
         return null;
     };
 
@@ -1295,6 +1295,7 @@ const ReportGenerator = (() => {
             if (Number.isNaN(parsed.getTime())) return timestamp;
             return parsed.toISOString().slice(11, 23);
         };
+        const MESSAGE_COLUMN = 28;
         const formatLine = (prefix, message, detail, forceDetail = false) => {
             const base = `${prefix}${message}`;
             if (!forceDetail && (detail === null || detail === undefined || detail === '')) return base;
@@ -1512,6 +1513,14 @@ ${stallSummaryLine}${stallRecentLine}${healerLine}
             return { ...inlinePairs, ...existing };
         };
 
+        const formatDetailColumns = (messageText, jsonText) => {
+            if (messageText && jsonText) {
+                const padLen = Math.max(1, MESSAGE_COLUMN - messageText.length);
+                return messageText + " ".repeat(padLen) + "| " + jsonText;
+            }
+            return messageText || jsonText || '';
+        };
+
         const seenSrcByVideo = new Set();
 
         const logContent = logs.map(l => {
@@ -1544,10 +1553,7 @@ ${stallSummaryLine}${stallRecentLine}${healerLine}
                     const jsonDetail = mergedDetail && Object.keys(mergedDetail).length > 0
                         ? JSON.stringify(mergedDetail)
                         : '';
-                    if (messageText && jsonDetail) {
-                        return `${messageText} | ${jsonDetail}`;
-                    }
-                    return messageText || jsonDetail;
+                    return formatDetailColumns(messageText, jsonDetail);
                 })();
                 return formatLine(`[${time}] ${formatted.icon} `, formatted.text, detail);
             }
