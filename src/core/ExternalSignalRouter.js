@@ -118,7 +118,7 @@ const ExternalSignalRouter = (() => {
                     activeVideoId: active ? active.id : null,
                     deltaSeconds: attribution.match ? attribution.match.deltaSeconds : null,
                     lastProgressAgoMs: state.lastProgressTime ? (now - state.lastProgressTime) : null,
-                    videoState: VideoState.get(entry.video, attribution.id)
+                    videoState: VideoStateSnapshot.forLog(entry.video, attribution.id)
                 });
 
                 AdGapSignals.maybeLog({

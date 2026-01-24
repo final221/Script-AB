@@ -53,56 +53,60 @@ The build uses a priority list followed by auto-discovered modules, then the ent
 10. `recovery/SeekTargetCalculator.js`
 11. `recovery/LiveEdgeSeeker.js`
 12. `monitoring/ErrorClassifier.js`
-13. `monitoring/LogSchemas.js`
-14. `monitoring/LogSanitizer.js`
-15. `monitoring/LogNormalizer.js`
-16. `monitoring/Logger.js`
-17. `monitoring/LogEvents.js`
-18. `monitoring/TagCategorizer.js`
-19. `monitoring/DetailFormatter.js`
-20. `monitoring/LogFormatter.js`
-21. `monitoring/ReportTemplate.js`
-22. `monitoring/ResourceWindow.js`
-23. `monitoring/Metrics.js`
-24. `monitoring/ReportGenerator.js`
-25. `monitoring/ConsoleInterceptor.js`
-26. `monitoring/ConsoleSignalDetector.js`
-27. `monitoring/Instrumentation.js`
-28. `core/VideoState.js`
-29. `core/StateSnapshot.js`
-30. `core/PlaybackLogHelper.js`
-31. `core/MediaState.js`
-32. `core/RecoveryContext.js`
-33. `core/PlaybackStateTracker.js`
-34. `core/PlaybackEventHandlers.js`
-35. `core/PlaybackWatchdog.js`
-36. `core/PlaybackMonitor.js`
-37. `core/CandidateScorer.js`
-38. `core/CandidateSwitchPolicy.js`
-39. `core/CandidateTrust.js`
-40. `core/CandidateSelector.js`
-41. `core/BackoffManager.js`
-42. `core/ProbationPolicy.js`
-43. `core/NoHealPointPolicy.js`
-44. `core/PlayErrorPolicy.js`
-45. `core/StallSkipPolicy.js`
-46. `core/RecoveryPolicyFactory.js`
-47. `core/RecoveryPolicy.js`
-48. `core/FailoverCandidatePicker.js`
-49. `core/FailoverManager.js`
-50. `core/RecoveryManager.js`
-51. `core/MonitorRegistry.js`
-52. `core/MonitorCoordinator.js`
-53. `core/HealPointPoller.js`
-54. `core/HealPipeline.js`
-55. `core/AdGapSignals.js`
-56. `core/PlayheadAttribution.js`
-57. `core/VideoDiscovery.js`
-58. `core/ExternalSignalRouter.js`
-59. `core/MonitoringOrchestrator.js`
-60. `core/RecoveryOrchestrator.js`
-61. `core/StreamHealer.js`
-62. `core/CoreOrchestrator.js`
+13. `monitoring/LogTagRegistry.js`
+14. `monitoring/LogSchemas.js`
+15. `monitoring/LogSanitizer.js`
+16. `monitoring/LogNormalizer.js`
+17. `monitoring/Logger.js`
+18. `monitoring/LogEvents.js`
+19. `monitoring/TagCategorizer.js`
+20. `monitoring/DetailFormatter.js`
+21. `monitoring/LogFormatter.js`
+22. `monitoring/LegendRenderer.js`
+23. `monitoring/ReportTemplate.js`
+24. `monitoring/ResourceWindow.js`
+25. `monitoring/Metrics.js`
+26. `monitoring/TimelineRenderer.js`
+27. `monitoring/ReportGenerator.js`
+28. `monitoring/ConsoleInterceptor.js`
+29. `monitoring/ConsoleSignalDetector.js`
+30. `monitoring/Instrumentation.js`
+31. `core/VideoState.js`
+32. `core/VideoStateSnapshot.js`
+33. `core/StateSnapshot.js`
+34. `core/PlaybackLogHelper.js`
+35. `core/MediaState.js`
+36. `core/RecoveryContext.js`
+37. `core/PlaybackStateTracker.js`
+38. `core/PlaybackEventHandlers.js`
+39. `core/PlaybackWatchdog.js`
+40. `core/PlaybackMonitor.js`
+41. `core/CandidateScorer.js`
+42. `core/CandidateSwitchPolicy.js`
+43. `core/CandidateTrust.js`
+44. `core/CandidateSelector.js`
+45. `core/BackoffManager.js`
+46. `core/ProbationPolicy.js`
+47. `core/NoHealPointPolicy.js`
+48. `core/PlayErrorPolicy.js`
+49. `core/StallSkipPolicy.js`
+50. `core/RecoveryPolicyFactory.js`
+51. `core/RecoveryPolicy.js`
+52. `core/FailoverCandidatePicker.js`
+53. `core/FailoverManager.js`
+54. `core/RecoveryManager.js`
+55. `core/MonitorRegistry.js`
+56. `core/MonitorCoordinator.js`
+57. `core/HealPointPoller.js`
+58. `core/HealPipeline.js`
+59. `core/AdGapSignals.js`
+60. `core/PlayheadAttribution.js`
+61. `core/VideoDiscovery.js`
+62. `core/ExternalSignalRouter.js`
+63. `core/MonitoringOrchestrator.js`
+64. `core/RecoveryOrchestrator.js`
+65. `core/StreamHealer.js`
+66. `core/CoreOrchestrator.js`
 <!-- LOAD_ORDER_END -->
 
 
@@ -178,6 +182,7 @@ Script Logger.add() -> Logger.getMergedTimeline()
 ### Core Layer
 - **CoreOrchestrator.js** - Application initialization, global function exports
 - **VideoState.js** - Shared video state helper
+- **VideoStateSnapshot.js** - Standardized video state snapshots for logs
 - **PlaybackStateTracker.js** - Progress and stall state tracking
 - **PlaybackEventHandlers.js** - Video event wiring for playback monitoring
 - **PlaybackWatchdog.js** - Watchdog interval for stall checks
@@ -211,6 +216,13 @@ Script Logger.add() -> Logger.getMergedTimeline()
 
 ### Monitoring Layer
 - **Logger.js** - Log collection with console capture
+- **LogTagRegistry.js** - Tag metadata (icons, groups, schemas)
+- **LogSanitizer.js** - Detail sanitization + ordering
+- **LogNormalizer.js** - Normalizes log messages and console captures
+- **DetailFormatter.js** - Column-aligned log formatting helpers
+- **LogFormatter.js** - Timeline formatting for reports
+- **LegendRenderer.js** - Legend generation for report exports
+- **TimelineRenderer.js** - Timeline generation for report exports
 - **ConsoleInterceptor.js** - Wraps console methods for capture
 - **ConsoleSignalDetector.js** - Detects console signal hints
 - **Instrumentation.js** - Console interception for timeline

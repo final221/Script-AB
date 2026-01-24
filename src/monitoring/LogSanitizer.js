@@ -108,6 +108,31 @@ const LogSanitizer = (() => {
         return ordered;
     };
 
+    const splitDetail = (detail, options = {}) => {
+        if (detail === null || detail === undefined) {
+            return { messageText: '', jsonDetail: '' };
+        }
+        if (typeof detail !== 'object') {
+            return { messageText: '', jsonDetail: String(detail) };
+        }
+        const messageKey = options.messageKey || 'message';
+        const inlineKey = options.inlineKey || 'inlineMessage';
+        const stripKeys = new Set(options.stripKeys || [messageKey, inlineKey]);
+        const messageText = typeof detail[messageKey] === 'string'
+            ? detail[messageKey]
+            : typeof detail[inlineKey] === 'string'
+                ? detail[inlineKey]
+                : '';
+        const cloned = { ...detail };
+        stripKeys.forEach((key) => {
+            if (Object.prototype.hasOwnProperty.call(cloned, key)) {
+                delete cloned[key];
+            }
+        });
+        const jsonDetail = Object.keys(cloned).length > 0 ? JSON.stringify(cloned) : '';
+        return { messageText, jsonDetail };
+    };
+
     const sanitizeDetail = (detail, message, seenSrcByVideo) => {
         if (!detail || typeof detail !== 'object') return detail;
         const sanitized = transformDetail(detail);
@@ -146,6 +171,16 @@ const LogSanitizer = (() => {
         return orderDetail(sanitized, schema);
     };
 
+    const prepareDetail = (detail, message, seenSrcByVideo, options = {}) => {
+        const sanitized = sanitizeDetail(detail, message, seenSrcByVideo);
+        const split = splitDetail(sanitized, options);
+        return {
+            sanitized,
+            messageText: split.messageText,
+            jsonDetail: split.jsonDetail
+        };
+    };
+
     return {
         normalizeVideoToken,
         transformDetail,
@@ -153,6 +188,8 @@ const LogSanitizer = (() => {
         parseInlinePairs,
         mergeDetail,
         sanitizeDetail,
+        splitDetail,
+        prepareDetail,
         getRawTag,
         orderDetail
     };

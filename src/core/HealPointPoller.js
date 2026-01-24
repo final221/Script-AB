@@ -119,7 +119,7 @@ const HealPointPoller = (() => {
             Logger.add(LogEvents.TAG.POLL_TIMEOUT, {
                 attempts: pollCount,
                 elapsed: (Date.now() - startTime) + 'ms',
-                finalState: VideoState.get(video, videoId)
+                finalState: VideoStateSnapshot.forLog(video, videoId)
             });
 
             return {

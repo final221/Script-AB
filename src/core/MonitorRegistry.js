@@ -94,7 +94,7 @@ const MonitorRegistry = (() => {
             const videoId = getVideoId(video);
             Logger.add(LogEvents.tagged('VIDEO', 'Video registered'), {
                 videoId,
-                videoState: VideoState.getLog(video, videoId)
+                videoState: VideoStateSnapshot.forLog(video, videoId)
             });
 
             const monitor = PlaybackMonitor.create(video, {

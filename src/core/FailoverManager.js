@@ -101,7 +101,7 @@ const FailoverManager = (() => {
                 to: toId,
                 reason,
                 stalledForMs: monitorState?.lastProgressTime ? (now - monitorState.lastProgressTime) : null,
-                candidateState: VideoState.get(entry.video, toId)
+                candidateState: VideoStateSnapshot.forLog(entry.video, toId)
             });
 
             const playPromise = entry.video?.play?.();
@@ -133,7 +133,7 @@ const FailoverManager = (() => {
                         from: fromVideoId,
                         to: toId,
                         progressDelayMs: latestProgressTime - state.startTime,
-                        candidateState: VideoState.get(currentEntry.video, toId)
+                        candidateState: VideoStateSnapshot.forLog(currentEntry.video, toId)
                     });
                     resetBackoff(currentEntry.monitor.state, 'failover_success');
                     state.recentFailures.delete(toId);
@@ -143,7 +143,7 @@ const FailoverManager = (() => {
                         to: toId,
                         timeoutMs: CONFIG.stall.FAILOVER_PROGRESS_TIMEOUT_MS,
                         progressObserved: Boolean(currentEntry?.monitor.state.hasProgress),
-                        candidateState: currentEntry ? VideoState.get(currentEntry.video, toId) : null
+                        candidateState: currentEntry ? VideoStateSnapshot.forLog(currentEntry.video, toId) : null
                     });
                     state.recentFailures.set(toId, Date.now());
                     if (fromEntry) {

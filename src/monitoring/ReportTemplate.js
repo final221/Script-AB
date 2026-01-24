@@ -23,6 +23,7 @@ const ReportTemplate = (() => {
             : '';
 
         const versionLine = BuildInfo.getVersionLine();
+        const legendLines = LegendRenderer.buildLegend();
 
         return `[STREAM HEALER METRICS]
 ${versionLine}Uptime: ${(metricsSummary.uptime_ms / 1000).toFixed(1)}s
@@ -33,17 +34,7 @@ Heal Rate: ${metricsSummary.heal_rate}
 Errors: ${metricsSummary.errors}
 ${stallSummaryLine}${stallRecentLine}${healerLine}
 [LEGEND]
-\uD83E\uDE7A = Healer core (STATE/STALL/HEAL)
-\uD83C\uDFAF = Candidate selection (CANDIDATE/PROBATION/SUPPRESSION)
-\uD83E\uDDED = Monitor & video (VIDEO/MONITOR/SCAN/SRC/MEDIA_STATE/EVENT)
-\uD83E\uDDEA = Instrumentation & signals (INSTRUMENT/RESOURCE/CONSOLE_HINT)
-\uD83E\uDDF0 = Recovery & failover (FAILOVER/BACKOFF/RESET/CATCH_UP)
-\uD83E\uDDFE = Metrics & config (SYNC/CONFIG)
-\u2699\uFE0F = Core/system
-\uD83D\uDCCB = Console.log/info/debug
-\u26A0\uFE0F = Console.warn
-\u274C = Console.error
-[TIMELINE - Merged script + console logs]
+${legendLines}
 `;
     };
 

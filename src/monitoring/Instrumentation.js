@@ -17,23 +17,7 @@ const Instrumentation = (() => {
     // Helper to capture video state for logging
     const getVideoState = () => {
         const video = document.querySelector('video');
-        if (!video) return { error: 'NO_VIDEO_ELEMENT' };
-        let bufferedState = 'empty';
-        try {
-            if (video.buffered?.length > 0) {
-                bufferedState = `${video.buffered.end(video.buffered.length - 1).toFixed(2)}`;
-            }
-        } catch (error) {
-            bufferedState = 'unavailable';
-        }
-        return {
-            currentTime: video.currentTime?.toFixed(2),
-            paused: video.paused,
-            readyState: video.readyState,
-            networkState: video.networkState,
-            buffered: bufferedState,
-            error: video.error?.code
-        };
+        return VideoStateSnapshot.summarize(video);
     };
 
     const setupGlobalErrorHandlers = () => {

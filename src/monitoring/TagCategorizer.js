@@ -3,7 +3,7 @@
  * Central mapping of log tags to categories and icons.
  */
 const TagCategorizer = (() => {
-    const ICONS = {
+    const FALLBACK_ICONS = {
         healer: '\uD83E\uDE7A',
         candidate: '\uD83C\uDFAF',
         monitor: '\uD83E\uDDED',
@@ -14,7 +14,15 @@ const TagCategorizer = (() => {
         other: '\uD83D\uDD27'
     };
 
+    const getRegistry = () => (
+        typeof LogTagRegistry !== 'undefined' ? LogTagRegistry : null
+    );
+
     const categoryForTag = (tag) => {
+        const registry = getRegistry();
+        if (registry?.getGroupForTag) {
+            return registry.getGroupForTag(tag).id;
+        }
         if (!tag) return 'other';
         const upper = tag.toUpperCase();
         if (upper.startsWith('INSTRUMENT')) return 'instrument';
@@ -42,6 +50,8 @@ const TagCategorizer = (() => {
     };
 
     const formatTag = (rawTag) => {
+        const registry = getRegistry();
+        if (registry?.formatTag) return registry.formatTag(rawTag);
         let displayTag = rawTag;
         let tagKey = rawTag;
         if (rawTag.startsWith('HEALER:')) {
@@ -52,7 +62,7 @@ const TagCategorizer = (() => {
             tagKey = displayTag;
         }
         const category = categoryForTag(tagKey);
-        const icon = ICONS[category] || ICONS.other;
+        const icon = (FALLBACK_ICONS[category] || FALLBACK_ICONS.other);
         return {
             icon,
             displayTag,
@@ -60,6 +70,11 @@ const TagCategorizer = (() => {
             category
         };
     };
+
+    const ICONS = (() => {
+        const registry = getRegistry();
+        return registry?.ICONS || FALLBACK_ICONS;
+    })();
 
     return {
         ICONS,

@@ -14,10 +14,9 @@ const Logger = (() => {
      */
     const add = (message, detail = null) => {
         if (logs.length >= CONFIG.logging.MAX_LOGS) logs.shift();
-        if (typeof LogNormalizer !== 'undefined' && LogNormalizer?.normalizeInternal) {
-            const normalized = LogNormalizer.normalizeInternal(message, detail);
-            message = normalized.message;
-            detail = normalized.detail;
+        if (typeof LogNormalizer !== 'undefined' && LogNormalizer?.buildInternalEvent) {
+            logs.push(LogNormalizer.buildInternalEvent(message, detail));
+            return;
         }
         logs.push({
             timestamp: new Date().toISOString(),
@@ -52,6 +51,10 @@ const Logger = (() => {
         }
 
         let detail = null;
+        if (typeof LogNormalizer !== 'undefined' && LogNormalizer?.buildConsoleEvent) {
+            consoleLogs.push(LogNormalizer.buildConsoleEvent(level, message));
+            return;
+        }
         if (typeof LogNormalizer !== 'undefined' && LogNormalizer?.normalizeConsole) {
             const normalized = LogNormalizer.normalizeConsole(level, message);
             message = normalized.message;

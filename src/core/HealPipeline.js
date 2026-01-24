@@ -34,7 +34,7 @@ const HealPipeline = (() => {
             Logger.add(LogEvents.tagged('CATCH_UP', 'Scheduled'), {
                 reason,
                 delayMs,
-                videoState: VideoState.get(video, videoId)
+                videoState: VideoStateSnapshot.forLog(video, videoId)
             });
             monitorState.catchUpTimeoutId = setTimeout(() => {
                 attemptCatchUp(video, monitorState, videoId, reason);
@@ -202,7 +202,7 @@ const HealPipeline = (() => {
                     if (poller.hasRecovered(video, monitorState)) {
                         Logger.add(LogEvents.tagged('SKIPPED', 'Video recovered, no heal needed'), {
                             duration: (performance.now() - healStartTime).toFixed(0) + 'ms',
-                            finalState: VideoState.get(video, videoId)
+                            finalState: VideoStateSnapshot.forLog(video, videoId)
                         });
                         recoveryManager.resetBackoff(monitorState, 'self_recovered');
                         if (recoveryManager.resetPlayError) {
@@ -222,7 +222,7 @@ const HealPipeline = (() => {
                         suggestion: 'User may need to refresh page',
                         currentTime: video.currentTime?.toFixed(3),
                         bufferRanges: BufferGapFinder.formatRanges(BufferGapFinder.getBufferRanges(video)),
-                        finalState: VideoState.get(video, videoId)
+                        finalState: VideoStateSnapshot.forLog(video, videoId)
                     });
                     Metrics.increment('heals_failed');
                     recoveryManager.handleNoHealPoint(video, monitorState, 'no_heal_point');
@@ -256,7 +256,7 @@ const HealPipeline = (() => {
                     }
                     Logger.add(LogEvents.tagged('STALE_GONE', 'Heal point disappeared before seek'), {
                         original: `${healPoint.start.toFixed(2)}-${healPoint.end.toFixed(2)}`,
-                        finalState: VideoState.get(video, videoId)
+                        finalState: VideoStateSnapshot.forLog(video, videoId)
                     });
                     Metrics.increment('heals_failed');
                     recoveryManager.handleNoHealPoint(video, monitorState, 'stale_gone');
@@ -355,7 +355,7 @@ const HealPipeline = (() => {
                         duration: duration + 'ms',
                         healAttempts: state.healAttempts,
                         bufferEndDelta: bufferEndDelta !== null ? bufferEndDelta.toFixed(2) + 's' : null,
-                        finalState: VideoState.get(video, videoId)
+                        finalState: VideoStateSnapshot.forLog(video, videoId)
                     });
                     Metrics.increment('heals_successful');
                     recoveryManager.resetBackoff(monitorState, 'heal_success');
@@ -401,7 +401,7 @@ const HealPipeline = (() => {
                         healRange: finalPoint ? `${finalPoint.start.toFixed(2)}-${finalPoint.end.toFixed(2)}` : null,
                         isNudge: finalPoint?.isNudge,
                         gapSize: finalPoint?.gapSize?.toFixed(2),
-                        finalState: VideoState.get(video, videoId)
+                        finalState: VideoStateSnapshot.forLog(video, videoId)
                     });
                     Metrics.increment('heals_failed');
                     if (monitorState && recoveryManager.handlePlayFailure

@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.1.64 - 2026-01-24T18:07:01.568Z
+Previous: 4.1.63
+Commit: 055a592
+Changes:
+- refactor logging pipeline and recovery policies
+
 ## 4.1.63 - 2026-01-24T17:44:59.598Z
 Previous: 4.1.62
 Commit: 13ecd18

@@ -3,8 +3,8 @@
  * Central helper for consistent video state snapshots.
  */
 const StateSnapshot = (() => {
-    const full = (video, videoId) => VideoState.get(video, videoId);
-    const lite = (video, videoId) => VideoState.getLite(video, videoId);
+    const full = (video, videoId) => VideoStateSnapshot.full(video, videoId, { compactSrc: false });
+    const lite = (video, videoId) => VideoStateSnapshot.lite(video, videoId, { compactSrc: false });
 
     const format = (snapshot) => {
         if (!snapshot || snapshot.error) {

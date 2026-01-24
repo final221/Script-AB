@@ -99,7 +99,7 @@ const PlaybackWatchdog = (() => {
                 logDebug(LogEvents.tagged('SRC', 'Source changed'), {
                     previous: VideoState.compactSrc(state.lastSrc),
                     current: VideoState.compactSrc(currentSrc),
-                    videoState: VideoState.getLog(video, videoId)
+                    videoState: VideoStateSnapshot.forLog(video, videoId)
                 });
                 state.lastSrc = currentSrc;
                 state.lastSrcChangeTime = now;
@@ -107,20 +107,20 @@ const PlaybackWatchdog = (() => {
 
             const srcAttr = video.getAttribute ? (video.getAttribute('src') || '') : '';
             if (srcAttr !== state.lastSrcAttr) {
-                logMediaStateChange('src attribute', state.lastSrcAttr, srcAttr, VideoState.getLiteLog(video, videoId));
+                logMediaStateChange('src attribute', state.lastSrcAttr, srcAttr, VideoStateSnapshot.forLog(video, videoId, 'lite'));
                 state.lastSrcAttr = srcAttr;
             }
 
             const readyState = video.readyState;
             if (readyState !== state.lastReadyState) {
-                logMediaStateChange('readyState', state.lastReadyState, readyState, VideoState.getLiteLog(video, videoId));
+                logMediaStateChange('readyState', state.lastReadyState, readyState, VideoStateSnapshot.forLog(video, videoId, 'lite'));
                 state.lastReadyState = readyState;
                 state.lastReadyStateChangeTime = now;
             }
 
             const networkState = video.networkState;
             if (networkState !== state.lastNetworkState) {
-                logMediaStateChange('networkState', state.lastNetworkState, networkState, VideoState.getLiteLog(video, videoId));
+                logMediaStateChange('networkState', state.lastNetworkState, networkState, VideoStateSnapshot.forLog(video, videoId, 'lite'));
                 state.lastNetworkState = networkState;
                 state.lastNetworkStateChangeTime = now;
             }
@@ -132,7 +132,7 @@ const PlaybackWatchdog = (() => {
                 bufferedLength = state.lastBufferedLength;
             }
             if (bufferedLength !== state.lastBufferedLength) {
-                logMediaStateChange('buffered range count', state.lastBufferedLength, bufferedLength, VideoState.getLiteLog(video, videoId));
+                logMediaStateChange('buffered range count', state.lastBufferedLength, bufferedLength, VideoStateSnapshot.forLog(video, videoId, 'lite'));
                 state.lastBufferedLength = bufferedLength;
                 state.lastBufferedLengthChangeTime = now;
             }

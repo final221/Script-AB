@@ -8,8 +8,7 @@ const ReportGenerator = (() => {
 
     const generateContent = (metricsSummary, logs, healerStats) => {
         const header = ReportTemplate.buildHeader(metricsSummary, healerStats);
-        const formatter = LogFormatter.create();
-        const logContent = formatter.formatLogs(logs);
+        const logContent = TimelineRenderer.render(logs);
 
         // Stats about what was captured
         const scriptLogs = logs.filter(l => l.source === 'SCRIPT' || l.type === 'internal').length;

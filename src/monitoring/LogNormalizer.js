@@ -7,6 +7,17 @@ const LogNormalizer = (() => {
         message.replace(/^\s*\d{2}:\d{2}:\d{2}\s*-\s*/, '')
     );
 
+    const createEvent = ({ timestamp, type, level, message, detail }) => ({
+        timestamp,
+        type,
+        level,
+        message,
+        detail,
+        tag: (typeof LogSanitizer !== 'undefined' && LogSanitizer?.getRawTag)
+            ? LogSanitizer.getRawTag(message)
+            : null
+    });
+
     const normalizeConsole = (level, message) => {
         if (typeof message !== 'string') return { message, detail: null };
         const stripped = stripConsoleTimestamp(message);
@@ -27,6 +38,17 @@ const LogNormalizer = (() => {
                 level
             }
         };
+    };
+
+    const buildConsoleEvent = (level, message, timestamp) => {
+        const normalized = normalizeConsole(level, message);
+        return createEvent({
+            timestamp: timestamp || new Date().toISOString(),
+            type: 'console',
+            level,
+            message: normalized.message,
+            detail: normalized.detail
+        });
     };
 
     const normalizeInternal = (message, detail) => {
@@ -59,5 +81,21 @@ const LogNormalizer = (() => {
         };
     };
 
-    return { normalizeInternal, normalizeConsole };
+    const buildInternalEvent = (message, detail, timestamp) => {
+        const normalized = normalizeInternal(message, detail);
+        return createEvent({
+            timestamp: timestamp || new Date().toISOString(),
+            type: 'internal',
+            message: normalized.message,
+            detail: normalized.detail
+        });
+    };
+
+    return {
+        normalizeInternal,
+        normalizeConsole,
+        buildInternalEvent,
+        buildConsoleEvent,
+        createEvent
+    };
 })();

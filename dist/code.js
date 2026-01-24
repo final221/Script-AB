@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.1.63
+// @version       4.1.64
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -144,7 +144,7 @@ const CONFIG = (() => {
  * Build metadata helpers (version injected at build time).
  */
 const BuildInfo = (() => {
-    const VERSION = '4.1.63';
+    const VERSION = '4.1.64';
 
     const getVersion = () => {
         const gmVersion = (typeof GM_info !== 'undefined' && GM_info?.script?.version)
@@ -155,7 +155,7 @@ const BuildInfo = (() => {
             ? unsafeWindow.GM_info.script.version
             : null;
         if (unsafeVersion) return unsafeVersion;
-        if (VERSION && VERSION !== '4.1.63') return VERSION;
+        if (VERSION && VERSION !== '4.1.64') return VERSION;
         return null;
     };
 
@@ -797,11 +797,122 @@ const ErrorClassifier = (() => {
 })();
 
 
-// --- LogSchemas ---
+// --- LogTagRegistry ---
 /**
- * Optional key ordering hints for log detail payloads.
+ * Central registry for log tag metadata (icons, groups, schemas).
  */
-const LogSchemas = (() => {
+const LogTagRegistry = (() => {
+    const ICONS = {
+        healer: '\uD83E\uDE7A',
+        candidate: '\uD83C\uDFAF',
+        monitor: '\uD83E\uDDED',
+        instrument: '\uD83E\uDDEA',
+        recovery: '\uD83E\uDDF0',
+        metrics: '\uD83E\uDDFE',
+        core: '\u2699\uFE0F',
+        other: '\uD83D\uDD27'
+    };
+
+    const GROUPS = [
+        {
+            id: 'healer',
+            icon: ICONS.healer,
+            legend: 'Healer core (STATE/STALL/HEAL)',
+            includeInLegend: true,
+            match: (tag) => (
+                !tag.startsWith('INSTRUMENT')
+                && tag !== 'CORE'
+                && !tag.startsWith('CANDIDATE')
+                && !tag.startsWith('PROBATION')
+                && !tag.startsWith('SUPPRESSION')
+                && !tag.startsWith('PROBE')
+                && !tag.startsWith('FAILOVER')
+                && !tag.startsWith('BACKOFF')
+                && !tag.startsWith('RESET')
+                && !tag.startsWith('CATCH_UP')
+                && !tag.startsWith('REFRESH')
+                && !tag.startsWith('DETACHED')
+                && !tag.startsWith('BLOCKED')
+                && !tag.startsWith('PLAY_BACKOFF')
+                && !tag.startsWith('PRUNE')
+                && !tag.startsWith('SYNC')
+                && !tag.startsWith('CONFIG')
+                && !tag.startsWith('METRIC')
+                && !['VIDEO', 'MONITOR', 'SCAN', 'SCAN_ITEM', 'SRC', 'MEDIA_STATE', 'EVENT', 'EVENT_SUMMARY'].includes(tag)
+            )
+        },
+        {
+            id: 'candidate',
+            icon: ICONS.candidate,
+            legend: 'Candidate selection (CANDIDATE/PROBATION/SUPPRESSION)',
+            includeInLegend: true,
+            match: (tag) => (
+                tag.startsWith('CANDIDATE')
+                || tag.startsWith('PROBATION')
+                || tag.startsWith('SUPPRESSION')
+                || tag.startsWith('PROBE')
+            )
+        },
+        {
+            id: 'monitor',
+            icon: ICONS.monitor,
+            legend: 'Monitor & video (VIDEO/MONITOR/SCAN/SRC/MEDIA_STATE/EVENT)',
+            includeInLegend: true,
+            match: (tag) => (
+                ['VIDEO', 'MONITOR', 'SCAN', 'SCAN_ITEM', 'SRC', 'MEDIA_STATE', 'EVENT', 'EVENT_SUMMARY'].includes(tag)
+            )
+        },
+        {
+            id: 'instrument',
+            icon: ICONS.instrument,
+            legend: 'Instrumentation & signals (INSTRUMENT/RESOURCE/CONSOLE_HINT)',
+            includeInLegend: true,
+            match: (tag) => tag.startsWith('INSTRUMENT')
+        },
+        {
+            id: 'recovery',
+            icon: ICONS.recovery,
+            legend: 'Recovery & failover (FAILOVER/BACKOFF/RESET/CATCH_UP)',
+            includeInLegend: true,
+            match: (tag) => (
+                tag.startsWith('FAILOVER')
+                || tag.startsWith('BACKOFF')
+                || tag.startsWith('RESET')
+                || tag.startsWith('CATCH_UP')
+                || tag.startsWith('REFRESH')
+                || tag.startsWith('DETACHED')
+                || tag.startsWith('BLOCKED')
+                || tag.startsWith('PLAY_BACKOFF')
+                || tag.startsWith('PRUNE')
+            )
+        },
+        {
+            id: 'metrics',
+            icon: ICONS.metrics,
+            legend: 'Metrics & config (SYNC/CONFIG)',
+            includeInLegend: true,
+            match: (tag) => (
+                tag.startsWith('SYNC')
+                || tag.startsWith('CONFIG')
+                || tag.startsWith('METRIC')
+            )
+        },
+        {
+            id: 'core',
+            icon: ICONS.core,
+            legend: 'Core/system',
+            includeInLegend: true,
+            match: (tag) => tag === 'CORE'
+        },
+        {
+            id: 'other',
+            icon: ICONS.other,
+            legend: 'Other',
+            includeInLegend: false,
+            match: () => true
+        }
+    ];
+
     const SCHEMAS = {
         STATE: [
             'message',
@@ -911,10 +1022,70 @@ const LogSchemas = (() => {
         ]
     };
 
+    const normalizeTag = (rawTag) => {
+        if (!rawTag) {
+            return { rawTag: '', tagKey: '', displayTag: '' };
+        }
+        if (rawTag.startsWith('HEALER:')) {
+            const tag = rawTag.slice(7);
+            return { rawTag, tagKey: tag, displayTag: tag };
+        }
+        if (rawTag.startsWith('INSTRUMENT:')) {
+            const tag = rawTag.slice(11);
+            const display = `INSTRUMENT:${tag}`;
+            return { rawTag, tagKey: display, displayTag: display };
+        }
+        return { rawTag, tagKey: rawTag, displayTag: rawTag };
+    };
+
+    const getGroupForTag = (tagKey) => {
+        const normalized = String(tagKey || '').toUpperCase();
+        return GROUPS.find(group => group.match(normalized)) || GROUPS[GROUPS.length - 1];
+    };
+
+    const formatTag = (rawTag) => {
+        const normalized = normalizeTag(rawTag);
+        const group = getGroupForTag(normalized.tagKey);
+        return {
+            icon: group.icon,
+            displayTag: normalized.displayTag,
+            tagKey: normalized.tagKey,
+            category: group.id
+        };
+    };
+
     const getSchema = (rawTag) => {
         if (!rawTag) return null;
-        const normalized = rawTag.startsWith('HEALER:') ? rawTag.slice(7) : rawTag;
+        const normalized = normalizeTag(rawTag).tagKey.toUpperCase();
         return SCHEMAS[normalized] || null;
+    };
+
+    const getLegendLines = () => (
+        GROUPS.filter(group => group.includeInLegend)
+            .map(group => `${group.icon} = ${group.legend}`)
+    );
+
+    return {
+        ICONS,
+        GROUPS,
+        normalizeTag,
+        formatTag,
+        getGroupForTag,
+        getSchema,
+        getLegendLines
+    };
+})();
+
+// --- LogSchemas ---
+/**
+ * Optional key ordering hints for log detail payloads.
+ */
+const LogSchemas = (() => {
+    const getSchema = (rawTag) => {
+        if (typeof LogTagRegistry !== 'undefined' && LogTagRegistry?.getSchema) {
+            return LogTagRegistry.getSchema(rawTag);
+        }
+        return null;
     };
 
     return { getSchema };
@@ -1030,6 +1201,31 @@ const LogSanitizer = (() => {
         return ordered;
     };
 
+    const splitDetail = (detail, options = {}) => {
+        if (detail === null || detail === undefined) {
+            return { messageText: '', jsonDetail: '' };
+        }
+        if (typeof detail !== 'object') {
+            return { messageText: '', jsonDetail: String(detail) };
+        }
+        const messageKey = options.messageKey || 'message';
+        const inlineKey = options.inlineKey || 'inlineMessage';
+        const stripKeys = new Set(options.stripKeys || [messageKey, inlineKey]);
+        const messageText = typeof detail[messageKey] === 'string'
+            ? detail[messageKey]
+            : typeof detail[inlineKey] === 'string'
+                ? detail[inlineKey]
+                : '';
+        const cloned = { ...detail };
+        stripKeys.forEach((key) => {
+            if (Object.prototype.hasOwnProperty.call(cloned, key)) {
+                delete cloned[key];
+            }
+        });
+        const jsonDetail = Object.keys(cloned).length > 0 ? JSON.stringify(cloned) : '';
+        return { messageText, jsonDetail };
+    };
+
     const sanitizeDetail = (detail, message, seenSrcByVideo) => {
         if (!detail || typeof detail !== 'object') return detail;
         const sanitized = transformDetail(detail);
@@ -1068,6 +1264,16 @@ const LogSanitizer = (() => {
         return orderDetail(sanitized, schema);
     };
 
+    const prepareDetail = (detail, message, seenSrcByVideo, options = {}) => {
+        const sanitized = sanitizeDetail(detail, message, seenSrcByVideo);
+        const split = splitDetail(sanitized, options);
+        return {
+            sanitized,
+            messageText: split.messageText,
+            jsonDetail: split.jsonDetail
+        };
+    };
+
     return {
         normalizeVideoToken,
         transformDetail,
@@ -1075,6 +1281,8 @@ const LogSanitizer = (() => {
         parseInlinePairs,
         mergeDetail,
         sanitizeDetail,
+        splitDetail,
+        prepareDetail,
         getRawTag,
         orderDetail
     };
@@ -1088,6 +1296,17 @@ const LogNormalizer = (() => {
     const stripConsoleTimestamp = (message) => (
         message.replace(/^\s*\d{2}:\d{2}:\d{2}\s*-\s*/, '')
     );
+
+    const createEvent = ({ timestamp, type, level, message, detail }) => ({
+        timestamp,
+        type,
+        level,
+        message,
+        detail,
+        tag: (typeof LogSanitizer !== 'undefined' && LogSanitizer?.getRawTag)
+            ? LogSanitizer.getRawTag(message)
+            : null
+    });
 
     const normalizeConsole = (level, message) => {
         if (typeof message !== 'string') return { message, detail: null };
@@ -1109,6 +1328,17 @@ const LogNormalizer = (() => {
                 level
             }
         };
+    };
+
+    const buildConsoleEvent = (level, message, timestamp) => {
+        const normalized = normalizeConsole(level, message);
+        return createEvent({
+            timestamp: timestamp || new Date().toISOString(),
+            type: 'console',
+            level,
+            message: normalized.message,
+            detail: normalized.detail
+        });
     };
 
     const normalizeInternal = (message, detail) => {
@@ -1141,7 +1371,23 @@ const LogNormalizer = (() => {
         };
     };
 
-    return { normalizeInternal, normalizeConsole };
+    const buildInternalEvent = (message, detail, timestamp) => {
+        const normalized = normalizeInternal(message, detail);
+        return createEvent({
+            timestamp: timestamp || new Date().toISOString(),
+            type: 'internal',
+            message: normalized.message,
+            detail: normalized.detail
+        });
+    };
+
+    return {
+        normalizeInternal,
+        normalizeConsole,
+        buildInternalEvent,
+        buildConsoleEvent,
+        createEvent
+    };
 })();
 
 // --- Logger ---
@@ -1160,10 +1406,9 @@ const Logger = (() => {
      */
     const add = (message, detail = null) => {
         if (logs.length >= CONFIG.logging.MAX_LOGS) logs.shift();
-        if (typeof LogNormalizer !== 'undefined' && LogNormalizer?.normalizeInternal) {
-            const normalized = LogNormalizer.normalizeInternal(message, detail);
-            message = normalized.message;
-            detail = normalized.detail;
+        if (typeof LogNormalizer !== 'undefined' && LogNormalizer?.buildInternalEvent) {
+            logs.push(LogNormalizer.buildInternalEvent(message, detail));
+            return;
         }
         logs.push({
             timestamp: new Date().toISOString(),
@@ -1198,6 +1443,10 @@ const Logger = (() => {
         }
 
         let detail = null;
+        if (typeof LogNormalizer !== 'undefined' && LogNormalizer?.buildConsoleEvent) {
+            consoleLogs.push(LogNormalizer.buildConsoleEvent(level, message));
+            return;
+        }
         if (typeof LogNormalizer !== 'undefined' && LogNormalizer?.normalizeConsole) {
             const normalized = LogNormalizer.normalizeConsole(level, message);
             message = normalized.message;
@@ -1475,7 +1724,7 @@ const LogEvents = (() => {
  * Central mapping of log tags to categories and icons.
  */
 const TagCategorizer = (() => {
-    const ICONS = {
+    const FALLBACK_ICONS = {
         healer: '\uD83E\uDE7A',
         candidate: '\uD83C\uDFAF',
         monitor: '\uD83E\uDDED',
@@ -1486,7 +1735,15 @@ const TagCategorizer = (() => {
         other: '\uD83D\uDD27'
     };
 
+    const getRegistry = () => (
+        typeof LogTagRegistry !== 'undefined' ? LogTagRegistry : null
+    );
+
     const categoryForTag = (tag) => {
+        const registry = getRegistry();
+        if (registry?.getGroupForTag) {
+            return registry.getGroupForTag(tag).id;
+        }
         if (!tag) return 'other';
         const upper = tag.toUpperCase();
         if (upper.startsWith('INSTRUMENT')) return 'instrument';
@@ -1514,6 +1771,8 @@ const TagCategorizer = (() => {
     };
 
     const formatTag = (rawTag) => {
+        const registry = getRegistry();
+        if (registry?.formatTag) return registry.formatTag(rawTag);
         let displayTag = rawTag;
         let tagKey = rawTag;
         if (rawTag.startsWith('HEALER:')) {
@@ -1524,7 +1783,7 @@ const TagCategorizer = (() => {
             tagKey = displayTag;
         }
         const category = categoryForTag(tagKey);
-        const icon = ICONS[category] || ICONS.other;
+        const icon = (FALLBACK_ICONS[category] || FALLBACK_ICONS.other);
         return {
             icon,
             displayTag,
@@ -1532,6 +1791,11 @@ const TagCategorizer = (() => {
             category
         };
     };
+
+    const ICONS = (() => {
+        const registry = getRegistry();
+        return registry?.ICONS || FALLBACK_ICONS;
+    })();
 
     return {
         ICONS,
@@ -1622,42 +1886,21 @@ const LogFormatter = (() => {
             if (l.source === 'CONSOLE' || l.type === 'console') {
                 const icon = l.level === 'error' ? '\u274C' : l.level === 'warn' ? '\u26A0\uFE0F' : '\uD83D\uDCCB';
                 const summary = l.message || 'Console';
-                const detailMessage = l.detail?.message || '';
-                const jsonDetail = (() => {
-                    if (!l.detail || typeof l.detail !== 'object') return '';
-                    const cloned = { ...l.detail };
-                    delete cloned.message;
-                    if (cloned.level !== undefined) delete cloned.level;
-                    return Object.keys(cloned).length > 0 ? JSON.stringify(cloned) : '';
-                })();
-                const detail = detailFormatter.formatDetailColumns(detailMessage, jsonDetail);
+                const split = LogSanitizer.splitDetail(l.detail, { stripKeys: ['message', 'level'] });
+                const detail = detailFormatter.formatDetailColumns(split.messageText, split.jsonDetail);
                 return detailFormatter.formatLine(`[${time}] ${icon} `, summary, detail, true);
             }
 
-            const sanitized = LogSanitizer.sanitizeDetail(l.detail, l.message, seenSrcByVideo);
+            const prepared = LogSanitizer.prepareDetail(l.detail, l.message, seenSrcByVideo);
             const match = l.message.match(/^\[([^\]]+)\]\s*(.*)$/);
             if (!match) {
-                const detail = sanitized && Object.keys(sanitized).length > 0
-                    ? JSON.stringify(sanitized)
-                    : '';
+                const detail = detailFormatter.formatDetailColumns(prepared.messageText, prepared.jsonDetail);
                 return detailFormatter.formatLine(`[${time}] \uD83D\uDD27 `, l.message, detail);
             }
 
             const rawTag = match[1];
             const formatted = TagCategorizer.formatTag(rawTag);
-            const messageText = (sanitized && typeof sanitized.message === 'string')
-                ? sanitized.message
-                : (sanitized && typeof sanitized.inlineMessage === 'string')
-                    ? sanitized.inlineMessage
-                    : '';
-            const jsonDetail = (() => {
-                if (!sanitized || typeof sanitized !== 'object') return '';
-                const cloned = { ...sanitized };
-                delete cloned.message;
-                if (cloned.inlineMessage !== undefined) delete cloned.inlineMessage;
-                return Object.keys(cloned).length > 0 ? JSON.stringify(cloned) : '';
-            })();
-            const detail = detailFormatter.formatDetailColumns(messageText, jsonDetail);
+            const detail = detailFormatter.formatDetailColumns(prepared.messageText, prepared.jsonDetail);
             return detailFormatter.formatLine(`[${time}] ${formatted.icon} `, `[${formatted.displayTag}]`, detail);
         }).join('\n');
 
@@ -1669,6 +1912,26 @@ const LogFormatter = (() => {
     return {
         create
     };
+})();
+
+// --- LegendRenderer ---
+/**
+ * Builds the legend section for report exports.
+ */
+const LegendRenderer = (() => {
+    const buildLegend = () => {
+        const tagLines = (typeof LogTagRegistry !== 'undefined' && LogTagRegistry?.getLegendLines)
+            ? LogTagRegistry.getLegendLines()
+            : [];
+        const consoleLines = [
+            '\uD83D\uDCCB = Console.log/info/debug',
+            '\u26A0\uFE0F = Console.warn',
+            '\u274C = Console.error'
+        ];
+        return [...tagLines, ...consoleLines].join('\n');
+    };
+
+    return { buildLegend };
 })();
 
 // --- ReportTemplate ---
@@ -1696,6 +1959,7 @@ const ReportTemplate = (() => {
             : '';
 
         const versionLine = BuildInfo.getVersionLine();
+        const legendLines = LegendRenderer.buildLegend();
 
         return `[STREAM HEALER METRICS]
 ${versionLine}Uptime: ${(metricsSummary.uptime_ms / 1000).toFixed(1)}s
@@ -1706,17 +1970,7 @@ Heal Rate: ${metricsSummary.heal_rate}
 Errors: ${metricsSummary.errors}
 ${stallSummaryLine}${stallRecentLine}${healerLine}
 [LEGEND]
-\uD83E\uDE7A = Healer core (STATE/STALL/HEAL)
-\uD83C\uDFAF = Candidate selection (CANDIDATE/PROBATION/SUPPRESSION)
-\uD83E\uDDED = Monitor & video (VIDEO/MONITOR/SCAN/SRC/MEDIA_STATE/EVENT)
-\uD83E\uDDEA = Instrumentation & signals (INSTRUMENT/RESOURCE/CONSOLE_HINT)
-\uD83E\uDDF0 = Recovery & failover (FAILOVER/BACKOFF/RESET/CATCH_UP)
-\uD83E\uDDFE = Metrics & config (SYNC/CONFIG)
-\u2699\uFE0F = Core/system
-\uD83D\uDCCB = Console.log/info/debug
-\u26A0\uFE0F = Console.warn
-\u274C = Console.error
-[TIMELINE - Merged script + console logs]
+${legendLines}
 `;
     };
 
@@ -1875,6 +2129,20 @@ const Metrics = (() => {
     };
 })();
 
+// --- TimelineRenderer ---
+/**
+ * Renders the merged log timeline for report exports.
+ */
+const TimelineRenderer = (() => {
+    const render = (logs) => {
+        const formatter = LogFormatter.create();
+        const content = formatter.formatLogs(logs);
+        return `[TIMELINE - Merged script + console logs]\n${content}`;
+    };
+
+    return { render };
+})();
+
 // --- ReportGenerator ---
 /**
  * Generates and facilitates the download of a comprehensive report.
@@ -1885,8 +2153,7 @@ const ReportGenerator = (() => {
 
     const generateContent = (metricsSummary, logs, healerStats) => {
         const header = ReportTemplate.buildHeader(metricsSummary, healerStats);
-        const formatter = LogFormatter.create();
-        const logContent = formatter.formatLogs(logs);
+        const logContent = TimelineRenderer.render(logs);
 
         // Stats about what was captured
         const scriptLogs = logs.filter(l => l.source === 'SCRIPT' || l.type === 'internal').length;
@@ -2063,23 +2330,7 @@ const Instrumentation = (() => {
     // Helper to capture video state for logging
     const getVideoState = () => {
         const video = document.querySelector('video');
-        if (!video) return { error: 'NO_VIDEO_ELEMENT' };
-        let bufferedState = 'empty';
-        try {
-            if (video.buffered?.length > 0) {
-                bufferedState = `${video.buffered.end(video.buffered.length - 1).toFixed(2)}`;
-            }
-        } catch (error) {
-            bufferedState = 'unavailable';
-        }
-        return {
-            currentTime: video.currentTime?.toFixed(2),
-            paused: video.paused,
-            readyState: video.readyState,
-            networkState: video.networkState,
-            buffered: bufferedState,
-            error: video.error?.code
-        };
+        return VideoStateSnapshot.summarize(video);
     };
 
     const setupGlobalErrorHandlers = () => {
@@ -2357,13 +2608,69 @@ const VideoState = (() => {
     };
 })();
 
+// --- VideoStateSnapshot ---
+/**
+ * Standardized helpers for capturing video state snapshots for logs.
+ */
+const VideoStateSnapshot = (() => {
+    const getBufferedEnd = (video) => {
+        if (!video) return 'empty';
+        try {
+            if (video.buffered?.length > 0) {
+                return `${video.buffered.end(video.buffered.length - 1).toFixed(2)}`;
+            }
+            return 'empty';
+        } catch (error) {
+            return 'unavailable';
+        }
+    };
+
+    const full = (video, id, options = {}) => {
+        const compactSrc = options.compactSrc !== false;
+        return compactSrc
+            ? VideoState.getLog(video, id)
+            : VideoState.get(video, id);
+    };
+
+    const lite = (video, id, options = {}) => {
+        const compactSrc = options.compactSrc !== false;
+        return compactSrc
+            ? VideoState.getLiteLog(video, id)
+            : VideoState.getLite(video, id);
+    };
+
+    const forLog = (video, id, mode = 'full') => (
+        mode === 'lite' ? lite(video, id) : full(video, id)
+    );
+
+    const summarize = (video) => {
+        if (!video) return { error: 'NO_VIDEO_ELEMENT' };
+        const base = VideoState.getLite(video, null);
+        return {
+            currentTime: base.currentTime,
+            paused: base.paused,
+            readyState: base.readyState,
+            networkState: base.networkState,
+            buffered: getBufferedEnd(video),
+            error: base.errorCode
+        };
+    };
+
+    return {
+        full,
+        lite,
+        forLog,
+        summarize
+    };
+})();
+
 // --- StateSnapshot ---
 /**
  * Central helper for consistent video state snapshots.
  */
 const StateSnapshot = (() => {
-    const full = (video, videoId) => VideoState.get(video, videoId);
-    const lite = (video, videoId) => VideoState.getLite(video, videoId);
+    const full = (video, videoId) => VideoStateSnapshot.full(video, videoId, { compactSrc: false });
+    const lite = (video, videoId) => VideoStateSnapshot.lite(video, videoId, { compactSrc: false });
 
     const format = (snapshot) => {
         if (!snapshot || snapshot.error) {
@@ -3518,7 +3825,7 @@ const PlaybackWatchdog = (() => {
                 logDebug(LogEvents.tagged('SRC', 'Source changed'), {
                     previous: VideoState.compactSrc(state.lastSrc),
                     current: VideoState.compactSrc(currentSrc),
-                    videoState: VideoState.getLog(video, videoId)
+                    videoState: VideoStateSnapshot.forLog(video, videoId)
                 });
                 state.lastSrc = currentSrc;
                 state.lastSrcChangeTime = now;
@@ -3526,20 +3833,20 @@ const PlaybackWatchdog = (() => {
 
             const srcAttr = video.getAttribute ? (video.getAttribute('src') || '') : '';
             if (srcAttr !== state.lastSrcAttr) {
-                logMediaStateChange('src attribute', state.lastSrcAttr, srcAttr, VideoState.getLiteLog(video, videoId));
+                logMediaStateChange('src attribute', state.lastSrcAttr, srcAttr, VideoStateSnapshot.forLog(video, videoId, 'lite'));
                 state.lastSrcAttr = srcAttr;
             }
 
             const readyState = video.readyState;
             if (readyState !== state.lastReadyState) {
-                logMediaStateChange('readyState', state.lastReadyState, readyState, VideoState.getLiteLog(video, videoId));
+                logMediaStateChange('readyState', state.lastReadyState, readyState, VideoStateSnapshot.forLog(video, videoId, 'lite'));
                 state.lastReadyState = readyState;
                 state.lastReadyStateChangeTime = now;
             }
 
             const networkState = video.networkState;
             if (networkState !== state.lastNetworkState) {
-                logMediaStateChange('networkState', state.lastNetworkState, networkState, VideoState.getLiteLog(video, videoId));
+                logMediaStateChange('networkState', state.lastNetworkState, networkState, VideoStateSnapshot.forLog(video, videoId, 'lite'));
                 state.lastNetworkState = networkState;
                 state.lastNetworkStateChangeTime = now;
             }
@@ -3551,7 +3858,7 @@ const PlaybackWatchdog = (() => {
                 bufferedLength = state.lastBufferedLength;
             }
             if (bufferedLength !== state.lastBufferedLength) {
-                logMediaStateChange('buffered range count', state.lastBufferedLength, bufferedLength, VideoState.getLiteLog(video, videoId));
+                logMediaStateChange('buffered range count', state.lastBufferedLength, bufferedLength, VideoStateSnapshot.forLog(video, videoId, 'lite'));
                 state.lastBufferedLength = bufferedLength;
                 state.lastBufferedLengthChangeTime = now;
             }
@@ -5063,7 +5370,7 @@ const FailoverManager = (() => {
                 to: toId,
                 reason,
                 stalledForMs: monitorState?.lastProgressTime ? (now - monitorState.lastProgressTime) : null,
-                candidateState: VideoState.get(entry.video, toId)
+                candidateState: VideoStateSnapshot.forLog(entry.video, toId)
             });
 
             const playPromise = entry.video?.play?.();
@@ -5095,7 +5402,7 @@ const FailoverManager = (() => {
                         from: fromVideoId,
                         to: toId,
                         progressDelayMs: latestProgressTime - state.startTime,
-                        candidateState: VideoState.get(currentEntry.video, toId)
+                        candidateState: VideoStateSnapshot.forLog(currentEntry.video, toId)
                     });
                     resetBackoff(currentEntry.monitor.state, 'failover_success');
                     state.recentFailures.delete(toId);
@@ -5105,7 +5412,7 @@ const FailoverManager = (() => {
                         to: toId,
                         timeoutMs: CONFIG.stall.FAILOVER_PROGRESS_TIMEOUT_MS,
                         progressObserved: Boolean(currentEntry?.monitor.state.hasProgress),
-                        candidateState: currentEntry ? VideoState.get(currentEntry.video, toId) : null
+                        candidateState: currentEntry ? VideoStateSnapshot.forLog(currentEntry.video, toId) : null
                     });
                     state.recentFailures.set(toId, Date.now());
                     if (fromEntry) {
@@ -5450,7 +5757,7 @@ const MonitorRegistry = (() => {
             const videoId = getVideoId(video);
             Logger.add(LogEvents.tagged('VIDEO', 'Video registered'), {
                 videoId,
-                videoState: VideoState.getLog(video, videoId)
+                videoState: VideoStateSnapshot.forLog(video, videoId)
             });
 
             const monitor = PlaybackMonitor.create(video, {
@@ -5699,7 +6006,7 @@ const HealPointPoller = (() => {
             Logger.add(LogEvents.TAG.POLL_TIMEOUT, {
                 attempts: pollCount,
                 elapsed: (Date.now() - startTime) + 'ms',
-                finalState: VideoState.get(video, videoId)
+                finalState: VideoStateSnapshot.forLog(video, videoId)
             });
 
             return {
@@ -5753,7 +6060,7 @@ const HealPipeline = (() => {
             Logger.add(LogEvents.tagged('CATCH_UP', 'Scheduled'), {
                 reason,
                 delayMs,
-                videoState: VideoState.get(video, videoId)
+                videoState: VideoStateSnapshot.forLog(video, videoId)
             });
             monitorState.catchUpTimeoutId = setTimeout(() => {
                 attemptCatchUp(video, monitorState, videoId, reason);
@@ -5921,7 +6228,7 @@ const HealPipeline = (() => {
                     if (poller.hasRecovered(video, monitorState)) {
                         Logger.add(LogEvents.tagged('SKIPPED', 'Video recovered, no heal needed'), {
                             duration: (performance.now() - healStartTime).toFixed(0) + 'ms',
-                            finalState: VideoState.get(video, videoId)
+                            finalState: VideoStateSnapshot.forLog(video, videoId)
                         });
                         recoveryManager.resetBackoff(monitorState, 'self_recovered');
                         if (recoveryManager.resetPlayError) {
@@ -5941,7 +6248,7 @@ const HealPipeline = (() => {
                         suggestion: 'User may need to refresh page',
                         currentTime: video.currentTime?.toFixed(3),
                         bufferRanges: BufferGapFinder.formatRanges(BufferGapFinder.getBufferRanges(video)),
-                        finalState: VideoState.get(video, videoId)
+                        finalState: VideoStateSnapshot.forLog(video, videoId)
                     });
                     Metrics.increment('heals_failed');
                     recoveryManager.handleNoHealPoint(video, monitorState, 'no_heal_point');
@@ -5975,7 +6282,7 @@ const HealPipeline = (() => {
                     }
                     Logger.add(LogEvents.tagged('STALE_GONE', 'Heal point disappeared before seek'), {
                         original: `${healPoint.start.toFixed(2)}-${healPoint.end.toFixed(2)}`,
-                        finalState: VideoState.get(video, videoId)
+                        finalState: VideoStateSnapshot.forLog(video, videoId)
                     });
                     Metrics.increment('heals_failed');
                     recoveryManager.handleNoHealPoint(video, monitorState, 'stale_gone');
@@ -6074,7 +6381,7 @@ const HealPipeline = (() => {
                         duration: duration + 'ms',
                         healAttempts: state.healAttempts,
                         bufferEndDelta: bufferEndDelta !== null ? bufferEndDelta.toFixed(2) + 's' : null,
-                        finalState: VideoState.get(video, videoId)
+                        finalState: VideoStateSnapshot.forLog(video, videoId)
                     });
                     Metrics.increment('heals_successful');
                     recoveryManager.resetBackoff(monitorState, 'heal_success');
@@ -6120,7 +6427,7 @@ const HealPipeline = (() => {
                         healRange: finalPoint ? `${finalPoint.start.toFixed(2)}-${finalPoint.end.toFixed(2)}` : null,
                         isNudge: finalPoint?.isNudge,
                         gapSize: finalPoint?.gapSize?.toFixed(2),
-                        finalState: VideoState.get(video, videoId)
+                        finalState: VideoStateSnapshot.forLog(video, videoId)
                     });
                     Metrics.increment('heals_failed');
                     if (monitorState && recoveryManager.handlePlayFailure
@@ -6515,7 +6822,7 @@ const ExternalSignalRouter = (() => {
                     activeVideoId: active ? active.id : null,
                     deltaSeconds: attribution.match ? attribution.match.deltaSeconds : null,
                     lastProgressAgoMs: state.lastProgressTime ? (now - state.lastProgressTime) : null,
-                    videoState: VideoState.get(entry.video, attribution.id)
+                    videoState: VideoStateSnapshot.forLog(entry.video, attribution.id)
                 });
 
                 AdGapSignals.maybeLog({
