@@ -383,7 +383,7 @@ const PlaybackStateTracker = (() => {
             logDebugLazy('[HEALER:READY] Initial ready state observed', () => ({
                 reason,
                 readyState: video.readyState,
-                currentSrc: src
+                currentSrc: VideoState.compactSrc(src)
             }));
             if (state.resetPendingAt) {
                 const vs = VideoState.get(video, videoId);

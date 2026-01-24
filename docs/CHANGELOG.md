@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.1.37 - 2026-01-24T12:46:59.342Z
+Previous: 4.1.36
+Commit: 93a9eee
+Changes:
+- Reduce repeated video state logging
+
 ## 4.1.36 - 2026-01-24T12:38:26.821Z
 Previous: 4.1.35
 Commit: f29ddb4

@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.1.36
+// @version       4.1.37
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -140,7 +140,7 @@ const CONFIG = (() => {
  * Build metadata helpers (version injected at build time).
  */
 const BuildInfo = (() => {
-    const VERSION = '4.1.36';
+    const VERSION = '4.1.37';
 
     const getVersion = () => {
         const gmVersion = (typeof GM_info !== 'undefined' && GM_info?.script?.version)
@@ -151,7 +151,7 @@ const BuildInfo = (() => {
             ? unsafeWindow.GM_info.script.version
             : null;
         if (unsafeVersion) return unsafeVersion;
-        if (VERSION && VERSION !== '4.1.36') return VERSION;
+        if (VERSION && VERSION !== '4.1.37') return VERSION;
         return null;
     };
 
@@ -1615,6 +1615,39 @@ const Instrumentation = (() => {
  * Shared helper for consistent video state logging.
  */
 const VideoState = (() => {
+    const compactSrc = (src) => {
+        if (!src) return '';
+        const blobPrefix = 'blob:https://www.twitch.tv/';
+        if (src.startsWith(blobPrefix)) {
+            const id = src.slice(blobPrefix.length);
+            const shortId = id.length > 10
+                ? `${id.slice(0, 4)}...${id.slice(-4)}`
+                : id;
+            return `blob:twitch#${shortId}`;
+        }
+        if (src.startsWith('blob:')) {
+            const id = src.slice('blob:'.length);
+            const shortId = id.length > 12
+                ? `${id.slice(0, 5)}...${id.slice(-5)}`
+                : id;
+            return `blob#${shortId}`;
+        }
+        const maxLen = CONFIG?.logging?.LOG_URL_MAX_LEN || 80;
+        if (src.length > maxLen) {
+            return src.slice(0, Math.max(maxLen - 3, 0)) + '...';
+        }
+        return src;
+    };
+
+    const withCompactSrc = (snapshot) => {
+        if (!snapshot || snapshot.error) return snapshot;
+        return {
+            ...snapshot,
+            currentSrc: compactSrc(snapshot.currentSrc || ''),
+            src: compactSrc(snapshot.src || '')
+        };
+    };
+
     const getLite = (video, id) => {
         if (!video) return { error: 'NO_VIDEO' };
         let bufferedLength = 0;
@@ -1641,27 +1674,32 @@ const VideoState = (() => {
         };
     };
 
+    const getFull = (video, id) => {
+        if (!video) return { error: 'NO_VIDEO' };
+        const duration = Number.isFinite(video.duration)
+            ? video.duration.toFixed(3)
+            : String(video.duration);
+        return {
+            id,
+            currentTime: video.currentTime?.toFixed(3),
+            paused: video.paused,
+            readyState: video.readyState,
+            networkState: video.networkState,
+            buffered: BufferGapFinder.formatRanges(BufferGapFinder.getBufferRanges(video)),
+            duration,
+            ended: video.ended,
+            currentSrc: video.currentSrc || '',
+            src: video.getAttribute ? (video.getAttribute('src') || '') : '',
+            errorCode: video.error ? video.error.code : null
+        };
+    };
+
     return {
-        get: (video, id) => {
-            if (!video) return { error: 'NO_VIDEO' };
-            const duration = Number.isFinite(video.duration)
-                ? video.duration.toFixed(3)
-                : String(video.duration);
-            return {
-                id,
-                currentTime: video.currentTime?.toFixed(3),
-                paused: video.paused,
-                readyState: video.readyState,
-                networkState: video.networkState,
-                buffered: BufferGapFinder.formatRanges(BufferGapFinder.getBufferRanges(video)),
-                duration,
-                ended: video.ended,
-                currentSrc: video.currentSrc || '',
-                src: video.getAttribute ? (video.getAttribute('src') || '') : '',
-                errorCode: video.error ? video.error.code : null
-            };
-        },
-        getLite
+        get: getFull,
+        getLite,
+        getLog: (video, id) => withCompactSrc(getFull(video, id)),
+        getLiteLog: (video, id) => withCompactSrc(getLite(video, id)),
+        compactSrc
     };
 })();
 
@@ -2140,7 +2178,7 @@ const PlaybackStateTracker = (() => {
             logDebugLazy('[HEALER:READY] Initial ready state observed', () => ({
                 reason,
                 readyState: video.readyState,
-                currentSrc: src
+                currentSrc: VideoState.compactSrc(src)
             }));
             if (state.resetPendingAt) {
                 const vs = VideoState.get(video, videoId);
@@ -2676,11 +2714,12 @@ const PlaybackWatchdog = (() => {
         const formatMediaValue = (value) => {
             if (typeof value === 'string') {
                 if (!value) return '""';
+                const compacted = VideoState.compactSrc(value);
                 const maxLen = 80;
-                if (value.length > maxLen) {
-                    return `"${value.slice(0, maxLen - 3)}..."`;
+                if (compacted.length > maxLen) {
+                    return `"${compacted.slice(0, maxLen - 3)}..."`;
                 }
-                return `"${value}"`;
+                return `"${compacted}"`;
             }
             if (value === null) return 'null';
             if (value === undefined) return 'undefined';
@@ -2747,9 +2786,9 @@ const PlaybackWatchdog = (() => {
             const currentSrc = video.currentSrc || video.getAttribute('src') || '';
             if (currentSrc !== state.lastSrc) {
                 logDebug('[HEALER:SRC] Source changed', {
-                    previous: state.lastSrc,
-                    current: currentSrc,
-                    videoState: VideoState.get(video, videoId)
+                    previous: VideoState.compactSrc(state.lastSrc),
+                    current: VideoState.compactSrc(currentSrc),
+                    videoState: VideoState.getLog(video, videoId)
                 });
                 state.lastSrc = currentSrc;
                 state.lastSrcChangeTime = now;
@@ -2757,20 +2796,20 @@ const PlaybackWatchdog = (() => {
 
             const srcAttr = video.getAttribute ? (video.getAttribute('src') || '') : '';
             if (srcAttr !== state.lastSrcAttr) {
-                logMediaStateChange('src attribute', state.lastSrcAttr, srcAttr, VideoState.getLite(video, videoId));
+                logMediaStateChange('src attribute', state.lastSrcAttr, srcAttr, VideoState.getLiteLog(video, videoId));
                 state.lastSrcAttr = srcAttr;
             }
 
             const readyState = video.readyState;
             if (readyState !== state.lastReadyState) {
-                logMediaStateChange('readyState', state.lastReadyState, readyState, VideoState.getLite(video, videoId));
+                logMediaStateChange('readyState', state.lastReadyState, readyState, VideoState.getLiteLog(video, videoId));
                 state.lastReadyState = readyState;
                 state.lastReadyStateChangeTime = now;
             }
 
             const networkState = video.networkState;
             if (networkState !== state.lastNetworkState) {
-                logMediaStateChange('networkState', state.lastNetworkState, networkState, VideoState.getLite(video, videoId));
+                logMediaStateChange('networkState', state.lastNetworkState, networkState, VideoState.getLiteLog(video, videoId));
                 state.lastNetworkState = networkState;
                 state.lastNetworkStateChangeTime = now;
             }
@@ -2782,7 +2821,7 @@ const PlaybackWatchdog = (() => {
                 bufferedLength = state.lastBufferedLength;
             }
             if (bufferedLength !== state.lastBufferedLength) {
-                logMediaStateChange('buffered range count', state.lastBufferedLength, bufferedLength, VideoState.getLite(video, videoId));
+                logMediaStateChange('buffered range count', state.lastBufferedLength, bufferedLength, VideoState.getLiteLog(video, videoId));
                 state.lastBufferedLength = bufferedLength;
                 state.lastBufferedLengthChangeTime = now;
             }
@@ -3352,7 +3391,7 @@ const CandidateSelector = (() => {
                     progressEligible: result.progressEligible,
                     paused: result.vs.paused,
                     readyState: result.vs.readyState,
-                    currentSrc: result.vs.currentSrc,
+                    hasSrc: Boolean(result.vs.currentSrc),
                     state: entry.monitor.state.state,
                     reasons: result.reasons,
                     trusted,
@@ -4537,7 +4576,7 @@ const MonitorRegistry = (() => {
             const videoId = getVideoId(video);
             Logger.add('[HEALER:VIDEO] Video registered', {
                 videoId,
-                videoState: VideoState.get(video, videoId)
+                videoState: VideoState.getLog(video, videoId)
             });
 
             const monitor = PlaybackMonitor.create(video, {

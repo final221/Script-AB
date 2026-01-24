@@ -171,7 +171,7 @@ const CandidateSelector = (() => {
                     progressEligible: result.progressEligible,
                     paused: result.vs.paused,
                     readyState: result.vs.readyState,
-                    currentSrc: result.vs.currentSrc,
+                    hasSrc: Boolean(result.vs.currentSrc),
                     state: entry.monitor.state.state,
                     reasons: result.reasons,
                     trusted,

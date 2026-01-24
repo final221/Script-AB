@@ -24,11 +24,12 @@ const PlaybackWatchdog = (() => {
         const formatMediaValue = (value) => {
             if (typeof value === 'string') {
                 if (!value) return '""';
+                const compacted = VideoState.compactSrc(value);
                 const maxLen = 80;
-                if (value.length > maxLen) {
-                    return `"${value.slice(0, maxLen - 3)}..."`;
+                if (compacted.length > maxLen) {
+                    return `"${compacted.slice(0, maxLen - 3)}..."`;
                 }
-                return `"${value}"`;
+                return `"${compacted}"`;
             }
             if (value === null) return 'null';
             if (value === undefined) return 'undefined';
@@ -95,9 +96,9 @@ const PlaybackWatchdog = (() => {
             const currentSrc = video.currentSrc || video.getAttribute('src') || '';
             if (currentSrc !== state.lastSrc) {
                 logDebug('[HEALER:SRC] Source changed', {
-                    previous: state.lastSrc,
-                    current: currentSrc,
-                    videoState: VideoState.get(video, videoId)
+                    previous: VideoState.compactSrc(state.lastSrc),
+                    current: VideoState.compactSrc(currentSrc),
+                    videoState: VideoState.getLog(video, videoId)
                 });
                 state.lastSrc = currentSrc;
                 state.lastSrcChangeTime = now;
@@ -105,20 +106,20 @@ const PlaybackWatchdog = (() => {
 
             const srcAttr = video.getAttribute ? (video.getAttribute('src') || '') : '';
             if (srcAttr !== state.lastSrcAttr) {
-                logMediaStateChange('src attribute', state.lastSrcAttr, srcAttr, VideoState.getLite(video, videoId));
+                logMediaStateChange('src attribute', state.lastSrcAttr, srcAttr, VideoState.getLiteLog(video, videoId));
                 state.lastSrcAttr = srcAttr;
             }
 
             const readyState = video.readyState;
             if (readyState !== state.lastReadyState) {
-                logMediaStateChange('readyState', state.lastReadyState, readyState, VideoState.getLite(video, videoId));
+                logMediaStateChange('readyState', state.lastReadyState, readyState, VideoState.getLiteLog(video, videoId));
                 state.lastReadyState = readyState;
                 state.lastReadyStateChangeTime = now;
             }
 
             const networkState = video.networkState;
             if (networkState !== state.lastNetworkState) {
-                logMediaStateChange('networkState', state.lastNetworkState, networkState, VideoState.getLite(video, videoId));
+                logMediaStateChange('networkState', state.lastNetworkState, networkState, VideoState.getLiteLog(video, videoId));
                 state.lastNetworkState = networkState;
                 state.lastNetworkStateChangeTime = now;
             }
@@ -130,7 +131,7 @@ const PlaybackWatchdog = (() => {
                 bufferedLength = state.lastBufferedLength;
             }
             if (bufferedLength !== state.lastBufferedLength) {
-                logMediaStateChange('buffered range count', state.lastBufferedLength, bufferedLength, VideoState.getLite(video, videoId));
+                logMediaStateChange('buffered range count', state.lastBufferedLength, bufferedLength, VideoState.getLiteLog(video, videoId));
                 state.lastBufferedLength = bufferedLength;
                 state.lastBufferedLengthChangeTime = now;
             }
