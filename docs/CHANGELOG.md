@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.1.69 - 2026-01-24T19:28:38.124Z
+Previous: 4.1.68
+Commit: c116ac6
+Changes:
+- document offline-looking crash as heal failure
+
 ## 4.1.68 - 2026-01-24T19:25:49.984Z
 Previous: 4.1.67
 Commit: 37e6f11

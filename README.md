@@ -32,7 +32,7 @@ exportTwitchAdLogs()      // Download report (healer + metrics + logs)
 See `docs/DEBUGGING.md` for log sequences and triage tips.
 
 ### Known Behavior (Important)
-- If the stream appears **offline** while you know it is **online**, treat it as a **healing failure**, not a real offline event. This is a known crash pattern where the script failed to heal (often following `POLL_TIMEOUT` → `NO_HEAL_POINT` → refresh/switch suppression).
+- If the stream appears **offline**, it is most likely still **online**, treat it as a **healing failure**, not a real offline event. This is a known crash pattern where the script failed to heal (often following `POLL_TIMEOUT` → `NO_HEAL_POINT` → refresh/switch suppression).
 
 ### Tuning
 Quick knobs (see `docs/TUNING.md` for full mapping):
@@ -142,7 +142,7 @@ Key settings in `Config.js`:
 
 ## Version
 
-Current: **4.1.68**
+Current: **4.1.69**
 
 Version increments automatically on each build (patch).
 Changelog: `docs/CHANGELOG.md`
