@@ -27,7 +27,7 @@ const ReportGenerator = (() => {
 
         // Header with metrics
         const versionLine = BuildInfo.getVersionLine();
-        const DETAIL_COLUMN = 110;
+        const DETAIL_COLUMN = 70;
         const formatTime = (timestamp) => {
             const parsed = new Date(timestamp);
             if (Number.isNaN(parsed.getTime())) return timestamp;

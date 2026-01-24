@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.1.51 - 2026-01-24T16:44:06.034Z
+Previous: 4.1.50
+Commit: b0e3f9a
+Changes:
+- Move tag text into detail
+
 ## 4.1.50 - 2026-01-24T16:21:06.494Z
 Previous: 4.1.49
 Commit: a80dacd
