@@ -157,11 +157,7 @@ const LogEvents = (() => {
             ['bufferExhausted', data.bufferExhausted],
             ['state', data.state],
             ['paused', data.paused],
-            ['pauseFromStall', data.pauseFromStall],
-            ['currentTime', data.currentTime],
-            ['readyState', data.readyState],
-            ['networkState', data.networkState],
-            ['buffered', data.buffered]
+            ['pauseFromStall', data.pauseFromStall]
         ]),
         stallDetected: (data = {}) => withTag(TAG.STALL_DETECTED, [
             ['video', formatVideoId(data.videoId)],

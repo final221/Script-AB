@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.1.45
+// @version       4.1.46
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -142,7 +142,7 @@ const CONFIG = (() => {
  * Build metadata helpers (version injected at build time).
  */
 const BuildInfo = (() => {
-    const VERSION = '4.1.45';
+    const VERSION = '4.1.46';
 
     const getVersion = () => {
         const gmVersion = (typeof GM_info !== 'undefined' && GM_info?.script?.version)
@@ -153,7 +153,7 @@ const BuildInfo = (() => {
             ? unsafeWindow.GM_info.script.version
             : null;
         if (unsafeVersion) return unsafeVersion;
-        if (VERSION && VERSION !== '4.1.45') return VERSION;
+        if (VERSION && VERSION !== '4.1.46') return VERSION;
         return null;
     };
 
@@ -1034,11 +1034,7 @@ const LogEvents = (() => {
             ['bufferExhausted', data.bufferExhausted],
             ['state', data.state],
             ['paused', data.paused],
-            ['pauseFromStall', data.pauseFromStall],
-            ['currentTime', data.currentTime],
-            ['readyState', data.readyState],
-            ['networkState', data.networkState],
-            ['buffered', data.buffered]
+            ['pauseFromStall', data.pauseFromStall]
         ]),
         stallDetected: (data = {}) => withTag(TAG.STALL_DETECTED, [
             ['video', formatVideoId(data.videoId)],

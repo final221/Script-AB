@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.1.46 - 2026-01-24T16:00:28.942Z
+Previous: 4.1.45
+Commit: afa57f7
+Changes:
+- Centralize logging tags
+
 ## 4.1.45 - 2026-01-24T15:32:24.871Z
 Previous: 4.1.44
 Commit: 54ecfec
