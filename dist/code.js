@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.1.35
+// @version       4.1.36
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -140,7 +140,7 @@ const CONFIG = (() => {
  * Build metadata helpers (version injected at build time).
  */
 const BuildInfo = (() => {
-    const VERSION = '4.1.35';
+    const VERSION = '4.1.36';
 
     const getVersion = () => {
         const gmVersion = (typeof GM_info !== 'undefined' && GM_info?.script?.version)
@@ -151,7 +151,7 @@ const BuildInfo = (() => {
             ? unsafeWindow.GM_info.script.version
             : null;
         if (unsafeVersion) return unsafeVersion;
-        if (VERSION && VERSION !== '4.1.35') return VERSION;
+        if (VERSION && VERSION !== '4.1.36') return VERSION;
         return null;
     };
 
@@ -1950,6 +1950,10 @@ const PlaybackStateTracker = (() => {
             logDebug(messageOrFactory, detailFactory ? detailFactory() : {});
         };
 
+        const getCurrentTime = () => (
+            Number.isFinite(video.currentTime) ? Number(video.currentTime.toFixed(3)) : null
+        );
+
         const evaluateResetState = (vs) => {
             const ranges = BufferGapFinder.getBufferRanges(video);
             const hasBuffer = ranges.length > 0;
@@ -1985,8 +1989,7 @@ const PlaybackStateTracker = (() => {
                         hasSrc: Boolean(snapshot.currentSrc || snapshot.src),
                         readyState: snapshot.readyState,
                         networkState: snapshot.networkState,
-                        buffered: snapshot.buffered || BufferGapFinder.formatRanges(BufferGapFinder.getBufferRanges(video)),
-                        videoState: snapshot
+                        buffered: snapshot.buffered || BufferGapFinder.formatRanges(BufferGapFinder.getBufferRanges(video))
                     }
                 };
             });
@@ -2035,8 +2038,7 @@ const PlaybackStateTracker = (() => {
                         detail: {
                             reason,
                             durationMs: stallDurationMs,
-                            bufferAhead: state.lastBufferAhead,
-                            videoState: snapshot
+                            bufferAhead: state.lastBufferAhead
                         }
                     };
                 });
@@ -2049,7 +2051,7 @@ const PlaybackStateTracker = (() => {
                         reason,
                         progressGapMs,
                         previousStreakMs: state.progressStreakMs,
-                        videoState: VideoState.get(video, videoId)
+                        currentTime: getCurrentTime()
                     }));
                 }
                 state.progressStartTime = now;
@@ -2072,7 +2074,7 @@ const PlaybackStateTracker = (() => {
                     reason,
                     progressStreakMs: state.progressStreakMs,
                     minProgressMs: CONFIG.monitoring.CANDIDATE_MIN_PROGRESS_MS,
-                    videoState: VideoState.get(video, videoId)
+                    currentTime: getCurrentTime()
                 }));
             }
 
@@ -2080,7 +2082,7 @@ const PlaybackStateTracker = (() => {
                 state.hasProgress = true;
                 logDebugLazy('[HEALER:PROGRESS] Initial progress observed', () => ({
                     reason,
-                    videoState: VideoState.get(video, videoId)
+                    currentTime: getCurrentTime()
                 }));
             }
 
@@ -2118,8 +2120,7 @@ const PlaybackStateTracker = (() => {
                     reason,
                     bufferStarvedSinceMs: state.bufferStarvedSince
                         ? (now - state.bufferStarvedSince)
-                        : null,
-                    videoState: VideoState.get(video, videoId)
+                        : null
                 }));
                 state.bufferStarved = false;
                 state.bufferStarvedSince = 0;
@@ -2159,7 +2160,7 @@ const PlaybackStateTracker = (() => {
                 state.pauseFromStall = true;
                 logDebugLazy('[HEALER:STALL] Marked paused due to stall', () => ({
                     reason,
-                    videoState: VideoState.get(video, videoId)
+                    currentTime: getCurrentTime()
                 }));
             }
         };
@@ -2198,7 +2199,10 @@ const PlaybackStateTracker = (() => {
                     reason,
                     resetType: state.resetPendingType,
                     graceMs: CONFIG.stall.RESET_GRACE_MS,
-                    videoState: vs
+                    hasSrc: resetState.hasSrc,
+                    hasBuffer: resetState.hasBuffer,
+                    readyState: vs.readyState,
+                    networkState: vs.networkState
                 }));
             }
             state.resetPendingCallback = onReset;
@@ -2231,7 +2235,10 @@ const PlaybackStateTracker = (() => {
                 resetType: pendingType,
                 pendingForMs,
                 graceMs: CONFIG.stall.RESET_GRACE_MS,
-                videoState: vs
+                hasSrc: resetState.hasSrc,
+                hasBuffer: resetState.hasBuffer,
+                readyState: vs.readyState,
+                networkState: vs.networkState
             }));
 
             const callback = state.resetPendingCallback;
@@ -2266,8 +2273,7 @@ const PlaybackStateTracker = (() => {
                         logDebugLazy('[HEALER:WATCHDOG] Awaiting initial progress', () => ({
                             state: state.state,
                             graceMs,
-                            baseline: state.firstReadyTime ? 'ready' : 'seen',
-                            videoState: VideoState.get(video, videoId)
+                            baseline: state.firstReadyTime ? 'ready' : 'seen'
                         }));
                     }
                     return true;
@@ -2279,8 +2285,7 @@ const PlaybackStateTracker = (() => {
                         state: state.state,
                         waitedMs: now - baselineTime,
                         graceMs,
-                        baseline: state.firstReadyTime ? 'ready' : 'seen',
-                        videoState: VideoState.get(video, videoId)
+                        baseline: state.firstReadyTime ? 'ready' : 'seen'
                     }));
                 }
 
@@ -2331,8 +2336,7 @@ const PlaybackStateTracker = (() => {
                 mediaDeltaMs: Math.round(mediaDelta),
                 driftMs: Math.round(driftMs),
                 rate: Number.isFinite(rate) ? rate.toFixed(3) : null,
-                bufferEndDelta: bufferEndDelta !== null ? bufferEndDelta.toFixed(2) + 's' : null,
-                videoState: VideoState.getLite(video, videoId)
+                bufferEndDelta: bufferEndDelta !== null ? bufferEndDelta.toFixed(2) + 's' : null
             }));
         };
 
@@ -2378,8 +2382,7 @@ const PlaybackStateTracker = (() => {
                         bufferAhead: bufferAhead.toFixed(3),
                         threshold: CONFIG.stall.BUFFER_STARVE_THRESHOLD_S,
                         confirmMs: CONFIG.stall.BUFFER_STARVE_CONFIRM_MS,
-                        backoffMs: CONFIG.stall.BUFFER_STARVE_BACKOFF_MS,
-                        videoState: VideoState.getLite(video, videoId)
+                        backoffMs: CONFIG.stall.BUFFER_STARVE_BACKOFF_MS
                     }));
                 } else if (state.bufferStarved
                     && (now - state.lastBufferStarveLogTime) >= CONFIG.logging.STARVE_LOG_MS) {
@@ -2391,8 +2394,7 @@ const PlaybackStateTracker = (() => {
                         reason,
                         bufferAhead: bufferAhead.toFixed(3),
                         starvedForMs,
-                        nextHealAllowedInMs: Math.max(state.bufferStarveUntil - now, 0),
-                        videoState: VideoState.getLite(video, videoId)
+                        nextHealAllowedInMs: Math.max(state.bufferStarveUntil - now, 0)
                     }));
                 }
                 return state.bufferStarved;
@@ -2408,8 +2410,7 @@ const PlaybackStateTracker = (() => {
                 logDebugLazy('[HEALER:STARVE_CLEAR] Buffer starvation cleared', () => ({
                     reason,
                     starvedForMs,
-                    bufferAhead: bufferAhead.toFixed(3),
-                    videoState: VideoState.getLite(video, videoId)
+                    bufferAhead: bufferAhead.toFixed(3)
                 }));
             }
 
@@ -2486,8 +2487,7 @@ const PlaybackEventHandlers = (() => {
                     logDebug('[HEALER:EVENT_SUMMARY] Active event summary', {
                         events: summary,
                         sinceMs: lastSummary ? (now - lastSummary) : null,
-                        state: state.state,
-                        videoState: VideoState.get(video, videoId)
+                        state: state.state
                     });
                 }
                 return;
@@ -2509,8 +2509,7 @@ const PlaybackEventHandlers = (() => {
             logDebug('[HEALER:EVENT_SUMMARY] Non-active event summary', {
                 events: summary,
                 sinceMs: lastLog ? (now - lastLog) : null,
-                state: state.state,
-                videoState: VideoState.get(video, videoId)
+                state: state.state
             });
         };
 
@@ -2519,8 +2518,7 @@ const PlaybackEventHandlers = (() => {
                 tracker.updateProgress('timeupdate');
                 if (state.state !== 'PLAYING') {
                 logEvent('timeupdate', () => ({
-                    state: state.state,
-                    videoState: VideoState.get(video, videoId)
+                    state: state.state
                 }));
                 }
                 if (!video.paused && state.state !== 'HEALING') {
@@ -2532,8 +2530,7 @@ const PlaybackEventHandlers = (() => {
                 state.pauseFromStall = false;
                 state.lastTime = video.currentTime;
                 logEvent('playing', () => ({
-                    state: state.state,
-                    videoState: VideoState.get(video, videoId)
+                    state: state.state
                 }));
                 if (state.state !== 'HEALING') {
                     setState('PLAYING', 'playing');
@@ -2542,29 +2539,25 @@ const PlaybackEventHandlers = (() => {
             loadedmetadata: () => {
                 tracker.markReady('loadedmetadata');
                 logEvent('loadedmetadata', () => ({
-                    state: state.state,
-                    videoState: VideoState.get(video, videoId)
+                    state: state.state
                 }));
             },
             loadeddata: () => {
                 tracker.markReady('loadeddata');
                 logEvent('loadeddata', () => ({
-                    state: state.state,
-                    videoState: VideoState.get(video, videoId)
+                    state: state.state
                 }));
             },
             canplay: () => {
                 tracker.markReady('canplay');
                 logEvent('canplay', () => ({
-                    state: state.state,
-                    videoState: VideoState.get(video, videoId)
+                    state: state.state
                 }));
             },
             waiting: () => {
                 tracker.markStallEvent('waiting');
                 logEvent('waiting', () => ({
-                    state: state.state,
-                    videoState: VideoState.get(video, videoId)
+                    state: state.state
                 }));
                 if (!video.paused && state.state !== 'HEALING') {
                     setState('STALLED', 'waiting');
@@ -2573,8 +2566,7 @@ const PlaybackEventHandlers = (() => {
             stalled: () => {
                 tracker.markStallEvent('stalled');
                 logEvent('stalled', () => ({
-                    state: state.state,
-                    videoState: VideoState.get(video, videoId)
+                    state: state.state
                 }));
                 if (!video.paused && state.state !== 'HEALING') {
                     setState('STALLED', 'stalled');
@@ -2584,8 +2576,7 @@ const PlaybackEventHandlers = (() => {
                 const bufferExhausted = MediaState.isBufferExhausted(video);
                 logEvent('pause', () => ({
                     state: state.state,
-                    bufferExhausted,
-                    videoState: VideoState.get(video, videoId)
+                    bufferExhausted
                 }));
                 if (bufferExhausted && !video.ended) {
                     tracker.markStallEvent('pause_buffer_exhausted');
@@ -2599,28 +2590,27 @@ const PlaybackEventHandlers = (() => {
             ended: () => {
                 state.pauseFromStall = false;
                 logEvent('ended', () => ({
-                    state: state.state,
-                    videoState: VideoState.get(video, videoId)
+                    state: state.state
                 }));
                 Logger.add('[HEALER:ENDED] Video ended', {
                     videoId,
-                    videoState: VideoState.get(video, videoId)
+                    currentTime: Number.isFinite(video.currentTime)
+                        ? Number(video.currentTime.toFixed(3))
+                        : null
                 });
                 setState('ENDED', 'ended');
             },
             error: () => {
                 state.pauseFromStall = false;
                 logEvent('error', () => ({
-                    state: state.state,
-                    videoState: VideoState.get(video, videoId)
+                    state: state.state
                 }));
                 setState('ERROR', 'error');
             },
             abort: () => {
                 state.pauseFromStall = false;
                 logEvent('abort', () => ({
-                    state: state.state,
-                    videoState: VideoState.get(video, videoId)
+                    state: state.state
                 }));
                 setState('PAUSED', 'abort');
                 tracker.handleReset('abort', onReset);
@@ -2628,15 +2618,13 @@ const PlaybackEventHandlers = (() => {
             emptied: () => {
                 state.pauseFromStall = false;
                 logEvent('emptied', () => ({
-                    state: state.state,
-                    videoState: VideoState.get(video, videoId)
+                    state: state.state
                 }));
                 tracker.handleReset('emptied', onReset);
             },
             suspend: () => {
                 logEvent('suspend', () => ({
-                    state: state.state,
-                    videoState: VideoState.get(video, videoId)
+                    state: state.state
                 }));
             }
         };
@@ -2838,8 +2826,7 @@ const PlaybackWatchdog = (() => {
                     bufferExhausted,
                     state: state.state,
                     paused: video.paused,
-                    pauseFromStall,
-                    videoState: snapshot
+                    pauseFromStall
                 });
             }
 
@@ -2923,14 +2910,7 @@ const PlaybackMonitor = (() => {
             logDebug(summary, {
                 from: prevState,
                 to: nextState,
-                reason,
-                pauseFromStall: state.pauseFromStall,
-                progressStreakMs: state.progressStreakMs,
-                progressEligible: state.progressEligible,
-                lastProgressAgoMs: state.lastProgressTime
-                    ? (Date.now() - state.lastProgressTime)
-                    : null,
-                videoState: snapshot
+                reason
             });
         };
 
@@ -2960,8 +2940,7 @@ const PlaybackMonitor = (() => {
 
         const start = () => {
             logDebug('[HEALER:MONITOR] PlaybackMonitor started', {
-                state: state.state,
-                videoState: VideoState.get(video, videoId)
+                state: state.state
             });
             eventHandlers.attach();
             watchdog.start();
@@ -2969,8 +2948,7 @@ const PlaybackMonitor = (() => {
 
         const stop = () => {
             logDebug('[HEALER:MONITOR] PlaybackMonitor stopped', {
-                state: state.state,
-                videoState: VideoState.get(video, videoId)
+                state: state.state
             });
             watchdog.stop();
             eventHandlers.detach();
@@ -4637,8 +4615,7 @@ const MonitorCoordinator = (() => {
                 logDebug('[HEALER:SCAN_ITEM] Video discovered', {
                     reason,
                     videoId,
-                    alreadyMonitored: monitorsById.has(videoId),
-                    videoState: VideoState.get(video, videoId)
+                    alreadyMonitored: monitorsById.has(videoId)
                 });
             }
             for (const video of videos) {

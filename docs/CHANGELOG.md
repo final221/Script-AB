@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.1.36 - 2026-01-24T12:38:26.821Z
+Previous: 4.1.35
+Commit: f29ddb4
+Changes:
+- Ignore benign GraphQL/Apollo console errors
+
 ## 4.1.35 - 2026-01-24T12:21:36.389Z
 Previous: 4.1.34
 Commit: 46f579c

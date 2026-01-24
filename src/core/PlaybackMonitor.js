@@ -53,14 +53,7 @@ const PlaybackMonitor = (() => {
             logDebug(summary, {
                 from: prevState,
                 to: nextState,
-                reason,
-                pauseFromStall: state.pauseFromStall,
-                progressStreakMs: state.progressStreakMs,
-                progressEligible: state.progressEligible,
-                lastProgressAgoMs: state.lastProgressTime
-                    ? (Date.now() - state.lastProgressTime)
-                    : null,
-                videoState: snapshot
+                reason
             });
         };
 
@@ -90,8 +83,7 @@ const PlaybackMonitor = (() => {
 
         const start = () => {
             logDebug('[HEALER:MONITOR] PlaybackMonitor started', {
-                state: state.state,
-                videoState: VideoState.get(video, videoId)
+                state: state.state
             });
             eventHandlers.attach();
             watchdog.start();
@@ -99,8 +91,7 @@ const PlaybackMonitor = (() => {
 
         const stop = () => {
             logDebug('[HEALER:MONITOR] PlaybackMonitor stopped', {
-                state: state.state,
-                videoState: VideoState.get(video, videoId)
+                state: state.state
             });
             watchdog.stop();
             eventHandlers.detach();

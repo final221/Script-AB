@@ -50,8 +50,7 @@ const PlaybackEventHandlers = (() => {
                     logDebug('[HEALER:EVENT_SUMMARY] Active event summary', {
                         events: summary,
                         sinceMs: lastSummary ? (now - lastSummary) : null,
-                        state: state.state,
-                        videoState: VideoState.get(video, videoId)
+                        state: state.state
                     });
                 }
                 return;
@@ -73,8 +72,7 @@ const PlaybackEventHandlers = (() => {
             logDebug('[HEALER:EVENT_SUMMARY] Non-active event summary', {
                 events: summary,
                 sinceMs: lastLog ? (now - lastLog) : null,
-                state: state.state,
-                videoState: VideoState.get(video, videoId)
+                state: state.state
             });
         };
 
@@ -83,8 +81,7 @@ const PlaybackEventHandlers = (() => {
                 tracker.updateProgress('timeupdate');
                 if (state.state !== 'PLAYING') {
                 logEvent('timeupdate', () => ({
-                    state: state.state,
-                    videoState: VideoState.get(video, videoId)
+                    state: state.state
                 }));
                 }
                 if (!video.paused && state.state !== 'HEALING') {
@@ -96,8 +93,7 @@ const PlaybackEventHandlers = (() => {
                 state.pauseFromStall = false;
                 state.lastTime = video.currentTime;
                 logEvent('playing', () => ({
-                    state: state.state,
-                    videoState: VideoState.get(video, videoId)
+                    state: state.state
                 }));
                 if (state.state !== 'HEALING') {
                     setState('PLAYING', 'playing');
@@ -106,29 +102,25 @@ const PlaybackEventHandlers = (() => {
             loadedmetadata: () => {
                 tracker.markReady('loadedmetadata');
                 logEvent('loadedmetadata', () => ({
-                    state: state.state,
-                    videoState: VideoState.get(video, videoId)
+                    state: state.state
                 }));
             },
             loadeddata: () => {
                 tracker.markReady('loadeddata');
                 logEvent('loadeddata', () => ({
-                    state: state.state,
-                    videoState: VideoState.get(video, videoId)
+                    state: state.state
                 }));
             },
             canplay: () => {
                 tracker.markReady('canplay');
                 logEvent('canplay', () => ({
-                    state: state.state,
-                    videoState: VideoState.get(video, videoId)
+                    state: state.state
                 }));
             },
             waiting: () => {
                 tracker.markStallEvent('waiting');
                 logEvent('waiting', () => ({
-                    state: state.state,
-                    videoState: VideoState.get(video, videoId)
+                    state: state.state
                 }));
                 if (!video.paused && state.state !== 'HEALING') {
                     setState('STALLED', 'waiting');
@@ -137,8 +129,7 @@ const PlaybackEventHandlers = (() => {
             stalled: () => {
                 tracker.markStallEvent('stalled');
                 logEvent('stalled', () => ({
-                    state: state.state,
-                    videoState: VideoState.get(video, videoId)
+                    state: state.state
                 }));
                 if (!video.paused && state.state !== 'HEALING') {
                     setState('STALLED', 'stalled');
@@ -148,8 +139,7 @@ const PlaybackEventHandlers = (() => {
                 const bufferExhausted = MediaState.isBufferExhausted(video);
                 logEvent('pause', () => ({
                     state: state.state,
-                    bufferExhausted,
-                    videoState: VideoState.get(video, videoId)
+                    bufferExhausted
                 }));
                 if (bufferExhausted && !video.ended) {
                     tracker.markStallEvent('pause_buffer_exhausted');
@@ -163,28 +153,27 @@ const PlaybackEventHandlers = (() => {
             ended: () => {
                 state.pauseFromStall = false;
                 logEvent('ended', () => ({
-                    state: state.state,
-                    videoState: VideoState.get(video, videoId)
+                    state: state.state
                 }));
                 Logger.add('[HEALER:ENDED] Video ended', {
                     videoId,
-                    videoState: VideoState.get(video, videoId)
+                    currentTime: Number.isFinite(video.currentTime)
+                        ? Number(video.currentTime.toFixed(3))
+                        : null
                 });
                 setState('ENDED', 'ended');
             },
             error: () => {
                 state.pauseFromStall = false;
                 logEvent('error', () => ({
-                    state: state.state,
-                    videoState: VideoState.get(video, videoId)
+                    state: state.state
                 }));
                 setState('ERROR', 'error');
             },
             abort: () => {
                 state.pauseFromStall = false;
                 logEvent('abort', () => ({
-                    state: state.state,
-                    videoState: VideoState.get(video, videoId)
+                    state: state.state
                 }));
                 setState('PAUSED', 'abort');
                 tracker.handleReset('abort', onReset);
@@ -192,15 +181,13 @@ const PlaybackEventHandlers = (() => {
             emptied: () => {
                 state.pauseFromStall = false;
                 logEvent('emptied', () => ({
-                    state: state.state,
-                    videoState: VideoState.get(video, videoId)
+                    state: state.state
                 }));
                 tracker.handleReset('emptied', onReset);
             },
             suspend: () => {
                 logEvent('suspend', () => ({
-                    state: state.state,
-                    videoState: VideoState.get(video, videoId)
+                    state: state.state
                 }));
             }
         };

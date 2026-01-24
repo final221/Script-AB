@@ -27,8 +27,7 @@ const MonitorCoordinator = (() => {
                 logDebug('[HEALER:SCAN_ITEM] Video discovered', {
                     reason,
                     videoId,
-                    alreadyMonitored: monitorsById.has(videoId),
-                    videoState: VideoState.get(video, videoId)
+                    alreadyMonitored: monitorsById.has(videoId)
                 });
             }
             for (const video of videos) {

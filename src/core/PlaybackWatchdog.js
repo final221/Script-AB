@@ -174,8 +174,7 @@ const PlaybackWatchdog = (() => {
                     bufferExhausted,
                     state: state.state,
                     paused: video.paused,
-                    pauseFromStall,
-                    videoState: snapshot
+                    pauseFromStall
                 });
             }
 
