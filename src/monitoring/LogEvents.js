@@ -120,38 +120,49 @@ const LogEvents = (() => {
         return Number(match[1]);
     };
 
-    const formatPairs = (pairs) => (
-        pairs
-            .map(([key, value]) => [key, formatValue(value)])
-            .filter(([, value]) => value !== null && value !== undefined)
-            .map(([key, value]) => `${key}=${value}`)
-            .join(' ')
-    );
-
-    const withTag = (tag, pairs) => {
-        const body = formatPairs(pairs);
-        return body ? `${tag} ${body}` : tag;
-    };
-
     const getTag = (tagKey) => TAG[tagKey] || tagKey;
 
-    const tagged = (tagKey, text) => {
+    const event = (tagKey, options = {}) => {
         const label = getTag(tagKey);
-        if (!text) return label;
-        return `${label} ${text}`;
+        const detail = (options.detail && typeof options.detail === 'object')
+            ? { ...options.detail }
+            : {};
+        const summary = options.summary || options.message || options.text || '';
+
+        if (Array.isArray(options.pairs)) {
+            options.pairs.forEach(([key, value]) => {
+                const nextValue = formatValue(value);
+                if (nextValue === null || nextValue === undefined) return;
+                detail[key] = nextValue;
+            });
+        }
+
+        if (summary) {
+            if (detail.message === undefined) {
+                detail.message = summary;
+            } else if (detail.inlineMessage === undefined) {
+                detail.inlineMessage = summary;
+            }
+        }
+
+        return {
+            message: label,
+            detail: Object.keys(detail).length > 0 ? detail : null
+        };
     };
 
-    const pairs = (tagKey, pairsList) => withTag(getTag(tagKey), pairsList);
+    const tagged = (tagKey, text, detail) => event(tagKey, { summary: text, detail });
+    const pairs = (tagKey, pairsList, detail) => event(tagKey, { pairs: pairsList, detail });
 
     const summary = {
-        stateChange: (data = {}) => withTag(TAG.STATE, [
+        stateChange: (data = {}) => pairs('STATE', [
             ['video', formatVideoId(data.videoId)],
             ['from', data.from],
             ['to', data.to],
             ['reason', data.reason],
             ['currentTime', data.currentTime]
         ]),
-        watchdogNoProgress: (data = {}) => withTag(TAG.WATCHDOG, [
+        watchdogNoProgress: (data = {}) => pairs('WATCHDOG', [
             ['video', formatVideoId(data.videoId)],
             ['stalledForMs', data.stalledForMs],
             ['bufferExhausted', data.bufferExhausted],
@@ -159,7 +170,7 @@ const LogEvents = (() => {
             ['paused', data.paused],
             ['pauseFromStall', data.pauseFromStall]
         ]),
-        stallDetected: (data = {}) => withTag(TAG.STALL_DETECTED, [
+        stallDetected: (data = {}) => pairs('STALL_DETECTED', [
             ['video', formatVideoId(data.videoId)],
             ['trigger', data.trigger],
             ['stalledFor', data.stalledFor],
@@ -172,13 +183,13 @@ const LogEvents = (() => {
             ['networkState', data.networkState],
             ['buffered', data.buffered]
         ]),
-        stallDuration: (data = {}) => withTag(TAG.STALL_DURATION, [
+        stallDuration: (data = {}) => pairs('STALL_DURATION', [
             ['video', formatVideoId(data.videoId)],
             ['reason', data.reason],
             ['durationMs', data.durationMs],
             ['currentTime', data.currentTime]
         ]),
-        healStart: (data = {}) => withTag(TAG.HEAL_START, [
+        healStart: (data = {}) => pairs('HEAL_START', [
             ['attempt', data.attempt],
             ['lastProgressAgoMs', data.lastProgressAgoMs],
             ['currentTime', data.currentTime],
@@ -187,7 +198,7 @@ const LogEvents = (() => {
             ['networkState', data.networkState],
             ['buffered', data.buffered]
         ]),
-        healFailed: (data = {}) => withTag(TAG.HEAL_FAILED, [
+        healFailed: (data = {}) => pairs('HEAL_FAILED', [
             ['duration', data.duration],
             ['errorName', data.errorName],
             ['error', data.error],
@@ -195,23 +206,23 @@ const LogEvents = (() => {
             ['gapSize', data.gapSize],
             ['isNudge', data.isNudge]
         ]),
-        healComplete: (data = {}) => withTag(TAG.HEAL_COMPLETE, [
+        healComplete: (data = {}) => pairs('HEAL_COMPLETE', [
             ['duration', data.duration],
             ['healAttempts', data.healAttempts],
             ['bufferEndDelta', data.bufferEndDelta]
         ]),
-        healDefer: (data = {}) => withTag(TAG.HEAL_DEFER, [
+        healDefer: (data = {}) => pairs('HEAL_DEFER', [
             ['bufferHeadroom', data.bufferHeadroom],
             ['minRequired', data.minRequired],
             ['healPoint', data.healPoint],
             ['buffers', data.buffers]
         ]),
-        noHealPoint: (data = {}) => withTag(TAG.HEAL_NO_POINT, [
+        noHealPoint: (data = {}) => pairs('HEAL_NO_POINT', [
             ['duration', data.duration],
             ['currentTime', data.currentTime],
             ['bufferRanges', data.bufferRanges]
         ]),
-        adGapSignature: (data = {}) => withTag(TAG.AD_GAP, [
+        adGapSignature: (data = {}) => pairs('AD_GAP', [
             ['video', formatVideoId(data.videoId)],
             ['playheadSeconds', data.playheadSeconds],
             ['rangeEnd', data.rangeEnd],
@@ -226,7 +237,7 @@ const LogEvents = (() => {
         summary,
         tagged,
         pairs,
-        formatPairs,
+        event,
         roundNumber
     };
 })();

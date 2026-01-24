@@ -14,6 +14,19 @@ const Logger = (() => {
      */
     const add = (message, detail = null) => {
         if (logs.length >= CONFIG.logging.MAX_LOGS) logs.shift();
+        if (message && typeof message === 'object' && message.message) {
+            const mergedDetail = (message.detail && typeof message.detail === 'object')
+                ? { ...message.detail }
+                : {};
+            if (detail && typeof detail === 'object') {
+                Object.entries(detail).forEach(([key, value]) => {
+                    if (value === undefined) return;
+                    mergedDetail[key] = value;
+                });
+            }
+            detail = Object.keys(mergedDetail).length ? mergedDetail : null;
+            message = message.message;
+        }
         if (typeof LogNormalizer !== 'undefined' && LogNormalizer?.buildInternalEvent) {
             logs.push(LogNormalizer.buildInternalEvent(message, detail));
             return;

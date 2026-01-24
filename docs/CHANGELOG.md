@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.1.65 - 2026-01-24T18:18:46.917Z
+Previous: 4.1.64
+Commit: 28bd3a7
+Changes:
+- refactor log registry and report rendering
+
 ## 4.1.64 - 2026-01-24T18:07:01.568Z
 Previous: 4.1.63
 Commit: 055a592

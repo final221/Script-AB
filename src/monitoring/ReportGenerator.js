@@ -39,7 +39,6 @@ Total entries: ${logs.length}
 
     return {
         exportReport: (metricsSummary, logs, healerStats) => {
-            Logger.add("Generating and exporting report...");
             const content = generateContent(metricsSummary, logs, healerStats);
             downloadFile(content);
         }

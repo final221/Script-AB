@@ -83,7 +83,14 @@ describe('PlaybackStateTracker.shouldSkipUntilProgress', () => {
         tracker.state.firstSeenTime = Date.now() - (graceMs + 1);
         expect(tracker.shouldSkipUntilProgress()).toBe(false);
 
-        const messages = logDebug.mock.calls.map(call => call[0]);
+        const messages = logDebug.mock.calls.map(call => {
+            const entry = call[0];
+            if (entry && typeof entry === 'object' && entry.message) {
+                const summary = entry.detail?.message;
+                return summary ? `${entry.message} ${summary}` : entry.message;
+            }
+            return entry;
+        });
         expect(messages).toContain('[HEALER:WATCHDOG] Awaiting initial progress');
         expect(messages).toContain('[HEALER:WATCHDOG] Initial progress timeout');
     });
