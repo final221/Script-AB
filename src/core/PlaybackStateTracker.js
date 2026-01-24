@@ -182,6 +182,8 @@ const PlaybackStateTracker = (() => {
             lastCatchUpTime: ['catchUp', 'lastCatchUpTime']
         });
 
+        const logHelper = PlaybackLogHelper.create({ video, videoId, state });
+
         const logDebugLazy = (messageOrFactory, detailFactory) => {
             if (!CONFIG.debug) return;
             if (typeof messageOrFactory === 'function') {
@@ -264,31 +266,7 @@ const PlaybackStateTracker = (() => {
                     reason,
                     bufferAhead: state.lastBufferAhead
                 });
-                logDebugLazy(() => {
-                    const snapshot = StateSnapshot.lite(video, videoId);
-                    const summary = LogEvents.summary.stallDuration({
-                        videoId,
-                        reason,
-                        durationMs: stallDurationMs,
-                        bufferAhead: state.lastBufferAhead,
-                        currentTime: snapshot?.currentTime ? Number(snapshot.currentTime) : null,
-                        readyState: snapshot?.readyState,
-                        networkState: snapshot?.networkState,
-                        buffered: snapshot?.bufferedLength
-                    });
-                    return {
-                        message: summary,
-                        detail: {
-                            reason,
-                            durationMs: stallDurationMs,
-                            bufferAhead: state.lastBufferAhead,
-                            currentTime: snapshot?.currentTime ? Number(snapshot.currentTime) : null,
-                            readyState: snapshot?.readyState,
-                            networkState: snapshot?.networkState,
-                            buffered: snapshot?.buffered
-                        }
-                    };
-                });
+                logDebugLazy(() => logHelper.buildStallDuration(reason, stallDurationMs, state.lastBufferAhead));
             }
 
             if (!state.progressStartTime

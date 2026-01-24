@@ -27,45 +27,14 @@ const PlaybackMonitor = (() => {
 
         const tracker = PlaybackStateTracker.create(video, videoId, logDebug);
         const state = tracker.state;
+        const logHelper = PlaybackLogHelper.create({ video, videoId, state });
 
         const setState = (nextState, reason) => {
             if (state.state === nextState) return;
             const prevState = state.state;
             state.state = nextState;
-            const snapshot = StateSnapshot.full(video, videoId);
-            const summary = LogEvents.summary.stateChange({
-                videoId,
-                from: prevState,
-                to: nextState,
-                reason,
-                currentTime: snapshot?.currentTime ? Number(snapshot.currentTime) : null,
-                paused: snapshot?.paused,
-                readyState: snapshot?.readyState,
-                networkState: snapshot?.networkState,
-                buffered: snapshot?.buffered,
-                lastProgressAgoMs: state.lastProgressTime
-                    ? (Date.now() - state.lastProgressTime)
-                    : null,
-                progressStreakMs: state.progressStreakMs,
-                progressEligible: state.progressEligible,
-                pauseFromStall: state.pauseFromStall
-            });
-            logDebug(summary, {
-                from: prevState,
-                to: nextState,
-                reason,
-                currentTime: snapshot?.currentTime ? Number(snapshot.currentTime) : null,
-                paused: snapshot?.paused,
-                readyState: snapshot?.readyState,
-                networkState: snapshot?.networkState,
-                buffered: snapshot?.buffered,
-                lastProgressAgoMs: state.lastProgressTime
-                    ? (Date.now() - state.lastProgressTime)
-                    : null,
-                progressStreakMs: state.progressStreakMs,
-                progressEligible: state.progressEligible,
-                pauseFromStall: state.pauseFromStall
-            });
+            const entry = logHelper.buildStateChange(prevState, nextState, reason);
+            logDebug(entry.message, entry.detail);
         };
 
         const eventHandlers = PlaybackEventHandlers.create({

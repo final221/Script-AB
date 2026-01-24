@@ -20,6 +20,7 @@ const PlaybackWatchdog = (() => {
         const onStall = options.onStall || (() => {});
 
         let intervalId;
+        const logHelper = PlaybackLogHelper.create({ video, videoId, state });
 
         const formatMediaValue = (value) => {
             if (typeof value === 'string') {
@@ -157,26 +158,8 @@ const PlaybackWatchdog = (() => {
             const logIntervalMs = Tuning.logIntervalMs(isActive());
             if (now - state.lastWatchdogLogTime > logIntervalMs) {
                 state.lastWatchdogLogTime = now;
-                const snapshot = StateSnapshot.full(video, videoId);
-                const summary = LogEvents.summary.watchdogNoProgress({
-                    videoId,
-                    stalledForMs,
-                    bufferExhausted,
-                    state: state.state,
-                    paused: video.paused,
-                    pauseFromStall,
-                    currentTime: snapshot?.currentTime ? Number(snapshot.currentTime) : null,
-                    readyState: snapshot?.readyState,
-                    networkState: snapshot?.networkState,
-                    buffered: snapshot?.buffered
-                });
-                logDebug(summary, {
-                    stalledForMs,
-                    bufferExhausted,
-                    state: state.state,
-                    paused: video.paused,
-                    pauseFromStall
-                });
+                const entry = logHelper.buildWatchdogNoProgress(stalledForMs, bufferExhausted, pauseFromStall);
+                logDebug(entry.message, entry.detail);
             }
 
             onStall({

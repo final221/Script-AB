@@ -14,6 +14,11 @@ const Logger = (() => {
      */
     const add = (message, detail = null) => {
         if (logs.length >= CONFIG.logging.MAX_LOGS) logs.shift();
+        if (typeof LogNormalizer !== 'undefined' && LogNormalizer?.normalizeInternal) {
+            const normalized = LogNormalizer.normalizeInternal(message, detail);
+            message = normalized.message;
+            detail = normalized.detail;
+        }
         logs.push({
             timestamp: new Date().toISOString(),
             type: 'internal',

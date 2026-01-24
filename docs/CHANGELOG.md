@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.1.57 - 2026-01-24T17:21:20.131Z
+Previous: 4.1.56
+Commit: 15234f9
+Changes:
+- Align secondary detail separator
+
 ## 4.1.56 - 2026-01-24T16:59:50.111Z
 Previous: 4.1.55
 Commit: a6f5dd0
