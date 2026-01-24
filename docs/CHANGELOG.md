@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.1.29 - 2026-01-24T11:28:39.524Z
+Previous: 4.1.28
+Commit: b8f032c
+Changes:
+- Refactor recovery logging and state
+
 ## 4.1.28 - 2026-01-24T11:20:32.950Z
 Previous: 4.1.27
 Commit: 4a3bb98

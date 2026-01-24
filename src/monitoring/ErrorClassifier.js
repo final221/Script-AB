@@ -4,7 +4,13 @@
  * @responsibility Determine severity and required action for a given error.
  */
 const ErrorClassifier = (() => {
-    const BENIGN_PATTERNS = ['graphql', 'unauthenticated', 'pinnedchatsettings'];
+    const BENIGN_PATTERNS = [
+        'graphql',
+        'unauthenticated',
+        'pinnedchatsettings',
+        'go.apollo.dev/c/err',
+        'apollo.dev/c/err'
+    ];
 
     return {
         classify: (error, message) => {

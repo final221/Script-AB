@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.1.28
+// @version       4.1.29
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -653,7 +653,13 @@ const LiveEdgeSeeker = (() => {
  * @responsibility Determine severity and required action for a given error.
  */
 const ErrorClassifier = (() => {
-    const BENIGN_PATTERNS = ['graphql', 'unauthenticated', 'pinnedchatsettings'];
+    const BENIGN_PATTERNS = [
+        'graphql',
+        'unauthenticated',
+        'pinnedchatsettings',
+        'go.apollo.dev/c/err',
+        'apollo.dev/c/err'
+    ];
 
     return {
         classify: (error, message) => {
@@ -935,8 +941,9 @@ const ResourceWindow = (() => {
 
     const logWindow = (detail = {}) => {
         const stallTime = detail.stallTime || Date.now();
+        const stallKey = Number.isFinite(detail.stallKey) ? detail.stallKey : stallTime;
         const videoId = detail.videoId || 'unknown';
-        const key = `${videoId}:${stallTime}`;
+        const key = `${videoId}:${stallKey}`;
         if (pendingWindows.has(key)) return;
         pendingWindows.set(key, true);
 
@@ -3899,6 +3906,7 @@ const RecoveryManager = (() => {
         });
         const probeCandidate = failoverManager.probeCandidate;
         let lastProbationRescanAt = 0;
+        const noBufferRescanTimes = new Map();
 
         const maybeTriggerProbation = (videoId, monitorState, trigger, count, threshold) => {
             if (!monitorState) return false;
@@ -3949,6 +3957,21 @@ const RecoveryManager = (() => {
         const handleNoHealPoint = (video, monitorState, reason) => {
             const videoId = getVideoId(video);
             backoffManager.applyBackoff(videoId, monitorState, reason);
+
+            const ranges = BufferGapFinder.getBufferRanges(video);
+            if (!ranges.length) {
+                const now = Date.now();
+                const lastNoBufferRescan = noBufferRescanTimes.get(videoId) || 0;
+                if (now - lastNoBufferRescan >= CONFIG.stall.PROBATION_RESCAN_COOLDOWN_MS) {
+                    noBufferRescanTimes.set(videoId, now);
+                    candidateSelector.activateProbation('no_buffer');
+                    onRescan('no_buffer', {
+                        videoId,
+                        reason,
+                        bufferRanges: 'none'
+                    });
+                }
+            }
             maybeTriggerProbation(
                 videoId,
                 monitorState,
@@ -5545,10 +5568,14 @@ const RecoveryOrchestrator = (() => {
             if (state && (!state.lastResourceWindowLogTime
                 || (now - state.lastResourceWindowLogTime) > CONFIG.logging.BACKOFF_LOG_INTERVAL_MS)) {
                 state.lastResourceWindowLogTime = now;
+                const stallKey = state.stallStartTime
+                    || state.lastProgressTime
+                    || now;
                 if (Instrumentation && typeof Instrumentation.logResourceWindow === 'function') {
                     Instrumentation.logResourceWindow({
                         videoId,
                         stallTime: now,
+                        stallKey,
                         reason: details.trigger || 'stall',
                         stalledFor: details.stalledFor || null
                     });

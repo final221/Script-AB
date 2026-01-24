@@ -26,8 +26,9 @@ const ResourceWindow = (() => {
 
     const logWindow = (detail = {}) => {
         const stallTime = detail.stallTime || Date.now();
+        const stallKey = Number.isFinite(detail.stallKey) ? detail.stallKey : stallTime;
         const videoId = detail.videoId || 'unknown';
-        const key = `${videoId}:${stallTime}`;
+        const key = `${videoId}:${stallKey}`;
         if (pendingWindows.has(key)) return;
         pendingWindows.set(key, true);
 

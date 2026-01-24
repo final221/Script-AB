@@ -21,6 +21,7 @@ const RecoveryManager = (() => {
         });
         const probeCandidate = failoverManager.probeCandidate;
         let lastProbationRescanAt = 0;
+        const noBufferRescanTimes = new Map();
 
         const maybeTriggerProbation = (videoId, monitorState, trigger, count, threshold) => {
             if (!monitorState) return false;
@@ -71,6 +72,21 @@ const RecoveryManager = (() => {
         const handleNoHealPoint = (video, monitorState, reason) => {
             const videoId = getVideoId(video);
             backoffManager.applyBackoff(videoId, monitorState, reason);
+
+            const ranges = BufferGapFinder.getBufferRanges(video);
+            if (!ranges.length) {
+                const now = Date.now();
+                const lastNoBufferRescan = noBufferRescanTimes.get(videoId) || 0;
+                if (now - lastNoBufferRescan >= CONFIG.stall.PROBATION_RESCAN_COOLDOWN_MS) {
+                    noBufferRescanTimes.set(videoId, now);
+                    candidateSelector.activateProbation('no_buffer');
+                    onRescan('no_buffer', {
+                        videoId,
+                        reason,
+                        bufferRanges: 'none'
+                    });
+                }
+            }
             maybeTriggerProbation(
                 videoId,
                 monitorState,

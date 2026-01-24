@@ -41,10 +41,14 @@ const RecoveryOrchestrator = (() => {
             if (state && (!state.lastResourceWindowLogTime
                 || (now - state.lastResourceWindowLogTime) > CONFIG.logging.BACKOFF_LOG_INTERVAL_MS)) {
                 state.lastResourceWindowLogTime = now;
+                const stallKey = state.stallStartTime
+                    || state.lastProgressTime
+                    || now;
                 if (Instrumentation && typeof Instrumentation.logResourceWindow === 'function') {
                     Instrumentation.logResourceWindow({
                         videoId,
                         stallTime: now,
+                        stallKey,
                         reason: details.trigger || 'stall',
                         stalledFor: details.stalledFor || null
                     });
