@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.1.61
+// @version       4.1.63
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -128,6 +128,8 @@ const CONFIG = (() => {
             LOG_REASON_MAX_LEN: 200,        // Max length for error reasons
             LOG_URL_MAX_LEN: 200,           // Max length for logged URLs
             CONSOLE_CAPTURE_MAX_LEN: 500,   // Max length for captured console lines
+            REPORT_DETAIL_COLUMN: 40,       // Column for first detail separator in report
+            REPORT_MESSAGE_COLUMN: 50,      // Column for message/detail split in report
             MAX_LOGS: 5000,                 // Max in-memory script logs
             MAX_CONSOLE_LOGS: 2000,         // Max in-memory console logs
         },
@@ -142,7 +144,7 @@ const CONFIG = (() => {
  * Build metadata helpers (version injected at build time).
  */
 const BuildInfo = (() => {
-    const VERSION = '4.1.61';
+    const VERSION = '4.1.63';
 
     const getVersion = () => {
         const gmVersion = (typeof GM_info !== 'undefined' && GM_info?.script?.version)
@@ -153,7 +155,7 @@ const BuildInfo = (() => {
             ? unsafeWindow.GM_info.script.version
             : null;
         if (unsafeVersion) return unsafeVersion;
-        if (VERSION && VERSION !== '4.1.61') return VERSION;
+        if (VERSION && VERSION !== '4.1.63') return VERSION;
         return null;
     };
 
@@ -795,6 +797,129 @@ const ErrorClassifier = (() => {
 })();
 
 
+// --- LogSchemas ---
+/**
+ * Optional key ordering hints for log detail payloads.
+ */
+const LogSchemas = (() => {
+    const SCHEMAS = {
+        STATE: [
+            'message',
+            'video',
+            'from',
+            'to',
+            'reason',
+            'currentTime',
+            'paused',
+            'readyState',
+            'networkState',
+            'buffered',
+            'lastProgressAgoMs',
+            'progressStreakMs',
+            'progressEligible',
+            'pauseFromStall'
+        ],
+        WATCHDOG: [
+            'message',
+            'video',
+            'stalledForMs',
+            'bufferExhausted',
+            'state',
+            'paused',
+            'pauseFromStall',
+            'currentTime',
+            'readyState',
+            'networkState',
+            'buffered'
+        ],
+        STALL_DURATION: [
+            'message',
+            'video',
+            'reason',
+            'durationMs',
+            'currentTime',
+            'bufferAhead',
+            'readyState',
+            'networkState'
+        ],
+        PROGRESS: [
+            'message',
+            'video',
+            'reason',
+            'currentTime',
+            'progressStreakMs',
+            'minProgressMs'
+        ],
+        READY: [
+            'message',
+            'video',
+            'reason',
+            'readyState'
+        ],
+        MEDIA_STATE: [
+            'message',
+            'video',
+            'changed',
+            'previous',
+            'current',
+            'videoState'
+        ],
+        SRC: [
+            'message',
+            'video',
+            'changed',
+            'previous',
+            'current',
+            'videoState'
+        ],
+        EVENT: [
+            'message',
+            'video',
+            'state'
+        ],
+        EVENT_SUMMARY: [
+            'message',
+            'video',
+            'events',
+            'sinceMs',
+            'state'
+        ],
+        BACKOFF: [
+            'message',
+            'video',
+            'reason',
+            'noHealPointCount',
+            'backoffMs',
+            'nextHealAllowedInMs'
+        ],
+        PLAY_BACKOFF: [
+            'message',
+            'video',
+            'reason',
+            'errorName',
+            'error',
+            'playErrorCount',
+            'backoffMs',
+            'nextHealAllowedInMs'
+        ],
+        FAILOVER: [
+            'message',
+            'from',
+            'to',
+            'reason',
+            'stalledForMs'
+        ]
+    };
+
+    const getSchema = (rawTag) => {
+        if (!rawTag) return null;
+        const normalized = rawTag.startsWith('HEALER:') ? rawTag.slice(7) : rawTag;
+        return SCHEMAS[normalized] || null;
+    };
+
+    return { getSchema };
+})();
+
 // --- LogSanitizer ---
 /**
  * Helpers for normalizing and sanitizing log details.
@@ -883,6 +1008,28 @@ const LogSanitizer = (() => {
         return { ...inlinePairs, ...existing };
     };
 
+    const getRawTag = (message) => {
+        if (!message || typeof message !== 'string') return null;
+        const match = message.match(/^\[([^\]]+)\]/);
+        return match ? match[1] : null;
+    };
+
+    const orderDetail = (detail, schema) => {
+        if (!schema || !detail || typeof detail !== 'object' || Array.isArray(detail)) return detail;
+        const ordered = {};
+        schema.forEach((key) => {
+            if (Object.prototype.hasOwnProperty.call(detail, key)) {
+                ordered[key] = detail[key];
+            }
+        });
+        Object.keys(detail).forEach((key) => {
+            if (!Object.prototype.hasOwnProperty.call(ordered, key)) {
+                ordered[key] = detail[key];
+            }
+        });
+        return ordered;
+    };
+
     const sanitizeDetail = (detail, message, seenSrcByVideo) => {
         if (!detail || typeof detail !== 'object') return detail;
         const sanitized = transformDetail(detail);
@@ -916,7 +1063,9 @@ const LogSanitizer = (() => {
             delete sanitized.current;
             sanitized.changed = true;
         }
-        return sanitized;
+        const rawTag = getRawTag(message);
+        const schema = typeof LogSchemas !== 'undefined' ? LogSchemas.getSchema(rawTag) : null;
+        return orderDetail(sanitized, schema);
     };
 
     return {
@@ -925,7 +1074,9 @@ const LogSanitizer = (() => {
         stripKeys,
         parseInlinePairs,
         mergeDetail,
-        sanitizeDetail
+        sanitizeDetail,
+        getRawTag,
+        orderDetail
     };
 })();
 
@@ -934,6 +1085,32 @@ const LogSanitizer = (() => {
  * Normalizes internal log messages into tag + structured detail fields.
  */
 const LogNormalizer = (() => {
+    const stripConsoleTimestamp = (message) => (
+        message.replace(/^\s*\d{2}:\d{2}:\d{2}\s*-\s*/, '')
+    );
+
+    const normalizeConsole = (level, message) => {
+        if (typeof message !== 'string') return { message, detail: null };
+        const stripped = stripConsoleTimestamp(message);
+        const match = stripped.match(/^\(([^)]+)\)\s*(.*)$/);
+        if (match) {
+            return {
+                message: `(${match[1]})`,
+                detail: {
+                    message: match[2] || '',
+                    level
+                }
+            };
+        }
+        return {
+            message: 'Console',
+            detail: {
+                message: stripped,
+                level
+            }
+        };
+    };
+
     const normalizeInternal = (message, detail) => {
         if (!message || typeof message !== 'string') return { message, detail };
         const match = message.match(/^\[([^\]]+)\]\s*(.*)$/);
@@ -964,7 +1141,7 @@ const LogNormalizer = (() => {
         };
     };
 
-    return { normalizeInternal };
+    return { normalizeInternal, normalizeConsole };
 })();
 
 // --- Logger ---
@@ -1020,11 +1197,19 @@ const Logger = (() => {
             message = '[Unable to stringify console args]';
         }
 
+        let detail = null;
+        if (typeof LogNormalizer !== 'undefined' && LogNormalizer?.normalizeConsole) {
+            const normalized = LogNormalizer.normalizeConsole(level, message);
+            message = normalized.message;
+            detail = normalized.detail;
+        }
+
         consoleLogs.push({
             timestamp: new Date().toISOString(),
             type: 'console',
             level,
             message,
+            detail,
         });
     };
 
@@ -1285,14 +1470,11 @@ const LogEvents = (() => {
     };
 })();
 
-// --- LogFormatter ---
+// --- TagCategorizer ---
 /**
- * Formats merged script + console logs into aligned report lines.
+ * Central mapping of log tags to categories and icons.
  */
-const LogFormatter = (() => {
-    const DEFAULT_DETAIL_COLUMN = 40;
-    const DEFAULT_MESSAGE_COLUMN = 50;
-
+const TagCategorizer = (() => {
     const ICONS = {
         healer: '\uD83E\uDE7A',
         candidate: '\uD83C\uDFAF',
@@ -1331,31 +1513,7 @@ const LogFormatter = (() => {
         return 'healer';
     };
 
-    const formatTime = (timestamp) => {
-        const parsed = new Date(timestamp);
-        if (Number.isNaN(parsed.getTime())) return timestamp;
-        return parsed.toISOString().slice(11, 23);
-    };
-
-    const stripConsoleTimestamp = (message) => (
-        message.replace(/^\s*\d{2}:\d{2}:\d{2}\s*-\s*/, '')
-    );
-
-    const splitConsoleMessage = (message) => {
-        const match = message.match(/^\(([^)]+)\)\s*(.*)$/);
-        if (match) {
-            return {
-                summary: `(${match[1]})`,
-                detail: match[2] || ''
-            };
-        }
-        return {
-            summary: 'Console',
-            detail: message
-        };
-    };
-
-    const formatTaggedMessage = (rawTag) => {
+    const formatTag = (rawTag) => {
         let displayTag = rawTag;
         let tagKey = rawTag;
         if (rawTag.startsWith('HEALER:')) {
@@ -1367,17 +1525,33 @@ const LogFormatter = (() => {
         }
         const category = categoryForTag(tagKey);
         const icon = ICONS[category] || ICONS.other;
-        const text = `[${displayTag}]`;
-        return { icon, text };
+        return {
+            icon,
+            displayTag,
+            tagKey,
+            category
+        };
     };
 
+    return {
+        ICONS,
+        categoryForTag,
+        formatTag
+    };
+})();
+
+// --- DetailFormatter ---
+/**
+ * Formats aligned log lines and detail columns.
+ */
+const DetailFormatter = (() => {
     const create = (options = {}) => {
         const detailColumn = Number.isFinite(options.detailColumn)
             ? options.detailColumn
-            : DEFAULT_DETAIL_COLUMN;
+            : 40;
         const messageColumn = Number.isFinite(options.messageColumn)
             ? options.messageColumn
-            : DEFAULT_MESSAGE_COLUMN;
+            : 50;
 
         const formatLine = (prefix, message, detail, forceDetail = false) => {
             const base = `${prefix}${message}`;
@@ -1405,6 +1579,41 @@ const LogFormatter = (() => {
             return normalizedMessage || '';
         };
 
+        return {
+            formatLine,
+            formatDetailColumns,
+            detailColumn,
+            messageColumn
+        };
+    };
+
+    return { create };
+})();
+
+// --- LogFormatter ---
+/**
+ * Formats merged script + console logs into aligned report lines.
+ */
+const LogFormatter = (() => {
+    const formatTime = (timestamp) => {
+        const parsed = new Date(timestamp);
+        if (Number.isNaN(parsed.getTime())) return timestamp;
+        return parsed.toISOString().slice(11, 23);
+    };
+
+    const create = (options = {}) => {
+        const detailColumn = Number.isFinite(options.detailColumn)
+            ? options.detailColumn
+            : (CONFIG?.logging?.REPORT_DETAIL_COLUMN ?? DetailFormatter.create().detailColumn);
+        const messageColumn = Number.isFinite(options.messageColumn)
+            ? options.messageColumn
+            : (CONFIG?.logging?.REPORT_MESSAGE_COLUMN ?? DetailFormatter.create().messageColumn);
+
+        const detailFormatter = DetailFormatter.create({
+            detailColumn,
+            messageColumn
+        });
+
         const seenSrcByVideo = new Set();
 
         const formatLogs = (logs) => logs.map(l => {
@@ -1412,9 +1621,17 @@ const LogFormatter = (() => {
 
             if (l.source === 'CONSOLE' || l.type === 'console') {
                 const icon = l.level === 'error' ? '\u274C' : l.level === 'warn' ? '\u26A0\uFE0F' : '\uD83D\uDCCB';
-                const message = stripConsoleTimestamp(l.message);
-                const split = splitConsoleMessage(message);
-                return formatLine(`[${time}] ${icon} `, split.summary, split.detail || '', true);
+                const summary = l.message || 'Console';
+                const detailMessage = l.detail?.message || '';
+                const jsonDetail = (() => {
+                    if (!l.detail || typeof l.detail !== 'object') return '';
+                    const cloned = { ...l.detail };
+                    delete cloned.message;
+                    if (cloned.level !== undefined) delete cloned.level;
+                    return Object.keys(cloned).length > 0 ? JSON.stringify(cloned) : '';
+                })();
+                const detail = detailFormatter.formatDetailColumns(detailMessage, jsonDetail);
+                return detailFormatter.formatLine(`[${time}] ${icon} `, summary, detail, true);
             }
 
             const sanitized = LogSanitizer.sanitizeDetail(l.detail, l.message, seenSrcByVideo);
@@ -1423,11 +1640,11 @@ const LogFormatter = (() => {
                 const detail = sanitized && Object.keys(sanitized).length > 0
                     ? JSON.stringify(sanitized)
                     : '';
-                return formatLine(`[${time}] ${ICONS.other} `, l.message, detail);
+                return detailFormatter.formatLine(`[${time}] \uD83D\uDD27 `, l.message, detail);
             }
 
             const rawTag = match[1];
-            const formatted = formatTaggedMessage(rawTag);
+            const formatted = TagCategorizer.formatTag(rawTag);
             const messageText = (sanitized && typeof sanitized.message === 'string')
                 ? sanitized.message
                 : (sanitized && typeof sanitized.inlineMessage === 'string')
@@ -1440,8 +1657,8 @@ const LogFormatter = (() => {
                 if (cloned.inlineMessage !== undefined) delete cloned.inlineMessage;
                 return Object.keys(cloned).length > 0 ? JSON.stringify(cloned) : '';
             })();
-            const detail = formatDetailColumns(messageText, jsonDetail);
-            return formatLine(`[${time}] ${formatted.icon} `, formatted.text, detail);
+            const detail = detailFormatter.formatDetailColumns(messageText, jsonDetail);
+            return detailFormatter.formatLine(`[${time}] ${formatted.icon} `, `[${formatted.displayTag}]`, detail);
         }).join('\n');
 
         return {
@@ -1450,10 +1667,60 @@ const LogFormatter = (() => {
     };
 
     return {
-        create,
-        DEFAULT_DETAIL_COLUMN,
-        DEFAULT_MESSAGE_COLUMN
+        create
     };
+})();
+
+// --- ReportTemplate ---
+/**
+ * Shared header/legend template for report exports.
+ */
+const ReportTemplate = (() => {
+    const buildHeader = (metricsSummary, healerStats) => {
+        const healerLine = healerStats
+            ? `Healer: isHealing ${healerStats.isHealing}, attempts ${healerStats.healAttempts}, monitors ${healerStats.monitoredCount}\n`
+            : '';
+
+        const stallCount = Number(metricsSummary.stalls_duration_count || 0);
+        const stallAvgMs = Number(metricsSummary.stall_duration_avg_ms || 0);
+        const stallMaxMs = Number(metricsSummary.stalls_duration_max_ms || 0);
+        const stallLastMs = Number(metricsSummary.stalls_duration_last_ms || 0);
+        const stallRecent = Array.isArray(metricsSummary.stall_duration_recent_ms)
+            ? metricsSummary.stall_duration_recent_ms
+            : [];
+        const stallSummaryLine = stallCount > 0
+            ? `Stall durations: count ${stallCount}, avg ${(stallAvgMs / 1000).toFixed(1)}s, max ${(stallMaxMs / 1000).toFixed(1)}s, last ${(stallLastMs / 1000).toFixed(1)}s\n`
+            : 'Stall durations: none recorded\n';
+        const stallRecentLine = stallRecent.length > 0
+            ? `Recent stalls: ${stallRecent.slice(-5).map(ms => (Number(ms) / 1000).toFixed(1) + 's').join(', ')}\n`
+            : '';
+
+        const versionLine = BuildInfo.getVersionLine();
+
+        return `[STREAM HEALER METRICS]
+${versionLine}Uptime: ${(metricsSummary.uptime_ms / 1000).toFixed(1)}s
+Stalls Detected: ${metricsSummary.stalls_detected}
+Heals Successful: ${metricsSummary.heals_successful}
+Heals Failed: ${metricsSummary.heals_failed}
+Heal Rate: ${metricsSummary.heal_rate}
+Errors: ${metricsSummary.errors}
+${stallSummaryLine}${stallRecentLine}${healerLine}
+[LEGEND]
+\uD83E\uDE7A = Healer core (STATE/STALL/HEAL)
+\uD83C\uDFAF = Candidate selection (CANDIDATE/PROBATION/SUPPRESSION)
+\uD83E\uDDED = Monitor & video (VIDEO/MONITOR/SCAN/SRC/MEDIA_STATE/EVENT)
+\uD83E\uDDEA = Instrumentation & signals (INSTRUMENT/RESOURCE/CONSOLE_HINT)
+\uD83E\uDDF0 = Recovery & failover (FAILOVER/BACKOFF/RESET/CATCH_UP)
+\uD83E\uDDFE = Metrics & config (SYNC/CONFIG)
+\u2699\uFE0F = Core/system
+\uD83D\uDCCB = Console.log/info/debug
+\u26A0\uFE0F = Console.warn
+\u274C = Console.error
+[TIMELINE - Merged script + console logs]
+`;
+    };
+
+    return { buildHeader };
 })();
 
 // --- ResourceWindow ---
@@ -1617,47 +1884,7 @@ const ReportGenerator = (() => {
     const getTimestampSuffix = () => new Date().toISOString().replace(/[:.]/g, '-');
 
     const generateContent = (metricsSummary, logs, healerStats) => {
-        const healerLine = healerStats
-            ? `Healer: isHealing ${healerStats.isHealing}, attempts ${healerStats.healAttempts}, monitors ${healerStats.monitoredCount}\n`
-            : '';
-
-        const stallCount = Number(metricsSummary.stalls_duration_count || 0);
-        const stallAvgMs = Number(metricsSummary.stall_duration_avg_ms || 0);
-        const stallMaxMs = Number(metricsSummary.stalls_duration_max_ms || 0);
-        const stallLastMs = Number(metricsSummary.stalls_duration_last_ms || 0);
-        const stallRecent = Array.isArray(metricsSummary.stall_duration_recent_ms)
-            ? metricsSummary.stall_duration_recent_ms
-            : [];
-        const stallSummaryLine = stallCount > 0
-            ? `Stall durations: count ${stallCount}, avg ${(stallAvgMs / 1000).toFixed(1)}s, max ${(stallMaxMs / 1000).toFixed(1)}s, last ${(stallLastMs / 1000).toFixed(1)}s\n`
-            : 'Stall durations: none recorded\n';
-        const stallRecentLine = stallRecent.length > 0
-            ? `Recent stalls: ${stallRecent.slice(-5).map(ms => (Number(ms) / 1000).toFixed(1) + 's').join(', ')}\n`
-            : '';
-
-        // Header with metrics
-        const versionLine = BuildInfo.getVersionLine();
-        const header = `[STREAM HEALER METRICS]
-${versionLine}Uptime: ${(metricsSummary.uptime_ms / 1000).toFixed(1)}s
-Stalls Detected: ${metricsSummary.stalls_detected}
-Heals Successful: ${metricsSummary.heals_successful}
-Heals Failed: ${metricsSummary.heals_failed}
-Heal Rate: ${metricsSummary.heal_rate}
-Errors: ${metricsSummary.errors}
-${stallSummaryLine}${stallRecentLine}${healerLine}
-[LEGEND]
-\uD83E\uDE7A = Healer core (STATE/STALL/HEAL)
-\uD83C\uDFAF = Candidate selection (CANDIDATE/PROBATION/SUPPRESSION)
-\uD83E\uDDED = Monitor & video (VIDEO/MONITOR/SCAN/SRC/MEDIA_STATE/EVENT)
-\uD83E\uDDEA = Instrumentation & signals (INSTRUMENT/RESOURCE/CONSOLE_HINT)
-\uD83E\uDDF0 = Recovery & failover (FAILOVER/BACKOFF/RESET/CATCH_UP)
-\uD83E\uDDFE = Metrics & config (SYNC/CONFIG)
-\u2699\uFE0F = Core/system
-\uD83D\uDCCB = Console.log/info/debug
-\u26A0\uFE0F = Console.warn
-\u274C = Console.error
-[TIMELINE - Merged script + console logs]
-`;
+        const header = ReportTemplate.buildHeader(metricsSummary, healerStats);
         const formatter = LogFormatter.create();
         const logContent = formatter.formatLogs(logs);
 
@@ -4610,11 +4837,11 @@ const StallSkipPolicy = (() => {
     return { create };
 })();
 
-// --- RecoveryPolicy ---
+// --- RecoveryPolicyFactory ---
 /**
- * Centralized recovery/backoff policy logic.
+ * Factory that wires recovery policy submodules into a single policy interface.
  */
-const RecoveryPolicy = (() => {
+const RecoveryPolicyFactory = (() => {
     const create = (options = {}) => {
         const logDebug = options.logDebug || (() => {});
         const candidateSelector = options.candidateSelector;
@@ -4624,6 +4851,7 @@ const RecoveryPolicy = (() => {
         const getVideoId = options.getVideoId;
 
         const backoffManager = BackoffManager.create({ logDebug });
+
         const probationPolicy = ProbationPolicy.create({
             candidateSelector,
             onRescan
@@ -4665,6 +4893,16 @@ const RecoveryPolicy = (() => {
             }
         };
     };
+
+    return { create };
+})();
+
+// --- RecoveryPolicy ---
+/**
+ * Centralized recovery/backoff policy logic.
+ */
+const RecoveryPolicy = (() => {
+    const create = (options = {}) => RecoveryPolicyFactory.create(options);
 
     return { create };
 })();

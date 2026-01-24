@@ -115,6 +115,8 @@ const CONFIG = (() => {
             LOG_REASON_MAX_LEN: 200,        // Max length for error reasons
             LOG_URL_MAX_LEN: 200,           // Max length for logged URLs
             CONSOLE_CAPTURE_MAX_LEN: 500,   // Max length for captured console lines
+            REPORT_DETAIL_COLUMN: 40,       // Column for first detail separator in report
+            REPORT_MESSAGE_COLUMN: 50,      // Column for message/detail split in report
             MAX_LOGS: 5000,                 // Max in-memory script logs
             MAX_CONSOLE_LOGS: 2000,         // Max in-memory console logs
         },

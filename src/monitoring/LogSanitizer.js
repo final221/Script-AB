@@ -86,6 +86,28 @@ const LogSanitizer = (() => {
         return { ...inlinePairs, ...existing };
     };
 
+    const getRawTag = (message) => {
+        if (!message || typeof message !== 'string') return null;
+        const match = message.match(/^\[([^\]]+)\]/);
+        return match ? match[1] : null;
+    };
+
+    const orderDetail = (detail, schema) => {
+        if (!schema || !detail || typeof detail !== 'object' || Array.isArray(detail)) return detail;
+        const ordered = {};
+        schema.forEach((key) => {
+            if (Object.prototype.hasOwnProperty.call(detail, key)) {
+                ordered[key] = detail[key];
+            }
+        });
+        Object.keys(detail).forEach((key) => {
+            if (!Object.prototype.hasOwnProperty.call(ordered, key)) {
+                ordered[key] = detail[key];
+            }
+        });
+        return ordered;
+    };
+
     const sanitizeDetail = (detail, message, seenSrcByVideo) => {
         if (!detail || typeof detail !== 'object') return detail;
         const sanitized = transformDetail(detail);
@@ -119,7 +141,9 @@ const LogSanitizer = (() => {
             delete sanitized.current;
             sanitized.changed = true;
         }
-        return sanitized;
+        const rawTag = getRawTag(message);
+        const schema = typeof LogSchemas !== 'undefined' ? LogSchemas.getSchema(rawTag) : null;
+        return orderDetail(sanitized, schema);
     };
 
     return {
@@ -128,6 +152,8 @@ const LogSanitizer = (() => {
         stripKeys,
         parseInlinePairs,
         mergeDetail,
-        sanitizeDetail
+        sanitizeDetail,
+        getRawTag,
+        orderDetail
     };
 })();

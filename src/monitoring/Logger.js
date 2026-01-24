@@ -51,11 +51,19 @@ const Logger = (() => {
             message = '[Unable to stringify console args]';
         }
 
+        let detail = null;
+        if (typeof LogNormalizer !== 'undefined' && LogNormalizer?.normalizeConsole) {
+            const normalized = LogNormalizer.normalizeConsole(level, message);
+            message = normalized.message;
+            detail = normalized.detail;
+        }
+
         consoleLogs.push({
             timestamp: new Date().toISOString(),
             type: 'console',
             level,
             message,
+            detail,
         });
     };
 
