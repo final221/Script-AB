@@ -34,6 +34,7 @@
     "core/VideoStateSnapshot.js",
     "core/StateSnapshot.js",
     "core/PlaybackLogHelper.js",
+    "core/PlaybackMediaWatcher.js",
     "core/MediaState.js",
     "core/PlaybackStateStore.js",
     "core/PlaybackResetLogic.js",

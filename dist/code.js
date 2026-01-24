@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.1.78
+// @version       4.1.79
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -152,7 +152,7 @@ const CONFIG = (() => {
  * Build metadata helpers (version injected at build time).
  */
 const BuildInfo = (() => {
-    const VERSION = '4.1.78';
+    const VERSION = '4.1.79';
 
     const getVersion = () => {
         const gmVersion = (typeof GM_info !== 'undefined' && GM_info?.script?.version)
@@ -163,7 +163,7 @@ const BuildInfo = (() => {
             ? unsafeWindow.GM_info.script.version
             : null;
         if (unsafeVersion) return unsafeVersion;
-        if (VERSION && VERSION !== '4.1.78') return VERSION;
+        if (VERSION && VERSION !== '4.1.79') return VERSION;
         return null;
     };
 
@@ -2840,6 +2840,129 @@ const PlaybackLogHelper = (() => {
     return { create };
 })();
 
+// --- PlaybackMediaWatcher ---
+/**
+ * Tracks media element property changes for watchdog logs.
+ */
+const PlaybackMediaWatcher = (() => {
+    const create = (options = {}) => {
+        const video = options.video;
+        const videoId = options.videoId;
+        const state = options.state;
+        const logDebug = options.logDebug || (() => {});
+
+        const formatMediaValue = (value) => {
+            if (typeof value === 'string') {
+                if (!value) return '""';
+                const compacted = VideoState.compactSrc(value);
+                const maxLen = 80;
+                if (compacted.length > maxLen) {
+                    return `"${compacted.slice(0, maxLen - 3)}..."`;
+                }
+                return `"${compacted}"`;
+            }
+            if (value === null) return 'null';
+            if (value === undefined) return 'undefined';
+            return value;
+        };
+
+        const logMediaStateChange = (label, previous, current, snapshot) => {
+            if (!state.mediaStateVerboseLogged) {
+                logDebug(LogEvents.tagged('MEDIA_STATE', `${label} changed`), {
+                    previous,
+                    current,
+                    videoState: snapshot
+                });
+                state.mediaStateVerboseLogged = true;
+                return;
+            }
+            logDebug(LogEvents.tagged('MEDIA_STATE', `${label} changed ${formatMediaValue(previous)} -> ${formatMediaValue(current)}`));
+        };
+
+        const update = (now) => {
+            const currentSrc = video.currentSrc || video.getAttribute('src') || '';
+            if (currentSrc !== state.lastSrc) {
+                logDebug(LogEvents.tagged('SRC', 'Source changed'), {
+                    previous: VideoState.compactSrc(state.lastSrc),
+                    current: VideoState.compactSrc(currentSrc),
+                    videoState: VideoStateSnapshot.forLog(video, videoId)
+                });
+                state.lastSrc = currentSrc;
+                state.lastSrcChangeTime = now;
+            }
+
+            const srcAttr = video.getAttribute ? (video.getAttribute('src') || '') : '';
+            if (srcAttr !== state.lastSrcAttr) {
+                logMediaStateChange(
+                    'src attribute',
+                    state.lastSrcAttr,
+                    srcAttr,
+                    VideoStateSnapshot.forLog(video, videoId, 'lite')
+                );
+                state.lastSrcAttr = srcAttr;
+            }
+
+            const readyState = video.readyState;
+            if (readyState !== state.lastReadyState) {
+                logMediaStateChange(
+                    'readyState',
+                    state.lastReadyState,
+                    readyState,
+                    VideoStateSnapshot.forLog(video, videoId, 'lite')
+                );
+                state.lastReadyState = readyState;
+                state.lastReadyStateChangeTime = now;
+            }
+
+            const networkState = video.networkState;
+            if (networkState !== state.lastNetworkState) {
+                logMediaStateChange(
+                    'networkState',
+                    state.lastNetworkState,
+                    networkState,
+                    VideoStateSnapshot.forLog(video, videoId, 'lite')
+                );
+                state.lastNetworkState = networkState;
+                state.lastNetworkStateChangeTime = now;
+            }
+
+            const hasSrc = Boolean(currentSrc || srcAttr);
+            if (!hasSrc && readyState === 0) {
+                if (!state.deadCandidateSince) {
+                    state.deadCandidateSince = now;
+                }
+                if ((now - state.deadCandidateSince) >= CONFIG.monitoring.DEAD_CANDIDATE_AFTER_MS) {
+                    state.deadCandidateUntil = now + CONFIG.monitoring.DEAD_CANDIDATE_COOLDOWN_MS;
+                }
+            } else if (state.deadCandidateSince || state.deadCandidateUntil) {
+                state.deadCandidateSince = 0;
+                state.deadCandidateUntil = 0;
+            }
+
+            let bufferedLength = 0;
+            try {
+                bufferedLength = video.buffered ? video.buffered.length : 0;
+            } catch (error) {
+                bufferedLength = state.lastBufferedLength;
+            }
+            if (bufferedLength !== state.lastBufferedLength) {
+                logMediaStateChange(
+                    'buffered range count',
+                    state.lastBufferedLength,
+                    bufferedLength,
+                    VideoStateSnapshot.forLog(video, videoId, 'lite')
+                );
+                state.lastBufferedLength = bufferedLength;
+                state.lastBufferedLengthChangeTime = now;
+            }
+        };
+
+        return { update };
+    };
+
+    return { create };
+})();
+
 // --- MediaState ---
 /**
  * Unified helpers for video state + buffer info.
@@ -4087,34 +4210,12 @@ const PlaybackWatchdog = (() => {
 
         let intervalId;
         const logHelper = PlaybackLogHelper.create({ video, videoId, state });
-
-        const formatMediaValue = (value) => {
-            if (typeof value === 'string') {
-                if (!value) return '""';
-                const compacted = VideoState.compactSrc(value);
-                const maxLen = 80;
-                if (compacted.length > maxLen) {
-                    return `"${compacted.slice(0, maxLen - 3)}..."`;
-                }
-                return `"${compacted}"`;
-            }
-            if (value === null) return 'null';
-            if (value === undefined) return 'undefined';
-            return value;
-        };
-
-        const logMediaStateChange = (label, previous, current, snapshot) => {
-            if (!state.mediaStateVerboseLogged) {
-                logDebug(LogEvents.tagged('MEDIA_STATE', `${label} changed`), {
-                    previous,
-                    current,
-                    videoState: snapshot
-                });
-                state.mediaStateVerboseLogged = true;
-                return;
-            }
-            logDebug(LogEvents.tagged('MEDIA_STATE', `${label} changed ${formatMediaValue(previous)} -> ${formatMediaValue(current)}`));
-        };
+        const mediaWatcher = PlaybackMediaWatcher.create({
+            video,
+            videoId,
+            state,
+            logDebug
+        });
 
         const tick = () => {
             const now = Date.now();
@@ -4160,61 +4261,7 @@ const PlaybackWatchdog = (() => {
                 tracker.updateBufferStarvation(bufferInfo, 'watchdog');
             }
 
-            const currentSrc = video.currentSrc || video.getAttribute('src') || '';
-            if (currentSrc !== state.lastSrc) {
-                logDebug(LogEvents.tagged('SRC', 'Source changed'), {
-                    previous: VideoState.compactSrc(state.lastSrc),
-                    current: VideoState.compactSrc(currentSrc),
-                    videoState: VideoStateSnapshot.forLog(video, videoId)
-                });
-                state.lastSrc = currentSrc;
-                state.lastSrcChangeTime = now;
-            }
-
-            const srcAttr = video.getAttribute ? (video.getAttribute('src') || '') : '';
-            if (srcAttr !== state.lastSrcAttr) {
-                logMediaStateChange('src attribute', state.lastSrcAttr, srcAttr, VideoStateSnapshot.forLog(video, videoId, 'lite'));
-                state.lastSrcAttr = srcAttr;
-            }
-
-            const readyState = video.readyState;
-            if (readyState !== state.lastReadyState) {
-                logMediaStateChange('readyState', state.lastReadyState, readyState, VideoStateSnapshot.forLog(video, videoId, 'lite'));
-                state.lastReadyState = readyState;
-                state.lastReadyStateChangeTime = now;
-            }
-
-            const networkState = video.networkState;
-            if (networkState !== state.lastNetworkState) {
-                logMediaStateChange('networkState', state.lastNetworkState, networkState, VideoStateSnapshot.forLog(video, videoId, 'lite'));
-                state.lastNetworkState = networkState;
-                state.lastNetworkStateChangeTime = now;
-            }
-
-            const hasSrc = Boolean(currentSrc || srcAttr);
-            if (!hasSrc && readyState === 0) {
-                if (!state.deadCandidateSince) {
-                    state.deadCandidateSince = now;
-                }
-                if ((now - state.deadCandidateSince) >= CONFIG.monitoring.DEAD_CANDIDATE_AFTER_MS) {
-                    state.deadCandidateUntil = now + CONFIG.monitoring.DEAD_CANDIDATE_COOLDOWN_MS;
-                }
-            } else if (state.deadCandidateSince || state.deadCandidateUntil) {
-                state.deadCandidateSince = 0;
-                state.deadCandidateUntil = 0;
-            }
-
-            let bufferedLength = 0;
-            try {
-                bufferedLength = video.buffered ? video.buffered.length : 0;
-            } catch (error) {
-                bufferedLength = state.lastBufferedLength;
-            }
-            if (bufferedLength !== state.lastBufferedLength) {
-                logMediaStateChange('buffered range count', state.lastBufferedLength, bufferedLength, VideoStateSnapshot.forLog(video, videoId, 'lite'));
-                state.lastBufferedLength = bufferedLength;
-                state.lastBufferedLengthChangeTime = now;
-            }
+            mediaWatcher.update(now);
 
             tracker.logSyncStatus();
 

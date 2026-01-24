@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.1.79 - 2026-01-24T20:14:31.242Z
+Previous: 4.1.78
+Commit: 07f8d45
+Changes:
+- refactor: extract failover probe controller
+
 ## 4.1.78 - 2026-01-24T20:09:47.988Z
 Previous: 4.1.77
 Commit: 2672aae
