@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.1.31 - 2026-01-24T11:52:31.120Z
+Previous: 4.1.30
+Commit: d494ccf
+Changes:
+- Refactor recovery flow and hot paths
+
 ## 4.1.30 - 2026-01-24T11:41:36.452Z
 Previous: 4.1.29
 Commit: ef7b71f

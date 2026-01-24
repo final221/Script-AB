@@ -11,6 +11,7 @@ All settings live in `src/config/Config.js`.
 - `stall.INIT_PROGRESS_GRACE_MS`: Initial grace window before stall detection starts.
 - `stall.SELF_RECOVER_GRACE_MS`: Grace window to allow self-recovery signals before healing.
 - `stall.SELF_RECOVER_MAX_MS`: Optional max window for self-recovery skips.
+- `stall.SELF_RECOVER_EXTRA_MS`: Extra grace when buffer grows or readyState improves.
 
 ## Healing + Backoff
 - `stall.HEAL_TIMEOUT_S`: Max time to search for a heal point.
@@ -21,6 +22,8 @@ All settings live in `src/config/Config.js`.
 - `stall.NO_HEAL_POINT_BACKOFF_BASE_MS`: Base backoff after a missing heal point.
 - `stall.NO_HEAL_POINT_BACKOFF_MAX_MS`: Max backoff after repeated misses.
 - `stall.RETRY_COOLDOWN_MS`: Cooldown between heal attempts on the same video.
+- `stall.PLAY_ABORT_BACKOFF_BASE_MS`: Base backoff after AbortError failures.
+- `stall.PLAY_ABORT_BACKOFF_MAX_MS`: Max backoff after repeated AbortError failures.
 
 ## Failover
 - `stall.FAILOVER_AFTER_NO_HEAL_POINTS`: Failover after repeated no-heal results.

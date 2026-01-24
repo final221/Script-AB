@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.1.30
+// @version       4.1.31
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -47,6 +47,7 @@ const CONFIG = (() => {
             RECOVERY_WINDOW_MS: 1500,       // Recent progress window to consider recovered
             SELF_RECOVER_GRACE_MS: 4000,    // Wait for recent src/buffer changes before healing
             SELF_RECOVER_MAX_MS: 12000,     // Max time to defer healing for self-recovery signals
+            SELF_RECOVER_EXTRA_MS: 3000,    // Extra grace when buffer grows/readyState improves
             RETRY_COOLDOWN_MS: 2000,        // Cooldown between heal attempts for same stall
             HEAL_POLL_INTERVAL_MS: 200,     // How often to poll for heal point
             HEAL_TIMEOUT_S: 15,             // Give up after this many seconds
@@ -54,6 +55,8 @@ const CONFIG = (() => {
             NO_HEAL_POINT_BACKOFF_MAX_MS: 60000, // Max backoff after repeated no heal points
             PLAY_ERROR_BACKOFF_BASE_MS: 2000, // Base backoff after play failures (Abort/PLAY_STUCK)
             PLAY_ERROR_BACKOFF_MAX_MS: 20000, // Max backoff after repeated play failures
+            PLAY_ABORT_BACKOFF_BASE_MS: 8000, // Base backoff after AbortError failures
+            PLAY_ABORT_BACKOFF_MAX_MS: 30000, // Max backoff after repeated AbortError failures
             PLAY_ERROR_DECAY_MS: 15000,    // Reset play-error count after this idle window
             FAILOVER_AFTER_NO_HEAL_POINTS: 3, // Failover after this many consecutive no-heal points
             FAILOVER_AFTER_PLAY_ERRORS: 3, // Failover after this many consecutive play failures
@@ -4073,8 +4076,14 @@ const RecoveryManager = (() => {
             }
 
             const count = (monitorState.playErrorCount || 0) + 1;
-            const base = CONFIG.stall.PLAY_ERROR_BACKOFF_BASE_MS;
-            const max = CONFIG.stall.PLAY_ERROR_BACKOFF_MAX_MS;
+            const isAbortError = detail?.errorName === 'AbortError'
+                || (typeof detail?.error === 'string' && detail.error.toLowerCase().includes('aborted'));
+            const base = isAbortError
+                ? (CONFIG.stall.PLAY_ABORT_BACKOFF_BASE_MS || CONFIG.stall.PLAY_ERROR_BACKOFF_BASE_MS)
+                : CONFIG.stall.PLAY_ERROR_BACKOFF_BASE_MS;
+            const max = isAbortError
+                ? (CONFIG.stall.PLAY_ABORT_BACKOFF_MAX_MS || CONFIG.stall.PLAY_ERROR_BACKOFF_MAX_MS)
+                : CONFIG.stall.PLAY_ERROR_BACKOFF_MAX_MS;
             const backoffMs = Math.min(base * count, max);
 
             monitorState.playErrorCount = count;
@@ -4088,6 +4097,7 @@ const RecoveryManager = (() => {
                 errorName: detail.errorName,
                 playErrorCount: count,
                 backoffMs,
+                abortBackoff: isAbortError,
                 nextHealAllowedInMs: backoffMs,
                 healRange: detail.healRange || null,
                 healPointRepeatCount: detail.healPointRepeatCount || 0
@@ -4175,40 +4185,55 @@ const RecoveryManager = (() => {
             if (monitorState) {
                 const lastProgress = monitorState.lastProgressTime || 0;
                 const stalledForMs = lastProgress ? (now - lastProgress) : null;
-                const graceMs = CONFIG.stall.SELF_RECOVER_GRACE_MS;
+                const baseGraceMs = CONFIG.stall.SELF_RECOVER_GRACE_MS;
+                const allowExtraGrace = !monitorState.bufferStarved;
+                const extraGraceMs = allowExtraGrace ? (CONFIG.stall.SELF_RECOVER_EXTRA_MS || 0) : 0;
+                const maxGraceMs = CONFIG.stall.SELF_RECOVER_MAX_MS || 0;
+                const extendedGraceMs = maxGraceMs
+                    ? Math.min(baseGraceMs + extraGraceMs, maxGraceMs)
+                    : baseGraceMs + extraGraceMs;
                 const maxMs = CONFIG.stall.SELF_RECOVER_MAX_MS;
 
                 if (stalledForMs !== null && (!maxMs || stalledForMs <= maxMs)) {
                     const signals = [];
+                    const strongSignals = [];
                     const lastSrcChange = monitorState.lastSrcChangeTime || 0;
                     const lastReadyChange = monitorState.lastReadyStateChangeTime || 0;
                     const lastNetworkChange = monitorState.lastNetworkStateChangeTime || 0;
                     const lastBufferRangeChange = monitorState.lastBufferedLengthChangeTime || 0;
                     const lastBufferGrow = monitorState.lastBufferAheadIncreaseTime || 0;
 
-                    if (lastSrcChange > lastProgress && (now - lastSrcChange) <= graceMs) {
+                    const isWithin = (ts, windowMs) => (
+                        ts > lastProgress && (now - ts) <= windowMs
+                    );
+
+                    if (isWithin(lastReadyChange, extendedGraceMs)) {
+                        signals.push('ready_state');
+                        strongSignals.push('ready_state');
+                    }
+                    if (isWithin(lastBufferGrow, extendedGraceMs)) {
+                        signals.push('buffer_growth');
+                        strongSignals.push('buffer_growth');
+                    }
+                    if (isWithin(lastSrcChange, baseGraceMs)) {
                         signals.push('src_change');
                     }
-                    if (lastReadyChange > lastProgress && (now - lastReadyChange) <= graceMs) {
-                        signals.push('ready_state');
-                    }
-                    if (lastNetworkChange > lastProgress && (now - lastNetworkChange) <= graceMs) {
+                    if (isWithin(lastNetworkChange, baseGraceMs)) {
                         signals.push('network_state');
                     }
-                    if (lastBufferRangeChange > lastProgress && (now - lastBufferRangeChange) <= graceMs) {
+                    if (isWithin(lastBufferRangeChange, baseGraceMs)) {
                         signals.push('buffer_ranges');
-                    }
-                    if (lastBufferGrow > lastProgress && (now - lastBufferGrow) <= graceMs) {
-                        signals.push('buffer_growth');
                     }
 
                     if (signals.length > 0) {
+                        const graceMs = strongSignals.length > 0 ? extendedGraceMs : baseGraceMs;
                         if (now - (monitorState.lastSelfRecoverSkipLogTime || 0) > CONFIG.logging.BACKOFF_LOG_INTERVAL_MS) {
                             monitorState.lastSelfRecoverSkipLogTime = now;
                             logDebug('[HEALER:SELF_RECOVER_SKIP] Stall skipped for self-recovery window', {
                                 videoId,
                                 stalledForMs,
                                 graceMs,
+                                extraGraceMs: strongSignals.length > 0 ? extraGraceMs : 0,
                                 signals,
                                 bufferAhead: monitorState.lastBufferAhead,
                                 bufferStarved: monitorState.bufferStarved || false

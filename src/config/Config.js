@@ -34,6 +34,7 @@ const CONFIG = (() => {
             RECOVERY_WINDOW_MS: 1500,       // Recent progress window to consider recovered
             SELF_RECOVER_GRACE_MS: 4000,    // Wait for recent src/buffer changes before healing
             SELF_RECOVER_MAX_MS: 12000,     // Max time to defer healing for self-recovery signals
+            SELF_RECOVER_EXTRA_MS: 3000,    // Extra grace when buffer grows/readyState improves
             RETRY_COOLDOWN_MS: 2000,        // Cooldown between heal attempts for same stall
             HEAL_POLL_INTERVAL_MS: 200,     // How often to poll for heal point
             HEAL_TIMEOUT_S: 15,             // Give up after this many seconds
@@ -41,6 +42,8 @@ const CONFIG = (() => {
             NO_HEAL_POINT_BACKOFF_MAX_MS: 60000, // Max backoff after repeated no heal points
             PLAY_ERROR_BACKOFF_BASE_MS: 2000, // Base backoff after play failures (Abort/PLAY_STUCK)
             PLAY_ERROR_BACKOFF_MAX_MS: 20000, // Max backoff after repeated play failures
+            PLAY_ABORT_BACKOFF_BASE_MS: 8000, // Base backoff after AbortError failures
+            PLAY_ABORT_BACKOFF_MAX_MS: 30000, // Max backoff after repeated AbortError failures
             PLAY_ERROR_DECAY_MS: 15000,    // Reset play-error count after this idle window
             FAILOVER_AFTER_NO_HEAL_POINTS: 3, // Failover after this many consecutive no-heal points
             FAILOVER_AFTER_PLAY_ERRORS: 3, // Failover after this many consecutive play failures
