@@ -3,40 +3,37 @@
 ## System Overview
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                      CoreOrchestrator                       │
-│                    (Main Entry Point)                       │
-└─────────────────────────────────────────────────────────────┘
-                              │
-              ┌───────────────┼───────────────┐
-              ▼               ▼               ▼
-      ┌──────────────┐ ┌─────────────┐ ┌──────────────┐
-      │ StreamHealer │ │Instrumentation│ │   Logger    │
-      └──────────────┘ └─────────────┘ └──────────────┘
-              │
-    ┌─────────┴─────────┐
-    ▼                   ▼
-┌─────────────┐   ┌─────────────┐
-│BufferGapFinder│ │LiveEdgeSeeker│
-└─────────────┘   └─────────────┘
++-------------------+
+| CoreOrchestrator  |
+| (entry point)     |
++-------------------+
+        |\
+        | +-> Instrumentation
+        | +-> Logger
+        |        |
+        |        +-> ReportGenerator
+        +-> StreamHealer
+                |
+                +-> BufferGapFinder
+                +-> LiveEdgeSeeker
 ```
 
 ## Module Dependency Graph
 
 ```
 CoreOrchestrator
-├─> Instrumentation (console capture for debugging)
-├─> StreamHealer (main healing orchestrator)
-�"o�"?> VideoState (shared video state helper)
-│   ├─> PlaybackMonitor (event-driven stall detection)
-│   ├─> BufferGapFinder (buffer analysis)
-│   │   └─> findHealPoint() - finds buffer ahead of currentTime
-│   │   └─> isBufferExhausted() - detects stall condition
-│   └─> LiveEdgeSeeker (seek execution)
-│       └─> seekAndPlay() - seeks to heal point, resumes playback
-│       └─> validateSeekTarget() - ensures target is within buffer
-└─> Logger (merged timeline collection)
-    └─> ReportGenerator (export functionality)
+  -> Instrumentation (console capture for debugging)
+  -> StreamHealer (main healing orchestrator)
+  -> VideoState (shared video state helper)
+       -> PlaybackMonitor (event-driven stall detection)
+       -> BufferGapFinder (buffer analysis)
+            -> findHealPoint() - finds buffer ahead of currentTime
+            -> isBufferExhausted() - detects stall condition
+       -> LiveEdgeSeeker (seek execution)
+            -> seekAndPlay() - seeks to heal point, resumes playback
+            -> validateSeekTarget() - ensures target is within buffer
+  -> Logger (merged timeline collection)
+       -> ReportGenerator (export functionality)
 ```
 
 ## Module Load Order
@@ -89,48 +86,25 @@ The build uses a priority list followed by auto-discovered modules, then the ent
 
 ### Stall Detection & Healing
 ```
-Video Element → StreamHealer.monitor()
-                      │
-                      ▼ (events + watchdog)
-                 Check: no progress?
-                      │
-         ┌────────────┴────────────┐
-         ▼                         ▼
-       No → Reset counter        Yes → Increment counter
-                                       │
-                                       ▼ (4 consecutive)
-                              StreamHealer.attemptHeal()
-                                       │
-                                       ▼
-                              BufferGapFinder.findHealPoint()
-                                       │
-                         ┌─────────────┴─────────────┐
-                         ▼                           ▼
-                    Found? → LiveEdgeSeeker       Not found?
-                         │   .seekAndPlay()          │
-                         │                           ▼
-                         ▼                      Log & wait
-                 Seek + Play                    (up to 15s)
-                         │
-                         ▼
-                 Log result ✓ or ✗
+Video element -> StreamHealer.monitor()
+  - event handlers + watchdog
+  - check progress
+    - no progress: reset counter
+    - stall: increment counter
+  - after threshold: StreamHealer.attemptHeal()
+    - BufferGapFinder.findHealPoint()
+      - found: LiveEdgeSeeker.seekAndPlay()
+      - not found: log + wait (up to 15s)
+  - log result
 ```
 
 ### Logging Timeline
 ```
-Console.log/warn/error ─────┐
-                            │
-Script Logger.add() ────────┼──> Logger.getMergedTimeline()
-                            │         │
-                            ▼         ▼
-                      Sorted by timestamp
-                            │
-                            ▼
-                   exportTwitchAdLogs()
-                            │
-                            ▼
-                   📁 stream_healer_logs_*.txt
-                   (🔧 Script | 📋 Log | ⚠️ Warn | ❌ Error)
+Console.log/warn/error -> Instrumentation -> Logger.add()
+Script Logger.add() -> Logger.getMergedTimeline()
+  -> sort by timestamp -> exportTwitchAdLogs()
+  -> writes stream_healer_logs_*.txt
+     (Script | Console | Warn | Error)
 ```
 
 ## Layer Responsibilities
@@ -283,6 +257,11 @@ When uBlock Origin blocks ad segments, the video buffer has a gap:
 - Stall confirmed after 2500ms without progress (longer if buffer is healthy)
 - Poll for heal point up to 15 seconds
 - Cooldown between heal attempts is 2000ms when progress resumed
+
+
+
+
+
 
 
 

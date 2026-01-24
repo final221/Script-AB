@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.1.20 - 2026-01-24T09:18:27.138Z
+Previous: 4.1.19
+Commit: ae94eec
+Changes:
+- x
+
 ## 4.1.19 - 2026-01-14T14:05:31.624Z
 Previous: 4.1.18
 Commit: 52df8dd

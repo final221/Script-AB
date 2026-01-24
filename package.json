@@ -1,6 +1,6 @@
 {
   "name": "twitch-ad-blocker",
-  "version": "4.1.19",
+  "version": "4.1.20",
   "description": "Twitch ad blocker with self-healing recovery",
   "private": true,
   "scripts": {

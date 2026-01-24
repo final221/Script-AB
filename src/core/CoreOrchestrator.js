@@ -44,9 +44,13 @@ const CoreOrchestrator = (() => {
             };
 
             exposeGlobal('getTwitchHealerStats', () => {
+                const healerStats = StreamHealer.getStats();
+                const metricsSummary = Metrics.getSummary();
+                ReportGenerator.exportStats(healerStats, metricsSummary);
+
                 return {
-                    healer: StreamHealer.getStats(),
-                    metrics: Metrics.getSummary()
+                    healer: healerStats,
+                    metrics: metricsSummary
                 };
             });
 

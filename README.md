@@ -13,9 +13,9 @@ Twitch stream healing userscript with comprehensive logging. When uBlock Origin 
 
 ### Build
 ```bash
-node build/build.js          # Patch: 4.0.5 → 4.0.6
-node build/build.js --minor  # Minor: 4.0.5 → 4.1.0
-node build/build.js --major  # Major: 4.0.5 → 5.0.0
+node build/build.js          # Patch: 4.0.5 -> 4.0.6
+node build/build.js --minor  # Minor: 4.0.5 -> 4.1.0
+node build/build.js --major  # Major: 4.0.5 -> 5.0.0
 ```
 
 Output: `dist/code.js`
@@ -27,7 +27,7 @@ Output: `dist/code.js`
 
 ### Debug
 ```javascript
-getTwitchHealerStats()    // Get heal statistics
+getTwitchHealerStats()    // Download stats snapshot (healer + metrics)
 exportTwitchAdLogs()      // Download merged timeline (script + console logs)
 ```
 See `docs/DEBUGGING.md` for log sequences and triage tips.
@@ -42,25 +42,40 @@ Quick knobs (see `docs/DEBUGGING.md` for full mapping):
 ### Contributing
 Run `npm test` and `npm run build` before committing changes.
 
+## Development Workflow (Agent-Friendly)
+- `npm test` runs `build/sync-docs.js --check` before tests, enforcing load-order sync.
+- `npm run build` runs sync-docs + tests, then generates `dist/code.js`.
+- `node build/build.js` updates `build/version.txt`, `package.json`, and `README.md` version.
+
+## Generated Files
+- `dist/code.js` is build output; do not edit by hand.
+- `build/version.txt` is managed by `build/build.js`.
+
 ## Project Structure
 
 ```
 Tw Adb/
-├── src/
-│   ├── config/       # Configuration (1 file)
-│   ├── utils/        # Utilities (2 files)
-│   ├── core/         # Orchestration (2 files)
-│   ├── recovery/     # Heal point finding & seeking (2 files)
-│   └── monitoring/   # Logging & metrics (5 files)
-├── build/            # Build scripts
-├── dist/             # Build output
-├── tests/            # Unit tests
-└── docs/             # Documentation
+|-- src/
+|   |-- config/       # Configuration
+|   |-- utils/        # Utilities + DOM adapters
+|   |-- core/         # Orchestration + playback monitoring
+|   |-- recovery/     # Buffer analysis + seeking
+|   |-- monitoring/   # Logging, metrics, instrumentation
+|-- build/            # Build scripts + manifest
+|-- dist/             # Generated output (userscript)
+|-- tests/            # Unit tests (Vitest + JSDOM)
+|-- docs/             # Documentation
+|-- data/             # Pattern data
 ```
 
 ## Architecture
 
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for detailed architecture.
+
+## Docs & Navigation
+- [docs/AI_CONTEXT.md](docs/AI_CONTEXT.md) - AI agent context, constraints, load order
+- [docs/DEBUGGING.md](docs/DEBUGGING.md) - Log sequences and triage guide
+- [tests/README.md](tests/README.md) - Test harness and conventions
 
 ## How It Works
 
@@ -124,8 +139,12 @@ Key settings in `Config.js`:
 
 ## Version
 
-Current: **4.1.19**
+Current: **4.1.20**
 
 Version increments automatically on each build (patch).
 Changelog: `docs/CHANGELOG.md`
+
+
+
+
 
