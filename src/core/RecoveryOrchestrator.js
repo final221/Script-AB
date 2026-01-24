@@ -55,7 +55,7 @@ const RecoveryOrchestrator = (() => {
             if (!state) return false;
             const progressedSinceAttempt = state.lastProgressTime > state.lastHealAttemptTime;
             if (progressedSinceAttempt && now - state.lastHealAttemptTime < CONFIG.stall.RETRY_COOLDOWN_MS) {
-                logDebug('[HEALER:DEBOUNCE]', {
+                logDebug(LogEvents.tagged('DEBOUNCE'), {
                     cooldownMs: CONFIG.stall.RETRY_COOLDOWN_MS,
                     lastHealAttemptAgoMs: now - state.lastHealAttemptTime,
                     state: state.state,
@@ -101,7 +101,7 @@ const RecoveryOrchestrator = (() => {
             const logIntervalMs = CONFIG.logging.NON_ACTIVE_LOG_MS;
             if (now - lastLog >= logIntervalMs) {
                 stallSkipLogTimes.set(context.videoId, now);
-                logDebug('[HEALER:STALL_SKIP] Stall on non-active video', {
+                logDebug(LogEvents.tagged('STALL_SKIP', 'Stall on non-active video'), {
                     videoId: context.videoId,
                     activeVideoId: activeCandidateId,
                     stalledFor: details.stalledFor

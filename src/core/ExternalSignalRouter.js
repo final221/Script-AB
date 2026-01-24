@@ -52,7 +52,7 @@ const ExternalSignalRouter = (() => {
                     reasons: score.reasons
                 });
             }
-            Logger.add('[HEALER:CANDIDATE_SNAPSHOT] Candidates scored', {
+            Logger.add(LogEvents.tagged('CANDIDATE_SNAPSHOT', 'Candidates scored'), {
                 reason,
                 candidates
             });
@@ -70,7 +70,7 @@ const ExternalSignalRouter = (() => {
                 attempts.push({ videoId, attempted });
                 if (attempted) attemptedCount += 1;
             }
-            Logger.add('[HEALER:PROBE_BURST] Probing candidates', {
+            Logger.add(LogEvents.tagged('PROBE_BURST', 'Probing candidates'), {
                 reason,
                 excludeId,
                 attemptedCount,
@@ -89,7 +89,7 @@ const ExternalSignalRouter = (() => {
             if (type === 'playhead_stall') {
                 const attribution = playheadAttribution.resolve(signal.playheadSeconds);
                 if (!attribution.id) {
-                    Logger.add('[HEALER:STALL_HINT_UNATTRIBUTED] Console playhead stall warning', {
+                    Logger.add(LogEvents.tagged('STALL_HINT_UNATTRIBUTED', 'Console playhead stall warning'), {
                         level,
                         message: truncateMessage(message),
                         playheadSeconds: attribution.playheadSeconds,
@@ -108,7 +108,7 @@ const ExternalSignalRouter = (() => {
                 state.lastStallEventTime = now;
                 state.pauseFromStall = true;
 
-                Logger.add('[HEALER:STALL_HINT] Console playhead stall warning', {
+                Logger.add(LogEvents.tagged('STALL_HINT', 'Console playhead stall warning'), {
                     videoId: attribution.id,
                     level,
                     message: truncateMessage(message),
@@ -148,7 +148,7 @@ const ExternalSignalRouter = (() => {
             }
 
             if (type === 'processing_asset') {
-                Logger.add('[HEALER:ASSET_HINT] Processing/offline asset detected', {
+                Logger.add(LogEvents.tagged('ASSET_HINT', 'Processing/offline asset detected'), {
                     level,
                     message: truncateMessage(message)
                 });
@@ -161,7 +161,7 @@ const ExternalSignalRouter = (() => {
                 onRescan('processing_asset', { level, message: truncateMessage(message) });
 
                 if (recoveryManager.isFailoverActive()) {
-                    logDebug('[HEALER:ASSET_HINT_SKIP] Failover in progress', {
+                    logDebug(LogEvents.tagged('ASSET_HINT_SKIP', 'Failover in progress'), {
                         reason: 'processing_asset'
                     });
                     return;
@@ -182,7 +182,7 @@ const ExternalSignalRouter = (() => {
                     const fromId = activeId;
                     activeId = best.id;
                     candidateSelector.setActiveId(activeId);
-                    Logger.add('[HEALER:CANDIDATE] Forced switch after processing asset', {
+                    Logger.add(LogEvents.tagged('CANDIDATE', 'Forced switch after processing asset'), {
                         from: fromId,
                         to: activeId,
                         bestScore: best.score,
@@ -192,7 +192,7 @@ const ExternalSignalRouter = (() => {
                         bufferStarved: activeMonitorState?.bufferStarved || false
                     });
                 } else if (best && best.id && best.id !== activeId) {
-                    logDebug('[HEALER:CANDIDATE] Processing asset switch suppressed', {
+                    logDebug(LogEvents.tagged('CANDIDATE', 'Processing asset switch suppressed'), {
                         from: activeId,
                         to: best.id,
                         progressEligible: best.progressEligible,
@@ -214,7 +214,7 @@ const ExternalSignalRouter = (() => {
                     const playPromise = activeEntryForPlay.video?.play?.();
                     if (playPromise && typeof playPromise.catch === 'function') {
                         playPromise.catch((err) => {
-                            Logger.add('[HEALER:ASSET_HINT_PLAY] Play rejected', {
+                            Logger.add(LogEvents.tagged('ASSET_HINT_PLAY', 'Play rejected'), {
                                 videoId: activeId,
                                 error: err?.name,
                                 message: err?.message
@@ -226,7 +226,7 @@ const ExternalSignalRouter = (() => {
             }
 
             if (type === 'adblock_block') {
-                Logger.add('[HEALER:ADBLOCK_HINT] Ad-block signal observed', {
+                Logger.add(LogEvents.tagged('ADBLOCK_HINT', 'Ad-block signal observed'), {
                     type,
                     level,
                     message: truncateMessage(message),
@@ -235,7 +235,7 @@ const ExternalSignalRouter = (() => {
                 return;
             }
 
-            Logger.add('[HEALER:EXTERNAL] Unhandled external signal', {
+            Logger.add(LogEvents.tagged('EXTERNAL', 'Unhandled external signal'), {
                 type,
                 level,
                 message: truncateMessage(message)

@@ -21,7 +21,7 @@ const LiveEdgeSeeker = (() => {
         const validation = SeekTargetCalculator.validateSeekTarget(video, target);
         const bufferRanges = BufferGapFinder.formatRanges(BufferGapFinder.getBufferRanges(video));
 
-        Logger.add('[HEALER:SEEK] Attempting seek', {
+        Logger.add(LogEvents.tagged('SEEK', 'Attempting seek'), {
             from: fromTime.toFixed(3),
             to: target.toFixed(3),
             healRange: `${healPoint.start.toFixed(2)}-${healPoint.end.toFixed(2)}`,
@@ -31,7 +31,7 @@ const LiveEdgeSeeker = (() => {
         });
 
         if (!validation.valid) {
-            Logger.add('[HEALER:SEEK_ABORT] Invalid seek target', {
+            Logger.add(LogEvents.tagged('SEEK_ABORT', 'Invalid seek target'), {
                 target: target.toFixed(3),
                 reason: validation.reason,
                 bufferRanges
@@ -46,12 +46,12 @@ const LiveEdgeSeeker = (() => {
             // Brief wait for seek to settle
             await Fn.sleep(CONFIG.recovery.SEEK_SETTLE_MS);
 
-            Logger.add('[HEALER:SEEKED] Seek completed', {
+            Logger.add(LogEvents.tagged('SEEKED', 'Seek completed'), {
                 newTime: video.currentTime.toFixed(3),
                 readyState: video.readyState
             });
         } catch (e) {
-            Logger.add('[HEALER:SEEK_ERROR] Seek failed', {
+            Logger.add(LogEvents.tagged('SEEK_ERROR', 'Seek failed'), {
                 error: e.name,
                 message: e.message,
                 bufferRanges
@@ -61,7 +61,7 @@ const LiveEdgeSeeker = (() => {
 
         // Attempt playback
         if (video.paused) {
-            Logger.add('[HEALER:PLAY] Attempting play');
+            Logger.add(LogEvents.tagged('PLAY', 'Attempting play'));
             try {
                 await video.play();
 
@@ -70,14 +70,14 @@ const LiveEdgeSeeker = (() => {
 
                 if (!video.paused && video.readyState >= 3) {
                     const duration = (performance.now() - startTime).toFixed(0);
-                    Logger.add('[HEALER:SUCCESS] Playback resumed', {
+                    Logger.add(LogEvents.tagged('SUCCESS', 'Playback resumed'), {
                         duration: duration + 'ms',
                         currentTime: video.currentTime.toFixed(3),
                         readyState: video.readyState
                     });
                     return { success: true };
                 } else {
-                    Logger.add('[HEALER:PLAY_STUCK] Play returned but not playing', {
+                    Logger.add(LogEvents.tagged('PLAY_STUCK', 'Play returned but not playing'), {
                         paused: video.paused,
                         readyState: video.readyState,
                         networkState: video.networkState,
@@ -87,7 +87,7 @@ const LiveEdgeSeeker = (() => {
                     return { success: false, error: 'Play did not resume', errorName: 'PLAY_STUCK' };
                 }
             } catch (e) {
-                Logger.add('[HEALER:PLAY_ERROR] Play failed', {
+                Logger.add(LogEvents.tagged('PLAY_ERROR', 'Play failed'), {
                     error: e.name,
                     message: e.message,
                     networkState: video.networkState,
@@ -99,7 +99,7 @@ const LiveEdgeSeeker = (() => {
             }
         } else {
             // Video already playing
-            Logger.add('[HEALER:ALREADY_PLAYING] Video resumed on its own');
+            Logger.add(LogEvents.tagged('ALREADY_PLAYING', 'Video resumed on its own'));
             return { success: true };
         }
     };

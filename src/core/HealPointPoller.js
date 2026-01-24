@@ -3,14 +3,6 @@
  * Polls for heal points and detects self-recovery.
  */
 const HealPointPoller = (() => {
-    const LOG = {
-        POLL_START: '[HEALER:POLL_START]',
-        POLL_SUCCESS: '[HEALER:POLL_SUCCESS]',
-        POLL_TIMEOUT: '[HEALER:POLL_TIMEOUT]',
-        POLLING: '[HEALER:POLLING]',
-        SELF_RECOVERED: '[HEALER:SELF_RECOVERED]'
-    };
-
     const create = (options) => {
         const getVideoId = options.getVideoId;
         const logWithState = options.logWithState;
@@ -27,7 +19,7 @@ const HealPointPoller = (() => {
             let pollCount = 0;
             const videoId = getVideoId(video);
 
-            logWithState(LOG.POLL_START, video, {
+            logWithState(LogEvents.TAG.POLL_START, video, {
                 timeout: timeoutMs + 'ms'
             });
 
@@ -44,7 +36,7 @@ const HealPointPoller = (() => {
                 }
 
                 if (hasRecovered(video, monitorState)) {
-                    logWithState(LOG.SELF_RECOVERED, video, {
+                    logWithState(LogEvents.TAG.SELF_RECOVERED, video, {
                         pollCount,
                         elapsed: (Date.now() - startTime) + 'ms'
                     });
@@ -65,7 +57,7 @@ const HealPointPoller = (() => {
                         const isGap = !healPoint.isNudge && gapSize > 0 && (healPoint.rangeIndex || 0) > 0;
                         const canOverride = isGap && gapSize >= gapOverrideMin && headroom >= gapHeadroomMin;
                         if (canOverride) {
-                            Logger.add('[HEALER:GAP_OVERRIDE] Low headroom gap heal allowed', {
+                            Logger.add(LogEvents.tagged('GAP_OVERRIDE', 'Low headroom gap heal allowed'), {
                                 bufferHeadroom: headroom.toFixed(2) + 's',
                                 minRequired: CONFIG.recovery.MIN_HEAL_HEADROOM_S + 's',
                                 overrideMinHeadroom: gapHeadroomMin + 's',
@@ -100,7 +92,7 @@ const HealPointPoller = (() => {
                         continue;
                     }
 
-                    Logger.add(LOG.POLL_SUCCESS, {
+                    Logger.add(LogEvents.TAG.POLL_SUCCESS, {
                         attempts: pollCount,
                         type: healPoint.isNudge ? 'NUDGE' : 'GAP',
                         elapsed: (Date.now() - startTime) + 'ms',
@@ -114,7 +106,7 @@ const HealPointPoller = (() => {
                 }
 
                 if (pollCount % 25 === 0) {
-                    logDebug(LOG.POLLING, {
+                    logDebug(LogEvents.TAG.POLLING, {
                         attempt: pollCount,
                         elapsed: (Date.now() - startTime) + 'ms',
                         buffers: BufferGapFinder.formatRanges(BufferGapFinder.getBufferRanges(video))
@@ -124,7 +116,7 @@ const HealPointPoller = (() => {
                 await Fn.sleep(CONFIG.stall.HEAL_POLL_INTERVAL_MS);
             }
 
-            Logger.add(LOG.POLL_TIMEOUT, {
+            Logger.add(LogEvents.TAG.POLL_TIMEOUT, {
                 attempts: pollCount,
                 elapsed: (Date.now() - startTime) + 'ms',
                 finalState: VideoState.get(video, videoId)

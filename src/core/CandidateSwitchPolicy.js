@@ -32,7 +32,7 @@ const CandidateSwitchPolicy = (() => {
             }
 
             if (!allow) {
-                logDebug('[HEALER:CANDIDATE] Switch suppressed', {
+                logDebug(LogEvents.tagged('CANDIDATE', 'Switch suppressed'), {
                     from: current.id,
                     to: best.id,
                     reason,

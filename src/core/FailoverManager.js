@@ -32,7 +32,7 @@ const FailoverManager = (() => {
                 clearTimeout(state.timerId);
             }
             if (state.inProgress) {
-                Logger.add('[HEALER:FAILOVER] Cleared', {
+                Logger.add(LogEvents.tagged('FAILOVER', 'Cleared'), {
                     reason,
                     from: state.fromId,
                     to: state.toId
@@ -49,14 +49,14 @@ const FailoverManager = (() => {
         const attemptFailover = (fromVideoId, reason, monitorState) => {
             const now = Date.now();
             if (state.inProgress) {
-                logDebug('[HEALER:FAILOVER_SKIP] Failover already in progress', {
+                logDebug(LogEvents.tagged('FAILOVER_SKIP', 'Failover already in progress'), {
                     from: fromVideoId,
                     reason
                 });
                 return false;
             }
             if (now - state.lastAttemptTime < CONFIG.stall.FAILOVER_COOLDOWN_MS) {
-                logDebug('[HEALER:FAILOVER_SKIP] Failover cooldown active', {
+                logDebug(LogEvents.tagged('FAILOVER_SKIP', 'Failover cooldown active'), {
                     from: fromVideoId,
                     reason,
                     cooldownMs: CONFIG.stall.FAILOVER_COOLDOWN_MS,
@@ -76,7 +76,7 @@ const FailoverManager = (() => {
 
             const candidate = picker.selectPreferred(fromVideoId, excluded);
             if (!candidate) {
-                Logger.add('[HEALER:FAILOVER_SKIP] No trusted candidate available', {
+                Logger.add(LogEvents.tagged('FAILOVER_SKIP', 'No trusted candidate available'), {
                     from: fromVideoId,
                     reason,
                     excluded: Array.from(excluded)
@@ -96,7 +96,7 @@ const FailoverManager = (() => {
 
             candidateSelector.setActiveId(toId);
 
-            Logger.add('[HEALER:FAILOVER] Switching to candidate', {
+            Logger.add(LogEvents.tagged('FAILOVER', 'Switching to candidate'), {
                 from: fromVideoId,
                 to: toId,
                 reason,
@@ -107,7 +107,7 @@ const FailoverManager = (() => {
             const playPromise = entry.video?.play?.();
             if (playPromise && typeof playPromise.catch === 'function') {
                 playPromise.catch((err) => {
-                    Logger.add('[HEALER:FAILOVER_PLAY] Play rejected', {
+                    Logger.add(LogEvents.tagged('FAILOVER_PLAY', 'Play rejected'), {
                         to: toId,
                         error: err?.name,
                         message: err?.message
@@ -129,7 +129,7 @@ const FailoverManager = (() => {
                     && latestProgressTime >= state.startTime;
 
                 if (progressed) {
-                    Logger.add('[HEALER:FAILOVER_SUCCESS] Candidate progressed', {
+                    Logger.add(LogEvents.tagged('FAILOVER_SUCCESS', 'Candidate progressed'), {
                         from: fromVideoId,
                         to: toId,
                         progressDelayMs: latestProgressTime - state.startTime,
@@ -138,7 +138,7 @@ const FailoverManager = (() => {
                     resetBackoff(currentEntry.monitor.state, 'failover_success');
                     state.recentFailures.delete(toId);
                 } else {
-                    Logger.add('[HEALER:FAILOVER_REVERT] Candidate did not progress', {
+                    Logger.add(LogEvents.tagged('FAILOVER_REVERT', 'Candidate did not progress'), {
                         from: fromVideoId,
                         to: toId,
                         timeoutMs: CONFIG.stall.FAILOVER_PROGRESS_TIMEOUT_MS,
@@ -161,7 +161,7 @@ const FailoverManager = (() => {
             if (state.inProgress && state.toId === videoId) {
                 const elapsedMs = Date.now() - state.startTime;
                 if (elapsedMs < CONFIG.stall.FAILOVER_PROGRESS_TIMEOUT_MS) {
-                    logDebug('[HEALER:FAILOVER] Stall ignored during failover', {
+                    logDebug(LogEvents.tagged('FAILOVER', 'Stall ignored during failover'), {
                         videoId,
                         elapsedMs,
                         timeoutMs: CONFIG.stall.FAILOVER_PROGRESS_TIMEOUT_MS
@@ -219,7 +219,7 @@ const FailoverManager = (() => {
                 return;
             }
 
-            Logger.add('[HEALER:PROBE_SUMMARY] Probe activity', {
+            Logger.add(LogEvents.tagged('PROBE_SUMMARY', 'Probe activity'), {
                 videoId,
                 intervalMs,
                 counts: stats.counts,

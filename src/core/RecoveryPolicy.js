@@ -50,7 +50,7 @@ const RecoveryPolicy = (() => {
                 return false;
             }
             monitorState.lastRefreshAt = now;
-            logDebug('[HEALER:REFRESH] Refreshing video after repeated no-heal points', {
+            logDebug(LogEvents.tagged('REFRESH', 'Refreshing video after repeated no-heal points'), {
                 videoId,
                 reason,
                 noHealPointCount: monitorState.noHealPointCount
@@ -114,7 +114,7 @@ const RecoveryPolicy = (() => {
         const resetPlayError = (monitorState, reason) => {
             if (!monitorState) return;
             if (monitorState.playErrorCount > 0 || monitorState.nextPlayHealAllowedTime > 0) {
-                logDebug('[HEALER:PLAY_BACKOFF] Reset', {
+                logDebug(LogEvents.tagged('PLAY_BACKOFF', 'Reset'), {
                     reason,
                     previousPlayErrors: monitorState.playErrorCount,
                     previousNextPlayAllowedMs: monitorState.nextPlayHealAllowedTime
@@ -157,7 +157,7 @@ const RecoveryPolicy = (() => {
             monitorState.lastPlayErrorTime = now;
             monitorState.nextPlayHealAllowedTime = now + backoffMs;
 
-            Logger.add('[HEALER:PLAY_BACKOFF] Play failed', {
+            Logger.add(LogEvents.tagged('PLAY_BACKOFF', 'Play failed'), {
                 videoId,
                 reason: detail.reason,
                 error: detail.error,
@@ -173,7 +173,7 @@ const RecoveryPolicy = (() => {
             const repeatCount = detail.healPointRepeatCount || 0;
             const repeatStuck = repeatCount >= CONFIG.stall.HEALPOINT_REPEAT_FAILOVER_COUNT;
             if (repeatStuck) {
-                Logger.add('[HEALER:HEALPOINT_STUCK] Repeated heal point loop', {
+                Logger.add(LogEvents.tagged('HEALPOINT_STUCK', 'Repeated heal point loop'), {
                     videoId,
                     healRange: detail.healRange || null,
                     repeatCount,
@@ -225,7 +225,7 @@ const RecoveryPolicy = (() => {
             if (monitorState?.bufferStarveUntil && now < monitorState.bufferStarveUntil) {
                 if (now - (monitorState.lastBufferStarveSkipLogTime || 0) > CONFIG.logging.STARVE_LOG_MS) {
                     monitorState.lastBufferStarveSkipLogTime = now;
-                    logDebug('[HEALER:STARVE_SKIP] Stall skipped due to buffer starvation', {
+                    logDebug(LogEvents.tagged('STARVE_SKIP', 'Stall skipped due to buffer starvation'), {
                         videoId,
                         remainingMs: monitorState.bufferStarveUntil - now,
                         bufferAhead: monitorState.lastBufferAhead !== null
@@ -238,7 +238,7 @@ const RecoveryPolicy = (() => {
             if (monitorState?.nextPlayHealAllowedTime && now < monitorState.nextPlayHealAllowedTime) {
                 if (now - (monitorState.lastPlayBackoffLogTime || 0) > CONFIG.logging.BACKOFF_LOG_INTERVAL_MS) {
                     monitorState.lastPlayBackoffLogTime = now;
-                    logDebug('[HEALER:PLAY_BACKOFF] Stall skipped due to play backoff', {
+                    logDebug(LogEvents.tagged('PLAY_BACKOFF', 'Stall skipped due to play backoff'), {
                         videoId,
                         remainingMs: monitorState.nextPlayHealAllowedTime - now,
                         playErrorCount: monitorState.playErrorCount
@@ -294,7 +294,7 @@ const RecoveryPolicy = (() => {
                         const graceMs = strongSignals.length > 0 ? extendedGraceMs : baseGraceMs;
                         if (now - (monitorState.lastSelfRecoverSkipLogTime || 0) > CONFIG.logging.BACKOFF_LOG_INTERVAL_MS) {
                             monitorState.lastSelfRecoverSkipLogTime = now;
-                            logDebug('[HEALER:SELF_RECOVER_SKIP] Stall skipped for self-recovery window', {
+                            logDebug(LogEvents.tagged('SELF_RECOVER_SKIP', 'Stall skipped for self-recovery window'), {
                                 videoId,
                                 stalledForMs,
                                 graceMs,

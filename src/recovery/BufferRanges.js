@@ -17,7 +17,7 @@ const BufferRanges = (() => {
                     end: buffered.end(i)
                 });
             } catch (error) {
-                Logger.add('[HEALER:BUFFER_ERROR] Buffer ranges changed during read', {
+                Logger.add(LogEvents.tagged('BUFFER_ERROR', 'Buffer ranges changed during read'), {
                     error: error?.name,
                     message: error?.message,
                     index: i,
@@ -83,7 +83,7 @@ const BufferRanges = (() => {
                 start = buffered.start(i);
                 end = buffered.end(i);
             } catch (error) {
-                Logger.add('[HEALER:BUFFER_ERROR] Buffer exhaustion check failed', {
+                Logger.add(LogEvents.tagged('BUFFER_ERROR', 'Buffer exhaustion check failed'), {
                     error: error?.name,
                     message: error?.message,
                     index: i,

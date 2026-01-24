@@ -37,7 +37,7 @@ const CandidateSelector = (() => {
             const windowMs = CONFIG.monitoring.PROBATION_WINDOW_MS;
             probationUntil = Date.now() + windowMs;
             probationReason = reason || 'unknown';
-            Logger.add('[HEALER:PROBATION] Window started', {
+            Logger.add(LogEvents.tagged('PROBATION', 'Window started'), {
                 reason: probationReason,
                 windowMs
             });
@@ -48,7 +48,7 @@ const CandidateSelector = (() => {
             if (Date.now() <= probationUntil) {
                 return true;
             }
-            Logger.add('[HEALER:PROBATION] Window ended', {
+            Logger.add(LogEvents.tagged('PROBATION', 'Window ended'), {
                 reason: probationReason
             });
             probationUntil = 0;
@@ -64,13 +64,13 @@ const CandidateSelector = (() => {
         const logDecision = (detail) => {
             if (!detail || !shouldLogDecision(detail.reason)) return;
             lastDecisionLogTime = Date.now();
-            Logger.add('[HEALER:CANDIDATE_DECISION] Selection summary', detail);
+            Logger.add(LogEvents.tagged('CANDIDATE_DECISION', 'Selection summary'), detail);
         };
 
         const logSuppression = (detail) => {
             if (!detail) return;
             if (detail.reason !== 'interval') {
-                logDebug('[HEALER:CANDIDATE] Switch suppressed', detail);
+                logDebug(LogEvents.tagged('CANDIDATE', 'Switch suppressed'), detail);
                 return;
             }
             const cause = detail.cause || 'unknown';
@@ -92,7 +92,7 @@ const CandidateSelector = (() => {
             const total = Object.values(suppressionSummary.counts)
                 .reduce((sum, count) => sum + count, 0);
             if (total > 0) {
-                Logger.add('[HEALER:SUPPRESSION_SUMMARY] Switch suppressed summary', {
+                Logger.add(LogEvents.tagged('SUPPRESSION', 'Switch suppressed summary'), {
                     windowMs,
                     total,
                     byCause: suppressionSummary.counts,
@@ -113,7 +113,7 @@ const CandidateSelector = (() => {
                     : monitorsById.keys().next().value;
                 if (fallbackId) {
                     activeCandidateId = fallbackId;
-                    Logger.add('[HEALER:CANDIDATE] Active video set', {
+                    Logger.add(LogEvents.tagged('CANDIDATE', 'Active video set'), {
                         to: activeCandidateId,
                         reason: 'fallback'
                     });
@@ -129,7 +129,7 @@ const CandidateSelector = (() => {
         const evaluateCandidates = (reason) => {
             const now = Date.now();
             if (lockChecker && lockChecker()) {
-                logDebug('[HEALER:CANDIDATE] Failover lock active', {
+                logDebug(LogEvents.tagged('CANDIDATE', 'Failover lock active'), {
                     reason,
                     activeVideoId: activeCandidateId
                 });
@@ -201,7 +201,7 @@ const CandidateSelector = (() => {
                     ? lastGoodCandidateId
                     : preferred?.id;
                 if (fallbackId) {
-                    Logger.add('[HEALER:CANDIDATE] Active video set', {
+                    Logger.add(LogEvents.tagged('CANDIDATE', 'Active video set'), {
                         to: fallbackId,
                         reason: 'no_active',
                         scores
@@ -235,7 +235,7 @@ const CandidateSelector = (() => {
 
                 if (fastSwitchAllowed) {
                     const fromId = activeCandidateId;
-                    Logger.add('[HEALER:CANDIDATE] Fast switch from healing dead-end', {
+                    Logger.add(LogEvents.tagged('CANDIDATE', 'Fast switch from healing dead-end'), {
                         from: fromId,
                         to: preferred.id,
                         reason,
@@ -371,7 +371,7 @@ const CandidateSelector = (() => {
                 const decision = switchPolicy.shouldSwitch(current, preferredForPolicy, scores, reason);
                 if (decision.allow) {
                     const fromId = activeCandidateId;
-                    Logger.add('[HEALER:CANDIDATE] Active video switched', {
+                    Logger.add(LogEvents.tagged('CANDIDATE', 'Active video switched'), {
                         from: activeCandidateId,
                         to: preferred.id,
                         reason,
@@ -432,14 +432,14 @@ const CandidateSelector = (() => {
             }
 
             if (worst) {
-                Logger.add('[HEALER:PRUNE] Stopped monitor due to cap', {
+                Logger.add(LogEvents.tagged('PRUNE', 'Stopped monitor due to cap'), {
                     videoId: worst.id,
                     score: worst.score,
                     maxMonitors
                 });
                 stopMonitoring(worst.entry.video);
             } else {
-                logDebug('[HEALER:PRUNE_SKIP] All candidates protected', {
+                logDebug(LogEvents.tagged('PRUNE_SKIP', 'All candidates protected'), {
                     protected: Array.from(protectedIds),
                     maxMonitors,
                     totalMonitors: monitorsById.size

@@ -31,7 +31,7 @@ const HealPipeline = (() => {
             if (!monitorState || monitorState.catchUpTimeoutId) return;
             monitorState.catchUpAttempts = 0;
             const delayMs = CONFIG.recovery.CATCH_UP_DELAY_MS;
-            Logger.add('[HEALER:CATCH_UP] Scheduled', {
+            Logger.add(LogEvents.tagged('CATCH_UP', 'Scheduled'), {
                 reason,
                 delayMs,
                 videoState: VideoState.get(video, videoId)
@@ -47,7 +47,7 @@ const HealPipeline = (() => {
             monitorState.catchUpAttempts += 1;
 
             if (!document.contains(video)) {
-                    Logger.add('[HEALER:CATCH_UP] Skipped (detached)', {
+                    Logger.add(LogEvents.tagged('CATCH_UP', 'Skipped (detached)'), {
                         reason,
                         attempts: monitorState.catchUpAttempts
                     });
@@ -65,7 +65,7 @@ const HealPipeline = (() => {
                 && (stallAgoMs === null || stallAgoMs >= CONFIG.recovery.CATCH_UP_STABLE_MS);
 
             if (!stableEnough) {
-                Logger.add('[HEALER:CATCH_UP] Deferred (unstable)', {
+                Logger.add(LogEvents.tagged('CATCH_UP', 'Deferred (unstable)'), {
                     reason,
                     attempts: monitorState.catchUpAttempts,
                     paused: video.paused,
@@ -83,7 +83,7 @@ const HealPipeline = (() => {
 
             const ranges = BufferGapFinder.getBufferRanges(video);
             if (!ranges.length) {
-                Logger.add('[HEALER:CATCH_UP] Skipped (no buffer)', {
+                Logger.add(LogEvents.tagged('CATCH_UP', 'Skipped (no buffer)'), {
                     reason,
                     attempts: monitorState.catchUpAttempts
                 });
@@ -95,7 +95,7 @@ const HealPipeline = (() => {
             const behindS = bufferEnd - video.currentTime;
 
             if (behindS < CONFIG.recovery.CATCH_UP_MIN_S) {
-                Logger.add('[HEALER:CATCH_UP] Skipped (already near live)', {
+                Logger.add(LogEvents.tagged('CATCH_UP', 'Skipped (already near live)'), {
                     reason,
                     behindS: behindS.toFixed(2)
                 });
@@ -107,7 +107,7 @@ const HealPipeline = (() => {
             const bufferRanges = BufferGapFinder.formatRanges(ranges);
 
             if (!validation.valid) {
-                Logger.add('[HEALER:CATCH_UP] Skipped (invalid target)', {
+                Logger.add(LogEvents.tagged('CATCH_UP', 'Skipped (invalid target)'), {
                     reason,
                     target: target.toFixed(3),
                     behindS: behindS.toFixed(2),
@@ -118,7 +118,7 @@ const HealPipeline = (() => {
             }
 
             try {
-                Logger.add('[HEALER:CATCH_UP] Seeking toward live edge', {
+                Logger.add(LogEvents.tagged('CATCH_UP', 'Seeking toward live edge'), {
                     reason,
                     from: video.currentTime.toFixed(3),
                     to: target.toFixed(3),
@@ -128,7 +128,7 @@ const HealPipeline = (() => {
                 video.currentTime = target;
                 monitorState.lastCatchUpTime = now;
             } catch (error) {
-                Logger.add('[HEALER:CATCH_UP] Seek failed', {
+                Logger.add(LogEvents.tagged('CATCH_UP', 'Seek failed'), {
                     reason,
                     error: error?.name,
                     message: error?.message
@@ -143,12 +143,12 @@ const HealPipeline = (() => {
             const videoId = context.videoId;
 
             if (state.isHealing) {
-                Logger.add('[HEALER:BLOCKED] Already healing');
+                Logger.add(LogEvents.tagged('BLOCKED', 'Already healing'));
                 return;
             }
 
             if (!document.contains(video)) {
-                Logger.add('[HEALER:DETACHED] Heal skipped, video not in DOM', {
+                Logger.add(LogEvents.tagged('DETACHED', 'Heal skipped, video not in DOM'), {
                     reason: 'pre_heal',
                     videoId
                 });
@@ -189,7 +189,7 @@ const HealPipeline = (() => {
                 );
 
                 if (pollResult.aborted) {
-                    Logger.add('[HEALER:DETACHED] Heal aborted during polling', {
+                    Logger.add(LogEvents.tagged('DETACHED', 'Heal aborted during polling'), {
                         reason: pollResult.reason || 'poll_abort',
                         videoId
                     });
@@ -200,7 +200,7 @@ const HealPipeline = (() => {
                 const healPoint = pollResult.healPoint;
                 if (!healPoint) {
                     if (poller.hasRecovered(video, monitorState)) {
-                        Logger.add('[HEALER:SKIPPED] Video recovered, no heal needed', {
+                        Logger.add(LogEvents.tagged('SKIPPED', 'Video recovered, no heal needed'), {
                             duration: (performance.now() - healStartTime).toFixed(0) + 'ms',
                             finalState: VideoState.get(video, videoId)
                         });
@@ -234,7 +234,7 @@ const HealPipeline = (() => {
                 }
 
                 if (!document.contains(video)) {
-                    Logger.add('[HEALER:DETACHED] Heal aborted before revalidation', {
+                    Logger.add(LogEvents.tagged('DETACHED', 'Heal aborted before revalidation'), {
                         reason: 'pre_revalidate',
                         videoId
                     });
@@ -245,7 +245,7 @@ const HealPipeline = (() => {
                 const freshPoint = BufferGapFinder.findHealPoint(video, { silent: true });
                 if (!freshPoint) {
                     if (poller.hasRecovered(video, monitorState)) {
-                        Logger.add('[HEALER:STALE_RECOVERED] Heal point gone, but video recovered', {
+                        Logger.add(LogEvents.tagged('STALE_RECOVERED', 'Heal point gone, but video recovered'), {
                             duration: (performance.now() - healStartTime).toFixed(0) + 'ms'
                         });
                         recoveryManager.resetBackoff(monitorState, 'stale_recovered');
@@ -254,7 +254,7 @@ const HealPipeline = (() => {
                         }
                         return;
                     }
-                    Logger.add('[HEALER:STALE_GONE] Heal point disappeared before seek', {
+                    Logger.add(LogEvents.tagged('STALE_GONE', 'Heal point disappeared before seek'), {
                         original: `${healPoint.start.toFixed(2)}-${healPoint.end.toFixed(2)}`,
                         finalState: VideoState.get(video, videoId)
                     });
@@ -268,7 +268,7 @@ const HealPipeline = (() => {
                 }
 
                 if (!document.contains(video)) {
-                    Logger.add('[HEALER:DETACHED] Heal aborted before seek', {
+                    Logger.add(LogEvents.tagged('DETACHED', 'Heal aborted before seek'), {
                         reason: 'pre_seek',
                         videoId
                     });
@@ -278,7 +278,7 @@ const HealPipeline = (() => {
 
                 const targetPoint = freshPoint;
                 if (freshPoint.start !== healPoint.start || freshPoint.end !== healPoint.end) {
-                    Logger.add('[HEALER:POINT_UPDATED] Using refreshed heal point', {
+                    Logger.add(LogEvents.tagged('POINT_UPDATED', 'Using refreshed heal point'), {
                         original: `${healPoint.start.toFixed(2)}-${healPoint.end.toFixed(2)}`,
                         fresh: `${freshPoint.start.toFixed(2)}-${freshPoint.end.toFixed(2)}`,
                         type: freshPoint.isNudge ? 'NUDGE' : 'GAP'
@@ -314,7 +314,7 @@ const HealPipeline = (() => {
 
                 const attemptSeekAndPlay = async (point, label) => {
                     if (label) {
-                        Logger.add('[HEALER:RETRY] Retrying heal', {
+                        Logger.add(LogEvents.tagged('RETRY', 'Retrying heal'), {
                             attempt: label,
                             healRange: `${point.start.toFixed(2)}-${point.end.toFixed(2)}`,
                             gapSize: point.gapSize?.toFixed(2),
@@ -334,7 +334,7 @@ const HealPipeline = (() => {
                         finalPoint = retryPoint;
                         result = await attemptSeekAndPlay(retryPoint, 'abort_error');
                     } else {
-                        Logger.add('[HEALER:RETRY_SKIP] Retry skipped, no heal point available', {
+                        Logger.add(LogEvents.tagged('RETRY_SKIP', 'Retry skipped, no heal point available'), {
                             reason: 'abort_error',
                             currentTime: video.currentTime?.toFixed(3),
                             bufferRanges: BufferGapFinder.formatRanges(BufferGapFinder.getBufferRanges(video))
@@ -367,7 +367,7 @@ const HealPipeline = (() => {
                     const repeatCount = updateHealPointRepeat(monitorState, finalPoint, false);
                     if (isAbortError(result)) {
                         const bufferRanges = BufferGapFinder.formatRanges(BufferGapFinder.getBufferRanges(video));
-                        Logger.add('[HEALER:ABORT_CONTEXT] Play aborted during heal', {
+                        Logger.add(LogEvents.tagged('ABORT_CONTEXT', 'Play aborted during heal'), {
                             error: result.error,
                             errorName: result.errorName,
                             stalledForMs: monitorState?.lastProgressTime
@@ -417,7 +417,7 @@ const HealPipeline = (() => {
                     }
                 }
             } catch (e) {
-                Logger.add('[HEALER:ERROR] Unexpected error during heal', {
+                Logger.add(LogEvents.tagged('ERROR', 'Unexpected error during heal'), {
                     error: e.name,
                     message: e.message,
                     stack: e.stack?.split('\n')[0]

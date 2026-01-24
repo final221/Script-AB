@@ -9,7 +9,7 @@ const BackoffManager = (() => {
         const resetBackoff = (monitorState, reason) => {
             if (!monitorState) return;
             if (monitorState.noHealPointCount > 0 || monitorState.nextHealAllowedTime > 0) {
-                logDebug('[HEALER:BACKOFF] Reset', {
+                logDebug(LogEvents.tagged('BACKOFF', 'Reset'), {
                     reason,
                     previousNoHealPoints: monitorState.noHealPointCount,
                     previousNextHealAllowedMs: monitorState.nextHealAllowedTime
@@ -31,7 +31,7 @@ const BackoffManager = (() => {
             monitorState.noHealPointCount = count;
             monitorState.nextHealAllowedTime = Date.now() + backoffMs;
 
-            Logger.add('[HEALER:BACKOFF] No heal point', {
+            Logger.add(LogEvents.tagged('BACKOFF', 'No heal point'), {
                 videoId,
                 reason,
                 noHealPointCount: count,
@@ -45,7 +45,7 @@ const BackoffManager = (() => {
             if (monitorState?.nextHealAllowedTime && now < monitorState.nextHealAllowedTime) {
                 if (now - (monitorState.lastBackoffLogTime || 0) > CONFIG.logging.BACKOFF_LOG_INTERVAL_MS) {
                     monitorState.lastBackoffLogTime = now;
-                    logDebug('[HEALER:BACKOFF] Stall skipped due to backoff', {
+                    logDebug(LogEvents.tagged('BACKOFF', 'Stall skipped due to backoff'), {
                         videoId,
                         remainingMs: monitorState.nextHealAllowedTime - now,
                         noHealPointCount: monitorState.noHealPointCount

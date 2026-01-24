@@ -1,5 +1,17 @@
 # Changelog
 
+## 4.1.45 - 2026-01-24T15:32:24.871Z
+Previous: 4.1.44
+Commit: 54ecfec
+Changes:
+- No commits detected since last build
+
+## 4.1.44 - 2026-01-24T15:24:46.266Z
+Previous: 4.1.43
+Commit: 54ecfec
+Changes:
+- Centralize playback and monitor logs
+
 ## 4.1.43 - 2026-01-24T15:09:11.615Z
 Previous: 4.1.42
 Commit: 7b8930e

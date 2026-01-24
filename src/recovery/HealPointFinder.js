@@ -25,7 +25,7 @@ const HealPointFinder = (() => {
     const findHealPoint = (video, options = {}) => {
         if (!video) {
             if (!options.silent) {
-                Logger.add('[HEALER:ERROR] No video element');
+                Logger.add(LogEvents.tagged('ERROR', 'No video element'));
             }
             return null;
         }
@@ -34,7 +34,7 @@ const HealPointFinder = (() => {
         const ranges = BufferRanges.getBufferRanges(video);
 
         if (!options.silent) {
-            Logger.add('[HEALER:SCAN] Scanning for heal point', {
+            Logger.add(LogEvents.tagged('SCAN', 'Scanning for heal point'), {
                 currentTime: currentTime.toFixed(3),
                 bufferRanges: BufferRanges.formatRanges(ranges),
                 rangeCount: ranges.length
@@ -75,7 +75,7 @@ const HealPointFinder = (() => {
 
             if (healStart >= range.end - EDGE_GUARD_S) {
                 if (!options.silent) {
-                    Logger.add('[HEALER:SKIP] Heal target too close to buffer end', {
+                    Logger.add(LogEvents.tagged('SKIP', 'Heal target too close to buffer end'), {
                         healStart: healStart.toFixed(3),
                         rangeEnd: range.end.toFixed(3),
                         edgeGuard: EDGE_GUARD_S
@@ -107,8 +107,8 @@ const HealPointFinder = (() => {
 
             if (!options.silent) {
                 Logger.add(healPoint.isNudge
-                    ? '[HEALER:NUDGE] Contiguous buffer found'
-                    : '[HEALER:FOUND] Heal point identified', {
+                    ? LogEvents.tagged('NUDGE', 'Contiguous buffer found')
+                    : LogEvents.tagged('FOUND', 'Heal point identified'), {
                     healPoint: `${healPoint.start.toFixed(3)}-${healPoint.end.toFixed(3)}`,
                     gapSize: healPoint.gapSize.toFixed(2) + 's',
                     headroom: healPoint.headroom.toFixed(2) + 's',
@@ -130,7 +130,7 @@ const HealPointFinder = (() => {
 
             const healPoint = emergencyCandidates[0];
             if (!options.silent) {
-                Logger.add('[HEALER:EMERGENCY] Emergency heal point selected', {
+                Logger.add(LogEvents.tagged('EMERGENCY', 'Emergency heal point selected'), {
                     healPoint: `${healPoint.start.toFixed(3)}-${healPoint.end.toFixed(3)}`,
                     gapSize: healPoint.gapSize.toFixed(2) + 's',
                     headroom: healPoint.headroom.toFixed(2) + 's',
@@ -144,7 +144,7 @@ const HealPointFinder = (() => {
         }
 
         if (!options.silent) {
-            Logger.add('[HEALER:NONE] No valid heal point found', {
+            Logger.add(LogEvents.tagged('NONE', 'No valid heal point found'), {
                 currentTime: currentTime.toFixed(3),
                 ranges: BufferRanges.formatRanges(ranges),
                 minRequired: MIN_HEAL_BUFFER_S + 's'
