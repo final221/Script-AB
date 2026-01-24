@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.1.24 - 2026-01-24T10:05:56.771Z
+Previous: 4.1.23
+Commit: 82d322c
+Changes:
+- Defer heals during self-recovery window
+
 ## 4.1.23 - 2026-01-24T09:56:59.171Z
 Previous: 4.1.22
 Commit: 200d00a

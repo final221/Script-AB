@@ -27,7 +27,6 @@ Output: `dist/code.js`
 
 ### Debug
 ```javascript
-getTwitchHealerStats()    // Get heal statistics (healer + metrics)
 exportTwitchAdLogs()      // Download report (healer + metrics + logs)
 ```
 See `docs/DEBUGGING.md` for log sequences and triage tips.
@@ -139,10 +138,11 @@ Key settings in `Config.js`:
 
 ## Version
 
-Current: **4.1.23**
+Current: **4.1.24**
 
 Version increments automatically on each build (patch).
 Changelog: `docs/CHANGELOG.md`
+
 
 
 

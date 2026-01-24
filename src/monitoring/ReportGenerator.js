@@ -7,12 +7,9 @@ const ReportGenerator = (() => {
     const getTimestampSuffix = () => new Date().toISOString().replace(/[:.]/g, '-');
 
     const generateContent = (metricsSummary, logs, healerStats) => {
-        const healerSection = healerStats ? `
-[HEALER]
-Is healing: ${healerStats.isHealing}
-Heal attempts: ${healerStats.healAttempts}
-Monitored videos: ${healerStats.monitoredCount}
-` : '';
+        const healerLine = healerStats
+            ? `Healer: isHealing ${healerStats.isHealing}, attempts ${healerStats.healAttempts}, monitors ${healerStats.monitoredCount}\n`
+            : '';
 
         const stallCount = Number(metricsSummary.stalls_duration_count || 0);
         const stallAvgMs = Number(metricsSummary.stall_duration_avg_ms || 0);
@@ -36,7 +33,7 @@ Heals Successful: ${metricsSummary.heals_successful}
 Heals Failed: ${metricsSummary.heals_failed}
 Heal Rate: ${metricsSummary.heal_rate}
 Errors: ${metricsSummary.errors}
-${stallSummaryLine}${stallRecentLine}${healerSection}
+${stallSummaryLine}${stallRecentLine}${healerLine}
 [LEGEND]
 🔧 = Script internal log
 📋 = Console.log/info/debug
@@ -96,4 +93,5 @@ Total entries: ${logs.length}
         }
     };
 })();
+
 
