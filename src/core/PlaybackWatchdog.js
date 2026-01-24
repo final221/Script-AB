@@ -132,9 +132,7 @@ const PlaybackWatchdog = (() => {
                 return;
             }
 
-            const confirmMs = bufferExhausted
-                ? CONFIG.stall.STALL_CONFIRM_MS
-                : CONFIG.stall.STALL_CONFIRM_MS + CONFIG.stall.STALL_CONFIRM_BUFFER_OK_MS;
+            const confirmMs = Tuning.stallConfirmMs(bufferExhausted);
 
             if (stalledForMs < confirmMs) {
                 return;
@@ -144,9 +142,7 @@ const PlaybackWatchdog = (() => {
                 setState('STALLED', 'watchdog_no_progress');
             }
 
-            const logIntervalMs = isActive()
-                ? CONFIG.logging.ACTIVE_LOG_MS
-                : CONFIG.logging.NON_ACTIVE_LOG_MS;
+            const logIntervalMs = Tuning.logIntervalMs(isActive());
             if (now - state.lastWatchdogLogTime > logIntervalMs) {
                 state.lastWatchdogLogTime = now;
                 const snapshot = StateSnapshot.full(video, videoId);

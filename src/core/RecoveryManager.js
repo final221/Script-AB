@@ -69,8 +69,11 @@ const RecoveryManager = (() => {
             return true;
         };
 
-        const handleNoHealPoint = (video, monitorState, reason) => {
-            const videoId = getVideoId(video);
+        const handleNoHealPoint = (videoOrContext, monitorStateOverride, reason) => {
+            const context = RecoveryContext.from(videoOrContext, monitorStateOverride, getVideoId, { reason });
+            const video = context.video;
+            const monitorState = context.monitorState;
+            const videoId = context.videoId;
             backoffManager.applyBackoff(videoId, monitorState, reason);
 
             const ranges = BufferGapFinder.getBufferRanges(video);
@@ -131,9 +134,12 @@ const RecoveryManager = (() => {
             monitorState.healPointRepeatCount = 0;
         };
 
-        const handlePlayFailure = (video, monitorState, detail = {}) => {
+        const handlePlayFailure = (videoOrContext, monitorStateOverride, detail = {}) => {
+            const context = RecoveryContext.from(videoOrContext, monitorStateOverride, getVideoId, detail);
+            const video = context.video;
+            const monitorState = context.monitorState;
             if (!monitorState) return;
-            const videoId = getVideoId(video);
+            const videoId = context.videoId;
             const now = Date.now();
             const lastErrorTime = monitorState.lastPlayErrorTime || 0;
             if (lastErrorTime > 0 && (now - lastErrorTime) > CONFIG.stall.PLAY_ERROR_DECAY_MS) {

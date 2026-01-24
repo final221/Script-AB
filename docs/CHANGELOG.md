@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.1.30 - 2026-01-24T11:41:36.452Z
+Previous: 4.1.29
+Commit: ef7b71f
+Changes:
+- Reduce stall noise and ignore Apollo errors
+
 ## 4.1.29 - 2026-01-24T11:28:39.524Z
 Previous: 4.1.28
 Commit: b8f032c

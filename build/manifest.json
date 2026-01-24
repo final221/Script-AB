@@ -1,6 +1,7 @@
 {
   "priority": [
     "config/Config.js",
+    "config/Tuning.js",
     "utils/Utils.js",
     "utils/Adapters.js",
     "recovery/BufferRanges.js",

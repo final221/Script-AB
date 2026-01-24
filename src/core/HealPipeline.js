@@ -27,30 +27,30 @@ const HealPipeline = (() => {
             return end - video.currentTime;
         };
 
-        const scheduleCatchUp = (video, monitorState, reason) => {
+        const scheduleCatchUp = (video, monitorState, videoId, reason) => {
             if (!monitorState || monitorState.catchUpTimeoutId) return;
             monitorState.catchUpAttempts = 0;
             const delayMs = CONFIG.recovery.CATCH_UP_DELAY_MS;
             Logger.add('[HEALER:CATCH_UP] Scheduled', {
                 reason,
                 delayMs,
-                videoState: VideoState.get(video, getVideoId(video))
+                videoState: VideoState.get(video, videoId)
             });
             monitorState.catchUpTimeoutId = setTimeout(() => {
-                attemptCatchUp(video, monitorState, reason);
+                attemptCatchUp(video, monitorState, videoId, reason);
             }, delayMs);
         };
 
-        const attemptCatchUp = (video, monitorState, reason) => {
+        const attemptCatchUp = (video, monitorState, videoId, reason) => {
             if (!monitorState) return;
             monitorState.catchUpTimeoutId = null;
             monitorState.catchUpAttempts += 1;
 
             if (!document.contains(video)) {
-                Logger.add('[HEALER:CATCH_UP] Skipped (detached)', {
-                    reason,
-                    attempts: monitorState.catchUpAttempts
-                });
+                    Logger.add('[HEALER:CATCH_UP] Skipped (detached)', {
+                        reason,
+                        attempts: monitorState.catchUpAttempts
+                    });
                 return;
             }
 
@@ -362,7 +362,7 @@ const HealPipeline = (() => {
                     if (recoveryManager.resetPlayError) {
                         recoveryManager.resetPlayError(monitorState, 'heal_success');
                     }
-                    scheduleCatchUp(video, monitorState, 'post_heal');
+                    scheduleCatchUp(video, monitorState, videoId, 'post_heal');
                 } else {
                     const repeatCount = updateHealPointRepeat(monitorState, finalPoint, false);
                     if (isAbortError(result)) {

@@ -25,6 +25,7 @@ const HealPointPoller = (() => {
         const pollForHealPoint = async (video, monitorState, timeoutMs) => {
             const startTime = Date.now();
             let pollCount = 0;
+            const videoId = getVideoId(video);
 
             logWithState(LOG.POLL_START, video, {
                 timeout: timeoutMs + 'ms'
@@ -126,7 +127,7 @@ const HealPointPoller = (() => {
             Logger.add(LOG.POLL_TIMEOUT, {
                 attempts: pollCount,
                 elapsed: (Date.now() - startTime) + 'ms',
-                finalState: VideoState.get(video, getVideoId(video))
+                finalState: VideoState.get(video, videoId)
             });
 
             return {
