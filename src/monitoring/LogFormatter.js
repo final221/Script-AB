@@ -4,7 +4,7 @@
  */
 const LogFormatter = (() => {
     const DEFAULT_DETAIL_COLUMN = 40;
-    const DEFAULT_MESSAGE_COLUMN = 28;
+    const DEFAULT_MESSAGE_COLUMN = 40;
 
     const ICONS = {
         healer: '\uD83E\uDE7A',
@@ -101,11 +101,21 @@ const LogFormatter = (() => {
         };
 
         const formatDetailColumns = (messageText, jsonText) => {
-            if (messageText && jsonText) {
-                const padLen = Math.max(1, messageColumn - messageText.length);
-                return messageText + " ".repeat(padLen) + "| " + jsonText;
+            const normalizedMessage = messageText
+                ? (messageText.length > messageColumn
+                    ? messageText.slice(0, Math.max(messageColumn - 3, 0)) + '...'
+                    : messageText)
+                : '';
+
+            if (jsonText) {
+                const padLen = Math.max(1, messageColumn - normalizedMessage.length);
+                const paddedMessage = normalizedMessage
+                    ? normalizedMessage + " ".repeat(padLen)
+                    : " ".repeat(messageColumn);
+                return paddedMessage + "| " + jsonText;
             }
-            return messageText || jsonText || '';
+
+            return normalizedMessage || '';
         };
 
         const seenSrcByVideo = new Set();

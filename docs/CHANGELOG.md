@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.1.58 - 2026-01-24T17:27:08.004Z
+Previous: 4.1.57
+Commit: ca6ad5e
+Changes:
+- Refactor logging and recovery policies
+
 ## 4.1.57 - 2026-01-24T17:21:20.131Z
 Previous: 4.1.56
 Commit: 15234f9

@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.1.57
+// @version       4.1.58
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -142,7 +142,7 @@ const CONFIG = (() => {
  * Build metadata helpers (version injected at build time).
  */
 const BuildInfo = (() => {
-    const VERSION = '4.1.57';
+    const VERSION = '4.1.58';
 
     const getVersion = () => {
         const gmVersion = (typeof GM_info !== 'undefined' && GM_info?.script?.version)
@@ -153,7 +153,7 @@ const BuildInfo = (() => {
             ? unsafeWindow.GM_info.script.version
             : null;
         if (unsafeVersion) return unsafeVersion;
-        if (VERSION && VERSION !== '4.1.57') return VERSION;
+        if (VERSION && VERSION !== '4.1.58') return VERSION;
         return null;
     };
 
@@ -1291,7 +1291,7 @@ const LogEvents = (() => {
  */
 const LogFormatter = (() => {
     const DEFAULT_DETAIL_COLUMN = 40;
-    const DEFAULT_MESSAGE_COLUMN = 28;
+    const DEFAULT_MESSAGE_COLUMN = 40;
 
     const ICONS = {
         healer: '\uD83E\uDE7A',
@@ -1388,11 +1388,21 @@ const LogFormatter = (() => {
         };
 
         const formatDetailColumns = (messageText, jsonText) => {
-            if (messageText && jsonText) {
-                const padLen = Math.max(1, messageColumn - messageText.length);
-                return messageText + " ".repeat(padLen) + "| " + jsonText;
+            const normalizedMessage = messageText
+                ? (messageText.length > messageColumn
+                    ? messageText.slice(0, Math.max(messageColumn - 3, 0)) + '...'
+                    : messageText)
+                : '';
+
+            if (jsonText) {
+                const padLen = Math.max(1, messageColumn - normalizedMessage.length);
+                const paddedMessage = normalizedMessage
+                    ? normalizedMessage + " ".repeat(padLen)
+                    : " ".repeat(messageColumn);
+                return paddedMessage + "| " + jsonText;
             }
-            return messageText || jsonText || '';
+
+            return normalizedMessage || '';
         };
 
         const seenSrcByVideo = new Set();
