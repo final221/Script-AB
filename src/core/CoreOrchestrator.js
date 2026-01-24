@@ -44,20 +44,17 @@ const CoreOrchestrator = (() => {
             };
 
             exposeGlobal('getTwitchHealerStats', () => {
-                const healerStats = StreamHealer.getStats();
-                const metricsSummary = Metrics.getSummary();
-                ReportGenerator.exportStats(healerStats, metricsSummary);
-
                 return {
-                    healer: healerStats,
-                    metrics: metricsSummary
+                    healer: StreamHealer.getStats(),
+                    metrics: Metrics.getSummary()
                 };
             });
 
             exposeGlobal('exportTwitchAdLogs', () => {
+                const healerStats = StreamHealer.getStats();
                 const metricsSummary = Metrics.getSummary();
                 const mergedLogs = Logger.getMergedTimeline();
-                ReportGenerator.exportReport(metricsSummary, mergedLogs);
+                ReportGenerator.exportReport(metricsSummary, mergedLogs, healerStats);
             });
 
             Logger.add('[CORE] Stream Healer ready', {

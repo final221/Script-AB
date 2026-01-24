@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.1.21 - 2026-01-24T09:24:50.671Z
+Previous: 4.1.20
+Commit: 6c41159
+Changes:
+- Export healer stats snapshot
+
 ## 4.1.20 - 2026-01-24T09:18:27.138Z
 Previous: 4.1.19
 Commit: ae94eec

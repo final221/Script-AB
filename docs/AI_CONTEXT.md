@@ -54,8 +54,8 @@
 
 ## Debugging Tools
 The following global functions are exposed for debugging:
-- `window.getTwitchHealerStats()`: Downloads a stats snapshot text file and returns current healer + metrics.
-- `window.exportTwitchAdLogs()`: Downloads merged timeline of script + console logs.
+- `window.getTwitchHealerStats()`: Returns current healer + metrics snapshot.
+- `window.exportTwitchAdLogs()`: Downloads report (healer + metrics + merged script/console logs).
 
 ## Module Load Order
 Build order matters (dependencies must load first):
@@ -92,6 +92,7 @@ Build order matters (dependencies must load first):
 31. `ExternalSignalRouter.js` - Console signal hints
 32. `StreamHealer.js` - Main healer (uses all above)
 33. `CoreOrchestrator.js` - Entry point (initializes everything)
+
 
 
 
