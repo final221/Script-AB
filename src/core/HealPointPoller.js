@@ -58,6 +58,27 @@ const HealPointPoller = (() => {
                 if (healPoint) {
                     const headroom = healPoint.end - healPoint.start;
                     if (headroom < CONFIG.recovery.MIN_HEAL_HEADROOM_S) {
+                        const gapOverrideMin = CONFIG.recovery.GAP_OVERRIDE_MIN_GAP_S || 0;
+                        const gapHeadroomMin = CONFIG.recovery.GAP_OVERRIDE_MIN_HEADROOM_S || 0;
+                        const gapSize = healPoint.gapSize || 0;
+                        const isGap = !healPoint.isNudge && gapSize > 0 && (healPoint.rangeIndex || 0) > 0;
+                        const canOverride = isGap && gapSize >= gapOverrideMin && headroom >= gapHeadroomMin;
+                        if (canOverride) {
+                            Logger.add('[HEALER:GAP_OVERRIDE] Low headroom gap heal allowed', {
+                                bufferHeadroom: headroom.toFixed(2) + 's',
+                                minRequired: CONFIG.recovery.MIN_HEAL_HEADROOM_S + 's',
+                                overrideMinHeadroom: gapHeadroomMin + 's',
+                                gapSize: gapSize.toFixed(2) + 's',
+                                minGap: gapOverrideMin + 's',
+                                healPoint: `${healPoint.start.toFixed(2)}-${healPoint.end.toFixed(2)}`,
+                                buffers: BufferGapFinder.formatRanges(BufferGapFinder.getBufferRanges(video))
+                            });
+                            return {
+                                healPoint,
+                                aborted: false
+                            };
+                        }
+
                         const now = Date.now();
                         if (monitorState && now - (monitorState.lastHealDeferralLogTime || 0) >= CONFIG.logging.HEAL_DEFER_LOG_MS) {
                             monitorState.lastHealDeferralLogTime = now;

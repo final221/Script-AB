@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.1.24
+// @version       4.1.25
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -91,6 +91,8 @@ const CONFIG = (() => {
             MIN_HEAL_HEADROOM_S: 0.75,      // Minimum headroom required to attempt a heal
             HEAL_NUDGE_S: 0.5,              // How far to nudge into buffer for contiguous ranges
             HEAL_EDGE_GUARD_S: 0.35,        // Avoid seeking too close to buffer end
+            GAP_OVERRIDE_MIN_GAP_S: 0.25,   // Minimum gap size to allow low-headroom gap heal
+            GAP_OVERRIDE_MIN_HEADROOM_S: 0.35, // Min headroom when overriding for ad gaps
             HEAL_RETRY_DELAY_MS: 200,       // Delay before retrying heal after AbortError
             SEEK_SETTLE_MS: 100,            // Wait after seek before validation
             PLAYBACK_VERIFY_MS: 200,        // Wait after play to verify playback
@@ -3904,6 +3906,27 @@ const HealPointPoller = (() => {
                 if (healPoint) {
                     const headroom = healPoint.end - healPoint.start;
                     if (headroom < CONFIG.recovery.MIN_HEAL_HEADROOM_S) {
+                        const gapOverrideMin = CONFIG.recovery.GAP_OVERRIDE_MIN_GAP_S || 0;
+                        const gapHeadroomMin = CONFIG.recovery.GAP_OVERRIDE_MIN_HEADROOM_S || 0;
+                        const gapSize = healPoint.gapSize || 0;
+                        const isGap = !healPoint.isNudge && gapSize > 0 && (healPoint.rangeIndex || 0) > 0;
+                        const canOverride = isGap && gapSize >= gapOverrideMin && headroom >= gapHeadroomMin;
+                        if (canOverride) {
+                            Logger.add('[HEALER:GAP_OVERRIDE] Low headroom gap heal allowed', {
+                                bufferHeadroom: headroom.toFixed(2) + 's',
+                                minRequired: CONFIG.recovery.MIN_HEAL_HEADROOM_S + 's',
+                                overrideMinHeadroom: gapHeadroomMin + 's',
+                                gapSize: gapSize.toFixed(2) + 's',
+                                minGap: gapOverrideMin + 's',
+                                healPoint: `${healPoint.start.toFixed(2)}-${healPoint.end.toFixed(2)}`,
+                                buffers: BufferGapFinder.formatRanges(BufferGapFinder.getBufferRanges(video))
+                            });
+                            return {
+                                healPoint,
+                                aborted: false
+                            };
+                        }
+
                         const now = Date.now();
                         if (monitorState && now - (monitorState.lastHealDeferralLogTime || 0) >= CONFIG.logging.HEAL_DEFER_LOG_MS) {
                             monitorState.lastHealDeferralLogTime = now;

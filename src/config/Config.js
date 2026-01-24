@@ -78,6 +78,8 @@ const CONFIG = (() => {
             MIN_HEAL_HEADROOM_S: 0.75,      // Minimum headroom required to attempt a heal
             HEAL_NUDGE_S: 0.5,              // How far to nudge into buffer for contiguous ranges
             HEAL_EDGE_GUARD_S: 0.35,        // Avoid seeking too close to buffer end
+            GAP_OVERRIDE_MIN_GAP_S: 0.25,   // Minimum gap size to allow low-headroom gap heal
+            GAP_OVERRIDE_MIN_HEADROOM_S: 0.35, // Min headroom when overriding for ad gaps
             HEAL_RETRY_DELAY_MS: 200,       // Delay before retrying heal after AbortError
             SEEK_SETTLE_MS: 100,            // Wait after seek before validation
             PLAYBACK_VERIFY_MS: 200,        // Wait after play to verify playback

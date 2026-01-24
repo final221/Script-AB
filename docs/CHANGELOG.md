@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.1.25 - 2026-01-24T10:16:55.427Z
+Previous: 4.1.24
+Commit: 103172f
+Changes:
+- Remove stats command and merge report header
+
 ## 4.1.24 - 2026-01-24T10:05:56.771Z
 Previous: 4.1.23
 Commit: 82d322c
