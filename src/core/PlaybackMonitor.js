@@ -93,7 +93,7 @@ const PlaybackMonitor = (() => {
         });
 
         const start = () => {
-            logDebug('[HEALER:MONITOR] PlaybackMonitor started', {
+            logDebug(LogEvents.tagged('MONITOR', 'PlaybackMonitor started'), {
                 state: state.state
             });
             eventHandlers.attach();
@@ -101,7 +101,7 @@ const PlaybackMonitor = (() => {
         };
 
         const stop = () => {
-            logDebug('[HEALER:MONITOR] PlaybackMonitor stopped', {
+            logDebug(LogEvents.tagged('MONITOR', 'PlaybackMonitor stopped'), {
                 state: state.state
             });
             watchdog.stop();

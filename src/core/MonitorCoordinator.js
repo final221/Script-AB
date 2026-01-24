@@ -17,14 +17,14 @@ const MonitorCoordinator = (() => {
             }
             const beforeCount = monitorsById.size;
             const videos = Array.from(document.querySelectorAll('video'));
-            Logger.add('[HEALER:SCAN] Video rescan requested', {
+            Logger.add(LogEvents.tagged('SCAN', 'Video rescan requested'), {
                 reason,
                 found: videos.length,
                 ...detail
             });
             for (const video of videos) {
                 const videoId = getVideoId(video);
-                logDebug('[HEALER:SCAN_ITEM] Video discovered', {
+                logDebug(LogEvents.tagged('SCAN_ITEM', 'Video discovered'), {
                     reason,
                     videoId,
                     alreadyMonitored: monitorsById.has(videoId)
@@ -36,7 +36,7 @@ const MonitorCoordinator = (() => {
             candidateSelector.evaluateCandidates(`scan_${reason || 'manual'}`);
             candidateSelector.getActiveId();
             const afterCount = monitorsById.size;
-            Logger.add('[HEALER:SCAN] Video rescan complete', {
+            Logger.add(LogEvents.tagged('SCAN', 'Video rescan complete'), {
                 reason,
                 found: videos.length,
                 newMonitors: Math.max(afterCount - beforeCount, 0),
@@ -48,7 +48,7 @@ const MonitorCoordinator = (() => {
             const entry = monitorsById.get(videoId);
             if (!entry) return false;
             const { video } = entry;
-            Logger.add('[HEALER:REFRESH] Refreshing video to escape stale state', {
+            Logger.add(LogEvents.tagged('REFRESH', 'Refreshing video to escape stale state'), {
                 videoId,
                 detail
             });

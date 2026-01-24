@@ -223,7 +223,7 @@ const PlaybackStateTracker = (() => {
             logDebugLazy(() => {
                 const snapshot = vs || VideoState.get(video, videoId);
                 return {
-                    message: '[HEALER:RESET_CLEAR] Reset pending cleared',
+                    message: LogEvents.tagged('RESET_CLEAR', 'Reset pending cleared'),
                     detail: {
                         reason,
                         pendingForMs: now - state.resetPendingAt,
@@ -294,7 +294,7 @@ const PlaybackStateTracker = (() => {
             if (!state.progressStartTime
                 || (progressGapMs !== null && progressGapMs > CONFIG.monitoring.PROGRESS_STREAK_RESET_MS)) {
                 if (state.progressStartTime) {
-                    logDebugLazy('[HEALER:PROGRESS] Progress streak reset', () => ({
+                    logDebugLazy(LogEvents.tagged('PROGRESS', 'Progress streak reset'), () => ({
                         reason,
                         progressGapMs,
                         previousStreakMs: state.progressStreakMs,
@@ -317,7 +317,7 @@ const PlaybackStateTracker = (() => {
             if (!state.progressEligible
                 && state.progressStreakMs >= CONFIG.monitoring.CANDIDATE_MIN_PROGRESS_MS) {
                 state.progressEligible = true;
-                logDebugLazy('[HEALER:PROGRESS] Candidate eligibility reached', () => ({
+                logDebugLazy(LogEvents.tagged('PROGRESS', 'Candidate eligibility reached'), () => ({
                     reason,
                     progressStreakMs: state.progressStreakMs,
                     minProgressMs: CONFIG.monitoring.CANDIDATE_MIN_PROGRESS_MS,
@@ -327,14 +327,14 @@ const PlaybackStateTracker = (() => {
 
             if (!state.hasProgress) {
                 state.hasProgress = true;
-                logDebugLazy('[HEALER:PROGRESS] Initial progress observed', () => ({
+                logDebugLazy(LogEvents.tagged('PROGRESS', 'Initial progress observed'), () => ({
                     reason,
                     currentTime: getCurrentTime()
                 }));
             }
 
             if (state.noHealPointCount > 0 || state.nextHealAllowedTime > 0) {
-                logDebugLazy('[HEALER:BACKOFF] Cleared after progress', () => ({
+                logDebugLazy(LogEvents.tagged('BACKOFF', 'Cleared after progress'), () => ({
                     reason,
                     previousNoHealPoints: state.noHealPointCount,
                     previousNextHealAllowedMs: state.nextHealAllowedTime
@@ -346,7 +346,7 @@ const PlaybackStateTracker = (() => {
             }
 
             if (state.playErrorCount > 0 || state.nextPlayHealAllowedTime > 0 || state.healPointRepeatCount > 0) {
-                logDebugLazy('[HEALER:PLAY_BACKOFF] Cleared after progress', () => ({
+                logDebugLazy(LogEvents.tagged('PLAY_BACKOFF', 'Cleared after progress'), () => ({
                     reason,
                     previousPlayErrors: state.playErrorCount,
                     previousNextPlayAllowedMs: state.nextPlayHealAllowedTime
@@ -363,7 +363,7 @@ const PlaybackStateTracker = (() => {
             }
 
             if (state.bufferStarved || state.bufferStarvedSince) {
-                logDebugLazy('[HEALER:STARVE_CLEAR] Buffer starvation cleared by progress', () => ({
+                logDebugLazy(LogEvents.tagged('STARVE_CLEAR', 'Buffer starvation cleared by progress'), () => ({
                     reason,
                     bufferStarvedSinceMs: state.bufferStarvedSince
                         ? (now - state.bufferStarvedSince)
@@ -384,7 +384,7 @@ const PlaybackStateTracker = (() => {
                 return;
             }
             state.firstReadyTime = Date.now();
-            logDebugLazy('[HEALER:READY] Initial ready state observed', () => ({
+            logDebugLazy(LogEvents.tagged('READY', 'Initial ready state observed'), () => ({
                 reason,
                 readyState: video.readyState,
                 currentSrc: VideoState.compactSrc(src)
@@ -405,7 +405,7 @@ const PlaybackStateTracker = (() => {
             }
             if (!state.pauseFromStall) {
                 state.pauseFromStall = true;
-                logDebugLazy('[HEALER:STALL] Marked paused due to stall', () => ({
+                logDebugLazy(LogEvents.tagged('STALL', 'Marked paused due to stall'), () => ({
                     reason,
                     currentTime: getCurrentTime()
                 }));
@@ -416,7 +416,7 @@ const PlaybackStateTracker = (() => {
             const vs = VideoState.get(video, videoId);
             const resetState = evaluateResetState(vs);
 
-            logDebugLazy('[HEALER:RESET_CHECK] Reset evaluation', () => ({
+            logDebugLazy(LogEvents.tagged('RESET_CHECK', 'Reset evaluation'), () => ({
                 reason,
                 hasSrc: resetState.hasSrc,
                 readyState: vs.readyState,
@@ -428,7 +428,7 @@ const PlaybackStateTracker = (() => {
             }));
 
             if (!resetState.isHardReset && !resetState.isSoftReset) {
-                logDebugLazy('[HEALER:RESET_SKIP] Reset suppressed', () => ({
+                logDebugLazy(LogEvents.tagged('RESET_SKIP', 'Reset suppressed'), () => ({
                     reason,
                     hasSrc: resetState.hasSrc,
                     readyState: vs.readyState,
@@ -442,7 +442,7 @@ const PlaybackStateTracker = (() => {
                 state.resetPendingAt = Date.now();
                 state.resetPendingReason = reason;
                 state.resetPendingType = resetState.isHardReset ? 'hard' : 'soft';
-                logDebugLazy('[HEALER:RESET_PENDING] Reset pending', () => ({
+                logDebugLazy(LogEvents.tagged('RESET_PENDING', 'Reset pending'), () => ({
                     reason,
                     resetType: state.resetPendingType,
                     graceMs: CONFIG.stall.RESET_GRACE_MS,
@@ -477,7 +477,7 @@ const PlaybackStateTracker = (() => {
             const pendingType = state.resetPendingType || (resetState.isHardReset ? 'hard' : 'soft');
 
             state.state = 'RESET';
-            logDebugLazy('[HEALER:RESET] Video reset', () => ({
+            logDebugLazy(LogEvents.tagged('RESET', 'Video reset'), () => ({
                 reason: pendingReason,
                 resetType: pendingType,
                 pendingForMs,
@@ -517,7 +517,7 @@ const PlaybackStateTracker = (() => {
                 if (waitingForProgress) {
                     if (!state.initLogEmitted) {
                         state.initLogEmitted = true;
-                        logDebugLazy('[HEALER:WATCHDOG] Awaiting initial progress', () => ({
+                        logDebugLazy(LogEvents.tagged('WATCHDOG', 'Awaiting initial progress'), () => ({
                             state: state.state,
                             graceMs,
                             baseline: state.firstReadyTime ? 'ready' : 'seen'
@@ -528,7 +528,7 @@ const PlaybackStateTracker = (() => {
 
                 if (!state.initialProgressTimeoutLogged) {
                     state.initialProgressTimeoutLogged = true;
-                    logDebugLazy('[HEALER:WATCHDOG] Initial progress timeout', () => ({
+                    logDebugLazy(LogEvents.tagged('WATCHDOG', 'Initial progress timeout'), () => ({
                         state: state.state,
                         waitedMs: now - baselineTime,
                         graceMs,
@@ -578,7 +578,7 @@ const PlaybackStateTracker = (() => {
                 return;
             }
             state.lastSyncLogTime = now;
-            logDebugLazy('[HEALER:SYNC] Playback drift sample', () => ({
+            logDebugLazy(LogEvents.tagged('SYNC', 'Playback drift sample'), () => ({
                 wallDeltaMs: wallDelta,
                 mediaDeltaMs: Math.round(mediaDelta),
                 driftMs: Math.round(driftMs),
@@ -624,7 +624,7 @@ const PlaybackStateTracker = (() => {
                     state.bufferStarved = true;
                     state.bufferStarveUntil = now + CONFIG.stall.BUFFER_STARVE_BACKOFF_MS;
                     state.lastBufferStarveLogTime = now;
-                    logDebugLazy('[HEALER:STARVE] Buffer starvation detected', () => ({
+                    logDebugLazy(LogEvents.tagged('STARVE', 'Buffer starvation detected'), () => ({
                         reason,
                         bufferAhead: bufferAhead.toFixed(3),
                         threshold: CONFIG.stall.BUFFER_STARVE_THRESHOLD_S,
@@ -637,7 +637,7 @@ const PlaybackStateTracker = (() => {
                     if (now >= state.bufferStarveUntil) {
                         state.bufferStarveUntil = now + CONFIG.stall.BUFFER_STARVE_BACKOFF_MS;
                     }
-                    logDebugLazy('[HEALER:STARVE] Buffer starvation persists', () => ({
+                    logDebugLazy(LogEvents.tagged('STARVE', 'Buffer starvation persists'), () => ({
                         reason,
                         bufferAhead: bufferAhead.toFixed(3),
                         starvedForMs,
@@ -654,7 +654,7 @@ const PlaybackStateTracker = (() => {
                 state.bufferStarveUntil = 0;
                 state.lastBufferStarveLogTime = 0;
                 state.lastBufferStarveSkipLogTime = 0;
-                logDebugLazy('[HEALER:STARVE_CLEAR] Buffer starvation cleared', () => ({
+                logDebugLazy(LogEvents.tagged('STARVE_CLEAR', 'Buffer starvation cleared'), () => ({
                     reason,
                     starvedForMs,
                     bufferAhead: bufferAhead.toFixed(3)

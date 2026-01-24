@@ -67,7 +67,7 @@ const MonitorRegistry = (() => {
                 }
             }
             stopCandidateEvaluationIfIdle();
-            Logger.add('[HEALER:STOP] Stopped monitoring video', {
+            Logger.add(LogEvents.tagged('STOP', 'Stopped monitoring video'), {
                 remainingMonitors: monitoredCount,
                 videoId
             });
@@ -82,17 +82,17 @@ const MonitorRegistry = (() => {
             if (!video) return;
 
             if (!candidateSelector) {
-                logDebug('[HEALER:SKIP] Candidate selector not ready');
+                logDebug(LogEvents.tagged('SKIP', 'Candidate selector not ready'));
                 return;
             }
 
             if (monitoredVideos.has(video)) {
-                logDebug('[HEALER:SKIP] Video already being monitored');
+                logDebug(LogEvents.tagged('SKIP', 'Video already being monitored'));
                 return;
             }
 
             const videoId = getVideoId(video);
-            Logger.add('[HEALER:VIDEO] Video registered', {
+            Logger.add(LogEvents.tagged('VIDEO', 'Video registered'), {
                 videoId,
                 videoState: VideoState.getLog(video, videoId)
             });
@@ -103,7 +103,7 @@ const MonitorRegistry = (() => {
                 onRemoved: () => stopMonitoring(video),
                 onStall: (details, state) => onStall(video, details, state),
                 onReset: (details) => {
-                    Logger.add('[HEALER:RESET] Video reset detected', {
+                    Logger.add(LogEvents.tagged('RESET', 'Video reset detected'), {
                         videoId,
                         ...details
                     });
@@ -121,7 +121,7 @@ const MonitorRegistry = (() => {
             candidateSelector.pruneMonitors(videoId, stopMonitoring);
             candidateSelector.evaluateCandidates('register');
 
-            Logger.add('[HEALER:MONITOR] Started monitoring video', {
+            Logger.add(LogEvents.tagged('MONITOR', 'Started monitoring video'), {
                 videoId,
                 debug: CONFIG.debug,
                 checkInterval: CONFIG.stall.WATCHDOG_INTERVAL_MS + 'ms',

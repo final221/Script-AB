@@ -7,6 +7,31 @@ const LogEvents = (() => {
         STATE: '[HEALER:STATE]',
         WATCHDOG: '[HEALER:WATCHDOG]',
         STALL: '[HEALER:STALL]',
+        READY: '[HEALER:READY]',
+        PROGRESS: '[HEALER:PROGRESS]',
+        BACKOFF: '[HEALER:BACKOFF]',
+        PLAY_BACKOFF: '[HEALER:PLAY_BACKOFF]',
+        STARVE: '[HEALER:STARVE]',
+        STARVE_CLEAR: '[HEALER:STARVE_CLEAR]',
+        SYNC: '[HEALER:SYNC]',
+        RESET_CHECK: '[HEALER:RESET_CHECK]',
+        RESET_SKIP: '[HEALER:RESET_SKIP]',
+        RESET_PENDING: '[HEALER:RESET_PENDING]',
+        RESET: '[HEALER:RESET]',
+        RESET_CLEAR: '[HEALER:RESET_CLEAR]',
+        EVENT: '[HEALER:EVENT]',
+        EVENT_SUMMARY: '[HEALER:EVENT_SUMMARY]',
+        SRC: '[HEALER:SRC]',
+        MEDIA_STATE: '[HEALER:MEDIA_STATE]',
+        MONITOR: '[HEALER:MONITOR]',
+        VIDEO: '[HEALER:VIDEO]',
+        SCAN: '[HEALER:SCAN]',
+        SCAN_ITEM: '[HEALER:SCAN_ITEM]',
+        REFRESH: '[HEALER:REFRESH]',
+        STOP: '[HEALER:STOP]',
+        SKIP: '[HEALER:SKIP]',
+        CLEANUP: '[HEALER:CLEANUP]',
+        ENDED: '[HEALER:ENDED]',
         STALL_DETECTED: '[STALL:DETECTED]',
         STALL_DURATION: '[HEALER:STALL_DURATION]',
         HEAL_START: '[HEALER:START]',
@@ -50,6 +75,16 @@ const LogEvents = (() => {
         const body = formatPairs(pairs);
         return body ? `${tag} ${body}` : tag;
     };
+
+    const getTag = (tagKey) => TAG[tagKey] || tagKey;
+
+    const tagged = (tagKey, text) => {
+        const label = getTag(tagKey);
+        if (!text) return label;
+        return `${label} ${text}`;
+    };
+
+    const pairs = (tagKey, pairsList) => withTag(getTag(tagKey), pairsList);
 
     const summary = {
         stateChange: (data = {}) => withTag(TAG.STATE, [
@@ -136,6 +171,8 @@ const LogEvents = (() => {
     return {
         TAG,
         summary,
+        tagged,
+        pairs,
         formatPairs,
         roundNumber
     };

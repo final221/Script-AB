@@ -3,10 +3,6 @@
  * Wires media element events to playback state tracking.
  */
 const PlaybackEventHandlers = (() => {
-    const LOG = {
-        EVENT: '[HEALER:EVENT]'
-    };
-
     const create = (options) => {
         const video = options.video;
         const videoId = options.videoId;
@@ -27,7 +23,7 @@ const PlaybackEventHandlers = (() => {
                 : (detailFactory || {});
 
             if (ALWAYS_LOG_EVENTS.has(event)) {
-                logDebug(`${LOG.EVENT} ${event}`, detail);
+                logDebug(LogEvents.tagged('EVENT', event), detail);
                 return;
             }
 
@@ -39,7 +35,7 @@ const PlaybackEventHandlers = (() => {
                 const lastActive = state.lastActiveEventLogTime || 0;
                 if (now - lastActive >= CONFIG.logging.ACTIVE_EVENT_LOG_MS) {
                     state.lastActiveEventLogTime = now;
-                    logDebug(`${LOG.EVENT} ${event}`, detail);
+                    logDebug(LogEvents.tagged('EVENT', event), detail);
                 }
 
                 const lastSummary = state.lastActiveEventSummaryTime || 0;
@@ -47,7 +43,7 @@ const PlaybackEventHandlers = (() => {
                     state.lastActiveEventSummaryTime = now;
                     const summary = { ...counts };
                     state.activeEventCounts = {};
-                    logDebug('[HEALER:EVENT_SUMMARY] Active event summary', {
+                    logDebug(LogEvents.tagged('EVENT_SUMMARY', 'Active'), {
                         events: summary,
                         sinceMs: lastSummary ? (now - lastSummary) : null,
                         state: state.state
@@ -69,7 +65,7 @@ const PlaybackEventHandlers = (() => {
             const summary = { ...counts };
             state.nonActiveEventCounts = {};
 
-            logDebug('[HEALER:EVENT_SUMMARY] Non-active event summary', {
+            logDebug(LogEvents.tagged('EVENT_SUMMARY', 'Non-active'), {
                 events: summary,
                 sinceMs: lastLog ? (now - lastLog) : null,
                 state: state.state
@@ -155,7 +151,7 @@ const PlaybackEventHandlers = (() => {
                 logEvent('ended', () => ({
                     state: state.state
                 }));
-                Logger.add('[HEALER:ENDED] Video ended', {
+                Logger.add(LogEvents.tagged('ENDED', 'Video ended'), {
                     videoId,
                     currentTime: Number.isFinite(video.currentTime)
                         ? Number(video.currentTime.toFixed(3))

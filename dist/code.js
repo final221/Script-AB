@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.1.42
+// @version       4.1.43
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -142,7 +142,7 @@ const CONFIG = (() => {
  * Build metadata helpers (version injected at build time).
  */
 const BuildInfo = (() => {
-    const VERSION = '4.1.42';
+    const VERSION = '4.1.43';
 
     const getVersion = () => {
         const gmVersion = (typeof GM_info !== 'undefined' && GM_info?.script?.version)
@@ -153,7 +153,7 @@ const BuildInfo = (() => {
             ? unsafeWindow.GM_info.script.version
             : null;
         if (unsafeVersion) return unsafeVersion;
-        if (VERSION && VERSION !== '4.1.42') return VERSION;
+        if (VERSION && VERSION !== '4.1.43') return VERSION;
         return null;
     };
 
@@ -884,6 +884,31 @@ const LogEvents = (() => {
         STATE: '[HEALER:STATE]',
         WATCHDOG: '[HEALER:WATCHDOG]',
         STALL: '[HEALER:STALL]',
+        READY: '[HEALER:READY]',
+        PROGRESS: '[HEALER:PROGRESS]',
+        BACKOFF: '[HEALER:BACKOFF]',
+        PLAY_BACKOFF: '[HEALER:PLAY_BACKOFF]',
+        STARVE: '[HEALER:STARVE]',
+        STARVE_CLEAR: '[HEALER:STARVE_CLEAR]',
+        SYNC: '[HEALER:SYNC]',
+        RESET_CHECK: '[HEALER:RESET_CHECK]',
+        RESET_SKIP: '[HEALER:RESET_SKIP]',
+        RESET_PENDING: '[HEALER:RESET_PENDING]',
+        RESET: '[HEALER:RESET]',
+        RESET_CLEAR: '[HEALER:RESET_CLEAR]',
+        EVENT: '[HEALER:EVENT]',
+        EVENT_SUMMARY: '[HEALER:EVENT_SUMMARY]',
+        SRC: '[HEALER:SRC]',
+        MEDIA_STATE: '[HEALER:MEDIA_STATE]',
+        MONITOR: '[HEALER:MONITOR]',
+        VIDEO: '[HEALER:VIDEO]',
+        SCAN: '[HEALER:SCAN]',
+        SCAN_ITEM: '[HEALER:SCAN_ITEM]',
+        REFRESH: '[HEALER:REFRESH]',
+        STOP: '[HEALER:STOP]',
+        SKIP: '[HEALER:SKIP]',
+        CLEANUP: '[HEALER:CLEANUP]',
+        ENDED: '[HEALER:ENDED]',
         STALL_DETECTED: '[STALL:DETECTED]',
         STALL_DURATION: '[HEALER:STALL_DURATION]',
         HEAL_START: '[HEALER:START]',
@@ -927,6 +952,16 @@ const LogEvents = (() => {
         const body = formatPairs(pairs);
         return body ? `${tag} ${body}` : tag;
     };
+
+    const getTag = (tagKey) => TAG[tagKey] || tagKey;
+
+    const tagged = (tagKey, text) => {
+        const label = getTag(tagKey);
+        if (!text) return label;
+        return `${label} ${text}`;
+    };
+
+    const pairs = (tagKey, pairsList) => withTag(getTag(tagKey), pairsList);
 
     const summary = {
         stateChange: (data = {}) => withTag(TAG.STATE, [
@@ -1013,6 +1048,8 @@ const LogEvents = (() => {
     return {
         TAG,
         summary,
+        tagged,
+        pairs,
         formatPairs,
         roundNumber
     };
@@ -2162,7 +2199,7 @@ const PlaybackStateTracker = (() => {
             logDebugLazy(() => {
                 const snapshot = vs || VideoState.get(video, videoId);
                 return {
-                    message: '[HEALER:RESET_CLEAR] Reset pending cleared',
+                    message: LogEvents.tagged('RESET_CLEAR', 'Reset pending cleared'),
                     detail: {
                         reason,
                         pendingForMs: now - state.resetPendingAt,
@@ -2233,7 +2270,7 @@ const PlaybackStateTracker = (() => {
             if (!state.progressStartTime
                 || (progressGapMs !== null && progressGapMs > CONFIG.monitoring.PROGRESS_STREAK_RESET_MS)) {
                 if (state.progressStartTime) {
-                    logDebugLazy('[HEALER:PROGRESS] Progress streak reset', () => ({
+                    logDebugLazy(LogEvents.tagged('PROGRESS', 'Progress streak reset'), () => ({
                         reason,
                         progressGapMs,
                         previousStreakMs: state.progressStreakMs,
@@ -2256,7 +2293,7 @@ const PlaybackStateTracker = (() => {
             if (!state.progressEligible
                 && state.progressStreakMs >= CONFIG.monitoring.CANDIDATE_MIN_PROGRESS_MS) {
                 state.progressEligible = true;
-                logDebugLazy('[HEALER:PROGRESS] Candidate eligibility reached', () => ({
+                logDebugLazy(LogEvents.tagged('PROGRESS', 'Candidate eligibility reached'), () => ({
                     reason,
                     progressStreakMs: state.progressStreakMs,
                     minProgressMs: CONFIG.monitoring.CANDIDATE_MIN_PROGRESS_MS,
@@ -2266,14 +2303,14 @@ const PlaybackStateTracker = (() => {
 
             if (!state.hasProgress) {
                 state.hasProgress = true;
-                logDebugLazy('[HEALER:PROGRESS] Initial progress observed', () => ({
+                logDebugLazy(LogEvents.tagged('PROGRESS', 'Initial progress observed'), () => ({
                     reason,
                     currentTime: getCurrentTime()
                 }));
             }
 
             if (state.noHealPointCount > 0 || state.nextHealAllowedTime > 0) {
-                logDebugLazy('[HEALER:BACKOFF] Cleared after progress', () => ({
+                logDebugLazy(LogEvents.tagged('BACKOFF', 'Cleared after progress'), () => ({
                     reason,
                     previousNoHealPoints: state.noHealPointCount,
                     previousNextHealAllowedMs: state.nextHealAllowedTime
@@ -2285,7 +2322,7 @@ const PlaybackStateTracker = (() => {
             }
 
             if (state.playErrorCount > 0 || state.nextPlayHealAllowedTime > 0 || state.healPointRepeatCount > 0) {
-                logDebugLazy('[HEALER:PLAY_BACKOFF] Cleared after progress', () => ({
+                logDebugLazy(LogEvents.tagged('PLAY_BACKOFF', 'Cleared after progress'), () => ({
                     reason,
                     previousPlayErrors: state.playErrorCount,
                     previousNextPlayAllowedMs: state.nextPlayHealAllowedTime
@@ -2302,7 +2339,7 @@ const PlaybackStateTracker = (() => {
             }
 
             if (state.bufferStarved || state.bufferStarvedSince) {
-                logDebugLazy('[HEALER:STARVE_CLEAR] Buffer starvation cleared by progress', () => ({
+                logDebugLazy(LogEvents.tagged('STARVE_CLEAR', 'Buffer starvation cleared by progress'), () => ({
                     reason,
                     bufferStarvedSinceMs: state.bufferStarvedSince
                         ? (now - state.bufferStarvedSince)
@@ -2323,7 +2360,7 @@ const PlaybackStateTracker = (() => {
                 return;
             }
             state.firstReadyTime = Date.now();
-            logDebugLazy('[HEALER:READY] Initial ready state observed', () => ({
+            logDebugLazy(LogEvents.tagged('READY', 'Initial ready state observed'), () => ({
                 reason,
                 readyState: video.readyState,
                 currentSrc: VideoState.compactSrc(src)
@@ -2344,7 +2381,7 @@ const PlaybackStateTracker = (() => {
             }
             if (!state.pauseFromStall) {
                 state.pauseFromStall = true;
-                logDebugLazy('[HEALER:STALL] Marked paused due to stall', () => ({
+                logDebugLazy(LogEvents.tagged('STALL', 'Marked paused due to stall'), () => ({
                     reason,
                     currentTime: getCurrentTime()
                 }));
@@ -2355,7 +2392,7 @@ const PlaybackStateTracker = (() => {
             const vs = VideoState.get(video, videoId);
             const resetState = evaluateResetState(vs);
 
-            logDebugLazy('[HEALER:RESET_CHECK] Reset evaluation', () => ({
+            logDebugLazy(LogEvents.tagged('RESET_CHECK', 'Reset evaluation'), () => ({
                 reason,
                 hasSrc: resetState.hasSrc,
                 readyState: vs.readyState,
@@ -2367,7 +2404,7 @@ const PlaybackStateTracker = (() => {
             }));
 
             if (!resetState.isHardReset && !resetState.isSoftReset) {
-                logDebugLazy('[HEALER:RESET_SKIP] Reset suppressed', () => ({
+                logDebugLazy(LogEvents.tagged('RESET_SKIP', 'Reset suppressed'), () => ({
                     reason,
                     hasSrc: resetState.hasSrc,
                     readyState: vs.readyState,
@@ -2381,7 +2418,7 @@ const PlaybackStateTracker = (() => {
                 state.resetPendingAt = Date.now();
                 state.resetPendingReason = reason;
                 state.resetPendingType = resetState.isHardReset ? 'hard' : 'soft';
-                logDebugLazy('[HEALER:RESET_PENDING] Reset pending', () => ({
+                logDebugLazy(LogEvents.tagged('RESET_PENDING', 'Reset pending'), () => ({
                     reason,
                     resetType: state.resetPendingType,
                     graceMs: CONFIG.stall.RESET_GRACE_MS,
@@ -2416,7 +2453,7 @@ const PlaybackStateTracker = (() => {
             const pendingType = state.resetPendingType || (resetState.isHardReset ? 'hard' : 'soft');
 
             state.state = 'RESET';
-            logDebugLazy('[HEALER:RESET] Video reset', () => ({
+            logDebugLazy(LogEvents.tagged('RESET', 'Video reset'), () => ({
                 reason: pendingReason,
                 resetType: pendingType,
                 pendingForMs,
@@ -2456,7 +2493,7 @@ const PlaybackStateTracker = (() => {
                 if (waitingForProgress) {
                     if (!state.initLogEmitted) {
                         state.initLogEmitted = true;
-                        logDebugLazy('[HEALER:WATCHDOG] Awaiting initial progress', () => ({
+                        logDebugLazy(LogEvents.tagged('WATCHDOG', 'Awaiting initial progress'), () => ({
                             state: state.state,
                             graceMs,
                             baseline: state.firstReadyTime ? 'ready' : 'seen'
@@ -2467,7 +2504,7 @@ const PlaybackStateTracker = (() => {
 
                 if (!state.initialProgressTimeoutLogged) {
                     state.initialProgressTimeoutLogged = true;
-                    logDebugLazy('[HEALER:WATCHDOG] Initial progress timeout', () => ({
+                    logDebugLazy(LogEvents.tagged('WATCHDOG', 'Initial progress timeout'), () => ({
                         state: state.state,
                         waitedMs: now - baselineTime,
                         graceMs,
@@ -2517,7 +2554,7 @@ const PlaybackStateTracker = (() => {
                 return;
             }
             state.lastSyncLogTime = now;
-            logDebugLazy('[HEALER:SYNC] Playback drift sample', () => ({
+            logDebugLazy(LogEvents.tagged('SYNC', 'Playback drift sample'), () => ({
                 wallDeltaMs: wallDelta,
                 mediaDeltaMs: Math.round(mediaDelta),
                 driftMs: Math.round(driftMs),
@@ -2563,7 +2600,7 @@ const PlaybackStateTracker = (() => {
                     state.bufferStarved = true;
                     state.bufferStarveUntil = now + CONFIG.stall.BUFFER_STARVE_BACKOFF_MS;
                     state.lastBufferStarveLogTime = now;
-                    logDebugLazy('[HEALER:STARVE] Buffer starvation detected', () => ({
+                    logDebugLazy(LogEvents.tagged('STARVE', 'Buffer starvation detected'), () => ({
                         reason,
                         bufferAhead: bufferAhead.toFixed(3),
                         threshold: CONFIG.stall.BUFFER_STARVE_THRESHOLD_S,
@@ -2576,7 +2613,7 @@ const PlaybackStateTracker = (() => {
                     if (now >= state.bufferStarveUntil) {
                         state.bufferStarveUntil = now + CONFIG.stall.BUFFER_STARVE_BACKOFF_MS;
                     }
-                    logDebugLazy('[HEALER:STARVE] Buffer starvation persists', () => ({
+                    logDebugLazy(LogEvents.tagged('STARVE', 'Buffer starvation persists'), () => ({
                         reason,
                         bufferAhead: bufferAhead.toFixed(3),
                         starvedForMs,
@@ -2593,7 +2630,7 @@ const PlaybackStateTracker = (() => {
                 state.bufferStarveUntil = 0;
                 state.lastBufferStarveLogTime = 0;
                 state.lastBufferStarveSkipLogTime = 0;
-                logDebugLazy('[HEALER:STARVE_CLEAR] Buffer starvation cleared', () => ({
+                logDebugLazy(LogEvents.tagged('STARVE_CLEAR', 'Buffer starvation cleared'), () => ({
                     reason,
                     starvedForMs,
                     bufferAhead: bufferAhead.toFixed(3)
@@ -2626,10 +2663,6 @@ const PlaybackStateTracker = (() => {
  * Wires media element events to playback state tracking.
  */
 const PlaybackEventHandlers = (() => {
-    const LOG = {
-        EVENT: '[HEALER:EVENT]'
-    };
-
     const create = (options) => {
         const video = options.video;
         const videoId = options.videoId;
@@ -2650,7 +2683,7 @@ const PlaybackEventHandlers = (() => {
                 : (detailFactory || {});
 
             if (ALWAYS_LOG_EVENTS.has(event)) {
-                logDebug(`${LOG.EVENT} ${event}`, detail);
+                logDebug(LogEvents.tagged('EVENT', event), detail);
                 return;
             }
 
@@ -2662,7 +2695,7 @@ const PlaybackEventHandlers = (() => {
                 const lastActive = state.lastActiveEventLogTime || 0;
                 if (now - lastActive >= CONFIG.logging.ACTIVE_EVENT_LOG_MS) {
                     state.lastActiveEventLogTime = now;
-                    logDebug(`${LOG.EVENT} ${event}`, detail);
+                    logDebug(LogEvents.tagged('EVENT', event), detail);
                 }
 
                 const lastSummary = state.lastActiveEventSummaryTime || 0;
@@ -2670,7 +2703,7 @@ const PlaybackEventHandlers = (() => {
                     state.lastActiveEventSummaryTime = now;
                     const summary = { ...counts };
                     state.activeEventCounts = {};
-                    logDebug('[HEALER:EVENT_SUMMARY] Active event summary', {
+                    logDebug(LogEvents.tagged('EVENT_SUMMARY', 'Active'), {
                         events: summary,
                         sinceMs: lastSummary ? (now - lastSummary) : null,
                         state: state.state
@@ -2692,7 +2725,7 @@ const PlaybackEventHandlers = (() => {
             const summary = { ...counts };
             state.nonActiveEventCounts = {};
 
-            logDebug('[HEALER:EVENT_SUMMARY] Non-active event summary', {
+            logDebug(LogEvents.tagged('EVENT_SUMMARY', 'Non-active'), {
                 events: summary,
                 sinceMs: lastLog ? (now - lastLog) : null,
                 state: state.state
@@ -2778,7 +2811,7 @@ const PlaybackEventHandlers = (() => {
                 logEvent('ended', () => ({
                     state: state.state
                 }));
-                Logger.add('[HEALER:ENDED] Video ended', {
+                Logger.add(LogEvents.tagged('ENDED', 'Video ended'), {
                     videoId,
                     currentTime: Number.isFinite(video.currentTime)
                         ? Number(video.currentTime.toFixed(3))
@@ -2876,7 +2909,7 @@ const PlaybackWatchdog = (() => {
 
         const logMediaStateChange = (label, previous, current, snapshot) => {
             if (!state.mediaStateVerboseLogged) {
-                logDebug(`[HEALER:MEDIA_STATE] ${label} changed`, {
+                logDebug(LogEvents.tagged('MEDIA_STATE', `${label} changed`), {
                     previous,
                     current,
                     videoState: snapshot
@@ -2884,13 +2917,13 @@ const PlaybackWatchdog = (() => {
                 state.mediaStateVerboseLogged = true;
                 return;
             }
-            logDebug(`[HEALER:MEDIA_STATE] ${label} changed ${formatMediaValue(previous)} -> ${formatMediaValue(current)}`);
+            logDebug(LogEvents.tagged('MEDIA_STATE', `${label} changed ${formatMediaValue(previous)} -> ${formatMediaValue(current)}`));
         };
 
         const tick = () => {
             const now = Date.now();
             if (!document.contains(video)) {
-                Logger.add('[HEALER:CLEANUP] Video removed from DOM', {
+                Logger.add(LogEvents.tagged('CLEANUP', 'Video removed from DOM'), {
                     videoId
                 });
                 onRemoved();
@@ -2933,7 +2966,7 @@ const PlaybackWatchdog = (() => {
 
             const currentSrc = video.currentSrc || video.getAttribute('src') || '';
             if (currentSrc !== state.lastSrc) {
-                logDebug('[HEALER:SRC] Source changed', {
+                logDebug(LogEvents.tagged('SRC', 'Source changed'), {
                     previous: VideoState.compactSrc(state.lastSrc),
                     current: VideoState.compactSrc(currentSrc),
                     videoState: VideoState.getLog(video, videoId)
@@ -3137,7 +3170,7 @@ const PlaybackMonitor = (() => {
         });
 
         const start = () => {
-            logDebug('[HEALER:MONITOR] PlaybackMonitor started', {
+            logDebug(LogEvents.tagged('MONITOR', 'PlaybackMonitor started'), {
                 state: state.state
             });
             eventHandlers.attach();
@@ -3145,7 +3178,7 @@ const PlaybackMonitor = (() => {
         };
 
         const stop = () => {
-            logDebug('[HEALER:MONITOR] PlaybackMonitor stopped', {
+            logDebug(LogEvents.tagged('MONITOR', 'PlaybackMonitor stopped'), {
                 state: state.state
             });
             watchdog.stop();
@@ -4751,7 +4784,7 @@ const MonitorRegistry = (() => {
                 }
             }
             stopCandidateEvaluationIfIdle();
-            Logger.add('[HEALER:STOP] Stopped monitoring video', {
+            Logger.add(LogEvents.tagged('STOP', 'Stopped monitoring video'), {
                 remainingMonitors: monitoredCount,
                 videoId
             });
@@ -4766,17 +4799,17 @@ const MonitorRegistry = (() => {
             if (!video) return;
 
             if (!candidateSelector) {
-                logDebug('[HEALER:SKIP] Candidate selector not ready');
+                logDebug(LogEvents.tagged('SKIP', 'Candidate selector not ready'));
                 return;
             }
 
             if (monitoredVideos.has(video)) {
-                logDebug('[HEALER:SKIP] Video already being monitored');
+                logDebug(LogEvents.tagged('SKIP', 'Video already being monitored'));
                 return;
             }
 
             const videoId = getVideoId(video);
-            Logger.add('[HEALER:VIDEO] Video registered', {
+            Logger.add(LogEvents.tagged('VIDEO', 'Video registered'), {
                 videoId,
                 videoState: VideoState.getLog(video, videoId)
             });
@@ -4787,7 +4820,7 @@ const MonitorRegistry = (() => {
                 onRemoved: () => stopMonitoring(video),
                 onStall: (details, state) => onStall(video, details, state),
                 onReset: (details) => {
-                    Logger.add('[HEALER:RESET] Video reset detected', {
+                    Logger.add(LogEvents.tagged('RESET', 'Video reset detected'), {
                         videoId,
                         ...details
                     });
@@ -4805,7 +4838,7 @@ const MonitorRegistry = (() => {
             candidateSelector.pruneMonitors(videoId, stopMonitoring);
             candidateSelector.evaluateCandidates('register');
 
-            Logger.add('[HEALER:MONITOR] Started monitoring video', {
+            Logger.add(LogEvents.tagged('MONITOR', 'Started monitoring video'), {
                 videoId,
                 debug: CONFIG.debug,
                 checkInterval: CONFIG.stall.WATCHDOG_INTERVAL_MS + 'ms',
@@ -4846,14 +4879,14 @@ const MonitorCoordinator = (() => {
             }
             const beforeCount = monitorsById.size;
             const videos = Array.from(document.querySelectorAll('video'));
-            Logger.add('[HEALER:SCAN] Video rescan requested', {
+            Logger.add(LogEvents.tagged('SCAN', 'Video rescan requested'), {
                 reason,
                 found: videos.length,
                 ...detail
             });
             for (const video of videos) {
                 const videoId = getVideoId(video);
-                logDebug('[HEALER:SCAN_ITEM] Video discovered', {
+                logDebug(LogEvents.tagged('SCAN_ITEM', 'Video discovered'), {
                     reason,
                     videoId,
                     alreadyMonitored: monitorsById.has(videoId)
@@ -4865,7 +4898,7 @@ const MonitorCoordinator = (() => {
             candidateSelector.evaluateCandidates(`scan_${reason || 'manual'}`);
             candidateSelector.getActiveId();
             const afterCount = monitorsById.size;
-            Logger.add('[HEALER:SCAN] Video rescan complete', {
+            Logger.add(LogEvents.tagged('SCAN', 'Video rescan complete'), {
                 reason,
                 found: videos.length,
                 newMonitors: Math.max(afterCount - beforeCount, 0),
@@ -4877,7 +4910,7 @@ const MonitorCoordinator = (() => {
             const entry = monitorsById.get(videoId);
             if (!entry) return false;
             const { video } = entry;
-            Logger.add('[HEALER:REFRESH] Refreshing video to escape stale state', {
+            Logger.add(LogEvents.tagged('REFRESH', 'Refreshing video to escape stale state'), {
                 videoId,
                 detail
             });

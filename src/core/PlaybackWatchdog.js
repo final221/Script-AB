@@ -38,7 +38,7 @@ const PlaybackWatchdog = (() => {
 
         const logMediaStateChange = (label, previous, current, snapshot) => {
             if (!state.mediaStateVerboseLogged) {
-                logDebug(`[HEALER:MEDIA_STATE] ${label} changed`, {
+                logDebug(LogEvents.tagged('MEDIA_STATE', `${label} changed`), {
                     previous,
                     current,
                     videoState: snapshot
@@ -46,13 +46,13 @@ const PlaybackWatchdog = (() => {
                 state.mediaStateVerboseLogged = true;
                 return;
             }
-            logDebug(`[HEALER:MEDIA_STATE] ${label} changed ${formatMediaValue(previous)} -> ${formatMediaValue(current)}`);
+            logDebug(LogEvents.tagged('MEDIA_STATE', `${label} changed ${formatMediaValue(previous)} -> ${formatMediaValue(current)}`));
         };
 
         const tick = () => {
             const now = Date.now();
             if (!document.contains(video)) {
-                Logger.add('[HEALER:CLEANUP] Video removed from DOM', {
+                Logger.add(LogEvents.tagged('CLEANUP', 'Video removed from DOM'), {
                     videoId
                 });
                 onRemoved();
@@ -95,7 +95,7 @@ const PlaybackWatchdog = (() => {
 
             const currentSrc = video.currentSrc || video.getAttribute('src') || '';
             if (currentSrc !== state.lastSrc) {
-                logDebug('[HEALER:SRC] Source changed', {
+                logDebug(LogEvents.tagged('SRC', 'Source changed'), {
                     previous: VideoState.compactSrc(state.lastSrc),
                     current: VideoState.compactSrc(currentSrc),
                     videoState: VideoState.getLog(video, videoId)

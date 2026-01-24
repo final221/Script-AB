@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.1.43 - 2026-01-24T15:09:11.615Z
+Previous: 4.1.42
+Commit: 7b8930e
+Changes:
+- Shorten state and stall duration summaries
+
 ## 4.1.42 - 2026-01-24T14:59:05.098Z
 Previous: 4.1.41
 Commit: 9ff2114
