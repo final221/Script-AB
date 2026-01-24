@@ -1,29 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-
-const defineVideoProps = (video, props) => {
-    Object.entries(props).forEach(([key, value]) => {
-        Object.defineProperty(video, key, { value, configurable: true });
-    });
-};
-
-const createVideo = (overrides = {}) => {
-    const video = document.createElement('video');
-    defineVideoProps(video, {
-        currentTime: 0,
-        duration: 0,
-        paused: false,
-        readyState: 0,
-        networkState: 0,
-        currentSrc: '',
-        ...overrides
-    });
-    video.getAttribute = vi.fn().mockImplementation((attr) => (attr === 'src' ? (overrides.src || '') : ''));
-    Object.defineProperty(video, 'buffered', {
-        value: { length: 0, start: () => 0, end: () => 0 },
-        configurable: true
-    });
-    return video;
-};
+import { createVideo, defineVideoProps } from '../helpers/video.js';
 
 describe('PlaybackStateTracker.handleReset', () => {
     it('defers hard reset until grace window expires', () => {

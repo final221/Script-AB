@@ -5,7 +5,7 @@
  */
 const PlaybackMonitor = (() => {
     const LOG = {
-        STATE: '[HEALER:STATE]'
+        STATE: LogEvents.TAG.STATE
     };
 
     const create = (video, options = {}) => {
@@ -32,7 +32,25 @@ const PlaybackMonitor = (() => {
             if (state.state === nextState) return;
             const prevState = state.state;
             state.state = nextState;
-            logDebug(LOG.STATE, {
+            const snapshot = StateSnapshot.full(video, videoId);
+            const summary = LogEvents.summary.stateChange({
+                videoId,
+                from: prevState,
+                to: nextState,
+                reason,
+                currentTime: snapshot?.currentTime ? Number(snapshot.currentTime) : null,
+                paused: snapshot?.paused,
+                readyState: snapshot?.readyState,
+                networkState: snapshot?.networkState,
+                buffered: snapshot?.buffered,
+                lastProgressAgoMs: state.lastProgressTime
+                    ? (Date.now() - state.lastProgressTime)
+                    : null,
+                progressStreakMs: state.progressStreakMs,
+                progressEligible: state.progressEligible,
+                pauseFromStall: state.pauseFromStall
+            });
+            logDebug(summary, {
                 from: prevState,
                 to: nextState,
                 reason,
@@ -42,7 +60,7 @@ const PlaybackMonitor = (() => {
                 lastProgressAgoMs: state.lastProgressTime
                     ? (Date.now() - state.lastProgressTime)
                     : null,
-                videoState: VideoState.get(video, videoId)
+                videoState: snapshot
             });
         };
 

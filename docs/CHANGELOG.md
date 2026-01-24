@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.1.28 - 2026-01-24T11:20:32.950Z
+Previous: 4.1.27
+Commit: 4a3bb98
+Changes:
+- Log ad-gap signature and resource windows
+
 ## 4.1.27 - 2026-01-24T10:34:47.900Z
 Previous: 4.1.26
 Commit: 3488af0

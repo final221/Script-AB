@@ -4,7 +4,7 @@
  */
 const PlaybackWatchdog = (() => {
     const LOG = {
-        WATCHDOG: '[HEALER:WATCHDOG]'
+        WATCHDOG: LogEvents.TAG.WATCHDOG
     };
 
     const create = (options) => {
@@ -149,11 +149,26 @@ const PlaybackWatchdog = (() => {
                 : CONFIG.logging.NON_ACTIVE_LOG_MS;
             if (now - state.lastWatchdogLogTime > logIntervalMs) {
                 state.lastWatchdogLogTime = now;
-                logDebug(`${LOG.WATCHDOG} No progress observed`, {
+                const snapshot = StateSnapshot.full(video, videoId);
+                const summary = LogEvents.summary.watchdogNoProgress({
+                    videoId,
                     stalledForMs,
                     bufferExhausted,
                     state: state.state,
-                    videoState: VideoState.get(video, videoId)
+                    paused: video.paused,
+                    pauseFromStall,
+                    currentTime: snapshot?.currentTime ? Number(snapshot.currentTime) : null,
+                    readyState: snapshot?.readyState,
+                    networkState: snapshot?.networkState,
+                    buffered: snapshot?.buffered
+                });
+                logDebug(summary, {
+                    stalledForMs,
+                    bufferExhausted,
+                    state: state.state,
+                    paused: video.paused,
+                    pauseFromStall,
+                    videoState: snapshot
                 });
             }
 

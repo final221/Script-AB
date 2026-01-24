@@ -10,8 +10,6 @@ const Instrumentation = (() => {
     let signalDetector = null;
     const PROCESSING_ASSET_PATTERN = /404_processing_640x360\.png/i;
     let lastResourceHintTime = 0;
-    const resourceEvents = [];
-    const pendingResourceWindows = new Map();
     const truncateMessage = (message, maxLen) => (
         String(message).substring(0, maxLen)
     );
@@ -108,60 +106,8 @@ const Instrumentation = (() => {
         });
     };
 
-    const recordResource = (url, initiatorType) => {
-        const now = Date.now();
-        resourceEvents.push({
-            ts: now,
-            url: truncateMessage(url, CONFIG.logging.LOG_URL_MAX_LEN),
-            initiatorType: initiatorType || null
-        });
-
-        const maxEntries = CONFIG.logging.RESOURCE_WINDOW_MAX || 8000;
-        if (resourceEvents.length > maxEntries) {
-            resourceEvents.splice(0, resourceEvents.length - maxEntries);
-        }
-    };
-
     const logResourceWindow = (detail = {}) => {
-        const stallTime = detail.stallTime || Date.now();
-        const videoId = detail.videoId || 'unknown';
-        const key = `${videoId}:${stallTime}`;
-        if (pendingResourceWindows.has(key)) return;
-        pendingResourceWindows.set(key, true);
-
-        const pastMs = CONFIG.logging.RESOURCE_WINDOW_PAST_MS || 30000;
-        const futureMs = CONFIG.logging.RESOURCE_WINDOW_FUTURE_MS || 60000;
-
-        Logger.add('[INSTRUMENT:RESOURCE_WINDOW_SCHEDULED]', {
-            videoId,
-            reason: detail.reason || 'stall',
-            stalledFor: detail.stalledFor || null,
-            windowPastMs: pastMs,
-            windowFutureMs: futureMs
-        });
-
-        setTimeout(() => {
-            const start = stallTime - pastMs;
-            const end = stallTime + futureMs;
-            const entries = resourceEvents
-                .filter(item => item.ts >= start && item.ts <= end)
-                .map(item => ({
-                    offsetMs: item.ts - stallTime,
-                    url: item.url,
-                    initiatorType: item.initiatorType
-                }));
-
-            Logger.add('[INSTRUMENT:RESOURCE_WINDOW]', {
-                videoId,
-                reason: detail.reason || 'stall',
-                stalledFor: detail.stalledFor || null,
-                windowPastMs: pastMs,
-                windowFutureMs: futureMs,
-                total: entries.length,
-                requests: entries
-            });
-            pendingResourceWindows.delete(key);
-        }, futureMs);
+        ResourceWindow.logWindow(detail);
     };
 
     const setupResourceObserver = () => {
@@ -170,7 +116,7 @@ const Instrumentation = (() => {
             const observer = new PerformanceObserver((list) => {
                 for (const entry of list.getEntries()) {
                     if (!entry?.name) continue;
-                    recordResource(entry.name, entry.initiatorType);
+                    ResourceWindow.record(entry.name, entry.initiatorType);
                     if (PROCESSING_ASSET_PATTERN.test(entry.name)) {
                         maybeEmitProcessingAsset(entry.name);
                     }

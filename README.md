@@ -32,7 +32,7 @@ exportTwitchAdLogs()      // Download report (healer + metrics + logs)
 See `docs/DEBUGGING.md` for log sequences and triage tips.
 
 ### Tuning
-Quick knobs (see `docs/DEBUGGING.md` for full mapping):
+Quick knobs (see `docs/TUNING.md` for full mapping):
 - `stall.INIT_PROGRESS_GRACE_MS` (initial progress grace window)
 - `stall.FAILOVER_*` (failover timing + cooldown)
 - `monitoring.CANDIDATE_*` (selection + scoring behavior)
@@ -74,6 +74,7 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for detailed architecture.
 ## Docs & Navigation
 - [docs/AI_CONTEXT.md](docs/AI_CONTEXT.md) - AI agent context, constraints, load order
 - [docs/DEBUGGING.md](docs/DEBUGGING.md) - Log sequences and triage guide
+- [docs/TUNING.md](docs/TUNING.md) - Configuration knobs and tuning workflow
 - [tests/README.md](tests/README.md) - Test harness and conventions
 
 ## How It Works
@@ -138,7 +139,7 @@ Key settings in `Config.js`:
 
 ## Version
 
-Current: **4.1.27**
+Current: **4.1.28**
 
 Version increments automatically on each build (patch).
 Changelog: `docs/CHANGELOG.md`

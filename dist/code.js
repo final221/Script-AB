@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.1.27
+// @version       4.1.28
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -759,6 +759,228 @@ const Logger = (() => {
 
 
 
+// --- LogEvents ---
+/**
+ * Central log tags and summary helpers for consistent, compact log messages.
+ */
+const LogEvents = (() => {
+    const TAG = {
+        STATE: '[HEALER:STATE]',
+        WATCHDOG: '[HEALER:WATCHDOG]',
+        STALL: '[HEALER:STALL]',
+        STALL_DETECTED: '[STALL:DETECTED]',
+        STALL_DURATION: '[HEALER:STALL_DURATION]',
+        HEAL_START: '[HEALER:START]',
+        HEAL_FAILED: '[HEALER:FAILED]',
+        HEAL_COMPLETE: '[HEALER:COMPLETE]',
+        HEAL_DEFER: '[HEALER:DEFER]',
+        HEAL_NO_POINT: '[HEALER:NO_HEAL_POINT]',
+        AD_GAP: '[HEALER:AD_GAP_SIGNATURE]'
+    };
+
+    const roundNumber = (value, digits = 3) => {
+        if (!Number.isFinite(value)) return value;
+        if (Number.isInteger(value)) return value;
+        return Number(value.toFixed(digits));
+    };
+
+    const formatValue = (value) => {
+        if (value === undefined || value === null) return null;
+        if (typeof value === 'number') return roundNumber(value);
+        if (typeof value === 'boolean') return value;
+        if (typeof value === 'string' && value.length === 0) return null;
+        return value;
+    };
+
+    const formatPairs = (pairs) => (
+        pairs
+            .map(([key, value]) => [key, formatValue(value)])
+            .filter(([, value]) => value !== null && value !== undefined)
+            .map(([key, value]) => `${key}=${value}`)
+            .join(' ')
+    );
+
+    const withTag = (tag, pairs) => {
+        const body = formatPairs(pairs);
+        return body ? `${tag} ${body}` : tag;
+    };
+
+    const summary = {
+        stateChange: (data = {}) => withTag(TAG.STATE, [
+            ['videoId', data.videoId],
+            ['from', data.from],
+            ['to', data.to],
+            ['reason', data.reason],
+            ['currentTime', data.currentTime],
+            ['paused', data.paused],
+            ['readyState', data.readyState],
+            ['networkState', data.networkState],
+            ['buffered', data.buffered],
+            ['lastProgressAgoMs', data.lastProgressAgoMs],
+            ['progressStreakMs', data.progressStreakMs],
+            ['progressEligible', data.progressEligible],
+            ['pauseFromStall', data.pauseFromStall]
+        ]),
+        watchdogNoProgress: (data = {}) => withTag(TAG.WATCHDOG, [
+            ['videoId', data.videoId],
+            ['stalledForMs', data.stalledForMs],
+            ['bufferExhausted', data.bufferExhausted],
+            ['state', data.state],
+            ['paused', data.paused],
+            ['pauseFromStall', data.pauseFromStall],
+            ['currentTime', data.currentTime],
+            ['readyState', data.readyState],
+            ['networkState', data.networkState],
+            ['buffered', data.buffered]
+        ]),
+        stallDetected: (data = {}) => withTag(TAG.STALL_DETECTED, [
+            ['videoId', data.videoId],
+            ['trigger', data.trigger],
+            ['stalledFor', data.stalledFor],
+            ['bufferExhausted', data.bufferExhausted],
+            ['paused', data.paused],
+            ['pauseFromStall', data.pauseFromStall],
+            ['lastProgressAgoMs', data.lastProgressAgoMs],
+            ['currentTime', data.currentTime],
+            ['readyState', data.readyState],
+            ['networkState', data.networkState],
+            ['buffered', data.buffered]
+        ]),
+        stallDuration: (data = {}) => withTag(TAG.STALL_DURATION, [
+            ['videoId', data.videoId],
+            ['reason', data.reason],
+            ['durationMs', data.durationMs],
+            ['bufferAhead', data.bufferAhead],
+            ['currentTime', data.currentTime],
+            ['readyState', data.readyState],
+            ['networkState', data.networkState],
+            ['buffered', data.buffered]
+        ]),
+        healStart: (data = {}) => withTag(TAG.HEAL_START, [
+            ['attempt', data.attempt],
+            ['lastProgressAgoMs', data.lastProgressAgoMs],
+            ['currentTime', data.currentTime],
+            ['paused', data.paused],
+            ['readyState', data.readyState],
+            ['networkState', data.networkState],
+            ['buffered', data.buffered]
+        ]),
+        healFailed: (data = {}) => withTag(TAG.HEAL_FAILED, [
+            ['duration', data.duration],
+            ['errorName', data.errorName],
+            ['error', data.error],
+            ['healRange', data.healRange],
+            ['gapSize', data.gapSize],
+            ['isNudge', data.isNudge]
+        ]),
+        healComplete: (data = {}) => withTag(TAG.HEAL_COMPLETE, [
+            ['duration', data.duration],
+            ['healAttempts', data.healAttempts],
+            ['bufferEndDelta', data.bufferEndDelta]
+        ]),
+        healDefer: (data = {}) => withTag(TAG.HEAL_DEFER, [
+            ['bufferHeadroom', data.bufferHeadroom],
+            ['minRequired', data.minRequired],
+            ['healPoint', data.healPoint],
+            ['buffers', data.buffers]
+        ]),
+        noHealPoint: (data = {}) => withTag(TAG.HEAL_NO_POINT, [
+            ['duration', data.duration],
+            ['currentTime', data.currentTime],
+            ['bufferRanges', data.bufferRanges]
+        ]),
+        adGapSignature: (data = {}) => withTag(TAG.AD_GAP, [
+            ['videoId', data.videoId],
+            ['playheadSeconds', data.playheadSeconds],
+            ['rangeEnd', data.rangeEnd],
+            ['nextRangeStart', data.nextRangeStart],
+            ['gapSize', data.gapSize],
+            ['ranges', data.ranges]
+        ])
+    };
+
+    return {
+        TAG,
+        summary,
+        formatPairs,
+        roundNumber
+    };
+})();
+
+// --- ResourceWindow ---
+/**
+ * Tracks network resource activity for stall-adjacent windows.
+ */
+const ResourceWindow = (() => {
+    const resourceEvents = [];
+    const pendingWindows = new Map();
+
+    const truncateUrl = (url) => (
+        String(url).substring(0, CONFIG.logging.LOG_URL_MAX_LEN)
+    );
+
+    const record = (url, initiatorType) => {
+        const now = Date.now();
+        resourceEvents.push({
+            ts: now,
+            url: truncateUrl(url),
+            initiatorType: initiatorType || null
+        });
+
+        const maxEntries = CONFIG.logging.RESOURCE_WINDOW_MAX || 8000;
+        if (resourceEvents.length > maxEntries) {
+            resourceEvents.splice(0, resourceEvents.length - maxEntries);
+        }
+    };
+
+    const logWindow = (detail = {}) => {
+        const stallTime = detail.stallTime || Date.now();
+        const videoId = detail.videoId || 'unknown';
+        const key = `${videoId}:${stallTime}`;
+        if (pendingWindows.has(key)) return;
+        pendingWindows.set(key, true);
+
+        const pastMs = CONFIG.logging.RESOURCE_WINDOW_PAST_MS || 30000;
+        const futureMs = CONFIG.logging.RESOURCE_WINDOW_FUTURE_MS || 60000;
+
+        Logger.add('[INSTRUMENT:RESOURCE_WINDOW_SCHEDULED]', {
+            videoId,
+            reason: detail.reason || 'stall',
+            stalledFor: detail.stalledFor || null,
+            windowPastMs: pastMs,
+            windowFutureMs: futureMs
+        });
+
+        setTimeout(() => {
+            const start = stallTime - pastMs;
+            const end = stallTime + futureMs;
+            const entries = resourceEvents
+                .filter(item => item.ts >= start && item.ts <= end)
+                .map(item => ({
+                    offsetMs: item.ts - stallTime,
+                    url: item.url,
+                    initiatorType: item.initiatorType
+                }));
+
+            Logger.add('[INSTRUMENT:RESOURCE_WINDOW]', {
+                videoId,
+                reason: detail.reason || 'stall',
+                stalledFor: detail.stalledFor || null,
+                windowPastMs: pastMs,
+                windowFutureMs: futureMs,
+                total: entries.length,
+                requests: entries
+            });
+            pendingWindows.delete(key);
+        }, futureMs);
+    };
+
+    return {
+        record,
+        logWindow
+    };
+})();
+
 // --- Metrics ---
 /**
  * High-level telemetry and metrics tracking for Stream Healer.
@@ -1064,8 +1286,6 @@ const Instrumentation = (() => {
     let signalDetector = null;
     const PROCESSING_ASSET_PATTERN = /404_processing_640x360\.png/i;
     let lastResourceHintTime = 0;
-    const resourceEvents = [];
-    const pendingResourceWindows = new Map();
     const truncateMessage = (message, maxLen) => (
         String(message).substring(0, maxLen)
     );
@@ -1162,60 +1382,8 @@ const Instrumentation = (() => {
         });
     };
 
-    const recordResource = (url, initiatorType) => {
-        const now = Date.now();
-        resourceEvents.push({
-            ts: now,
-            url: truncateMessage(url, CONFIG.logging.LOG_URL_MAX_LEN),
-            initiatorType: initiatorType || null
-        });
-
-        const maxEntries = CONFIG.logging.RESOURCE_WINDOW_MAX || 8000;
-        if (resourceEvents.length > maxEntries) {
-            resourceEvents.splice(0, resourceEvents.length - maxEntries);
-        }
-    };
-
     const logResourceWindow = (detail = {}) => {
-        const stallTime = detail.stallTime || Date.now();
-        const videoId = detail.videoId || 'unknown';
-        const key = `${videoId}:${stallTime}`;
-        if (pendingResourceWindows.has(key)) return;
-        pendingResourceWindows.set(key, true);
-
-        const pastMs = CONFIG.logging.RESOURCE_WINDOW_PAST_MS || 30000;
-        const futureMs = CONFIG.logging.RESOURCE_WINDOW_FUTURE_MS || 60000;
-
-        Logger.add('[INSTRUMENT:RESOURCE_WINDOW_SCHEDULED]', {
-            videoId,
-            reason: detail.reason || 'stall',
-            stalledFor: detail.stalledFor || null,
-            windowPastMs: pastMs,
-            windowFutureMs: futureMs
-        });
-
-        setTimeout(() => {
-            const start = stallTime - pastMs;
-            const end = stallTime + futureMs;
-            const entries = resourceEvents
-                .filter(item => item.ts >= start && item.ts <= end)
-                .map(item => ({
-                    offsetMs: item.ts - stallTime,
-                    url: item.url,
-                    initiatorType: item.initiatorType
-                }));
-
-            Logger.add('[INSTRUMENT:RESOURCE_WINDOW]', {
-                videoId,
-                reason: detail.reason || 'stall',
-                stalledFor: detail.stalledFor || null,
-                windowPastMs: pastMs,
-                windowFutureMs: futureMs,
-                total: entries.length,
-                requests: entries
-            });
-            pendingResourceWindows.delete(key);
-        }, futureMs);
+        ResourceWindow.logWindow(detail);
     };
 
     const setupResourceObserver = () => {
@@ -1224,7 +1392,7 @@ const Instrumentation = (() => {
             const observer = new PerformanceObserver((list) => {
                 for (const entry of list.getEntries()) {
                     if (!entry?.name) continue;
-                    recordResource(entry.name, entry.initiatorType);
+                    ResourceWindow.record(entry.name, entry.initiatorType);
                     if (PROCESSING_ASSET_PATTERN.test(entry.name)) {
                         maybeEmitProcessingAsset(entry.name);
                     }
@@ -1377,6 +1545,74 @@ const VideoState = (() => {
     };
 })();
 
+// --- StateSnapshot ---
+/**
+ * Central helper for consistent video state snapshots.
+ */
+const StateSnapshot = (() => {
+    const full = (video, videoId) => VideoState.get(video, videoId);
+    const lite = (video, videoId) => VideoState.getLite(video, videoId);
+
+    const format = (snapshot) => {
+        if (!snapshot || snapshot.error) {
+            return snapshot?.error || 'unknown';
+        }
+        const parts = [
+            `currentTime=${snapshot.currentTime}`,
+            `paused=${snapshot.paused}`,
+            `readyState=${snapshot.readyState}`,
+            `networkState=${snapshot.networkState}`,
+            snapshot.buffered ? `buffered=${snapshot.buffered}` : `bufferedLength=${snapshot.bufferedLength}`
+        ];
+        return parts.filter(Boolean).join(' ');
+    };
+
+    return {
+        full,
+        lite,
+        format
+    };
+})();
+
+// --- RecoveryContext ---
+/**
+ * Shared context wrapper for recovery flows.
+ */
+const RecoveryContext = (() => {
+    const create = (video, monitorState, getVideoId, detail = {}) => {
+        const videoId = detail.videoId || (typeof getVideoId === 'function'
+            ? getVideoId(video)
+            : 'unknown');
+        const now = Number.isFinite(detail.now) ? detail.now : Date.now();
+        return {
+            video,
+            monitorState,
+            videoId,
+            now,
+            trigger: detail.trigger || null,
+            reason: detail.reason || null,
+            detail,
+            getSnapshot: () => StateSnapshot.full(video, videoId),
+            getLiteSnapshot: () => StateSnapshot.lite(video, videoId),
+            getRanges: () => BufferGapFinder.getBufferRanges(video),
+            getRangesFormatted: () => BufferGapFinder.formatRanges(BufferGapFinder.getBufferRanges(video)),
+            getBufferAhead: () => BufferGapFinder.getBufferAhead(video)
+        };
+    };
+
+    const from = (videoOrContext, monitorState, getVideoId, detail = {}) => {
+        if (videoOrContext && typeof videoOrContext === 'object' && videoOrContext.video) {
+            return videoOrContext;
+        }
+        return create(videoOrContext, monitorState, getVideoId, detail);
+    };
+
+    return {
+        create,
+        from
+    };
+})();
+
 // --- PlaybackStateTracker ---
 /**
  * Shared playback state tracking for PlaybackMonitor.
@@ -1384,78 +1620,180 @@ const VideoState = (() => {
 const PlaybackStateTracker = (() => {
     const PROGRESS_EPSILON = 0.05;
 
+    const defineAlias = (target, key, path) => {
+        Object.defineProperty(target, key, {
+            configurable: true,
+            get: () => path.reduce((ref, segment) => ref[segment], target),
+            set: (value) => {
+                let ref = target;
+                for (let i = 0; i < path.length - 1; i++) {
+                    ref = ref[path[i]];
+                }
+                ref[path[path.length - 1]] = value;
+            }
+        });
+    };
+
+    const applyAliases = (target, map) => {
+        Object.entries(map).forEach(([key, path]) => defineAlias(target, key, path));
+    };
+
     const create = (video, videoId, logDebug) => {
         const state = {
-            lastProgressTime: 0,
-            lastTime: video.currentTime,
-            progressStartTime: null,
-            progressStreakMs: 0,
-            progressEligible: false,
-            hasProgress: false,
-            firstSeenTime: Date.now(),
-            firstReadyTime: 0,
-            initialProgressTimeoutLogged: false,
-            noHealPointCount: 0,
-            nextHealAllowedTime: 0,
-            playErrorCount: 0,
-            nextPlayHealAllowedTime: 0,
-            lastPlayErrorTime: 0,
-            lastPlayBackoffLogTime: 0,
-            lastHealPointKey: null,
-            healPointRepeatCount: 0,
-            lastBackoffLogTime: 0,
-            initLogEmitted: false,
-            state: 'PLAYING',
-            lastHealAttemptTime: 0,
-            lastWatchdogLogTime: 0,
-            lastNonActiveEventLogTime: 0,
-            nonActiveEventCounts: {},
-            lastActiveEventLogTime: 0,
-            lastActiveEventSummaryTime: 0,
-            activeEventCounts: {},
-            lastSrc: video.currentSrc || video.getAttribute('src') || '',
-            lastSrcAttr: video.getAttribute ? (video.getAttribute('src') || '') : '',
-            lastReadyState: video.readyState,
-            lastNetworkState: video.networkState,
-            lastSrcChangeTime: 0,
-            lastReadyStateChangeTime: 0,
-            lastNetworkStateChangeTime: 0,
-            lastBufferedLengthChangeTime: 0,
-            lastBufferedLength: (() => {
-                try {
-                    return video.buffered ? video.buffered.length : 0;
-                } catch (error) {
-                    return 0;
-                }
-            })(),
-            lastStallEventTime: 0,
-            pauseFromStall: false,
-            lastSyncWallTime: 0,
-            lastSyncMediaTime: 0,
-            lastSyncLogTime: 0,
-            catchUpTimeoutId: null,
-            catchUpAttempts: 0,
-            lastCatchUpTime: 0,
-            resetPendingAt: 0,
-            resetPendingReason: null,
-            resetPendingType: null,
-            resetPendingCallback: null,
-            bufferStarvedSince: 0,
-            bufferStarved: false,
-            bufferStarveUntil: 0,
-            lastBufferStarveLogTime: 0,
-            lastBufferStarveSkipLogTime: 0,
-            lastBufferStarveRescanTime: 0,
-            lastBufferAhead: null,
-            lastBufferAheadUpdateTime: 0,
-            lastBufferAheadIncreaseTime: 0,
-            lastHealDeferralLogTime: 0,
-            lastRefreshAt: 0,
-            stallStartTime: 0,
-            lastSelfRecoverSkipLogTime: 0,
-            lastAdGapSignatureLogTime: 0,
-            lastResourceWindowLogTime: 0
+            status: {
+                value: 'PLAYING'
+            },
+            progress: {
+                lastProgressTime: 0,
+                lastTime: video.currentTime,
+                progressStartTime: null,
+                progressStreakMs: 0,
+                progressEligible: false,
+                hasProgress: false,
+                firstSeenTime: Date.now(),
+                firstReadyTime: 0,
+                initialProgressTimeoutLogged: false,
+                initLogEmitted: false
+            },
+            heal: {
+                noHealPointCount: 0,
+                nextHealAllowedTime: 0,
+                playErrorCount: 0,
+                nextPlayHealAllowedTime: 0,
+                lastPlayErrorTime: 0,
+                lastPlayBackoffLogTime: 0,
+                lastHealPointKey: null,
+                healPointRepeatCount: 0,
+                lastBackoffLogTime: 0,
+                lastHealAttemptTime: 0,
+                lastHealDeferralLogTime: 0,
+                lastRefreshAt: 0
+            },
+            events: {
+                lastWatchdogLogTime: 0,
+                lastNonActiveEventLogTime: 0,
+                nonActiveEventCounts: {},
+                lastActiveEventLogTime: 0,
+                lastActiveEventSummaryTime: 0,
+                activeEventCounts: {}
+            },
+            media: {
+                lastSrc: video.currentSrc || video.getAttribute('src') || '',
+                lastSrcAttr: video.getAttribute ? (video.getAttribute('src') || '') : '',
+                lastReadyState: video.readyState,
+                lastNetworkState: video.networkState,
+                lastSrcChangeTime: 0,
+                lastReadyStateChangeTime: 0,
+                lastNetworkStateChangeTime: 0,
+                lastBufferedLengthChangeTime: 0,
+                lastBufferedLength: (() => {
+                    try {
+                        return video.buffered ? video.buffered.length : 0;
+                    } catch (error) {
+                        return 0;
+                    }
+                })()
+            },
+            stall: {
+                lastStallEventTime: 0,
+                pauseFromStall: false,
+                stallStartTime: 0,
+                bufferStarvedSince: 0,
+                bufferStarved: false,
+                bufferStarveUntil: 0,
+                lastBufferStarveLogTime: 0,
+                lastBufferStarveSkipLogTime: 0,
+                lastBufferStarveRescanTime: 0,
+                lastBufferAhead: null,
+                lastBufferAheadUpdateTime: 0,
+                lastBufferAheadIncreaseTime: 0,
+                lastSelfRecoverSkipLogTime: 0,
+                lastAdGapSignatureLogTime: 0,
+                lastResourceWindowLogTime: 0
+            },
+            sync: {
+                lastSyncWallTime: 0,
+                lastSyncMediaTime: 0,
+                lastSyncLogTime: 0
+            },
+            reset: {
+                resetPendingAt: 0,
+                resetPendingReason: null,
+                resetPendingType: null,
+                resetPendingCallback: null
+            },
+            catchUp: {
+                catchUpTimeoutId: null,
+                catchUpAttempts: 0,
+                lastCatchUpTime: 0
+            }
         };
+
+        applyAliases(state, {
+            state: ['status', 'value'],
+            lastProgressTime: ['progress', 'lastProgressTime'],
+            lastTime: ['progress', 'lastTime'],
+            progressStartTime: ['progress', 'progressStartTime'],
+            progressStreakMs: ['progress', 'progressStreakMs'],
+            progressEligible: ['progress', 'progressEligible'],
+            hasProgress: ['progress', 'hasProgress'],
+            firstSeenTime: ['progress', 'firstSeenTime'],
+            firstReadyTime: ['progress', 'firstReadyTime'],
+            initialProgressTimeoutLogged: ['progress', 'initialProgressTimeoutLogged'],
+            initLogEmitted: ['progress', 'initLogEmitted'],
+            noHealPointCount: ['heal', 'noHealPointCount'],
+            nextHealAllowedTime: ['heal', 'nextHealAllowedTime'],
+            playErrorCount: ['heal', 'playErrorCount'],
+            nextPlayHealAllowedTime: ['heal', 'nextPlayHealAllowedTime'],
+            lastPlayErrorTime: ['heal', 'lastPlayErrorTime'],
+            lastPlayBackoffLogTime: ['heal', 'lastPlayBackoffLogTime'],
+            lastHealPointKey: ['heal', 'lastHealPointKey'],
+            healPointRepeatCount: ['heal', 'healPointRepeatCount'],
+            lastBackoffLogTime: ['heal', 'lastBackoffLogTime'],
+            lastHealAttemptTime: ['heal', 'lastHealAttemptTime'],
+            lastHealDeferralLogTime: ['heal', 'lastHealDeferralLogTime'],
+            lastRefreshAt: ['heal', 'lastRefreshAt'],
+            lastWatchdogLogTime: ['events', 'lastWatchdogLogTime'],
+            lastNonActiveEventLogTime: ['events', 'lastNonActiveEventLogTime'],
+            nonActiveEventCounts: ['events', 'nonActiveEventCounts'],
+            lastActiveEventLogTime: ['events', 'lastActiveEventLogTime'],
+            lastActiveEventSummaryTime: ['events', 'lastActiveEventSummaryTime'],
+            activeEventCounts: ['events', 'activeEventCounts'],
+            lastSrc: ['media', 'lastSrc'],
+            lastSrcAttr: ['media', 'lastSrcAttr'],
+            lastReadyState: ['media', 'lastReadyState'],
+            lastNetworkState: ['media', 'lastNetworkState'],
+            lastSrcChangeTime: ['media', 'lastSrcChangeTime'],
+            lastReadyStateChangeTime: ['media', 'lastReadyStateChangeTime'],
+            lastNetworkStateChangeTime: ['media', 'lastNetworkStateChangeTime'],
+            lastBufferedLengthChangeTime: ['media', 'lastBufferedLengthChangeTime'],
+            lastBufferedLength: ['media', 'lastBufferedLength'],
+            lastStallEventTime: ['stall', 'lastStallEventTime'],
+            pauseFromStall: ['stall', 'pauseFromStall'],
+            stallStartTime: ['stall', 'stallStartTime'],
+            bufferStarvedSince: ['stall', 'bufferStarvedSince'],
+            bufferStarved: ['stall', 'bufferStarved'],
+            bufferStarveUntil: ['stall', 'bufferStarveUntil'],
+            lastBufferStarveLogTime: ['stall', 'lastBufferStarveLogTime'],
+            lastBufferStarveSkipLogTime: ['stall', 'lastBufferStarveSkipLogTime'],
+            lastBufferStarveRescanTime: ['stall', 'lastBufferStarveRescanTime'],
+            lastBufferAhead: ['stall', 'lastBufferAhead'],
+            lastBufferAheadUpdateTime: ['stall', 'lastBufferAheadUpdateTime'],
+            lastBufferAheadIncreaseTime: ['stall', 'lastBufferAheadIncreaseTime'],
+            lastSelfRecoverSkipLogTime: ['stall', 'lastSelfRecoverSkipLogTime'],
+            lastAdGapSignatureLogTime: ['stall', 'lastAdGapSignatureLogTime'],
+            lastResourceWindowLogTime: ['stall', 'lastResourceWindowLogTime'],
+            lastSyncWallTime: ['sync', 'lastSyncWallTime'],
+            lastSyncMediaTime: ['sync', 'lastSyncMediaTime'],
+            lastSyncLogTime: ['sync', 'lastSyncLogTime'],
+            resetPendingAt: ['reset', 'resetPendingAt'],
+            resetPendingReason: ['reset', 'resetPendingReason'],
+            resetPendingType: ['reset', 'resetPendingType'],
+            resetPendingCallback: ['reset', 'resetPendingCallback'],
+            catchUpTimeoutId: ['catchUp', 'catchUpTimeoutId'],
+            catchUpAttempts: ['catchUp', 'catchUpAttempts'],
+            lastCatchUpTime: ['catchUp', 'lastCatchUpTime']
+        });
 
         const evaluateResetState = (vs) => {
             const ranges = BufferGapFinder.getBufferRanges(video);
@@ -1520,11 +1858,22 @@ const PlaybackStateTracker = (() => {
                     reason,
                     bufferAhead: state.lastBufferAhead
                 });
-                logDebug('[HEALER:STALL_DURATION] Stall cleared by progress', {
+                const snapshot = StateSnapshot.lite(video, videoId);
+                const summary = LogEvents.summary.stallDuration({
+                    videoId,
                     reason,
                     durationMs: stallDurationMs,
                     bufferAhead: state.lastBufferAhead,
-                    videoState: VideoState.getLite(video, videoId)
+                    currentTime: snapshot?.currentTime ? Number(snapshot.currentTime) : null,
+                    readyState: snapshot?.readyState,
+                    networkState: snapshot?.networkState,
+                    buffered: snapshot?.bufferedLength
+                });
+                logDebug(summary, {
+                    reason,
+                    durationMs: stallDurationMs,
+                    bufferAhead: state.lastBufferAhead,
+                    videoState: snapshot
                 });
             }
 
@@ -2151,7 +2500,7 @@ const PlaybackEventHandlers = (() => {
  */
 const PlaybackWatchdog = (() => {
     const LOG = {
-        WATCHDOG: '[HEALER:WATCHDOG]'
+        WATCHDOG: LogEvents.TAG.WATCHDOG
     };
 
     const create = (options) => {
@@ -2296,11 +2645,26 @@ const PlaybackWatchdog = (() => {
                 : CONFIG.logging.NON_ACTIVE_LOG_MS;
             if (now - state.lastWatchdogLogTime > logIntervalMs) {
                 state.lastWatchdogLogTime = now;
-                logDebug(`${LOG.WATCHDOG} No progress observed`, {
+                const snapshot = StateSnapshot.full(video, videoId);
+                const summary = LogEvents.summary.watchdogNoProgress({
+                    videoId,
                     stalledForMs,
                     bufferExhausted,
                     state: state.state,
-                    videoState: VideoState.get(video, videoId)
+                    paused: video.paused,
+                    pauseFromStall,
+                    currentTime: snapshot?.currentTime ? Number(snapshot.currentTime) : null,
+                    readyState: snapshot?.readyState,
+                    networkState: snapshot?.networkState,
+                    buffered: snapshot?.buffered
+                });
+                logDebug(summary, {
+                    stalledForMs,
+                    bufferExhausted,
+                    state: state.state,
+                    paused: video.paused,
+                    pauseFromStall,
+                    videoState: snapshot
                 });
             }
 
@@ -2336,7 +2700,7 @@ const PlaybackWatchdog = (() => {
  */
 const PlaybackMonitor = (() => {
     const LOG = {
-        STATE: '[HEALER:STATE]'
+        STATE: LogEvents.TAG.STATE
     };
 
     const create = (video, options = {}) => {
@@ -2363,7 +2727,25 @@ const PlaybackMonitor = (() => {
             if (state.state === nextState) return;
             const prevState = state.state;
             state.state = nextState;
-            logDebug(LOG.STATE, {
+            const snapshot = StateSnapshot.full(video, videoId);
+            const summary = LogEvents.summary.stateChange({
+                videoId,
+                from: prevState,
+                to: nextState,
+                reason,
+                currentTime: snapshot?.currentTime ? Number(snapshot.currentTime) : null,
+                paused: snapshot?.paused,
+                readyState: snapshot?.readyState,
+                networkState: snapshot?.networkState,
+                buffered: snapshot?.buffered,
+                lastProgressAgoMs: state.lastProgressTime
+                    ? (Date.now() - state.lastProgressTime)
+                    : null,
+                progressStreakMs: state.progressStreakMs,
+                progressEligible: state.progressEligible,
+                pauseFromStall: state.pauseFromStall
+            });
+            logDebug(summary, {
                 from: prevState,
                 to: nextState,
                 reason,
@@ -2373,7 +2755,7 @@ const PlaybackMonitor = (() => {
                 lastProgressAgoMs: state.lastProgressTime
                     ? (Date.now() - state.lastProgressTime)
                     : null,
-                videoState: VideoState.get(video, videoId)
+                videoState: snapshot
             });
         };
 
@@ -4014,7 +4396,13 @@ const HealPointPoller = (() => {
                         const now = Date.now();
                         if (monitorState && now - (monitorState.lastHealDeferralLogTime || 0) >= CONFIG.logging.HEAL_DEFER_LOG_MS) {
                             monitorState.lastHealDeferralLogTime = now;
-                            logDebug('[HEALER:DEFER] Heal deferred, buffer headroom too small', {
+                            const deferSummary = LogEvents.summary.healDefer({
+                                bufferHeadroom: headroom,
+                                minRequired: CONFIG.recovery.MIN_HEAL_HEADROOM_S,
+                                healPoint: `${healPoint.start.toFixed(2)}-${healPoint.end.toFixed(2)}`,
+                                buffers: BufferGapFinder.formatRanges(BufferGapFinder.getBufferRanges(video))
+                            });
+                            logDebug(deferSummary, {
                                 bufferHeadroom: headroom.toFixed(2) + 's',
                                 minRequired: CONFIG.recovery.MIN_HEAL_HEADROOM_S + 's',
                                 healPoint: `${healPoint.start.toFixed(2)}-${healPoint.end.toFixed(2)}`,
@@ -4075,10 +4463,6 @@ const HealPointPoller = (() => {
  * Handles heal-point polling and seek recovery.
  */
 const HealPipeline = (() => {
-    const LOG = {
-        START: '[HEALER:START]'
-    };
-
     const create = (options) => {
         const getVideoId = options.getVideoId;
         const logWithState = options.logWithState;
@@ -4212,7 +4596,12 @@ const HealPipeline = (() => {
             }
         };
 
-        const attemptHeal = async (video, monitorState) => {
+        const attemptHeal = async (videoOrContext, monitorStateOverride) => {
+            const context = RecoveryContext.from(videoOrContext, monitorStateOverride, getVideoId);
+            const video = context.video;
+            const monitorState = context.monitorState;
+            const videoId = context.videoId;
+
             if (state.isHealing) {
                 Logger.add('[HEALER:BLOCKED] Already healing');
                 return;
@@ -4221,7 +4610,7 @@ const HealPipeline = (() => {
             if (!document.contains(video)) {
                 Logger.add('[HEALER:DETACHED] Heal skipped, video not in DOM', {
                     reason: 'pre_heal',
-                    videoId: getVideoId(video)
+                    videoId
                 });
                 onDetached(video, 'pre_heal');
                 return;
@@ -4235,9 +4624,21 @@ const HealPipeline = (() => {
                 monitorState.lastHealAttemptTime = Date.now();
             }
 
-            logWithState(LOG.START, video, {
+            const startSnapshot = StateSnapshot.full(video, videoId);
+            const startSummary = LogEvents.summary.healStart({
                 attempt: state.healAttempts,
-                lastProgressAgoMs: monitorState ? (Date.now() - monitorState.lastProgressTime) : undefined
+                lastProgressAgoMs: monitorState ? (Date.now() - monitorState.lastProgressTime) : null,
+                currentTime: startSnapshot?.currentTime ? Number(startSnapshot.currentTime) : null,
+                paused: startSnapshot?.paused,
+                readyState: startSnapshot?.readyState,
+                networkState: startSnapshot?.networkState,
+                buffered: startSnapshot?.buffered
+            });
+            Logger.add(startSummary, {
+                attempt: state.healAttempts,
+                lastProgressAgoMs: monitorState ? (Date.now() - monitorState.lastProgressTime) : undefined,
+                videoId,
+                videoState: startSnapshot
             });
 
             try {
@@ -4250,7 +4651,7 @@ const HealPipeline = (() => {
                 if (pollResult.aborted) {
                     Logger.add('[HEALER:DETACHED] Heal aborted during polling', {
                         reason: pollResult.reason || 'poll_abort',
-                        videoId: getVideoId(video)
+                        videoId
                     });
                     onDetached(video, pollResult.reason || 'poll_abort');
                     return;
@@ -4261,7 +4662,7 @@ const HealPipeline = (() => {
                     if (poller.hasRecovered(video, monitorState)) {
                         Logger.add('[HEALER:SKIPPED] Video recovered, no heal needed', {
                             duration: (performance.now() - healStartTime).toFixed(0) + 'ms',
-                            finalState: VideoState.get(video, getVideoId(video))
+                            finalState: VideoState.get(video, videoId)
                         });
                         recoveryManager.resetBackoff(monitorState, 'self_recovered');
                         if (recoveryManager.resetPlayError) {
@@ -4270,12 +4671,18 @@ const HealPipeline = (() => {
                         return;
                     }
 
-                    Logger.add('[HEALER:NO_HEAL_POINT] Could not find heal point', {
-                        duration: (performance.now() - healStartTime).toFixed(0) + 'ms',
+                    const noPointDuration = Number((performance.now() - healStartTime).toFixed(0));
+                    const noPointSummary = LogEvents.summary.noHealPoint({
+                        duration: noPointDuration,
+                        currentTime: video.currentTime,
+                        bufferRanges: BufferGapFinder.formatRanges(BufferGapFinder.getBufferRanges(video))
+                    });
+                    Logger.add(noPointSummary, {
+                        duration: noPointDuration + 'ms',
                         suggestion: 'User may need to refresh page',
                         currentTime: video.currentTime?.toFixed(3),
                         bufferRanges: BufferGapFinder.formatRanges(BufferGapFinder.getBufferRanges(video)),
-                        finalState: VideoState.get(video, getVideoId(video))
+                        finalState: VideoState.get(video, videoId)
                     });
                     Metrics.increment('heals_failed');
                     recoveryManager.handleNoHealPoint(video, monitorState, 'no_heal_point');
@@ -4289,7 +4696,7 @@ const HealPipeline = (() => {
                 if (!document.contains(video)) {
                     Logger.add('[HEALER:DETACHED] Heal aborted before revalidation', {
                         reason: 'pre_revalidate',
-                        videoId: getVideoId(video)
+                        videoId
                     });
                     onDetached(video, 'pre_revalidate');
                     return;
@@ -4309,7 +4716,7 @@ const HealPipeline = (() => {
                     }
                     Logger.add('[HEALER:STALE_GONE] Heal point disappeared before seek', {
                         original: `${healPoint.start.toFixed(2)}-${healPoint.end.toFixed(2)}`,
-                        finalState: VideoState.get(video, getVideoId(video))
+                        finalState: VideoState.get(video, videoId)
                     });
                     Metrics.increment('heals_failed');
                     recoveryManager.handleNoHealPoint(video, monitorState, 'stale_gone');
@@ -4323,7 +4730,7 @@ const HealPipeline = (() => {
                 if (!document.contains(video)) {
                     Logger.add('[HEALER:DETACHED] Heal aborted before seek', {
                         reason: 'pre_seek',
-                        videoId: getVideoId(video)
+                        videoId
                     });
                     onDetached(video, 'pre_seek');
                     return;
@@ -4395,15 +4802,20 @@ const HealPipeline = (() => {
                     }
                 }
 
-                const duration = (performance.now() - healStartTime).toFixed(0);
+                const duration = Number((performance.now() - healStartTime).toFixed(0));
 
                 if (result.success) {
                     const bufferEndDelta = getBufferEndDelta(video);
-                    Logger.add('[HEALER:COMPLETE] Stream healed successfully', {
+                    const completeSummary = LogEvents.summary.healComplete({
+                        duration,
+                        healAttempts: state.healAttempts,
+                        bufferEndDelta
+                    });
+                    Logger.add(completeSummary, {
                         duration: duration + 'ms',
                         healAttempts: state.healAttempts,
                         bufferEndDelta: bufferEndDelta !== null ? bufferEndDelta.toFixed(2) + 's' : null,
-                        finalState: VideoState.get(video, getVideoId(video))
+                        finalState: VideoState.get(video, videoId)
                     });
                     Metrics.increment('heals_successful');
                     recoveryManager.resetBackoff(monitorState, 'heal_success');
@@ -4434,14 +4846,22 @@ const HealPipeline = (() => {
                             networkState: video.networkState
                         });
                     }
-                    Logger.add('[HEALER:FAILED] Heal attempt failed', {
+                    const failedSummary = LogEvents.summary.healFailed({
+                        duration,
+                        errorName: result.errorName,
+                        error: result.error,
+                        healRange: finalPoint ? `${finalPoint.start.toFixed(2)}-${finalPoint.end.toFixed(2)}` : null,
+                        gapSize: finalPoint?.gapSize,
+                        isNudge: finalPoint?.isNudge
+                    });
+                    Logger.add(failedSummary, {
                         duration: duration + 'ms',
                         error: result.error,
                         errorName: result.errorName,
                         healRange: finalPoint ? `${finalPoint.start.toFixed(2)}-${finalPoint.end.toFixed(2)}` : null,
                         isNudge: finalPoint?.isNudge,
                         gapSize: finalPoint?.gapSize?.toFixed(2),
-                        finalState: VideoState.get(video, getVideoId(video))
+                        finalState: VideoState.get(video, videoId)
                     });
                     Metrics.increment('heals_failed');
                     if (monitorState && recoveryManager.handlePlayFailure
@@ -4485,6 +4905,88 @@ const HealPipeline = (() => {
     };
 
     return { create };
+})();
+
+// --- AdGapSignals ---
+/**
+ * Detects ad-gap-like buffered range gaps around stalled playheads.
+ */
+const AdGapSignals = (() => {
+    const getEdgeThreshold = () => Math.max(0.25, CONFIG.recovery.HEAL_EDGE_GUARD_S || 0.25);
+
+    const detectGap = (ranges, playheadSeconds, edgeThreshold) => {
+        if (!ranges || ranges.length < 2 || !Number.isFinite(playheadSeconds)) return null;
+        const threshold = Number.isFinite(edgeThreshold) ? edgeThreshold : getEdgeThreshold();
+        for (let i = 0; i < ranges.length - 1; i++) {
+            const range = ranges[i];
+            const next = ranges[i + 1];
+            if (playheadSeconds < range.start || playheadSeconds > range.end) {
+                continue;
+            }
+            const gapSize = next.start - range.end;
+            const nearEdge = Math.abs(range.end - playheadSeconds) <= threshold;
+            if (gapSize > 0 && nearEdge) {
+                return {
+                    playheadSeconds,
+                    rangeEnd: range.end,
+                    nextRangeStart: next.start,
+                    gapSize,
+                    ranges
+                };
+            }
+            break;
+        }
+        return null;
+    };
+
+    const maybeLog = (options = {}) => {
+        const video = options.video;
+        const videoId = options.videoId || 'unknown';
+        const monitorState = options.monitorState;
+        const playheadSeconds = options.playheadSeconds;
+        if (!video || !Number.isFinite(playheadSeconds)) return null;
+
+        const now = options.now || Date.now();
+        const lastLog = monitorState?.lastAdGapSignatureLogTime || 0;
+        if (now - lastLog < CONFIG.logging.BACKOFF_LOG_INTERVAL_MS) {
+            return null;
+        }
+
+        const ranges = options.ranges || BufferGapFinder.getBufferRanges(video);
+        const detection = detectGap(ranges, playheadSeconds, options.edgeThreshold);
+        if (!detection) return null;
+
+        if (monitorState) {
+            monitorState.lastAdGapSignatureLogTime = now;
+        }
+
+        const formattedRanges = BufferGapFinder.formatRanges(detection.ranges);
+        const summary = LogEvents.summary.adGapSignature({
+            videoId,
+            playheadSeconds: detection.playheadSeconds,
+            rangeEnd: detection.rangeEnd,
+            nextRangeStart: detection.nextRangeStart,
+            gapSize: detection.gapSize,
+            ranges: formattedRanges
+        });
+
+        Logger.add(summary, {
+            videoId,
+            reason: options.reason || null,
+            playheadSeconds: Number(detection.playheadSeconds.toFixed(3)),
+            rangeEnd: Number(detection.rangeEnd.toFixed(3)),
+            nextRangeStart: Number(detection.nextRangeStart.toFixed(3)),
+            gapSize: Number(detection.gapSize.toFixed(3)),
+            ranges: formattedRanges
+        });
+
+        return detection;
+    };
+
+    return {
+        detectGap,
+        maybeLog
+    };
 })();
 
 // --- PlayheadAttribution ---
@@ -4757,34 +5259,14 @@ const ExternalSignalRouter = (() => {
                     videoState: VideoState.get(entry.video, attribution.id)
                 });
 
-                const ranges = BufferGapFinder.getBufferRanges(entry.video);
-                if (ranges.length >= 2 && Number.isFinite(attribution.playheadSeconds)) {
-                    const edgeThreshold = Math.max(0.25, CONFIG.recovery.HEAL_EDGE_GUARD_S || 0.25);
-                    for (let i = 0; i < ranges.length - 1; i++) {
-                        const range = ranges[i];
-                        const next = ranges[i + 1];
-                        if (attribution.playheadSeconds < range.start || attribution.playheadSeconds > range.end) {
-                            continue;
-                        }
-                        const gapSize = next.start - range.end;
-                        const nearEdge = Math.abs(range.end - attribution.playheadSeconds) <= edgeThreshold;
-                        if (gapSize > 0 && nearEdge) {
-                            const lastGapLog = state.lastAdGapSignatureLogTime || 0;
-                            if (now - lastGapLog >= CONFIG.logging.BACKOFF_LOG_INTERVAL_MS) {
-                                state.lastAdGapSignatureLogTime = now;
-                                Logger.add('[HEALER:AD_GAP_SIGNATURE]', {
-                                    videoId: attribution.id,
-                                    playheadSeconds: attribution.playheadSeconds,
-                                    rangeEnd: Number(range.end.toFixed(3)),
-                                    nextRangeStart: Number(next.start.toFixed(3)),
-                                    gapSize: Number(gapSize.toFixed(3)),
-                                    ranges: BufferGapFinder.formatRanges(ranges)
-                                });
-                            }
-                        }
-                        break;
-                    }
-                }
+                AdGapSignals.maybeLog({
+                    video: entry.video,
+                    videoId: attribution.id,
+                    playheadSeconds: attribution.playheadSeconds,
+                    monitorState: state,
+                    now,
+                    reason: 'console_stall'
+                });
 
                 if (!state.hasProgress || !state.lastProgressTime) {
                     return;
@@ -5053,6 +5535,12 @@ const RecoveryOrchestrator = (() => {
         const onStallDetected = (video, details = {}, state = null) => {
             const now = Date.now();
             const videoId = getVideoId(video);
+            const context = RecoveryContext.create(video, state, getVideoId, {
+                trigger: details.trigger,
+                reason: details.trigger || 'stall',
+                stalledFor: details.stalledFor,
+                now
+            });
 
             if (state && (!state.lastResourceWindowLogTime
                 || (now - state.lastResourceWindowLogTime) > CONFIG.logging.BACKOFF_LOG_INTERVAL_MS)) {
@@ -5101,6 +5589,15 @@ const RecoveryOrchestrator = (() => {
                 }
             }
 
+            AdGapSignals.maybeLog({
+                video,
+                videoId,
+                playheadSeconds: video?.currentTime,
+                monitorState: state,
+                now,
+                reason: details.trigger || 'stall'
+            });
+
             candidateSelector.evaluateCandidates('stall');
             const activeCandidateId = candidateSelector.getActiveId();
             if (activeCandidateId && activeCandidateId !== videoId) {
@@ -5120,14 +5617,29 @@ const RecoveryOrchestrator = (() => {
                 return;
             }
 
-            logWithState('[STALL:DETECTED]', video, {
+            const snapshot = context.getSnapshot();
+            const summary = LogEvents.summary.stallDetected({
+                videoId,
+                trigger: details.trigger,
+                stalledFor: details.stalledFor,
+                bufferExhausted: details.bufferExhausted,
+                paused: video.paused,
+                pauseFromStall: state?.pauseFromStall,
+                lastProgressAgoMs: state ? (now - state.lastProgressTime) : null,
+                currentTime: snapshot?.currentTime ? Number(snapshot.currentTime) : null,
+                readyState: snapshot?.readyState,
+                networkState: snapshot?.networkState,
+                buffered: snapshot?.buffered
+            });
+            Logger.add(summary, {
                 ...details,
-                lastProgressAgoMs: state ? (Date.now() - state.lastProgressTime) : undefined,
-                videoId
+                lastProgressAgoMs: state ? (now - state.lastProgressTime) : undefined,
+                videoId,
+                videoState: snapshot
             });
 
             Metrics.increment('stalls_detected');
-            healPipeline.attemptHeal(video, state);
+            healPipeline.attemptHeal(context);
         };
 
         monitoring.setStallHandler(onStallDetected);
@@ -5180,10 +5692,13 @@ const StreamHealer = (() => {
         isFallbackSource
     });
 
-    const logWithState = (message, video, detail = {}) => {
+    const logWithState = (message, videoOrContext, detail = {}) => {
+        const context = RecoveryContext.from(videoOrContext, null, monitoring.getVideoId);
+        const snapshot = StateSnapshot.full(context.video, context.videoId);
         Logger.add(message, {
             ...detail,
-            videoState: VideoState.get(video, monitoring.getVideoId(video))
+            videoId: detail.videoId || context.videoId,
+            videoState: snapshot
         });
     };
 

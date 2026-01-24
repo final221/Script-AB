@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
+import { setBufferedRanges } from '../helpers/video.js';
 
 describe('BufferGapFinder', () => {
     let video;
@@ -34,20 +35,14 @@ describe('BufferGapFinder', () => {
 
     it('returns null if no buffered ranges', () => {
         const BufferGapFinder = window.BufferGapFinder;
-        Object.defineProperty(video, 'buffered', {
-            value: { length: 0, start: () => 0, end: () => 0 },
-            configurable: true
-        });
+        setBufferedRanges(video, []);
         const result = BufferGapFinder.findHealPoint(video, { silent: true });
         expect(result).toBeNull();
     });
 
     it('returns empty array for no buffer ranges', () => {
         const BufferGapFinder = window.BufferGapFinder;
-        Object.defineProperty(video, 'buffered', {
-            value: { length: 0, start: () => 0, end: () => 0 },
-            configurable: true
-        });
+        setBufferedRanges(video, []);
         const ranges = BufferGapFinder.getBufferRanges(video);
         expect(ranges).toEqual([]);
     });
@@ -55,14 +50,7 @@ describe('BufferGapFinder', () => {
     it('finds heal point (nudge) when contiguous buffer ahead exists', () => {
         const BufferGapFinder = window.BufferGapFinder;
         // Mock buffered ranges: [0-10], [20-30]
-        Object.defineProperty(video, 'buffered', {
-            value: {
-                length: 2,
-                start: (i) => i === 0 ? 0 : 20,
-                end: (i) => i === 0 ? 10 : 30
-            },
-            configurable: true
-        });
+        setBufferedRanges(video, [[0, 10], [20, 30]]);
         video.currentTime = 5;
 
         const result = BufferGapFinder.findHealPoint(video, { silent: true });
@@ -75,14 +63,7 @@ describe('BufferGapFinder', () => {
     it('falls back to emergency heal point if buffer is too small', () => {
         const BufferGapFinder = window.BufferGapFinder;
         // Mock buffered ranges: [0-5.5] - Current 5, so 0.5s ahead (too small for nudge which needs gap > MIN_HEAL_BUFFER_S)
-        Object.defineProperty(video, 'buffered', {
-            value: {
-                length: 1,
-                start: () => 0,
-                end: () => 5.5
-            },
-            configurable: true
-        });
+        setBufferedRanges(video, [[0, 5.5]]);
         video.currentTime = 5;
 
         const result = BufferGapFinder.findHealPoint(video, { silent: true });
@@ -94,14 +75,7 @@ describe('BufferGapFinder', () => {
     it('prefers contiguous nudge over distant gap', () => {
         const BufferGapFinder = window.BufferGapFinder;
         // Mock: [0-10] (contiguous), [30-35] (gap)
-        Object.defineProperty(video, 'buffered', {
-            value: {
-                length: 2,
-                start: (i) => [0, 30][i],
-                end: (i) => [10, 35][i]
-            },
-            configurable: true
-        });
+        setBufferedRanges(video, [[0, 10], [30, 35]]);
         video.currentTime = 5;
 
         const result = BufferGapFinder.findHealPoint(video, { silent: true });
@@ -112,14 +86,7 @@ describe('BufferGapFinder', () => {
 
     it('returns nudge if contiguous buffer ahead of currentTime', () => {
         const BufferGapFinder = window.BufferGapFinder;
-        Object.defineProperty(video, 'buffered', {
-            value: {
-                length: 1,
-                start: () => 0,
-                end: () => 20
-            },
-            configurable: true
-        });
+        setBufferedRanges(video, [[0, 20]]);
         video.currentTime = 15;
 
         const result = BufferGapFinder.findHealPoint(video, { silent: true });
@@ -130,14 +97,7 @@ describe('BufferGapFinder', () => {
 
     it('detects buffer exhaustion', () => {
         const BufferGapFinder = window.BufferGapFinder;
-        Object.defineProperty(video, 'buffered', {
-            value: {
-                length: 1,
-                start: () => 0,
-                end: () => 10
-            },
-            configurable: true
-        });
+        setBufferedRanges(video, [[0, 10]]);
         video.currentTime = 9.8; // Very close to buffer end
 
         const result = BufferGapFinder.isBufferExhausted(video);
@@ -146,14 +106,7 @@ describe('BufferGapFinder', () => {
 
     it('detects healthy buffer', () => {
         const BufferGapFinder = window.BufferGapFinder;
-        Object.defineProperty(video, 'buffered', {
-            value: {
-                length: 1,
-                start: () => 0,
-                end: () => 10
-            },
-            configurable: true
-        });
+        setBufferedRanges(video, [[0, 10]]);
         video.currentTime = 5; // Plenty of buffer ahead
 
         const result = BufferGapFinder.isBufferExhausted(video);
@@ -178,10 +131,7 @@ describe('BufferGapFinder', () => {
 
     it('supports silent mode for polling', () => {
         const BufferGapFinder = window.BufferGapFinder;
-        Object.defineProperty(video, 'buffered', {
-            value: { length: 0, start: () => 0, end: () => 0 },
-            configurable: true
-        });
+        setBufferedRanges(video, []);
 
         // Should not throw, even with no buffer
         const result = BufferGapFinder.findHealPoint(video, { silent: true });

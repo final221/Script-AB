@@ -82,7 +82,13 @@ const HealPointPoller = (() => {
                         const now = Date.now();
                         if (monitorState && now - (monitorState.lastHealDeferralLogTime || 0) >= CONFIG.logging.HEAL_DEFER_LOG_MS) {
                             monitorState.lastHealDeferralLogTime = now;
-                            logDebug('[HEALER:DEFER] Heal deferred, buffer headroom too small', {
+                            const deferSummary = LogEvents.summary.healDefer({
+                                bufferHeadroom: headroom,
+                                minRequired: CONFIG.recovery.MIN_HEAL_HEADROOM_S,
+                                healPoint: `${healPoint.start.toFixed(2)}-${healPoint.end.toFixed(2)}`,
+                                buffers: BufferGapFinder.formatRanges(BufferGapFinder.getBufferRanges(video))
+                            });
+                            logDebug(deferSummary, {
                                 bufferHeadroom: headroom.toFixed(2) + 's',
                                 minRequired: CONFIG.recovery.MIN_HEAL_HEADROOM_S + 's',
                                 healPoint: `${healPoint.start.toFixed(2)}-${healPoint.end.toFixed(2)}`,

@@ -24,10 +24,13 @@ const StreamHealer = (() => {
         isFallbackSource
     });
 
-    const logWithState = (message, video, detail = {}) => {
+    const logWithState = (message, videoOrContext, detail = {}) => {
+        const context = RecoveryContext.from(videoOrContext, null, monitoring.getVideoId);
+        const snapshot = StateSnapshot.full(context.video, context.videoId);
         Logger.add(message, {
             ...detail,
-            videoState: VideoState.get(video, monitoring.getVideoId(video))
+            videoId: detail.videoId || context.videoId,
+            videoState: snapshot
         });
     };
 

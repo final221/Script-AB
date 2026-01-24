@@ -31,6 +31,12 @@ const RecoveryOrchestrator = (() => {
         const onStallDetected = (video, details = {}, state = null) => {
             const now = Date.now();
             const videoId = getVideoId(video);
+            const context = RecoveryContext.create(video, state, getVideoId, {
+                trigger: details.trigger,
+                reason: details.trigger || 'stall',
+                stalledFor: details.stalledFor,
+                now
+            });
 
             if (state && (!state.lastResourceWindowLogTime
                 || (now - state.lastResourceWindowLogTime) > CONFIG.logging.BACKOFF_LOG_INTERVAL_MS)) {
@@ -79,6 +85,15 @@ const RecoveryOrchestrator = (() => {
                 }
             }
 
+            AdGapSignals.maybeLog({
+                video,
+                videoId,
+                playheadSeconds: video?.currentTime,
+                monitorState: state,
+                now,
+                reason: details.trigger || 'stall'
+            });
+
             candidateSelector.evaluateCandidates('stall');
             const activeCandidateId = candidateSelector.getActiveId();
             if (activeCandidateId && activeCandidateId !== videoId) {
@@ -98,14 +113,29 @@ const RecoveryOrchestrator = (() => {
                 return;
             }
 
-            logWithState('[STALL:DETECTED]', video, {
+            const snapshot = context.getSnapshot();
+            const summary = LogEvents.summary.stallDetected({
+                videoId,
+                trigger: details.trigger,
+                stalledFor: details.stalledFor,
+                bufferExhausted: details.bufferExhausted,
+                paused: video.paused,
+                pauseFromStall: state?.pauseFromStall,
+                lastProgressAgoMs: state ? (now - state.lastProgressTime) : null,
+                currentTime: snapshot?.currentTime ? Number(snapshot.currentTime) : null,
+                readyState: snapshot?.readyState,
+                networkState: snapshot?.networkState,
+                buffered: snapshot?.buffered
+            });
+            Logger.add(summary, {
                 ...details,
-                lastProgressAgoMs: state ? (Date.now() - state.lastProgressTime) : undefined,
-                videoId
+                lastProgressAgoMs: state ? (now - state.lastProgressTime) : undefined,
+                videoId,
+                videoState: snapshot
             });
 
             Metrics.increment('stalls_detected');
-            healPipeline.attemptHeal(video, state);
+            healPipeline.attemptHeal(context);
         };
 
         monitoring.setStallHandler(onStallDetected);
