@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.1.61 - 2026-01-24T17:35:45.825Z
+Previous: 4.1.60
+Commit: 065feda
+Changes:
+- Widen message column
+
 ## 4.1.60 - 2026-01-24T17:35:11.922Z
 Previous: 4.1.59
 Commit: 7fb3723
