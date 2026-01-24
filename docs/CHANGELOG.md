@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.1.35 - 2026-01-24T12:21:36.389Z
+Previous: 4.1.34
+Commit: 46f579c
+Changes:
+- Shorten media state change logs
+
 ## 4.1.34 - 2026-01-24T12:19:29.428Z
 Previous: 4.1.33
 Commit: 481a830

@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.1.34
+// @version       4.1.35
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -140,7 +140,7 @@ const CONFIG = (() => {
  * Build metadata helpers (version injected at build time).
  */
 const BuildInfo = (() => {
-    const VERSION = '4.1.34';
+    const VERSION = '4.1.35';
 
     const getVersion = () => {
         const gmVersion = (typeof GM_info !== 'undefined' && GM_info?.script?.version)
@@ -151,7 +151,7 @@ const BuildInfo = (() => {
             ? unsafeWindow.GM_info.script.version
             : null;
         if (unsafeVersion) return unsafeVersion;
-        if (VERSION && VERSION !== '4.1.34') return VERSION;
+        if (VERSION && VERSION !== '4.1.35') return VERSION;
         return null;
     };
 
@@ -1546,10 +1546,14 @@ const Instrumentation = (() => {
             }
         },
         onError: (args) => {
-            Logger.captureConsole('error', args);
-
             const msg = args.map(String).join(' ');
             const classification = classifyError(null, msg);
+
+            if (classification.action === 'LOG_ONLY') {
+                return;
+            }
+
+            Logger.captureConsole('error', args);
 
             Logger.add('[INSTRUMENT:CONSOLE_ERROR] Console error intercepted', {
                 message: truncateMessage(msg, CONFIG.logging.LOG_MESSAGE_MAX_LEN),

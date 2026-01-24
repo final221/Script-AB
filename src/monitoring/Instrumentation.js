@@ -154,10 +154,14 @@ const Instrumentation = (() => {
             }
         },
         onError: (args) => {
-            Logger.captureConsole('error', args);
-
             const msg = args.map(String).join(' ');
             const classification = classifyError(null, msg);
+
+            if (classification.action === 'LOG_ONLY') {
+                return;
+            }
+
+            Logger.captureConsole('error', args);
 
             Logger.add('[INSTRUMENT:CONSOLE_ERROR] Console error intercepted', {
                 message: truncateMessage(msg, CONFIG.logging.LOG_MESSAGE_MAX_LEN),
