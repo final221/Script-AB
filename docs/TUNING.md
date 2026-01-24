@@ -21,6 +21,12 @@ All settings live in `src/config/Config.js`.
 - `recovery.GAP_OVERRIDE_MIN_HEADROOM_S`: Minimum headroom allowed when override triggers.
 - `stall.NO_HEAL_POINT_BACKOFF_BASE_MS`: Base backoff after a missing heal point.
 - `stall.NO_HEAL_POINT_BACKOFF_MAX_MS`: Max backoff after repeated misses.
+- `stall.NO_HEAL_POINT_REFRESH_DELAY_MS`: Delay refresh when headroom is low but src/readyState look valid.
+- `stall.NO_HEAL_POINT_REFRESH_MIN_READY_STATE`: Minimum readyState required to allow refresh delay.
+- `stall.NO_HEAL_POINT_EMERGENCY_AFTER`: Emergency switch after this many no-heal points.
+- `stall.NO_HEAL_POINT_EMERGENCY_COOLDOWN_MS`: Cooldown between emergency switches.
+- `stall.NO_HEAL_POINT_EMERGENCY_MIN_READY_STATE`: Minimum readyState for emergency switch candidates.
+- `stall.NO_HEAL_POINT_EMERGENCY_REQUIRE_SRC`: Require src for emergency switch candidates.
 - `stall.RETRY_COOLDOWN_MS`: Cooldown between heal attempts on the same video.
 - `stall.PLAY_ABORT_BACKOFF_BASE_MS`: Base backoff after AbortError failures.
 - `stall.PLAY_ABORT_BACKOFF_MAX_MS`: Max backoff after repeated AbortError failures.
@@ -41,6 +47,8 @@ All settings live in `src/config/Config.js`.
 - `monitoring.PROGRESS_STALE_MS`: Stale progress threshold used in scoring.
 - `monitoring.TRUST_STALE_MS`: How quickly trust decays for idle candidates.
 - `monitoring.PROBE_COOLDOWN_MS`: Minimum time between candidate probes.
+- `monitoring.DEAD_CANDIDATE_AFTER_MS`: Mark candidate dead after sustained empty src + readyState 0.
+- `monitoring.DEAD_CANDIDATE_COOLDOWN_MS`: Exclude dead candidates for this long.
 
 ## Logging + Instrumentation
 - `logging.ACTIVE_LOG_MS`: Log interval for active candidates.
