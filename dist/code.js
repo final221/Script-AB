@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.1.41
+// @version       4.1.42
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -142,7 +142,7 @@ const CONFIG = (() => {
  * Build metadata helpers (version injected at build time).
  */
 const BuildInfo = (() => {
-    const VERSION = '4.1.41';
+    const VERSION = '4.1.42';
 
     const getVersion = () => {
         const gmVersion = (typeof GM_info !== 'undefined' && GM_info?.script?.version)
@@ -153,7 +153,7 @@ const BuildInfo = (() => {
             ? unsafeWindow.GM_info.script.version
             : null;
         if (unsafeVersion) return unsafeVersion;
-        if (VERSION && VERSION !== '4.1.41') return VERSION;
+        if (VERSION && VERSION !== '4.1.42') return VERSION;
         return null;
     };
 
@@ -934,15 +934,7 @@ const LogEvents = (() => {
             ['from', data.from],
             ['to', data.to],
             ['reason', data.reason],
-            ['currentTime', data.currentTime],
-            ['paused', data.paused],
-            ['readyState', data.readyState],
-            ['networkState', data.networkState],
-            ['buffered', data.buffered],
-            ['lastProgressAgoMs', data.lastProgressAgoMs],
-            ['progressStreakMs', data.progressStreakMs],
-            ['progressEligible', data.progressEligible],
-            ['pauseFromStall', data.pauseFromStall]
+            ['currentTime', data.currentTime]
         ]),
         watchdogNoProgress: (data = {}) => withTag(TAG.WATCHDOG, [
             ['video', formatVideoId(data.videoId)],
@@ -973,11 +965,7 @@ const LogEvents = (() => {
             ['video', formatVideoId(data.videoId)],
             ['reason', data.reason],
             ['durationMs', data.durationMs],
-            ['bufferAhead', data.bufferAhead],
-            ['currentTime', data.currentTime],
-            ['readyState', data.readyState],
-            ['networkState', data.networkState],
-            ['buffered', data.buffered]
+            ['currentTime', data.currentTime]
         ]),
         healStart: (data = {}) => withTag(TAG.HEAL_START, [
             ['attempt', data.attempt],
@@ -2232,7 +2220,11 @@ const PlaybackStateTracker = (() => {
                         detail: {
                             reason,
                             durationMs: stallDurationMs,
-                            bufferAhead: state.lastBufferAhead
+                            bufferAhead: state.lastBufferAhead,
+                            currentTime: snapshot?.currentTime ? Number(snapshot.currentTime) : null,
+                            readyState: snapshot?.readyState,
+                            networkState: snapshot?.networkState,
+                            buffered: snapshot?.buffered
                         }
                     };
                 });
@@ -3105,7 +3097,18 @@ const PlaybackMonitor = (() => {
             logDebug(summary, {
                 from: prevState,
                 to: nextState,
-                reason
+                reason,
+                currentTime: snapshot?.currentTime ? Number(snapshot.currentTime) : null,
+                paused: snapshot?.paused,
+                readyState: snapshot?.readyState,
+                networkState: snapshot?.networkState,
+                buffered: snapshot?.buffered,
+                lastProgressAgoMs: state.lastProgressTime
+                    ? (Date.now() - state.lastProgressTime)
+                    : null,
+                progressStreakMs: state.progressStreakMs,
+                progressEligible: state.progressEligible,
+                pauseFromStall: state.pauseFromStall
             });
         };
 

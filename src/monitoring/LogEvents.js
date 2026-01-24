@@ -57,15 +57,7 @@ const LogEvents = (() => {
             ['from', data.from],
             ['to', data.to],
             ['reason', data.reason],
-            ['currentTime', data.currentTime],
-            ['paused', data.paused],
-            ['readyState', data.readyState],
-            ['networkState', data.networkState],
-            ['buffered', data.buffered],
-            ['lastProgressAgoMs', data.lastProgressAgoMs],
-            ['progressStreakMs', data.progressStreakMs],
-            ['progressEligible', data.progressEligible],
-            ['pauseFromStall', data.pauseFromStall]
+            ['currentTime', data.currentTime]
         ]),
         watchdogNoProgress: (data = {}) => withTag(TAG.WATCHDOG, [
             ['video', formatVideoId(data.videoId)],
@@ -96,11 +88,7 @@ const LogEvents = (() => {
             ['video', formatVideoId(data.videoId)],
             ['reason', data.reason],
             ['durationMs', data.durationMs],
-            ['bufferAhead', data.bufferAhead],
-            ['currentTime', data.currentTime],
-            ['readyState', data.readyState],
-            ['networkState', data.networkState],
-            ['buffered', data.buffered]
+            ['currentTime', data.currentTime]
         ]),
         healStart: (data = {}) => withTag(TAG.HEAL_START, [
             ['attempt', data.attempt],

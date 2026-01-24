@@ -53,7 +53,18 @@ const PlaybackMonitor = (() => {
             logDebug(summary, {
                 from: prevState,
                 to: nextState,
-                reason
+                reason,
+                currentTime: snapshot?.currentTime ? Number(snapshot.currentTime) : null,
+                paused: snapshot?.paused,
+                readyState: snapshot?.readyState,
+                networkState: snapshot?.networkState,
+                buffered: snapshot?.buffered,
+                lastProgressAgoMs: state.lastProgressTime
+                    ? (Date.now() - state.lastProgressTime)
+                    : null,
+                progressStreakMs: state.progressStreakMs,
+                progressEligible: state.progressEligible,
+                pauseFromStall: state.pauseFromStall
             });
         };
 

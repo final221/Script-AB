@@ -281,7 +281,11 @@ const PlaybackStateTracker = (() => {
                         detail: {
                             reason,
                             durationMs: stallDurationMs,
-                            bufferAhead: state.lastBufferAhead
+                            bufferAhead: state.lastBufferAhead,
+                            currentTime: snapshot?.currentTime ? Number(snapshot.currentTime) : null,
+                            readyState: snapshot?.readyState,
+                            networkState: snapshot?.networkState,
+                            buffered: snapshot?.buffered
                         }
                     };
                 });

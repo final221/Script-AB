@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.1.42 - 2026-01-24T14:59:05.098Z
+Previous: 4.1.41
+Commit: 9ff2114
+Changes:
+- Group script logs with category icons
+
 ## 4.1.41 - 2026-01-24T14:53:23.039Z
 Previous: 4.1.40
 Commit: 5ef5161
