@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.1.67 - 2026-01-24T19:07:23.945Z
+Previous: 4.1.66
+Commit: d352a08
+Changes:
+- refactor core state, snapshots, and buffer analysis
+
 ## 4.1.66 - 2026-01-24T18:34:39.232Z
 Previous: 4.1.65
 Commit: 5525d4f
