@@ -56,6 +56,14 @@ const CoreOrchestrator = (() => {
                     healTimeout: CONFIG.stall.HEAL_TIMEOUT_S + 's'
                 }
             });
+
+            const warnings = ConfigValidator.validate(CONFIG);
+            if (warnings.length > 0) {
+                Logger.add('[CORE] Config validation warnings', {
+                    count: warnings.length,
+                    warnings
+                });
+            }
         }
     };
 })();

@@ -81,7 +81,7 @@ const RecoveryOrchestrator = (() => {
             }
             state.lastBufferStarveRescanTime = now;
             candidateSelector.activateProbation('buffer_starved');
-            const bufferInfo = BufferGapFinder.getBufferAhead(context.video);
+            const bufferInfo = MediaState.bufferAhead(context.video);
             monitoring.scanForVideos('buffer_starved', {
                 videoId: context.videoId,
                 bufferAhead: bufferInfo?.bufferAhead ?? null,

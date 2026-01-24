@@ -145,7 +145,7 @@ const PlaybackEventHandlers = (() => {
                 }
             },
             pause: () => {
-                const bufferExhausted = BufferGapFinder.isBufferExhausted(video);
+                const bufferExhausted = MediaState.isBufferExhausted(video);
                 logEvent('pause', () => ({
                     state: state.state,
                     bufferExhausted,

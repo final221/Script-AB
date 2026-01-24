@@ -40,7 +40,7 @@ const PlaybackWatchdog = (() => {
                 return;
             }
 
-            const bufferExhausted = BufferGapFinder.isBufferExhausted(video);
+            const bufferExhausted = MediaState.isBufferExhausted(video);
             const pausedAfterStall = state.lastStallEventTime > 0
                 && (now - state.lastStallEventTime) < CONFIG.stall.PAUSED_STALL_GRACE_MS;
             let pauseFromStall = state.pauseFromStall || pausedAfterStall;
@@ -61,7 +61,7 @@ const PlaybackWatchdog = (() => {
             }
 
             if (isActive()) {
-                const bufferInfo = BufferGapFinder.getBufferAhead(video);
+                const bufferInfo = MediaState.bufferAhead(video);
                 tracker.updateBufferStarvation(bufferInfo, 'watchdog');
             }
 

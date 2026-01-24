@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.1.32 - 2026-01-24T12:04:13.063Z
+Previous: 4.1.31
+Commit: fbd98a5
+Changes:
+- Improve stability with adaptive grace and abort backoff
+
 ## 4.1.31 - 2026-01-24T11:52:31.120Z
 Previous: 4.1.30
 Commit: d494ccf
