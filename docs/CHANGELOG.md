@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.1.48 - 2026-01-24T16:11:12.842Z
+Previous: 4.1.47
+Commit: b0546de
+Changes:
+- Align console log formatting
+
 ## 4.1.47 - 2026-01-24T16:06:19.216Z
 Previous: 4.1.46
 Commit: de689fa

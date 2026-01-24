@@ -163,7 +163,11 @@ ${stallSummaryLine}${stallRecentLine}${healerLine}
             return 'healer';
         };
 
-        const formatScriptMessage = (message) => {
+        const shouldStripKeyValueSummary = (rest, hasDetail) => (
+            hasDetail && rest && /\b\w+=/.test(rest)
+        );
+
+        const formatScriptMessage = (message, hasDetail) => {
             const match = message.match(/^\[([^\]]+)\]\s*(.*)$/);
             if (!match) {
                 return {
@@ -184,7 +188,8 @@ ${stallSummaryLine}${stallRecentLine}${healerLine}
             }
             const category = categoryForTag(tagKey);
             const icon = ICONS[category] || ICONS.other;
-            const text = rest ? `[${displayTag}] ${rest}` : `[${displayTag}]`;
+            const trimmedRest = shouldStripKeyValueSummary(rest, hasDetail) ? '' : rest;
+            const text = trimmedRest ? `[${displayTag}] ${trimmedRest}` : `[${displayTag}]`;
             return { icon, text };
         };
 
@@ -193,6 +198,20 @@ ${stallSummaryLine}${stallRecentLine}${healerLine}
             message.replace(/^\s*\d{2}:\d{2}:\d{2}\s*-\s*/, '')
         );
 
+        const splitConsoleMessage = (message) => {
+            const match = message.match(/^\(([^)]+)\)\s*(.*)$/);
+            if (match) {
+                return {
+                    summary: `(${match[1]})`,
+                    detail: match[2] || ''
+                };
+            }
+            return {
+                summary: 'Console',
+                detail: message
+            };
+        };
+
         const logContent = logs.map(l => {
             const time = formatTime(l.timestamp);
 
@@ -200,11 +219,13 @@ ${stallSummaryLine}${stallRecentLine}${healerLine}
                 // Console log entry
                 const icon = l.level === 'error' ? '\u274C' : l.level === 'warn' ? '\u26A0\uFE0F' : '\uD83D\uDCCB';
                 const message = stripConsoleTimestamp(l.message);
-                return formatLine(`[${time}] ${icon} `, message, '', true);
+                const split = splitConsoleMessage(message);
+                const detail = JSON.stringify({ message: split.detail });
+                return formatLine(`[${time}] ${icon} `, split.summary, detail, true);
             } else {
                 // Internal script log
                 const sanitized = sanitizeDetail(l.detail, l.message);
-                const formatted = formatScriptMessage(l.message);
+                const formatted = formatScriptMessage(l.message, Boolean(sanitized));
                 const detail = sanitized && Object.keys(sanitized).length > 0
                     ? JSON.stringify(sanitized)
                     : '';
