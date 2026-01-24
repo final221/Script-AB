@@ -48,6 +48,8 @@ const CONFIG = (() => {
             FAILOVER_AFTER_NO_HEAL_POINTS: 3, // Failover after this many consecutive no-heal points
             FAILOVER_AFTER_PLAY_ERRORS: 3, // Failover after this many consecutive play failures
             FAILOVER_AFTER_STALL_MS: 30000,  // Failover after this long stuck without progress
+            FAST_SWITCH_AFTER_NO_HEAL_POINTS: 2, // Switch when active healing is stuck and a stable candidate exists
+            FAST_SWITCH_AFTER_STALL_MS: 15000, // Switch when healing stalls too long and another candidate is stable
             HEALPOINT_REPEAT_FAILOVER_COUNT: 3, // Failover after repeated identical heal points
             FAILOVER_PROGRESS_TIMEOUT_MS: 8000, // Trial time for failover candidate to progress
             FAILOVER_COOLDOWN_MS: 30000,     // Minimum time between failover attempts

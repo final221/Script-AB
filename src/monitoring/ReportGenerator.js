@@ -93,6 +93,11 @@ ${stallSummaryLine}${stallRecentLine}${healerLine}
             if (!isVideoIntro) {
                 stripKeys(sanitized, new Set(['currentSrc', 'src']));
             }
+            if (message.includes('[HEALER:MEDIA_STATE]') && message.includes('src attribute changed')) {
+                delete sanitized.previous;
+                delete sanitized.current;
+                sanitized.changed = true;
+            }
             if (message.includes('[HEALER:SRC]')) {
                 delete sanitized.previous;
                 delete sanitized.current;

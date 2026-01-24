@@ -127,6 +127,7 @@ const CandidateSelector = (() => {
 
         const scoreVideo = (video, monitor, videoId) => scorer.score(video, monitor, videoId);
         const evaluateCandidates = (reason) => {
+            const now = Date.now();
             if (lockChecker && lockChecker()) {
                 logDebug('[HEALER:CANDIDATE] Failover lock active', {
                     reason,
@@ -153,6 +154,7 @@ const CandidateSelector = (() => {
                 current = {
                     id: activeCandidateId,
                     state: entry.monitor.state.state,
+                    monitorState: entry.monitor.state,
                     ...result
                 };
                 current.trusted = trustInfo.trusted;
@@ -210,6 +212,12 @@ const CandidateSelector = (() => {
 
             if (preferred && preferred.id !== activeCandidateId) {
                 const activeState = current ? current.state : null;
+                const activeMonitorState = current ? current.monitorState : null;
+                const activeNoHealPoints = activeMonitorState?.noHealPointCount || 0;
+                const activeStalledForMs = activeMonitorState?.lastProgressTime
+                    ? (now - activeMonitorState.lastProgressTime)
+                    : null;
+                const activeHealing = activeState === 'HEALING';
                 const activeIsStalled = !current || ['STALLED', 'RESET', 'ERROR', 'ENDED'].includes(activeState);
                 const probationActive = isProbationActive();
                 const probationProgressOk = preferred.progressStreakMs >= CONFIG.monitoring.PROBATION_MIN_PROGRESS_MS;
@@ -217,6 +225,41 @@ const CandidateSelector = (() => {
                     && probationProgressOk
                     && (preferred.vs.readyState >= CONFIG.monitoring.PROBATION_READY_STATE
                         || preferred.vs.currentSrc);
+
+                const fastSwitchAllowed = activeHealing
+                    && preferred.trusted
+                    && preferred.progressEligible
+                    && preferred.progressStreakMs >= CONFIG.monitoring.CANDIDATE_MIN_PROGRESS_MS
+                    && (activeNoHealPoints >= CONFIG.stall.FAST_SWITCH_AFTER_NO_HEAL_POINTS
+                        || (activeStalledForMs !== null && activeStalledForMs >= CONFIG.stall.FAST_SWITCH_AFTER_STALL_MS));
+
+                if (fastSwitchAllowed) {
+                    const fromId = activeCandidateId;
+                    Logger.add('[HEALER:CANDIDATE] Fast switch from healing dead-end', {
+                        from: fromId,
+                        to: preferred.id,
+                        reason,
+                        activeState,
+                        noHealPointCount: activeNoHealPoints,
+                        stalledForMs: activeStalledForMs,
+                        preferredScore: preferred.score,
+                        preferredProgressStreakMs: preferred.progressStreakMs,
+                        preferredTrusted: preferred.trusted
+                    });
+                    activeCandidateId = preferred.id;
+                    logDecision({
+                        reason,
+                        action: 'fast_switch',
+                        from: fromId,
+                        to: activeCandidateId,
+                        activeState,
+                        preferredScore: preferred.score,
+                        preferredProgressEligible: preferred.progressEligible,
+                        preferredTrusted: preferred.trusted,
+                        probationActive
+                    });
+                    return preferred;
+                }
 
                 if (!preferred.progressEligible && !probationReady) {
                     logSuppression({

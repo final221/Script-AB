@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.1.38
+// @version       4.1.39
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -61,6 +61,8 @@ const CONFIG = (() => {
             FAILOVER_AFTER_NO_HEAL_POINTS: 3, // Failover after this many consecutive no-heal points
             FAILOVER_AFTER_PLAY_ERRORS: 3, // Failover after this many consecutive play failures
             FAILOVER_AFTER_STALL_MS: 30000,  // Failover after this long stuck without progress
+            FAST_SWITCH_AFTER_NO_HEAL_POINTS: 2, // Switch when active healing is stuck and a stable candidate exists
+            FAST_SWITCH_AFTER_STALL_MS: 15000, // Switch when healing stalls too long and another candidate is stable
             HEALPOINT_REPEAT_FAILOVER_COUNT: 3, // Failover after repeated identical heal points
             FAILOVER_PROGRESS_TIMEOUT_MS: 8000, // Trial time for failover candidate to progress
             FAILOVER_COOLDOWN_MS: 30000,     // Minimum time between failover attempts
@@ -140,7 +142,7 @@ const CONFIG = (() => {
  * Build metadata helpers (version injected at build time).
  */
 const BuildInfo = (() => {
-    const VERSION = '4.1.38';
+    const VERSION = '4.1.39';
 
     const getVersion = () => {
         const gmVersion = (typeof GM_info !== 'undefined' && GM_info?.script?.version)
@@ -151,7 +153,7 @@ const BuildInfo = (() => {
             ? unsafeWindow.GM_info.script.version
             : null;
         if (unsafeVersion) return unsafeVersion;
-        if (VERSION && VERSION !== '4.1.38') return VERSION;
+        if (VERSION && VERSION !== '4.1.39') return VERSION;
         return null;
     };
 
@@ -1274,6 +1276,11 @@ ${stallSummaryLine}${stallRecentLine}${healerLine}
             const isVideoIntro = message.includes('[HEALER:VIDEO] Video registered');
             if (!isVideoIntro) {
                 stripKeys(sanitized, new Set(['currentSrc', 'src']));
+            }
+            if (message.includes('[HEALER:MEDIA_STATE]') && message.includes('src attribute changed')) {
+                delete sanitized.previous;
+                delete sanitized.current;
+                sanitized.changed = true;
             }
             if (message.includes('[HEALER:SRC]')) {
                 delete sanitized.previous;
@@ -3413,6 +3420,7 @@ const CandidateSelector = (() => {
 
         const scoreVideo = (video, monitor, videoId) => scorer.score(video, monitor, videoId);
         const evaluateCandidates = (reason) => {
+            const now = Date.now();
             if (lockChecker && lockChecker()) {
                 logDebug('[HEALER:CANDIDATE] Failover lock active', {
                     reason,
@@ -3439,6 +3447,7 @@ const CandidateSelector = (() => {
                 current = {
                     id: activeCandidateId,
                     state: entry.monitor.state.state,
+                    monitorState: entry.monitor.state,
                     ...result
                 };
                 current.trusted = trustInfo.trusted;
@@ -3496,6 +3505,12 @@ const CandidateSelector = (() => {
 
             if (preferred && preferred.id !== activeCandidateId) {
                 const activeState = current ? current.state : null;
+                const activeMonitorState = current ? current.monitorState : null;
+                const activeNoHealPoints = activeMonitorState?.noHealPointCount || 0;
+                const activeStalledForMs = activeMonitorState?.lastProgressTime
+                    ? (now - activeMonitorState.lastProgressTime)
+                    : null;
+                const activeHealing = activeState === 'HEALING';
                 const activeIsStalled = !current || ['STALLED', 'RESET', 'ERROR', 'ENDED'].includes(activeState);
                 const probationActive = isProbationActive();
                 const probationProgressOk = preferred.progressStreakMs >= CONFIG.monitoring.PROBATION_MIN_PROGRESS_MS;
@@ -3503,6 +3518,41 @@ const CandidateSelector = (() => {
                     && probationProgressOk
                     && (preferred.vs.readyState >= CONFIG.monitoring.PROBATION_READY_STATE
                         || preferred.vs.currentSrc);
+
+                const fastSwitchAllowed = activeHealing
+                    && preferred.trusted
+                    && preferred.progressEligible
+                    && preferred.progressStreakMs >= CONFIG.monitoring.CANDIDATE_MIN_PROGRESS_MS
+                    && (activeNoHealPoints >= CONFIG.stall.FAST_SWITCH_AFTER_NO_HEAL_POINTS
+                        || (activeStalledForMs !== null && activeStalledForMs >= CONFIG.stall.FAST_SWITCH_AFTER_STALL_MS));
+
+                if (fastSwitchAllowed) {
+                    const fromId = activeCandidateId;
+                    Logger.add('[HEALER:CANDIDATE] Fast switch from healing dead-end', {
+                        from: fromId,
+                        to: preferred.id,
+                        reason,
+                        activeState,
+                        noHealPointCount: activeNoHealPoints,
+                        stalledForMs: activeStalledForMs,
+                        preferredScore: preferred.score,
+                        preferredProgressStreakMs: preferred.progressStreakMs,
+                        preferredTrusted: preferred.trusted
+                    });
+                    activeCandidateId = preferred.id;
+                    logDecision({
+                        reason,
+                        action: 'fast_switch',
+                        from: fromId,
+                        to: activeCandidateId,
+                        activeState,
+                        preferredScore: preferred.score,
+                        preferredProgressEligible: preferred.progressEligible,
+                        preferredTrusted: preferred.trusted,
+                        probationActive
+                    });
+                    return preferred;
+                }
 
                 if (!preferred.progressEligible && !probationReady) {
                     logSuppression({

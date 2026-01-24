@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.1.39 - 2026-01-24T14:24:54.530Z
+Previous: 4.1.38
+Commit: bd24d14
+Changes:
+- De-duplicate video IDs and srcs in reports
+
 ## 4.1.38 - 2026-01-24T12:53:42.744Z
 Previous: 4.1.37
 Commit: 1d6000e
