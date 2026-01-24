@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.1.72 - 2026-01-24T19:47:39.000Z
+Previous: 4.1.71
+Commit: 56078a6
+Changes:
+- update tuning and debugging docs
+
 ## 4.1.71 - 2026-01-24T19:39:00.969Z
 Previous: 4.1.70
 Commit: 86b7f91

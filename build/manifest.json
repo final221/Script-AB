@@ -42,6 +42,7 @@
     "core/PlaybackStarvationLogic.js",
     "core/RecoveryContext.js",
     "core/PlaybackStateTracker.js",
+    "core/PlaybackEventLogger.js",
     "core/PlaybackEventHandlers.js",
     "core/PlaybackWatchdog.js",
     "core/PlaybackMonitor.js",

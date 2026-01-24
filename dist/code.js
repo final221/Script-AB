@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.1.71
+// @version       4.1.72
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -152,7 +152,7 @@ const CONFIG = (() => {
  * Build metadata helpers (version injected at build time).
  */
 const BuildInfo = (() => {
-    const VERSION = '4.1.71';
+    const VERSION = '4.1.72';
 
     const getVersion = () => {
         const gmVersion = (typeof GM_info !== 'undefined' && GM_info?.script?.version)
@@ -163,7 +163,7 @@ const BuildInfo = (() => {
             ? unsafeWindow.GM_info.script.version
             : null;
         if (unsafeVersion) return unsafeVersion;
-        if (VERSION && VERSION !== '4.1.71') return VERSION;
+        if (VERSION && VERSION !== '4.1.72') return VERSION;
         return null;
     };
 
@@ -3701,19 +3701,14 @@ const PlaybackStateTracker = (() => {
 })();
 
 
-// --- PlaybackEventHandlers ---
+// --- PlaybackEventLogger ---
 /**
- * Wires media element events to playback state tracking.
+ * Shared logging for playback event handlers.
  */
-const PlaybackEventHandlers = (() => {
-    const create = (options) => {
-        const video = options.video;
-        const videoId = options.videoId;
-        const logDebug = options.logDebug;
-        const tracker = options.tracker;
+const PlaybackEventLogger = (() => {
+    const create = (options = {}) => {
+        const logDebug = options.logDebug || (() => {});
         const state = options.state;
-        const setState = options.setState;
-        const onReset = options.onReset || (() => {});
         const isActive = options.isActive || (() => true);
 
         const ALWAYS_LOG_EVENTS = new Set(['abort', 'emptied', 'error', 'ended']);
@@ -3774,6 +3769,33 @@ const PlaybackEventHandlers = (() => {
                 state: state.state
             });
         };
+
+        return { logEvent };
+    };
+
+    return { create };
+})();
+
+// --- PlaybackEventHandlers ---
+/**
+ * Wires media element events to playback state tracking.
+ */
+const PlaybackEventHandlers = (() => {
+    const create = (options) => {
+        const video = options.video;
+        const videoId = options.videoId;
+        const logDebug = options.logDebug;
+        const tracker = options.tracker;
+        const state = options.state;
+        const setState = options.setState;
+        const onReset = options.onReset || (() => {});
+        const isActive = options.isActive || (() => true);
+        const eventLogger = PlaybackEventLogger.create({
+            logDebug,
+            state,
+            isActive
+        });
+        const logEvent = eventLogger.logEvent;
 
         const handlers = {
             timeupdate: () => {
