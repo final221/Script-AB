@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.1.23 - 2026-01-24T09:56:59.171Z
+Previous: 4.1.22
+Commit: 200d00a
+Changes:
+- Add stall duration summary and abort context
+
 ## 4.1.22 - 2026-01-24T09:42:42.272Z
 Previous: 4.1.21
 Commit: 96cedc9

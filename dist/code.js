@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.1.22
+// @version       4.1.23
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -45,6 +45,8 @@ const CONFIG = (() => {
             INIT_PROGRESS_GRACE_MS: 5000,   // Wait for initial progress before treating as stalled
             RESET_GRACE_MS: 2000,           // Delay before confirming reset (abort/emptied)
             RECOVERY_WINDOW_MS: 1500,       // Recent progress window to consider recovered
+            SELF_RECOVER_GRACE_MS: 4000,    // Wait for recent src/buffer changes before healing
+            SELF_RECOVER_MAX_MS: 12000,     // Max time to defer healing for self-recovery signals
             RETRY_COOLDOWN_MS: 2000,        // Cooldown between heal attempts for same stall
             HEAL_POLL_INTERVAL_MS: 200,     // How often to poll for heal point
             HEAL_TIMEOUT_S: 15,             // Give up after this many seconds
@@ -1334,6 +1336,10 @@ const PlaybackStateTracker = (() => {
             lastSrcAttr: video.getAttribute ? (video.getAttribute('src') || '') : '',
             lastReadyState: video.readyState,
             lastNetworkState: video.networkState,
+            lastSrcChangeTime: 0,
+            lastReadyStateChangeTime: 0,
+            lastNetworkStateChangeTime: 0,
+            lastBufferedLengthChangeTime: 0,
             lastBufferedLength: (() => {
                 try {
                     return video.buffered ? video.buffered.length : 0;
@@ -1360,9 +1366,12 @@ const PlaybackStateTracker = (() => {
             lastBufferStarveSkipLogTime: 0,
             lastBufferStarveRescanTime: 0,
             lastBufferAhead: null,
+            lastBufferAheadUpdateTime: 0,
+            lastBufferAheadIncreaseTime: 0,
             lastHealDeferralLogTime: 0,
             lastRefreshAt: 0,
-            stallStartTime: 0
+            stallStartTime: 0,
+            lastSelfRecoverSkipLogTime: 0
         };
 
         const evaluateResetState = (vs) => {
@@ -1744,7 +1753,18 @@ const PlaybackStateTracker = (() => {
                 }
             }
 
+            const prevBufferAhead = state.lastBufferAhead;
             state.lastBufferAhead = bufferAhead;
+            state.lastBufferAheadUpdateTime = now;
+            if (Number.isFinite(bufferAhead)) {
+                if (Number.isFinite(prevBufferAhead)) {
+                    if (bufferAhead > prevBufferAhead + 0.05) {
+                        state.lastBufferAheadIncreaseTime = now;
+                    }
+                } else if (bufferAhead > 0) {
+                    state.lastBufferAheadIncreaseTime = now;
+                }
+            }
 
             if (bufferAhead <= CONFIG.stall.BUFFER_STARVE_THRESHOLD_S) {
                 if (!state.bufferStarvedSince) {
@@ -2116,6 +2136,7 @@ const PlaybackWatchdog = (() => {
                     videoState: VideoState.get(video, videoId)
                 });
                 state.lastSrc = currentSrc;
+                state.lastSrcChangeTime = now;
             }
 
             const srcAttr = video.getAttribute ? (video.getAttribute('src') || '') : '';
@@ -2136,6 +2157,7 @@ const PlaybackWatchdog = (() => {
                     videoState: VideoState.getLite(video, videoId)
                 });
                 state.lastReadyState = readyState;
+                state.lastReadyStateChangeTime = now;
             }
 
             const networkState = video.networkState;
@@ -2146,6 +2168,7 @@ const PlaybackWatchdog = (() => {
                     videoState: VideoState.getLite(video, videoId)
                 });
                 state.lastNetworkState = networkState;
+                state.lastNetworkStateChangeTime = now;
             }
 
             let bufferedLength = 0;
@@ -2161,6 +2184,7 @@ const PlaybackWatchdog = (() => {
                     videoState: VideoState.getLite(video, videoId)
                 });
                 state.lastBufferedLength = bufferedLength;
+                state.lastBufferedLengthChangeTime = now;
             }
 
             tracker.logSyncStatus();
@@ -3610,6 +3634,53 @@ const RecoveryManager = (() => {
                     });
                 }
                 return true;
+            }
+
+            if (monitorState) {
+                const lastProgress = monitorState.lastProgressTime || 0;
+                const stalledForMs = lastProgress ? (now - lastProgress) : null;
+                const graceMs = CONFIG.stall.SELF_RECOVER_GRACE_MS;
+                const maxMs = CONFIG.stall.SELF_RECOVER_MAX_MS;
+
+                if (stalledForMs !== null && (!maxMs || stalledForMs <= maxMs)) {
+                    const signals = [];
+                    const lastSrcChange = monitorState.lastSrcChangeTime || 0;
+                    const lastReadyChange = monitorState.lastReadyStateChangeTime || 0;
+                    const lastNetworkChange = monitorState.lastNetworkStateChangeTime || 0;
+                    const lastBufferRangeChange = monitorState.lastBufferedLengthChangeTime || 0;
+                    const lastBufferGrow = monitorState.lastBufferAheadIncreaseTime || 0;
+
+                    if (lastSrcChange > lastProgress && (now - lastSrcChange) <= graceMs) {
+                        signals.push('src_change');
+                    }
+                    if (lastReadyChange > lastProgress && (now - lastReadyChange) <= graceMs) {
+                        signals.push('ready_state');
+                    }
+                    if (lastNetworkChange > lastProgress && (now - lastNetworkChange) <= graceMs) {
+                        signals.push('network_state');
+                    }
+                    if (lastBufferRangeChange > lastProgress && (now - lastBufferRangeChange) <= graceMs) {
+                        signals.push('buffer_ranges');
+                    }
+                    if (lastBufferGrow > lastProgress && (now - lastBufferGrow) <= graceMs) {
+                        signals.push('buffer_growth');
+                    }
+
+                    if (signals.length > 0) {
+                        if (now - (monitorState.lastSelfRecoverSkipLogTime || 0) > CONFIG.logging.BACKOFF_LOG_INTERVAL_MS) {
+                            monitorState.lastSelfRecoverSkipLogTime = now;
+                            logDebug('[HEALER:SELF_RECOVER_SKIP] Stall skipped for self-recovery window', {
+                                videoId,
+                                stalledForMs,
+                                graceMs,
+                                signals,
+                                bufferAhead: monitorState.lastBufferAhead,
+                                bufferStarved: monitorState.bufferStarved || false
+                            });
+                        }
+                        return true;
+                    }
+                }
             }
             return false;
         };

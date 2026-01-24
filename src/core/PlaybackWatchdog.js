@@ -73,6 +73,7 @@ const PlaybackWatchdog = (() => {
                     videoState: VideoState.get(video, videoId)
                 });
                 state.lastSrc = currentSrc;
+                state.lastSrcChangeTime = now;
             }
 
             const srcAttr = video.getAttribute ? (video.getAttribute('src') || '') : '';
@@ -93,6 +94,7 @@ const PlaybackWatchdog = (() => {
                     videoState: VideoState.getLite(video, videoId)
                 });
                 state.lastReadyState = readyState;
+                state.lastReadyStateChangeTime = now;
             }
 
             const networkState = video.networkState;
@@ -103,6 +105,7 @@ const PlaybackWatchdog = (() => {
                     videoState: VideoState.getLite(video, videoId)
                 });
                 state.lastNetworkState = networkState;
+                state.lastNetworkStateChangeTime = now;
             }
 
             let bufferedLength = 0;
@@ -118,6 +121,7 @@ const PlaybackWatchdog = (() => {
                     videoState: VideoState.getLite(video, videoId)
                 });
                 state.lastBufferedLength = bufferedLength;
+                state.lastBufferedLengthChangeTime = now;
             }
 
             tracker.logSyncStatus();

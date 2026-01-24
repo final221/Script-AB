@@ -32,6 +32,8 @@ const CONFIG = (() => {
             INIT_PROGRESS_GRACE_MS: 5000,   // Wait for initial progress before treating as stalled
             RESET_GRACE_MS: 2000,           // Delay before confirming reset (abort/emptied)
             RECOVERY_WINDOW_MS: 1500,       // Recent progress window to consider recovered
+            SELF_RECOVER_GRACE_MS: 4000,    // Wait for recent src/buffer changes before healing
+            SELF_RECOVER_MAX_MS: 12000,     // Max time to defer healing for self-recovery signals
             RETRY_COOLDOWN_MS: 2000,        // Cooldown between heal attempts for same stall
             HEAL_POLL_INTERVAL_MS: 200,     // How often to poll for heal point
             HEAL_TIMEOUT_S: 15,             // Give up after this many seconds

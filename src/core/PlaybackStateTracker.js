@@ -38,6 +38,10 @@ const PlaybackStateTracker = (() => {
             lastSrcAttr: video.getAttribute ? (video.getAttribute('src') || '') : '',
             lastReadyState: video.readyState,
             lastNetworkState: video.networkState,
+            lastSrcChangeTime: 0,
+            lastReadyStateChangeTime: 0,
+            lastNetworkStateChangeTime: 0,
+            lastBufferedLengthChangeTime: 0,
             lastBufferedLength: (() => {
                 try {
                     return video.buffered ? video.buffered.length : 0;
@@ -64,9 +68,12 @@ const PlaybackStateTracker = (() => {
             lastBufferStarveSkipLogTime: 0,
             lastBufferStarveRescanTime: 0,
             lastBufferAhead: null,
+            lastBufferAheadUpdateTime: 0,
+            lastBufferAheadIncreaseTime: 0,
             lastHealDeferralLogTime: 0,
             lastRefreshAt: 0,
-            stallStartTime: 0
+            stallStartTime: 0,
+            lastSelfRecoverSkipLogTime: 0
         };
 
         const evaluateResetState = (vs) => {
@@ -448,7 +455,18 @@ const PlaybackStateTracker = (() => {
                 }
             }
 
+            const prevBufferAhead = state.lastBufferAhead;
             state.lastBufferAhead = bufferAhead;
+            state.lastBufferAheadUpdateTime = now;
+            if (Number.isFinite(bufferAhead)) {
+                if (Number.isFinite(prevBufferAhead)) {
+                    if (bufferAhead > prevBufferAhead + 0.05) {
+                        state.lastBufferAheadIncreaseTime = now;
+                    }
+                } else if (bufferAhead > 0) {
+                    state.lastBufferAheadIncreaseTime = now;
+                }
+            }
 
             if (bufferAhead <= CONFIG.stall.BUFFER_STARVE_THRESHOLD_S) {
                 if (!state.bufferStarvedSince) {

@@ -223,6 +223,53 @@ const RecoveryManager = (() => {
                 }
                 return true;
             }
+
+            if (monitorState) {
+                const lastProgress = monitorState.lastProgressTime || 0;
+                const stalledForMs = lastProgress ? (now - lastProgress) : null;
+                const graceMs = CONFIG.stall.SELF_RECOVER_GRACE_MS;
+                const maxMs = CONFIG.stall.SELF_RECOVER_MAX_MS;
+
+                if (stalledForMs !== null && (!maxMs || stalledForMs <= maxMs)) {
+                    const signals = [];
+                    const lastSrcChange = monitorState.lastSrcChangeTime || 0;
+                    const lastReadyChange = monitorState.lastReadyStateChangeTime || 0;
+                    const lastNetworkChange = monitorState.lastNetworkStateChangeTime || 0;
+                    const lastBufferRangeChange = monitorState.lastBufferedLengthChangeTime || 0;
+                    const lastBufferGrow = monitorState.lastBufferAheadIncreaseTime || 0;
+
+                    if (lastSrcChange > lastProgress && (now - lastSrcChange) <= graceMs) {
+                        signals.push('src_change');
+                    }
+                    if (lastReadyChange > lastProgress && (now - lastReadyChange) <= graceMs) {
+                        signals.push('ready_state');
+                    }
+                    if (lastNetworkChange > lastProgress && (now - lastNetworkChange) <= graceMs) {
+                        signals.push('network_state');
+                    }
+                    if (lastBufferRangeChange > lastProgress && (now - lastBufferRangeChange) <= graceMs) {
+                        signals.push('buffer_ranges');
+                    }
+                    if (lastBufferGrow > lastProgress && (now - lastBufferGrow) <= graceMs) {
+                        signals.push('buffer_growth');
+                    }
+
+                    if (signals.length > 0) {
+                        if (now - (monitorState.lastSelfRecoverSkipLogTime || 0) > CONFIG.logging.BACKOFF_LOG_INTERVAL_MS) {
+                            monitorState.lastSelfRecoverSkipLogTime = now;
+                            logDebug('[HEALER:SELF_RECOVER_SKIP] Stall skipped for self-recovery window', {
+                                videoId,
+                                stalledForMs,
+                                graceMs,
+                                signals,
+                                bufferAhead: monitorState.lastBufferAhead,
+                                bufferStarved: monitorState.bufferStarved || false
+                            });
+                        }
+                        return true;
+                    }
+                }
+            }
             return false;
         };
 
