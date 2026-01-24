@@ -65,7 +65,8 @@ const PlaybackStateTracker = (() => {
             lastBufferStarveRescanTime: 0,
             lastBufferAhead: null,
             lastHealDeferralLogTime: 0,
-            lastRefreshAt: 0
+            lastRefreshAt: 0,
+            stallStartTime: 0
         };
 
         const evaluateResetState = (vs) => {
@@ -121,6 +122,22 @@ const PlaybackStateTracker = (() => {
 
             if (video.paused || timeDelta <= PROGRESS_EPSILON) {
                 return;
+            }
+
+            if (state.stallStartTime) {
+                const stallDurationMs = now - state.stallStartTime;
+                state.stallStartTime = 0;
+                Metrics.recordStallDuration(stallDurationMs, {
+                    videoId,
+                    reason,
+                    bufferAhead: state.lastBufferAhead
+                });
+                logDebug('[HEALER:STALL_DURATION] Stall cleared by progress', {
+                    reason,
+                    durationMs: stallDurationMs,
+                    bufferAhead: state.lastBufferAhead,
+                    videoState: VideoState.getLite(video, videoId)
+                });
             }
 
             if (!state.progressStartTime
@@ -233,6 +250,9 @@ const PlaybackStateTracker = (() => {
 
         const markStallEvent = (reason) => {
             state.lastStallEventTime = Date.now();
+            if (!state.stallStartTime) {
+                state.stallStartTime = state.lastStallEventTime;
+            }
             if (!state.pauseFromStall) {
                 state.pauseFromStall = true;
                 logDebug('[HEALER:STALL] Marked paused due to stall', {

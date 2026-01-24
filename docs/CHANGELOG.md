@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.1.22 - 2026-01-24T09:42:42.272Z
+Previous: 4.1.21
+Commit: 96cedc9
+Changes:
+- Fold healer stats into ad log export
+
 ## 4.1.21 - 2026-01-24T09:24:50.671Z
 Previous: 4.1.20
 Commit: 6c41159

@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.1.21
+// @version       4.1.22
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -758,13 +758,19 @@ const Logger = (() => {
  * @responsibility Collects and calculates application metrics.
  */
 const Metrics = (() => {
+    const STALL_HISTORY_MAX = 20;
     const counters = {
         stalls_detected: 0,
+        stalls_duration_total_ms: 0,
+        stalls_duration_max_ms: 0,
+        stalls_duration_last_ms: 0,
+        stalls_duration_count: 0,
         heals_successful: 0,
         heals_failed: 0,
         errors: 0,
         session_start: Date.now(),
     };
+    const stallHistory = [];
 
     const increment = (category, value = 1) => {
         if (counters[category] !== undefined) {
@@ -772,13 +778,21 @@ const Metrics = (() => {
         }
     };
 
-    const getSummary = () => ({
-        ...counters,
-        uptime_ms: Date.now() - counters.session_start,
-        heal_rate: counters.stalls_detected > 0
-            ? ((counters.heals_successful / counters.stalls_detected) * 100).toFixed(1) + '%'
-            : 'N/A',
-    });
+    const getSummary = () => {
+        const avgMs = counters.stalls_duration_count > 0
+            ? Math.round(counters.stalls_duration_total_ms / counters.stalls_duration_count)
+            : 0;
+
+        return {
+            ...counters,
+            uptime_ms: Date.now() - counters.session_start,
+            heal_rate: counters.stalls_detected > 0
+                ? ((counters.heals_successful / counters.stalls_detected) * 100).toFixed(1) + '%'
+                : 'N/A',
+            stall_duration_avg_ms: avgMs,
+            stall_duration_recent_ms: stallHistory.map(entry => entry.ms)
+        };
+    };
 
     const get = (category) => counters[category] || 0;
 
@@ -787,6 +801,7 @@ const Metrics = (() => {
             if (key !== 'session_start') counters[key] = 0;
         });
         counters.session_start = Date.now();
+        stallHistory.length = 0;
     };
 
     return {
@@ -794,6 +809,22 @@ const Metrics = (() => {
         get,
         reset,
         getSummary,
+        recordStallDuration: (durationMs, detail = {}) => {
+            if (!Number.isFinite(durationMs) || durationMs <= 0) return;
+            counters.stalls_duration_count += 1;
+            counters.stalls_duration_total_ms += durationMs;
+            counters.stalls_duration_last_ms = durationMs;
+            counters.stalls_duration_max_ms = Math.max(counters.stalls_duration_max_ms, durationMs);
+
+            stallHistory.push({
+                ms: Math.round(durationMs),
+                at: Date.now(),
+                ...detail
+            });
+            if (stallHistory.length > STALL_HISTORY_MAX) {
+                stallHistory.splice(0, stallHistory.length - STALL_HISTORY_MAX);
+            }
+        }
     };
 })();
 
@@ -813,6 +844,20 @@ Heal attempts: ${healerStats.healAttempts}
 Monitored videos: ${healerStats.monitoredCount}
 ` : '';
 
+        const stallCount = Number(metricsSummary.stalls_duration_count || 0);
+        const stallAvgMs = Number(metricsSummary.stall_duration_avg_ms || 0);
+        const stallMaxMs = Number(metricsSummary.stalls_duration_max_ms || 0);
+        const stallLastMs = Number(metricsSummary.stalls_duration_last_ms || 0);
+        const stallRecent = Array.isArray(metricsSummary.stall_duration_recent_ms)
+            ? metricsSummary.stall_duration_recent_ms
+            : [];
+        const stallSummaryLine = stallCount > 0
+            ? `Stall durations: count ${stallCount}, avg ${(stallAvgMs / 1000).toFixed(1)}s, max ${(stallMaxMs / 1000).toFixed(1)}s, last ${(stallLastMs / 1000).toFixed(1)}s\n`
+            : 'Stall durations: none recorded\n';
+        const stallRecentLine = stallRecent.length > 0
+            ? `Recent stalls: ${stallRecent.slice(-5).map(ms => (Number(ms) / 1000).toFixed(1) + 's').join(', ')}\n`
+            : '';
+
         // Header with metrics
         const header = `[STREAM HEALER METRICS]
 Uptime: ${(metricsSummary.uptime_ms / 1000).toFixed(1)}s
@@ -821,7 +866,7 @@ Heals Successful: ${metricsSummary.heals_successful}
 Heals Failed: ${metricsSummary.heals_failed}
 Heal Rate: ${metricsSummary.heal_rate}
 Errors: ${metricsSummary.errors}
-${healerSection}
+${stallSummaryLine}${stallRecentLine}${healerSection}
 [LEGEND]
 🔧 = Script internal log
 📋 = Console.log/info/debug
@@ -1316,7 +1361,8 @@ const PlaybackStateTracker = (() => {
             lastBufferStarveRescanTime: 0,
             lastBufferAhead: null,
             lastHealDeferralLogTime: 0,
-            lastRefreshAt: 0
+            lastRefreshAt: 0,
+            stallStartTime: 0
         };
 
         const evaluateResetState = (vs) => {
@@ -1372,6 +1418,22 @@ const PlaybackStateTracker = (() => {
 
             if (video.paused || timeDelta <= PROGRESS_EPSILON) {
                 return;
+            }
+
+            if (state.stallStartTime) {
+                const stallDurationMs = now - state.stallStartTime;
+                state.stallStartTime = 0;
+                Metrics.recordStallDuration(stallDurationMs, {
+                    videoId,
+                    reason,
+                    bufferAhead: state.lastBufferAhead
+                });
+                logDebug('[HEALER:STALL_DURATION] Stall cleared by progress', {
+                    reason,
+                    durationMs: stallDurationMs,
+                    bufferAhead: state.lastBufferAhead,
+                    videoState: VideoState.getLite(video, videoId)
+                });
             }
 
             if (!state.progressStartTime
@@ -1484,6 +1546,9 @@ const PlaybackStateTracker = (() => {
 
         const markStallEvent = (reason) => {
             state.lastStallEventTime = Date.now();
+            if (!state.stallStartTime) {
+                state.stallStartTime = state.lastStallEventTime;
+            }
             if (!state.pauseFromStall) {
                 state.pauseFromStall = true;
                 logDebug('[HEALER:STALL] Marked paused due to stall', {
@@ -4172,6 +4237,27 @@ const HealPipeline = (() => {
                     scheduleCatchUp(video, monitorState, 'post_heal');
                 } else {
                     const repeatCount = updateHealPointRepeat(monitorState, finalPoint, false);
+                    if (isAbortError(result)) {
+                        const bufferRanges = BufferGapFinder.formatRanges(BufferGapFinder.getBufferRanges(video));
+                        Logger.add('[HEALER:ABORT_CONTEXT] Play aborted during heal', {
+                            error: result.error,
+                            errorName: result.errorName,
+                            stalledForMs: monitorState?.lastProgressTime
+                                ? (Date.now() - monitorState.lastProgressTime)
+                                : null,
+                            bufferStarved: monitorState?.bufferStarved || false,
+                            bufferStarvedSinceMs: monitorState?.bufferStarvedSince
+                                ? (Date.now() - monitorState.bufferStarvedSince)
+                                : null,
+                            bufferStarveUntilMs: monitorState?.bufferStarveUntil
+                                ? Math.max(monitorState.bufferStarveUntil - Date.now(), 0)
+                                : null,
+                            bufferAhead: monitorState?.lastBufferAhead ?? null,
+                            bufferRanges,
+                            readyState: video.readyState,
+                            networkState: video.networkState
+                        });
+                    }
                     Logger.add('[HEALER:FAILED] Heal attempt failed', {
                         duration: duration + 'ms',
                         error: result.error,

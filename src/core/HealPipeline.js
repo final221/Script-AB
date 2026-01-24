@@ -341,6 +341,27 @@ const HealPipeline = (() => {
                     scheduleCatchUp(video, monitorState, 'post_heal');
                 } else {
                     const repeatCount = updateHealPointRepeat(monitorState, finalPoint, false);
+                    if (isAbortError(result)) {
+                        const bufferRanges = BufferGapFinder.formatRanges(BufferGapFinder.getBufferRanges(video));
+                        Logger.add('[HEALER:ABORT_CONTEXT] Play aborted during heal', {
+                            error: result.error,
+                            errorName: result.errorName,
+                            stalledForMs: monitorState?.lastProgressTime
+                                ? (Date.now() - monitorState.lastProgressTime)
+                                : null,
+                            bufferStarved: monitorState?.bufferStarved || false,
+                            bufferStarvedSinceMs: monitorState?.bufferStarvedSince
+                                ? (Date.now() - monitorState.bufferStarvedSince)
+                                : null,
+                            bufferStarveUntilMs: monitorState?.bufferStarveUntil
+                                ? Math.max(monitorState.bufferStarveUntil - Date.now(), 0)
+                                : null,
+                            bufferAhead: monitorState?.lastBufferAhead ?? null,
+                            bufferRanges,
+                            readyState: video.readyState,
+                            networkState: video.networkState
+                        });
+                    }
                     Logger.add('[HEALER:FAILED] Heal attempt failed', {
                         duration: duration + 'ms',
                         error: result.error,
