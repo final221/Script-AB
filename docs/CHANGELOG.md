@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.1.81 - 2026-01-24T20:23:07.672Z
+Previous: 4.1.80
+Commit: e0cea2a
+Changes:
+- refactor: extract heal attempt helpers
+
 ## 4.1.80 - 2026-01-24T20:18:21.557Z
 Previous: 4.1.79
 Commit: 8ea5534

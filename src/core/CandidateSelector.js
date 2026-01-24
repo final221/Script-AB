@@ -14,8 +14,6 @@ const CandidateSelector = (() => {
         let activeCandidateId = null;
         let lockChecker = null;
         let lastGoodCandidateId = null;
-        let probationUntil = 0;
-        let probationReason = null;
         const scorer = CandidateScorer.create({ minProgressMs, isFallbackSource });
         const switchPolicy = CandidateSwitchPolicy.create({
             switchDelta,
@@ -23,33 +21,14 @@ const CandidateSelector = (() => {
             logDebug
         });
         const selectionLogger = CandidateSelectionLogger.create({ logDebug });
+        const probation = CandidateProbation.create();
 
         const setLockChecker = (fn) => {
             lockChecker = fn;
         };
 
-        const activateProbation = (reason) => {
-            const windowMs = CONFIG.monitoring.PROBATION_WINDOW_MS;
-            probationUntil = Date.now() + windowMs;
-            probationReason = reason || 'unknown';
-            Logger.add(LogEvents.tagged('PROBATION', 'Window started'), {
-                reason: probationReason,
-                windowMs
-            });
-        };
-
-        const isProbationActive = () => {
-            if (!probationUntil) return false;
-            if (Date.now() <= probationUntil) {
-                return true;
-            }
-            Logger.add(LogEvents.tagged('PROBATION', 'Window ended'), {
-                reason: probationReason
-            });
-            probationUntil = 0;
-            probationReason = null;
-            return false;
-        };
+        const activateProbation = (reason) => probation.activate(reason);
+        const isProbationActive = () => probation.isActive();
 
         const logDecision = selectionLogger.logDecision;
         const logSuppression = selectionLogger.logSuppression;
