@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.1.80 - 2026-01-24T20:18:21.557Z
+Previous: 4.1.79
+Commit: 8ea5534
+Changes:
+- refactor: extract playback media watcher
+
 ## 4.1.79 - 2026-01-24T20:14:31.242Z
 Previous: 4.1.78
 Commit: 07f8d45

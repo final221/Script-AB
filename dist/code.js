@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.1.79
+// @version       4.1.80
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -152,7 +152,7 @@ const CONFIG = (() => {
  * Build metadata helpers (version injected at build time).
  */
 const BuildInfo = (() => {
-    const VERSION = '4.1.79';
+    const VERSION = '4.1.80';
 
     const getVersion = () => {
         const gmVersion = (typeof GM_info !== 'undefined' && GM_info?.script?.version)
@@ -163,7 +163,7 @@ const BuildInfo = (() => {
             ? unsafeWindow.GM_info.script.version
             : null;
         if (unsafeVersion) return unsafeVersion;
-        if (VERSION && VERSION !== '4.1.79') return VERSION;
+        if (VERSION && VERSION !== '4.1.80') return VERSION;
         return null;
     };
 
@@ -6614,6 +6614,221 @@ const CatchUpController = (() => {
     return { create };
 })();
 
+// --- HealAttemptUtils ---
+/**
+ * Shared helper functions for heal attempts.
+ */
+const HealAttemptUtils = (() => {
+    const getBufferEndDelta = (video) => {
+        const ranges = BufferGapFinder.getBufferRanges(video);
+        if (!ranges.length) return null;
+        const end = ranges[ranges.length - 1].end;
+        return end - video.currentTime;
+    };
+
+    const isAbortError = (result) => (
+        result?.errorName === 'AbortError'
+        || (typeof result?.error === 'string' && result.error.includes('aborted'))
+    );
+
+    const isPlayFailure = (result) => (
+        isAbortError(result)
+        || result?.errorName === 'PLAY_STUCK'
+    );
+
+    const updateHealPointRepeat = (monitorStateRef, point, succeeded) => {
+        if (!monitorStateRef) return 0;
+        if (succeeded || !point) {
+            monitorStateRef.lastHealPointKey = null;
+            monitorStateRef.healPointRepeatCount = 0;
+            return 0;
+        }
+        const key = `${point.start.toFixed(2)}-${point.end.toFixed(2)}`;
+        if (monitorStateRef.lastHealPointKey === key) {
+            monitorStateRef.healPointRepeatCount = (monitorStateRef.healPointRepeatCount || 0) + 1;
+        } else {
+            monitorStateRef.lastHealPointKey = key;
+            monitorStateRef.healPointRepeatCount = 1;
+        }
+        return monitorStateRef.healPointRepeatCount;
+    };
+
+    return {
+        getBufferEndDelta,
+        isAbortError,
+        isPlayFailure,
+        updateHealPointRepeat
+    };
+})();
+
+// --- HealAttemptLogger ---
+/**
+ * Logging helper for heal attempts.
+ */
+const HealAttemptLogger = (() => {
+    const create = () => {
+        const logStart = (detail = {}) => {
+            const snapshot = StateSnapshot.full(detail.video, detail.videoId);
+            const lastProgressAgoMs = detail.monitorState?.lastProgressTime
+                ? (Date.now() - detail.monitorState.lastProgressTime)
+                : null;
+            const startSummary = LogEvents.summary.healStart({
+                attempt: detail.attempt,
+                lastProgressAgoMs,
+                currentTime: snapshot?.currentTime ? Number(snapshot.currentTime) : null,
+                paused: snapshot?.paused,
+                readyState: snapshot?.readyState,
+                networkState: snapshot?.networkState,
+                buffered: snapshot?.buffered
+            });
+            Logger.add(startSummary, {
+                attempt: detail.attempt,
+                lastProgressAgoMs: detail.monitorState ? lastProgressAgoMs : undefined,
+                videoId: detail.videoId,
+                videoState: snapshot
+            });
+        };
+
+        const logSelfRecovered = (durationMs, video, videoId) => {
+            Logger.add(LogEvents.tagged('SKIPPED', 'Video recovered, no heal needed'), {
+                duration: durationMs + 'ms',
+                finalState: VideoStateSnapshot.forLog(video, videoId)
+            });
+        };
+
+        const logNoHealPoint = (durationMs, video, videoId) => {
+            const noPointSummary = LogEvents.summary.noHealPoint({
+                duration: durationMs,
+                currentTime: video.currentTime,
+                bufferRanges: BufferGapFinder.analyze(video).formattedRanges
+            });
+            Logger.add(noPointSummary, {
+                duration: durationMs + 'ms',
+                suggestion: 'User may need to refresh page',
+                currentTime: video.currentTime?.toFixed(3),
+                bufferRanges: BufferGapFinder.analyze(video).formattedRanges,
+                finalState: VideoStateSnapshot.forLog(video, videoId)
+            });
+        };
+
+        const logStaleRecovered = (durationMs) => {
+            Logger.add(LogEvents.tagged('STALE_RECOVERED', 'Heal point gone, but video recovered'), {
+                duration: durationMs + 'ms'
+            });
+        };
+
+        const logStaleGone = (healPoint, video, videoId) => {
+            Logger.add(LogEvents.tagged('STALE_GONE', 'Heal point disappeared before seek'), {
+                original: `${healPoint.start.toFixed(2)}-${healPoint.end.toFixed(2)}`,
+                finalState: VideoStateSnapshot.forLog(video, videoId)
+            });
+        };
+
+        const logPointUpdated = (originalPoint, freshPoint) => {
+            Logger.add(LogEvents.tagged('POINT_UPDATED', 'Using refreshed heal point'), {
+                original: `${originalPoint.start.toFixed(2)}-${originalPoint.end.toFixed(2)}`,
+                fresh: `${freshPoint.start.toFixed(2)}-${freshPoint.end.toFixed(2)}`,
+                type: freshPoint.isNudge ? 'NUDGE' : 'GAP'
+            });
+        };
+
+        const logRetry = (label, point) => {
+            Logger.add(LogEvents.tagged('RETRY', 'Retrying heal'), {
+                attempt: label,
+                healRange: `${point.start.toFixed(2)}-${point.end.toFixed(2)}`,
+                gapSize: point.gapSize?.toFixed(2),
+                isNudge: point.isNudge
+            });
+        };
+
+        const logRetrySkip = (video, reason) => {
+            Logger.add(LogEvents.tagged('RETRY_SKIP', 'Retry skipped, no heal point available'), {
+                reason,
+                currentTime: video.currentTime?.toFixed(3),
+                bufferRanges: BufferGapFinder.analyze(video).formattedRanges
+            });
+        };
+
+        const logHealComplete = (detail = {}) => {
+            const completeSummary = LogEvents.summary.healComplete({
+                duration: detail.durationMs,
+                healAttempts: detail.healAttempts,
+                bufferEndDelta: detail.bufferEndDelta
+            });
+            Logger.add(completeSummary, {
+                duration: detail.durationMs + 'ms',
+                healAttempts: detail.healAttempts,
+                bufferEndDelta: detail.bufferEndDelta !== null
+                    ? detail.bufferEndDelta.toFixed(2) + 's'
+                    : null,
+                finalState: VideoStateSnapshot.forLog(detail.video, detail.videoId)
+            });
+        };
+
+        const logAbortContext = (detail = {}) => {
+            const bufferRanges = BufferGapFinder.analyze(detail.video).formattedRanges;
+            Logger.add(LogEvents.tagged('ABORT_CONTEXT', 'Play aborted during heal'), {
+                error: detail.result?.error,
+                errorName: detail.result?.errorName,
+                stalledForMs: detail.monitorState?.lastProgressTime
+                    ? (Date.now() - detail.monitorState.lastProgressTime)
+                    : null,
+                bufferStarved: detail.monitorState?.bufferStarved || false,
+                bufferStarvedSinceMs: detail.monitorState?.bufferStarvedSince
+                    ? (Date.now() - detail.monitorState.bufferStarvedSince)
+                    : null,
+                bufferStarveUntilMs: detail.monitorState?.bufferStarveUntil
+                    ? Math.max(detail.monitorState.bufferStarveUntil - Date.now(), 0)
+                    : null,
+                bufferAhead: detail.monitorState?.lastBufferAhead ?? null,
+                bufferRanges,
+                readyState: detail.video.readyState,
+                networkState: detail.video.networkState
+            });
+        };
+
+        const logHealFailed = (detail = {}) => {
+            const failedSummary = LogEvents.summary.healFailed({
+                duration: detail.durationMs,
+                errorName: detail.result?.errorName,
+                error: detail.result?.error,
+                healRange: detail.finalPoint
+                    ? `${detail.finalPoint.start.toFixed(2)}-${detail.finalPoint.end.toFixed(2)}`
+                    : null,
+                gapSize: detail.finalPoint?.gapSize,
+                isNudge: detail.finalPoint?.isNudge
+            });
+            Logger.add(failedSummary, {
+                duration: detail.durationMs + 'ms',
+                error: detail.result?.error,
+                errorName: detail.result?.errorName,
+                healRange: detail.finalPoint
+                    ? `${detail.finalPoint.start.toFixed(2)}-${detail.finalPoint.end.toFixed(2)}`
+                    : null,
+                isNudge: detail.finalPoint?.isNudge,
+                gapSize: detail.finalPoint?.gapSize?.toFixed(2),
+                finalState: VideoStateSnapshot.forLog(detail.video, detail.videoId)
+            });
+        };
+
+        return {
+            logStart,
+            logSelfRecovered,
+            logNoHealPoint,
+            logStaleRecovered,
+            logStaleGone,
+            logPointUpdated,
+            logRetry,
+            logRetrySkip,
+            logHealComplete,
+            logAbortContext,
+            logHealFailed
+        };
+    };
+
+    return { create };
+})();
+
 // --- HealPointPoller ---
 /**
  * Polls for heal points and detects self-recovery.
@@ -6770,19 +6985,12 @@ const HealPipeline = (() => {
             shouldAbort: (video) => (!document.contains(video) ? 'detached' : false)
         });
         const catchUpController = CatchUpController.create();
+        const attemptLogger = HealAttemptLogger.create();
 
         const state = {
             isHealing: false,
             healAttempts: 0
         };
-
-        const getBufferEndDelta = (video) => {
-            const ranges = BufferGapFinder.getBufferRanges(video);
-            if (!ranges.length) return null;
-            const end = ranges[ranges.length - 1].end;
-            return end - video.currentTime;
-        };
-
 
         const attemptHeal = async (videoOrContext, monitorStateOverride) => {
             const context = RecoveryContext.from(videoOrContext, monitorStateOverride, getVideoId);
@@ -6812,21 +7020,11 @@ const HealPipeline = (() => {
                 monitorState.lastHealAttemptTime = Date.now();
             }
 
-            const startSnapshot = StateSnapshot.full(video, videoId);
-            const startSummary = LogEvents.summary.healStart({
+            attemptLogger.logStart({
                 attempt: state.healAttempts,
-                lastProgressAgoMs: monitorState ? (Date.now() - monitorState.lastProgressTime) : null,
-                currentTime: startSnapshot?.currentTime ? Number(startSnapshot.currentTime) : null,
-                paused: startSnapshot?.paused,
-                readyState: startSnapshot?.readyState,
-                networkState: startSnapshot?.networkState,
-                buffered: startSnapshot?.buffered
-            });
-            Logger.add(startSummary, {
-                attempt: state.healAttempts,
-                lastProgressAgoMs: monitorState ? (Date.now() - monitorState.lastProgressTime) : undefined,
-                videoId,
-                videoState: startSnapshot
+                monitorState,
+                video,
+                videoId
             });
 
             try {
@@ -6848,10 +7046,11 @@ const HealPipeline = (() => {
                 const healPoint = pollResult.healPoint;
                 if (!healPoint) {
                     if (poller.hasRecovered(video, monitorState)) {
-                        Logger.add(LogEvents.tagged('SKIPPED', 'Video recovered, no heal needed'), {
-                            duration: (performance.now() - healStartTime).toFixed(0) + 'ms',
-                            finalState: VideoStateSnapshot.forLog(video, videoId)
-                        });
+                        attemptLogger.logSelfRecovered(
+                            Number((performance.now() - healStartTime).toFixed(0)),
+                            video,
+                            videoId
+                        );
                         recoveryManager.resetBackoff(monitorState, 'self_recovered');
                         if (recoveryManager.resetPlayError) {
                             recoveryManager.resetPlayError(monitorState, 'self_recovered');
@@ -6860,18 +7059,7 @@ const HealPipeline = (() => {
                     }
 
                     const noPointDuration = Number((performance.now() - healStartTime).toFixed(0));
-                    const noPointSummary = LogEvents.summary.noHealPoint({
-                        duration: noPointDuration,
-                        currentTime: video.currentTime,
-                        bufferRanges: BufferGapFinder.analyze(video).formattedRanges
-                    });
-                    Logger.add(noPointSummary, {
-                        duration: noPointDuration + 'ms',
-                        suggestion: 'User may need to refresh page',
-                        currentTime: video.currentTime?.toFixed(3),
-                        bufferRanges: BufferGapFinder.analyze(video).formattedRanges,
-                        finalState: VideoStateSnapshot.forLog(video, videoId)
-                    });
+                    attemptLogger.logNoHealPoint(noPointDuration, video, videoId);
                     Metrics.increment('heals_failed');
                     recoveryManager.handleNoHealPoint(video, monitorState, 'no_heal_point');
                     if (monitorState) {
@@ -6893,19 +7081,16 @@ const HealPipeline = (() => {
                 const freshPoint = BufferGapFinder.findHealPoint(video, { silent: true });
                 if (!freshPoint) {
                     if (poller.hasRecovered(video, monitorState)) {
-                        Logger.add(LogEvents.tagged('STALE_RECOVERED', 'Heal point gone, but video recovered'), {
-                            duration: (performance.now() - healStartTime).toFixed(0) + 'ms'
-                        });
+                        attemptLogger.logStaleRecovered(
+                            Number((performance.now() - healStartTime).toFixed(0))
+                        );
                         recoveryManager.resetBackoff(monitorState, 'stale_recovered');
                         if (recoveryManager.resetPlayError) {
                             recoveryManager.resetPlayError(monitorState, 'stale_recovered');
                         }
                         return;
                     }
-                    Logger.add(LogEvents.tagged('STALE_GONE', 'Heal point disappeared before seek'), {
-                        original: `${healPoint.start.toFixed(2)}-${healPoint.end.toFixed(2)}`,
-                        finalState: VideoStateSnapshot.forLog(video, videoId)
-                    });
+                    attemptLogger.logStaleGone(healPoint, video, videoId);
                     Metrics.increment('heals_failed');
                     recoveryManager.handleNoHealPoint(video, monitorState, 'stale_gone');
                     if (monitorState) {
@@ -6926,48 +7111,12 @@ const HealPipeline = (() => {
 
                 const targetPoint = freshPoint;
                 if (freshPoint.start !== healPoint.start || freshPoint.end !== healPoint.end) {
-                    Logger.add(LogEvents.tagged('POINT_UPDATED', 'Using refreshed heal point'), {
-                        original: `${healPoint.start.toFixed(2)}-${healPoint.end.toFixed(2)}`,
-                        fresh: `${freshPoint.start.toFixed(2)}-${freshPoint.end.toFixed(2)}`,
-                        type: freshPoint.isNudge ? 'NUDGE' : 'GAP'
-                    });
+                    attemptLogger.logPointUpdated(healPoint, freshPoint);
                 }
-
-                const isAbortError = (result) => (
-                    result?.errorName === 'AbortError'
-                    || (typeof result?.error === 'string' && result.error.includes('aborted'))
-                );
-
-                const isPlayFailure = (result) => (
-                    isAbortError(result)
-                    || result?.errorName === 'PLAY_STUCK'
-                );
-
-                const updateHealPointRepeat = (monitorStateRef, point, succeeded) => {
-                    if (!monitorStateRef) return 0;
-                    if (succeeded || !point) {
-                        monitorStateRef.lastHealPointKey = null;
-                        monitorStateRef.healPointRepeatCount = 0;
-                        return 0;
-                    }
-                    const key = `${point.start.toFixed(2)}-${point.end.toFixed(2)}`;
-                    if (monitorStateRef.lastHealPointKey === key) {
-                        monitorStateRef.healPointRepeatCount = (monitorStateRef.healPointRepeatCount || 0) + 1;
-                    } else {
-                        monitorStateRef.lastHealPointKey = key;
-                        monitorStateRef.healPointRepeatCount = 1;
-                    }
-                    return monitorStateRef.healPointRepeatCount;
-                };
 
                 const attemptSeekAndPlay = async (point, label) => {
                     if (label) {
-                        Logger.add(LogEvents.tagged('RETRY', 'Retrying heal'), {
-                            attempt: label,
-                            healRange: `${point.start.toFixed(2)}-${point.end.toFixed(2)}`,
-                            gapSize: point.gapSize?.toFixed(2),
-                            isNudge: point.isNudge
-                        });
+                        attemptLogger.logRetry(label, point);
                     }
                     return LiveEdgeSeeker.seekAndPlay(video, point);
                 };
@@ -6975,35 +7124,27 @@ const HealPipeline = (() => {
                 let result = await attemptSeekAndPlay(targetPoint, null);
                 let finalPoint = targetPoint;
 
-                if (!result.success && isAbortError(result)) {
+                if (!result.success && HealAttemptUtils.isAbortError(result)) {
                     await Fn.sleep(CONFIG.recovery.HEAL_RETRY_DELAY_MS);
                     const retryPoint = BufferGapFinder.findHealPoint(video, { silent: true });
                     if (retryPoint) {
                         finalPoint = retryPoint;
                         result = await attemptSeekAndPlay(retryPoint, 'abort_error');
                     } else {
-                        Logger.add(LogEvents.tagged('RETRY_SKIP', 'Retry skipped, no heal point available'), {
-                            reason: 'abort_error',
-                            currentTime: video.currentTime?.toFixed(3),
-                            bufferRanges: BufferGapFinder.analyze(video).formattedRanges
-                        });
+                        attemptLogger.logRetrySkip(video, 'abort_error');
                     }
                 }
 
                 const duration = Number((performance.now() - healStartTime).toFixed(0));
 
                 if (result.success) {
-                    const bufferEndDelta = getBufferEndDelta(video);
-                    const completeSummary = LogEvents.summary.healComplete({
-                        duration,
+                    const bufferEndDelta = HealAttemptUtils.getBufferEndDelta(video);
+                    attemptLogger.logHealComplete({
+                        durationMs: duration,
                         healAttempts: state.healAttempts,
-                        bufferEndDelta
-                    });
-                    Logger.add(completeSummary, {
-                        duration: duration + 'ms',
-                        healAttempts: state.healAttempts,
-                        bufferEndDelta: bufferEndDelta !== null ? bufferEndDelta.toFixed(2) + 's' : null,
-                        finalState: VideoStateSnapshot.forLog(video, videoId)
+                        bufferEndDelta,
+                        video,
+                        videoId
                     });
                     Metrics.increment('heals_successful');
                     recoveryManager.resetBackoff(monitorState, 'heal_success');
@@ -7012,51 +7153,27 @@ const HealPipeline = (() => {
                     }
                     catchUpController.scheduleCatchUp(video, monitorState, videoId, 'post_heal');
                 } else {
-                    const repeatCount = updateHealPointRepeat(monitorState, finalPoint, false);
-                    if (isAbortError(result)) {
-                        const bufferRanges = BufferGapFinder.analyze(video).formattedRanges;
-                        Logger.add(LogEvents.tagged('ABORT_CONTEXT', 'Play aborted during heal'), {
-                            error: result.error,
-                            errorName: result.errorName,
-                            stalledForMs: monitorState?.lastProgressTime
-                                ? (Date.now() - monitorState.lastProgressTime)
-                                : null,
-                            bufferStarved: monitorState?.bufferStarved || false,
-                            bufferStarvedSinceMs: monitorState?.bufferStarvedSince
-                                ? (Date.now() - monitorState.bufferStarvedSince)
-                                : null,
-                            bufferStarveUntilMs: monitorState?.bufferStarveUntil
-                                ? Math.max(monitorState.bufferStarveUntil - Date.now(), 0)
-                                : null,
-                            bufferAhead: monitorState?.lastBufferAhead ?? null,
-                            bufferRanges,
-                            readyState: video.readyState,
-                            networkState: video.networkState
+                    const repeatCount = HealAttemptUtils.updateHealPointRepeat(monitorState, finalPoint, false);
+                    if (HealAttemptUtils.isAbortError(result)) {
+                        attemptLogger.logAbortContext({
+                            result,
+                            monitorState,
+                            video
                         });
                     }
-                    const failedSummary = LogEvents.summary.healFailed({
-                        duration,
-                        errorName: result.errorName,
-                        error: result.error,
-                        healRange: finalPoint ? `${finalPoint.start.toFixed(2)}-${finalPoint.end.toFixed(2)}` : null,
-                        gapSize: finalPoint?.gapSize,
-                        isNudge: finalPoint?.isNudge
-                    });
-                    Logger.add(failedSummary, {
-                        duration: duration + 'ms',
-                        error: result.error,
-                        errorName: result.errorName,
-                        healRange: finalPoint ? `${finalPoint.start.toFixed(2)}-${finalPoint.end.toFixed(2)}` : null,
-                        isNudge: finalPoint?.isNudge,
-                        gapSize: finalPoint?.gapSize?.toFixed(2),
-                        finalState: VideoStateSnapshot.forLog(video, videoId)
+                    attemptLogger.logHealFailed({
+                        durationMs: duration,
+                        result,
+                        finalPoint,
+                        video,
+                        videoId
                     });
                     Metrics.increment('heals_failed');
                     if (monitorState && recoveryManager.handlePlayFailure
-                        && (isPlayFailure(result)
+                        && (HealAttemptUtils.isPlayFailure(result)
                             || repeatCount >= CONFIG.stall.HEALPOINT_REPEAT_FAILOVER_COUNT)) {
                         recoveryManager.handlePlayFailure(video, monitorState, {
-                            reason: isPlayFailure(result) ? 'play_error' : 'healpoint_repeat',
+                            reason: HealAttemptUtils.isPlayFailure(result) ? 'play_error' : 'healpoint_repeat',
                             error: result.error,
                             errorName: result.errorName,
                             healRange: finalPoint ? `${finalPoint.start.toFixed(2)}-${finalPoint.end.toFixed(2)}` : null,

@@ -114,21 +114,23 @@ The build uses a priority list followed by auto-discovered modules, then the ent
 71. `core/MonitorRegistry.js`
 72. `core/MonitorCoordinator.js`
 73. `core/CatchUpController.js`
-74. `core/HealPointPoller.js`
-75. `core/HealPipeline.js`
-76. `core/AdGapSignals.js`
-77. `core/PlayheadAttribution.js`
-78. `core/ExternalSignalUtils.js`
-79. `core/ExternalSignalHandlerStall.js`
-80. `core/ExternalSignalHandlerAsset.js`
-81. `core/ExternalSignalHandlerAdblock.js`
-82. `core/ExternalSignalHandlerFallback.js`
-83. `core/VideoDiscovery.js`
-84. `core/ExternalSignalRouter.js`
-85. `core/MonitoringOrchestrator.js`
-86. `core/RecoveryOrchestrator.js`
-87. `core/StreamHealer.js`
-88. `core/CoreOrchestrator.js`
+74. `core/HealAttemptUtils.js`
+75. `core/HealAttemptLogger.js`
+76. `core/HealPointPoller.js`
+77. `core/HealPipeline.js`
+78. `core/AdGapSignals.js`
+79. `core/PlayheadAttribution.js`
+80. `core/ExternalSignalUtils.js`
+81. `core/ExternalSignalHandlerStall.js`
+82. `core/ExternalSignalHandlerAsset.js`
+83. `core/ExternalSignalHandlerAdblock.js`
+84. `core/ExternalSignalHandlerFallback.js`
+85. `core/VideoDiscovery.js`
+86. `core/ExternalSignalRouter.js`
+87. `core/MonitoringOrchestrator.js`
+88. `core/RecoveryOrchestrator.js`
+89. `core/StreamHealer.js`
+90. `core/CoreOrchestrator.js`
 <!-- LOAD_ORDER_END -->
 
 
@@ -235,6 +237,8 @@ Script Logger.add() -> Logger.getMergedTimeline()
 - **MonitorRegistry.js** - Tracks monitored video lifecycle
 - **HealPointPoller.js** - Polls for heal points
 - **CatchUpController.js** - Post-heal live-edge catch-up scheduler
+- **HealAttemptUtils.js** - Heal attempt helper utilities
+- **HealAttemptLogger.js** - Heal attempt logging helpers
 - **HealPipeline.js** - Polls for heal points and executes seeks
 - **ExternalSignalRouter.js** - Handles console signal hints
 - **ExternalSignalUtils.js** - Shared helpers for console signal handling

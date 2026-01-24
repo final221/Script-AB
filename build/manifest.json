@@ -73,6 +73,8 @@
     "core/MonitorRegistry.js",
     "core/MonitorCoordinator.js",
     "core/CatchUpController.js",
+    "core/HealAttemptUtils.js",
+    "core/HealAttemptLogger.js",
     "core/HealPointPoller.js",
     "core/HealPipeline.js",
     "core/AdGapSignals.js",
