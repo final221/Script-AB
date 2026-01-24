@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.1.33 - 2026-01-24T12:08:15.796Z
+Previous: 4.1.32
+Commit: bca39a9
+Changes:
+- Refactor recovery policy, monitoring, and config validation
+
 ## 4.1.32 - 2026-01-24T12:04:13.063Z
 Previous: 4.1.31
 Commit: fbd98a5

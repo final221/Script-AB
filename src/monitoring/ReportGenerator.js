@@ -26,8 +26,9 @@ const ReportGenerator = (() => {
             : '';
 
         // Header with metrics
+        const versionLine = BuildInfo.getVersionLine();
         const header = `[STREAM HEALER METRICS]
-Uptime: ${(metricsSummary.uptime_ms / 1000).toFixed(1)}s
+${versionLine}Uptime: ${(metricsSummary.uptime_ms / 1000).toFixed(1)}s
 Stalls Detected: ${metricsSummary.stalls_detected}
 Heals Successful: ${metricsSummary.heals_successful}
 Heals Failed: ${metricsSummary.heals_failed}

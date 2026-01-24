@@ -205,9 +205,10 @@ const updateChangelog = (oldVersion, newVersion) => {
     }).join('\n');
 
     try {
-        const finalOutput = `${headerContent}(function () {\n    'use strict';\n\n${combinedContent}\n})();\n`;
+        const injectedContent = combinedContent.replace(/__BUILD_VERSION__/g, version);
+        const finalOutput = `${headerContent}(function () {\n    'use strict';\n\n${injectedContent}\n})();\n`;
         fs.writeFileSync(CONFIG.OUT, finalOutput);
-        console.log(`✅ Built: ${CONFIG.OUT} (${(combinedContent.length / 1024).toFixed(2)} KB)`);
+        console.log(`✅ Built: ${CONFIG.OUT} (${(injectedContent.length / 1024).toFixed(2)} KB)`);
     } catch (e) {
         console.error(`❌ Error: ${e.message}`);
     }

@@ -1,6 +1,7 @@
 {
   "priority": [
     "config/Config.js",
+    "config/BuildInfo.js",
     "config/Tuning.js",
     "config/Validate.js",
     "utils/Utils.js",

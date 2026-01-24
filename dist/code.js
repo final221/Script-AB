@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.1.32
+// @version       4.1.33
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -134,6 +134,38 @@ const CONFIG = (() => {
     return Object.freeze(raw);
 })();
 
+
+// --- BuildInfo ---
+/**
+ * Build metadata helpers (version injected at build time).
+ */
+const BuildInfo = (() => {
+    const VERSION = '4.1.33';
+
+    const getVersion = () => {
+        const gmVersion = (typeof GM_info !== 'undefined' && GM_info?.script?.version)
+            ? GM_info.script.version
+            : null;
+        if (gmVersion) return gmVersion;
+        const unsafeVersion = (typeof unsafeWindow !== 'undefined' && unsafeWindow?.GM_info?.script?.version)
+            ? unsafeWindow.GM_info.script.version
+            : null;
+        if (unsafeVersion) return unsafeVersion;
+        if (VERSION && VERSION !== '4.1.33') return VERSION;
+        return null;
+    };
+
+    const getVersionLine = () => {
+        const version = getVersion();
+        return version ? `Version: ${version}\n` : '';
+    };
+
+    return {
+        VERSION,
+        getVersion,
+        getVersionLine
+    };
+})();
 
 // --- Tuning ---
 /**
@@ -1169,8 +1201,9 @@ const ReportGenerator = (() => {
             : '';
 
         // Header with metrics
+        const versionLine = BuildInfo.getVersionLine();
         const header = `[STREAM HEALER METRICS]
-Uptime: ${(metricsSummary.uptime_ms / 1000).toFixed(1)}s
+${versionLine}Uptime: ${(metricsSummary.uptime_ms / 1000).toFixed(1)}s
 Stalls Detected: ${metricsSummary.stalls_detected}
 Heals Successful: ${metricsSummary.heals_successful}
 Heals Failed: ${metricsSummary.heals_failed}
