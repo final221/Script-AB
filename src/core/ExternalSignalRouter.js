@@ -84,6 +84,7 @@ const ExternalSignalRouter = (() => {
             const type = signal.type || 'unknown';
             const level = signal.level || 'unknown';
             const message = signal.message || '';
+            const url = signal.url || null;
 
             if (type === 'playhead_stall') {
                 const attribution = playheadAttribution.resolve(signal.playheadSeconds);
@@ -215,6 +216,16 @@ const ExternalSignalRouter = (() => {
                 return;
             }
 
+            if (type === 'adblock_block' || type === 'ad_resource') {
+                Logger.add('[HEALER:ADBLOCK_HINT] Ad-block signal observed', {
+                    type,
+                    level,
+                    message: truncateMessage(message),
+                    url: url ? truncateMessage(url) : null
+                });
+                return;
+            }
+
             Logger.add('[HEALER:EXTERNAL] Unhandled external signal', {
                 type,
                 level,
@@ -227,3 +238,4 @@ const ExternalSignalRouter = (() => {
 
     return { create };
 })();
+

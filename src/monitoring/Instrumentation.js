@@ -9,7 +9,16 @@ const Instrumentation = (() => {
     let externalSignalHandler = null;
     let signalDetector = null;
     const PROCESSING_ASSET_PATTERN = /404_processing_640x360\.png/i;
+    const ADBLOCK_RESOURCE_PATTERNS = [
+        /amazon-adsystem\.com/i,
+        /imasdk\.googleapis\.com/i,
+        /googlesyndication\.com/i,
+        /doubleclick\.net/i,
+        /\/api\/ads?\//i,
+        /\/ad[s]?\/v\d+\//i
+    ];
     let lastResourceHintTime = 0;
+    let lastAdResourceHintTime = 0;
     const truncateMessage = (message, maxLen) => (
         String(message).substring(0, maxLen)
     );
@@ -106,6 +115,25 @@ const Instrumentation = (() => {
         });
     };
 
+    const maybeEmitAdResource = (url, initiatorType) => {
+        const now = Date.now();
+        if (now - lastAdResourceHintTime < CONFIG.logging.RESOURCE_HINT_THROTTLE_MS) {
+            return;
+        }
+        lastAdResourceHintTime = now;
+        Logger.add('[INSTRUMENT:AD_RESOURCE] Ad-like resource observed', {
+            url: truncateMessage(url, CONFIG.logging.LOG_URL_MAX_LEN),
+            initiatorType: initiatorType || null
+        });
+        emitExternalSignal({
+            type: 'ad_resource',
+            level: 'resource',
+            message: truncateMessage(url, CONFIG.logging.LOG_URL_MAX_LEN),
+            initiatorType: initiatorType || null,
+            timestamp: new Date().toISOString()
+        });
+    };
+
     const setupResourceObserver = () => {
         if (typeof window === 'undefined' || !window.PerformanceObserver) return;
         try {
@@ -113,6 +141,9 @@ const Instrumentation = (() => {
                 for (const entry of list.getEntries()) {
                     if (entry?.name && PROCESSING_ASSET_PATTERN.test(entry.name)) {
                         maybeEmitProcessingAsset(entry.name);
+                    }
+                    if (entry?.name && ADBLOCK_RESOURCE_PATTERNS.some(pattern => pattern.test(entry.name))) {
+                        maybeEmitAdResource(entry.name, entry.initiatorType);
                     }
                 }
             });
@@ -204,3 +235,4 @@ const Instrumentation = (() => {
         },
     };
 })();
+

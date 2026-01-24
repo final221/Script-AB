@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.1.25
+// @version       4.1.26
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -976,6 +976,7 @@ const ConsoleSignalDetector = (() => {
     const SIGNAL_PATTERNS = {
         PLAYHEAD_STALL: /playhead stalling at/i,
         PROCESSING_ASSET: /404_processing_640x360\.png/i,
+        ADBLOCK_BLOCK: /(ERR_BLOCKED_BY_CLIENT|blocked by client|net::ERR_BLOCKED_BY_CLIENT|uBlock|uBO|ublock|adblock)/i,
     };
 
     const parsePlayheadStall = (message) => {
@@ -989,11 +990,18 @@ const ConsoleSignalDetector = (() => {
         return { playheadSeconds, bufferEndSeconds };
     };
 
+    const parseBlockedUrl = (message) => {
+        const match = message.match(/https?:\/\/[^\s"')]+/i);
+        if (!match) return null;
+        return match[0];
+    };
+
     const create = (options = {}) => {
         const emitSignal = options.emitSignal || (() => {});
         const lastSignalTimes = {
             playhead_stall: 0,
-            processing_asset: 0
+            processing_asset: 0,
+            adblock_block: 0
         };
 
         const maybeEmit = (type, message, level, detail = null) => {
@@ -1026,6 +1034,10 @@ const ConsoleSignalDetector = (() => {
             if (SIGNAL_PATTERNS.PROCESSING_ASSET.test(message)) {
                 maybeEmit('processing_asset', message, level);
             }
+            if (SIGNAL_PATTERNS.ADBLOCK_BLOCK.test(message)) {
+                const url = parseBlockedUrl(message);
+                maybeEmit('adblock_block', message, level, url ? { url } : null);
+            }
         };
 
         return { detect };
@@ -1033,6 +1045,7 @@ const ConsoleSignalDetector = (() => {
 
     return { create };
 })();
+
 
 // --- Instrumentation ---
 /**
@@ -1045,7 +1058,16 @@ const Instrumentation = (() => {
     let externalSignalHandler = null;
     let signalDetector = null;
     const PROCESSING_ASSET_PATTERN = /404_processing_640x360\.png/i;
+    const ADBLOCK_RESOURCE_PATTERNS = [
+        /amazon-adsystem\.com/i,
+        /imasdk\.googleapis\.com/i,
+        /googlesyndication\.com/i,
+        /doubleclick\.net/i,
+        /\/api\/ads?\//i,
+        /\/ad[s]?\/v\d+\//i
+    ];
     let lastResourceHintTime = 0;
+    let lastAdResourceHintTime = 0;
     const truncateMessage = (message, maxLen) => (
         String(message).substring(0, maxLen)
     );
@@ -1142,6 +1164,25 @@ const Instrumentation = (() => {
         });
     };
 
+    const maybeEmitAdResource = (url, initiatorType) => {
+        const now = Date.now();
+        if (now - lastAdResourceHintTime < CONFIG.logging.RESOURCE_HINT_THROTTLE_MS) {
+            return;
+        }
+        lastAdResourceHintTime = now;
+        Logger.add('[INSTRUMENT:AD_RESOURCE] Ad-like resource observed', {
+            url: truncateMessage(url, CONFIG.logging.LOG_URL_MAX_LEN),
+            initiatorType: initiatorType || null
+        });
+        emitExternalSignal({
+            type: 'ad_resource',
+            level: 'resource',
+            message: truncateMessage(url, CONFIG.logging.LOG_URL_MAX_LEN),
+            initiatorType: initiatorType || null,
+            timestamp: new Date().toISOString()
+        });
+    };
+
     const setupResourceObserver = () => {
         if (typeof window === 'undefined' || !window.PerformanceObserver) return;
         try {
@@ -1149,6 +1190,9 @@ const Instrumentation = (() => {
                 for (const entry of list.getEntries()) {
                     if (entry?.name && PROCESSING_ASSET_PATTERN.test(entry.name)) {
                         maybeEmitProcessingAsset(entry.name);
+                    }
+                    if (entry?.name && ADBLOCK_RESOURCE_PATTERNS.some(pattern => pattern.test(entry.name))) {
+                        maybeEmitAdResource(entry.name, entry.initiatorType);
                     }
                 }
             });
@@ -1240,6 +1284,7 @@ const Instrumentation = (() => {
         },
     };
 })();
+
 
 // --- VideoState ---
 /**
@@ -4636,6 +4681,7 @@ const ExternalSignalRouter = (() => {
             const type = signal.type || 'unknown';
             const level = signal.level || 'unknown';
             const message = signal.message || '';
+            const url = signal.url || null;
 
             if (type === 'playhead_stall') {
                 const attribution = playheadAttribution.resolve(signal.playheadSeconds);
@@ -4767,6 +4813,16 @@ const ExternalSignalRouter = (() => {
                 return;
             }
 
+            if (type === 'adblock_block' || type === 'ad_resource') {
+                Logger.add('[HEALER:ADBLOCK_HINT] Ad-block signal observed', {
+                    type,
+                    level,
+                    message: truncateMessage(message),
+                    url: url ? truncateMessage(url) : null
+                });
+                return;
+            }
+
             Logger.add('[HEALER:EXTERNAL] Unhandled external signal', {
                 type,
                 level,
@@ -4779,6 +4835,7 @@ const ExternalSignalRouter = (() => {
 
     return { create };
 })();
+
 
 // --- MonitoringOrchestrator ---
 /**

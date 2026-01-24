@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.1.26 - 2026-01-24T10:27:35.991Z
+Previous: 4.1.25
+Commit: ded26ae
+Changes:
+- Allow low-headroom gap heals
+
 ## 4.1.25 - 2026-01-24T10:16:55.427Z
 Previous: 4.1.24
 Commit: 103172f

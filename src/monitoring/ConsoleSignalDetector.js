@@ -6,6 +6,7 @@ const ConsoleSignalDetector = (() => {
     const SIGNAL_PATTERNS = {
         PLAYHEAD_STALL: /playhead stalling at/i,
         PROCESSING_ASSET: /404_processing_640x360\.png/i,
+        ADBLOCK_BLOCK: /(ERR_BLOCKED_BY_CLIENT|blocked by client|net::ERR_BLOCKED_BY_CLIENT|uBlock|uBO|ublock|adblock)/i,
     };
 
     const parsePlayheadStall = (message) => {
@@ -19,11 +20,18 @@ const ConsoleSignalDetector = (() => {
         return { playheadSeconds, bufferEndSeconds };
     };
 
+    const parseBlockedUrl = (message) => {
+        const match = message.match(/https?:\/\/[^\s"')]+/i);
+        if (!match) return null;
+        return match[0];
+    };
+
     const create = (options = {}) => {
         const emitSignal = options.emitSignal || (() => {});
         const lastSignalTimes = {
             playhead_stall: 0,
-            processing_asset: 0
+            processing_asset: 0,
+            adblock_block: 0
         };
 
         const maybeEmit = (type, message, level, detail = null) => {
@@ -56,6 +64,10 @@ const ConsoleSignalDetector = (() => {
             if (SIGNAL_PATTERNS.PROCESSING_ASSET.test(message)) {
                 maybeEmit('processing_asset', message, level);
             }
+            if (SIGNAL_PATTERNS.ADBLOCK_BLOCK.test(message)) {
+                const url = parseBlockedUrl(message);
+                maybeEmit('adblock_block', message, level, url ? { url } : null);
+            }
         };
 
         return { detect };
@@ -63,3 +75,4 @@ const ConsoleSignalDetector = (() => {
 
     return { create };
 })();
+
