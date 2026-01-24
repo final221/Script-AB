@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.1.48
+// @version       4.1.49
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -142,7 +142,7 @@ const CONFIG = (() => {
  * Build metadata helpers (version injected at build time).
  */
 const BuildInfo = (() => {
-    const VERSION = '4.1.48';
+    const VERSION = '4.1.49';
 
     const getVersion = () => {
         const gmVersion = (typeof GM_info !== 'undefined' && GM_info?.script?.version)
@@ -153,7 +153,7 @@ const BuildInfo = (() => {
             ? unsafeWindow.GM_info.script.version
             : null;
         if (unsafeVersion) return unsafeVersion;
-        if (VERSION && VERSION !== '4.1.48') return VERSION;
+        if (VERSION && VERSION !== '4.1.49') return VERSION;
         return null;
     };
 
@@ -1425,20 +1425,43 @@ ${stallSummaryLine}${stallRecentLine}${healerLine}
             return 'healer';
         };
 
-        const shouldStripKeyValueSummary = (rest, hasDetail) => (
-            hasDetail && rest && /\b\w+=/.test(rest)
-        );
+        const parseInlinePairs = (rest) => {
+            if (!rest) return { prefix: rest, pairs: null };
+            const tokens = rest.trim().split(/\s+/);
+            const prefixTokens = [];
+            const pairs = {};
+            let inPairs = false;
+            let lastKey = null;
 
-        const formatScriptMessage = (message, hasDetail) => {
-            const match = message.match(/^\[([^\]]+)\]\s*(.*)$/);
-            if (!match) {
-                return {
-                    icon: ICONS.other,
-                    text: message
-                };
+            tokens.forEach((token) => {
+                const eqIndex = token.indexOf('=');
+                if (eqIndex > 0) {
+                    inPairs = true;
+                    const key = token.slice(0, eqIndex);
+                    const value = token.slice(eqIndex + 1);
+                    pairs[key] = value;
+                    lastKey = key;
+                    return;
+                }
+                if (!inPairs) {
+                    prefixTokens.push(token);
+                    return;
+                }
+                if (lastKey) {
+                    pairs[lastKey] = `${pairs[lastKey]} ${token}`;
+                }
+            });
+
+            if (!inPairs) {
+                return { prefix: rest, pairs: null };
             }
-            const rawTag = match[1];
-            const rest = match[2];
+            return {
+                prefix: prefixTokens.join(' ').trim(),
+                pairs
+            };
+        };
+
+        const formatTaggedMessage = (rawTag, rest) => {
             let displayTag = rawTag;
             let tagKey = rawTag;
             if (rawTag.startsWith('HEALER:')) {
@@ -1450,8 +1473,7 @@ ${stallSummaryLine}${stallRecentLine}${healerLine}
             }
             const category = categoryForTag(tagKey);
             const icon = ICONS[category] || ICONS.other;
-            const trimmedRest = shouldStripKeyValueSummary(rest, hasDetail) ? '' : rest;
-            const text = trimmedRest ? `[${displayTag}] ${trimmedRest}` : `[${displayTag}]`;
+            const text = rest ? `[${displayTag}] ${rest}` : `[${displayTag}]`;
             return { icon, text };
         };
 
@@ -1474,6 +1496,12 @@ ${stallSummaryLine}${stallRecentLine}${healerLine}
             };
         };
 
+        const mergeDetail = (inlinePairs, existing) => {
+            if (!inlinePairs) return existing;
+            if (!existing || typeof existing !== 'object') return inlinePairs;
+            return { ...inlinePairs, ...existing };
+        };
+
         const logContent = logs.map(l => {
             const time = formatTime(l.timestamp);
 
@@ -1487,9 +1515,20 @@ ${stallSummaryLine}${stallRecentLine}${healerLine}
             } else {
                 // Internal script log
                 const sanitized = sanitizeDetail(l.detail, l.message);
-                const formatted = formatScriptMessage(l.message, Boolean(sanitized));
-                const detail = sanitized && Object.keys(sanitized).length > 0
-                    ? JSON.stringify(sanitized)
+                const match = l.message.match(/^\[([^\]]+)\]\s*(.*)$/);
+                if (!match) {
+                    const detail = sanitized && Object.keys(sanitized).length > 0
+                        ? JSON.stringify(sanitized)
+                        : '';
+                    return formatLine(`[${time}] ${ICONS.other} `, l.message, detail);
+                }
+                const rawTag = match[1];
+                const rest = match[2];
+                const parsed = parseInlinePairs(rest);
+                const mergedDetail = mergeDetail(parsed.pairs, sanitized);
+                const formatted = formatTaggedMessage(rawTag, parsed.prefix);
+                const detail = mergedDetail && Object.keys(mergedDetail).length > 0
+                    ? JSON.stringify(mergedDetail)
                     : '';
                 return formatLine(`[${time}] ${formatted.icon} `, formatted.text, detail);
             }

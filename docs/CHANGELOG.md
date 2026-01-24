@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.1.49 - 2026-01-24T16:15:30.474Z
+Previous: 4.1.48
+Commit: a677c77
+Changes:
+- Move key-value summaries into detail
+
 ## 4.1.48 - 2026-01-24T16:11:12.842Z
 Previous: 4.1.47
 Commit: b0546de
