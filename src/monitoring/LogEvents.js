@@ -31,6 +31,13 @@ const LogEvents = (() => {
         return value;
     };
 
+    const formatVideoId = (value) => {
+        if (typeof value !== 'string') return value;
+        const match = value.match(/^video-(\d+)$/);
+        if (!match) return value;
+        return Number(match[1]);
+    };
+
     const formatPairs = (pairs) => (
         pairs
             .map(([key, value]) => [key, formatValue(value)])
@@ -46,7 +53,7 @@ const LogEvents = (() => {
 
     const summary = {
         stateChange: (data = {}) => withTag(TAG.STATE, [
-            ['videoId', data.videoId],
+            ['video', formatVideoId(data.videoId)],
             ['from', data.from],
             ['to', data.to],
             ['reason', data.reason],
@@ -61,7 +68,7 @@ const LogEvents = (() => {
             ['pauseFromStall', data.pauseFromStall]
         ]),
         watchdogNoProgress: (data = {}) => withTag(TAG.WATCHDOG, [
-            ['videoId', data.videoId],
+            ['video', formatVideoId(data.videoId)],
             ['stalledForMs', data.stalledForMs],
             ['bufferExhausted', data.bufferExhausted],
             ['state', data.state],
@@ -73,7 +80,7 @@ const LogEvents = (() => {
             ['buffered', data.buffered]
         ]),
         stallDetected: (data = {}) => withTag(TAG.STALL_DETECTED, [
-            ['videoId', data.videoId],
+            ['video', formatVideoId(data.videoId)],
             ['trigger', data.trigger],
             ['stalledFor', data.stalledFor],
             ['bufferExhausted', data.bufferExhausted],
@@ -86,7 +93,7 @@ const LogEvents = (() => {
             ['buffered', data.buffered]
         ]),
         stallDuration: (data = {}) => withTag(TAG.STALL_DURATION, [
-            ['videoId', data.videoId],
+            ['video', formatVideoId(data.videoId)],
             ['reason', data.reason],
             ['durationMs', data.durationMs],
             ['bufferAhead', data.bufferAhead],
@@ -129,7 +136,7 @@ const LogEvents = (() => {
             ['bufferRanges', data.bufferRanges]
         ]),
         adGapSignature: (data = {}) => withTag(TAG.AD_GAP, [
-            ['videoId', data.videoId],
+            ['video', formatVideoId(data.videoId)],
             ['playheadSeconds', data.playheadSeconds],
             ['rangeEnd', data.rangeEnd],
             ['nextRangeStart', data.nextRangeStart],

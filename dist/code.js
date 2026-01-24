@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.1.37
+// @version       4.1.38
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -140,7 +140,7 @@ const CONFIG = (() => {
  * Build metadata helpers (version injected at build time).
  */
 const BuildInfo = (() => {
-    const VERSION = '4.1.37';
+    const VERSION = '4.1.38';
 
     const getVersion = () => {
         const gmVersion = (typeof GM_info !== 'undefined' && GM_info?.script?.version)
@@ -151,7 +151,7 @@ const BuildInfo = (() => {
             ? unsafeWindow.GM_info.script.version
             : null;
         if (unsafeVersion) return unsafeVersion;
-        if (VERSION && VERSION !== '4.1.37') return VERSION;
+        if (VERSION && VERSION !== '4.1.38') return VERSION;
         return null;
     };
 
@@ -906,6 +906,13 @@ const LogEvents = (() => {
         return value;
     };
 
+    const formatVideoId = (value) => {
+        if (typeof value !== 'string') return value;
+        const match = value.match(/^video-(\d+)$/);
+        if (!match) return value;
+        return Number(match[1]);
+    };
+
     const formatPairs = (pairs) => (
         pairs
             .map(([key, value]) => [key, formatValue(value)])
@@ -921,7 +928,7 @@ const LogEvents = (() => {
 
     const summary = {
         stateChange: (data = {}) => withTag(TAG.STATE, [
-            ['videoId', data.videoId],
+            ['video', formatVideoId(data.videoId)],
             ['from', data.from],
             ['to', data.to],
             ['reason', data.reason],
@@ -936,7 +943,7 @@ const LogEvents = (() => {
             ['pauseFromStall', data.pauseFromStall]
         ]),
         watchdogNoProgress: (data = {}) => withTag(TAG.WATCHDOG, [
-            ['videoId', data.videoId],
+            ['video', formatVideoId(data.videoId)],
             ['stalledForMs', data.stalledForMs],
             ['bufferExhausted', data.bufferExhausted],
             ['state', data.state],
@@ -948,7 +955,7 @@ const LogEvents = (() => {
             ['buffered', data.buffered]
         ]),
         stallDetected: (data = {}) => withTag(TAG.STALL_DETECTED, [
-            ['videoId', data.videoId],
+            ['video', formatVideoId(data.videoId)],
             ['trigger', data.trigger],
             ['stalledFor', data.stalledFor],
             ['bufferExhausted', data.bufferExhausted],
@@ -961,7 +968,7 @@ const LogEvents = (() => {
             ['buffered', data.buffered]
         ]),
         stallDuration: (data = {}) => withTag(TAG.STALL_DURATION, [
-            ['videoId', data.videoId],
+            ['video', formatVideoId(data.videoId)],
             ['reason', data.reason],
             ['durationMs', data.durationMs],
             ['bufferAhead', data.bufferAhead],
@@ -1004,7 +1011,7 @@ const LogEvents = (() => {
             ['bufferRanges', data.bufferRanges]
         ]),
         adGapSignature: (data = {}) => withTag(TAG.AD_GAP, [
-            ['videoId', data.videoId],
+            ['video', formatVideoId(data.videoId)],
             ['playheadSeconds', data.playheadSeconds],
             ['rangeEnd', data.rangeEnd],
             ['nextRangeStart', data.nextRangeStart],
@@ -1220,6 +1227,62 @@ ${stallSummaryLine}${stallRecentLine}${healerLine}
 `;
 
         // Format each log entry based on source and type
+        const normalizeVideoToken = (value) => {
+            if (typeof value !== 'string') return value;
+            const match = value.match(/^video-(\d+)$/);
+            if (!match) return value;
+            return Number(match[1]);
+        };
+
+        const transformDetail = (input) => {
+            if (Array.isArray(input)) {
+                return input.map(transformDetail);
+            }
+            if (input && typeof input === 'object') {
+                const result = {};
+                Object.entries(input).forEach(([key, value]) => {
+                    if (key === 'videoId') {
+                        result.video = normalizeVideoToken(value);
+                        return;
+                    }
+                    const transformed = transformDetail(value);
+                    result[key] = normalizeVideoToken(transformed);
+                });
+                return result;
+            }
+            return normalizeVideoToken(input);
+        };
+
+        const stripKeys = (input, keys) => {
+            if (Array.isArray(input)) {
+                input.forEach(entry => stripKeys(entry, keys));
+                return;
+            }
+            if (!input || typeof input !== 'object') return;
+            Object.keys(input).forEach((key) => {
+                if (keys.has(key)) {
+                    delete input[key];
+                } else {
+                    stripKeys(input[key], keys);
+                }
+            });
+        };
+
+        const sanitizeDetail = (detail, message) => {
+            if (!detail || typeof detail !== 'object') return detail;
+            const sanitized = transformDetail(detail);
+            const isVideoIntro = message.includes('[HEALER:VIDEO] Video registered');
+            if (!isVideoIntro) {
+                stripKeys(sanitized, new Set(['currentSrc', 'src']));
+            }
+            if (message.includes('[HEALER:SRC]')) {
+                delete sanitized.previous;
+                delete sanitized.current;
+                sanitized.changed = true;
+            }
+            return sanitized;
+        };
+
         const logContent = logs.map(l => {
             const time = l.timestamp;
 
@@ -1229,7 +1292,10 @@ ${stallSummaryLine}${stallRecentLine}${healerLine}
                 return `[${time}] ${icon} ${l.message}`;
             } else {
                 // Internal script log
-                const detail = l.detail ? ' | ' + JSON.stringify(l.detail) : '';
+                const sanitized = sanitizeDetail(l.detail, l.message);
+                const detail = sanitized && Object.keys(sanitized).length > 0
+                    ? ' | ' + JSON.stringify(sanitized)
+                    : '';
                 return `[${time}] 🔧 ${l.message}${detail}`;
             }
         }).join('\n');

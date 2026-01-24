@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.1.38 - 2026-01-24T12:53:42.744Z
+Previous: 4.1.37
+Commit: 1d6000e
+Changes:
+- Compact source URLs in logs
+
 ## 4.1.37 - 2026-01-24T12:46:59.342Z
 Previous: 4.1.36
 Commit: 93a9eee

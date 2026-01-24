@@ -45,6 +45,62 @@ ${stallSummaryLine}${stallRecentLine}${healerLine}
 `;
 
         // Format each log entry based on source and type
+        const normalizeVideoToken = (value) => {
+            if (typeof value !== 'string') return value;
+            const match = value.match(/^video-(\d+)$/);
+            if (!match) return value;
+            return Number(match[1]);
+        };
+
+        const transformDetail = (input) => {
+            if (Array.isArray(input)) {
+                return input.map(transformDetail);
+            }
+            if (input && typeof input === 'object') {
+                const result = {};
+                Object.entries(input).forEach(([key, value]) => {
+                    if (key === 'videoId') {
+                        result.video = normalizeVideoToken(value);
+                        return;
+                    }
+                    const transformed = transformDetail(value);
+                    result[key] = normalizeVideoToken(transformed);
+                });
+                return result;
+            }
+            return normalizeVideoToken(input);
+        };
+
+        const stripKeys = (input, keys) => {
+            if (Array.isArray(input)) {
+                input.forEach(entry => stripKeys(entry, keys));
+                return;
+            }
+            if (!input || typeof input !== 'object') return;
+            Object.keys(input).forEach((key) => {
+                if (keys.has(key)) {
+                    delete input[key];
+                } else {
+                    stripKeys(input[key], keys);
+                }
+            });
+        };
+
+        const sanitizeDetail = (detail, message) => {
+            if (!detail || typeof detail !== 'object') return detail;
+            const sanitized = transformDetail(detail);
+            const isVideoIntro = message.includes('[HEALER:VIDEO] Video registered');
+            if (!isVideoIntro) {
+                stripKeys(sanitized, new Set(['currentSrc', 'src']));
+            }
+            if (message.includes('[HEALER:SRC]')) {
+                delete sanitized.previous;
+                delete sanitized.current;
+                sanitized.changed = true;
+            }
+            return sanitized;
+        };
+
         const logContent = logs.map(l => {
             const time = l.timestamp;
 
@@ -54,7 +110,10 @@ ${stallSummaryLine}${stallRecentLine}${healerLine}
                 return `[${time}] ${icon} ${l.message}`;
             } else {
                 // Internal script log
-                const detail = l.detail ? ' | ' + JSON.stringify(l.detail) : '';
+                const sanitized = sanitizeDetail(l.detail, l.message);
+                const detail = sanitized && Object.keys(sanitized).length > 0
+                    ? ' | ' + JSON.stringify(sanitized)
+                    : '';
                 return `[${time}] 🔧 ${l.message}${detail}`;
             }
         }).join('\n');
