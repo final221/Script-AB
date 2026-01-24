@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.1.53 - 2026-01-24T16:46:30.287Z
+Previous: 4.1.52
+Commit: 1aaf118
+Changes:
+- Set log detail column to 50
+
 ## 4.1.52 - 2026-01-24T16:45:15.886Z
 Previous: 4.1.51
 Commit: cab1443
