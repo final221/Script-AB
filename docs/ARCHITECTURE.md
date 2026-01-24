@@ -107,26 +107,27 @@ The build uses a priority list followed by auto-discovered modules, then the ent
 64. `core/RecoveryPolicyFactory.js`
 65. `core/RecoveryPolicy.js`
 66. `core/FailoverCandidatePicker.js`
-67. `core/FailoverManager.js`
-68. `core/RecoveryManager.js`
-69. `core/MonitorRegistry.js`
-70. `core/MonitorCoordinator.js`
-71. `core/CatchUpController.js`
-72. `core/HealPointPoller.js`
-73. `core/HealPipeline.js`
-74. `core/AdGapSignals.js`
-75. `core/PlayheadAttribution.js`
-76. `core/ExternalSignalUtils.js`
-77. `core/ExternalSignalHandlerStall.js`
-78. `core/ExternalSignalHandlerAsset.js`
-79. `core/ExternalSignalHandlerAdblock.js`
-80. `core/ExternalSignalHandlerFallback.js`
-81. `core/VideoDiscovery.js`
-82. `core/ExternalSignalRouter.js`
-83. `core/MonitoringOrchestrator.js`
-84. `core/RecoveryOrchestrator.js`
-85. `core/StreamHealer.js`
-86. `core/CoreOrchestrator.js`
+67. `core/FailoverProbeController.js`
+68. `core/FailoverManager.js`
+69. `core/RecoveryManager.js`
+70. `core/MonitorRegistry.js`
+71. `core/MonitorCoordinator.js`
+72. `core/CatchUpController.js`
+73. `core/HealPointPoller.js`
+74. `core/HealPipeline.js`
+75. `core/AdGapSignals.js`
+76. `core/PlayheadAttribution.js`
+77. `core/ExternalSignalUtils.js`
+78. `core/ExternalSignalHandlerStall.js`
+79. `core/ExternalSignalHandlerAsset.js`
+80. `core/ExternalSignalHandlerAdblock.js`
+81. `core/ExternalSignalHandlerFallback.js`
+82. `core/VideoDiscovery.js`
+83. `core/ExternalSignalRouter.js`
+84. `core/MonitoringOrchestrator.js`
+85. `core/RecoveryOrchestrator.js`
+86. `core/StreamHealer.js`
+87. `core/CoreOrchestrator.js`
 <!-- LOAD_ORDER_END -->
 
 
@@ -226,6 +227,7 @@ Script Logger.add() -> Logger.getMergedTimeline()
 - **CandidateSelector.js** - Scores and selects the active video
 - **BackoffManager.js** - No-heal-point backoff tracking
 - **FailoverCandidatePicker.js** - Failover candidate selection
+- **FailoverProbeController.js** - Probe attempt tracking for failover
 - **FailoverManager.js** - Failover attempt logic
 - **RecoveryManager.js** - Backoff and failover coordination
 - **MonitorRegistry.js** - Tracks monitored video lifecycle

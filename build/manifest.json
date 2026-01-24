@@ -66,6 +66,7 @@
     "core/RecoveryPolicyFactory.js",
     "core/RecoveryPolicy.js",
     "core/FailoverCandidatePicker.js",
+    "core/FailoverProbeController.js",
     "core/FailoverManager.js",
     "core/RecoveryManager.js",
     "core/MonitorRegistry.js",

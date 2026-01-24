@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.1.78 - 2026-01-24T20:09:47.988Z
+Previous: 4.1.77
+Commit: 2672aae
+Changes:
+- refactor: split external signal handling
+
 ## 4.1.77 - 2026-01-24T20:05:23.979Z
 Previous: 4.1.76
 Commit: ff62bef
