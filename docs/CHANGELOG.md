@@ -1,5 +1,17 @@
 # Changelog
 
+## 4.1.74 - 2026-01-24T19:52:22.301Z
+Previous: 4.1.73
+Commit: d342328
+Changes:
+- No commits detected since last build
+
+## 4.1.73 - 2026-01-24T19:50:57.473Z
+Previous: 4.1.72
+Commit: d342328
+Changes:
+- extract playback event logging
+
 ## 4.1.72 - 2026-01-24T19:47:39.000Z
 Previous: 4.1.71
 Commit: 56078a6

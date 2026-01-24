@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.1.72
+// @version       4.1.74
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -152,7 +152,7 @@ const CONFIG = (() => {
  * Build metadata helpers (version injected at build time).
  */
 const BuildInfo = (() => {
-    const VERSION = '4.1.72';
+    const VERSION = '4.1.74';
 
     const getVersion = () => {
         const gmVersion = (typeof GM_info !== 'undefined' && GM_info?.script?.version)
@@ -163,7 +163,7 @@ const BuildInfo = (() => {
             ? unsafeWindow.GM_info.script.version
             : null;
         if (unsafeVersion) return unsafeVersion;
-        if (VERSION && VERSION !== '4.1.72') return VERSION;
+        if (VERSION && VERSION !== '4.1.74') return VERSION;
         return null;
     };
 
@@ -3776,39 +3776,49 @@ const PlaybackEventLogger = (() => {
     return { create };
 })();
 
-// --- PlaybackEventHandlers ---
+// --- PlaybackEventHandlersProgress ---
 /**
- * Wires media element events to playback state tracking.
+ * Progress-related playback event handlers.
  */
-const PlaybackEventHandlers = (() => {
-    const create = (options) => {
+const PlaybackEventHandlersProgress = (() => {
+    const create = (options = {}) => {
         const video = options.video;
-        const videoId = options.videoId;
-        const logDebug = options.logDebug;
         const tracker = options.tracker;
         const state = options.state;
         const setState = options.setState;
-        const onReset = options.onReset || (() => {});
-        const isActive = options.isActive || (() => true);
-        const eventLogger = PlaybackEventLogger.create({
-            logDebug,
-            state,
-            isActive
-        });
-        const logEvent = eventLogger.logEvent;
+        const logEvent = options.logEvent;
 
-        const handlers = {
+        return {
             timeupdate: () => {
                 tracker.updateProgress('timeupdate');
                 if (state.state !== 'PLAYING') {
-                logEvent('timeupdate', () => ({
-                    state: state.state
-                }));
+                    logEvent('timeupdate', () => ({
+                        state: state.state
+                    }));
                 }
                 if (!video.paused && state.state !== 'HEALING') {
                     setState('PLAYING', 'timeupdate');
                 }
-            },
+            }
+        };
+    };
+
+    return { create };
+})();
+
+// --- PlaybackEventHandlersReady ---
+/**
+ * Ready/playback-start event handlers.
+ */
+const PlaybackEventHandlersReady = (() => {
+    const create = (options = {}) => {
+        const video = options.video;
+        const tracker = options.tracker;
+        const state = options.state;
+        const setState = options.setState;
+        const logEvent = options.logEvent;
+
+        return {
             playing: () => {
                 tracker.markReady('playing');
                 state.pauseFromStall = false;
@@ -3837,7 +3847,26 @@ const PlaybackEventHandlers = (() => {
                 logEvent('canplay', () => ({
                     state: state.state
                 }));
-            },
+            }
+        };
+    };
+
+    return { create };
+})();
+
+// --- PlaybackEventHandlersStall ---
+/**
+ * Stall-related playback event handlers.
+ */
+const PlaybackEventHandlersStall = (() => {
+    const create = (options = {}) => {
+        const video = options.video;
+        const tracker = options.tracker;
+        const state = options.state;
+        const setState = options.setState;
+        const logEvent = options.logEvent;
+
+        return {
             waiting: () => {
                 tracker.markStallEvent('waiting');
                 logEvent('waiting', () => ({
@@ -3870,7 +3899,28 @@ const PlaybackEventHandlers = (() => {
                     return;
                 }
                 setState('PAUSED', 'pause');
-            },
+            }
+        };
+    };
+
+    return { create };
+})();
+
+// --- PlaybackEventHandlersLifecycle ---
+/**
+ * Lifecycle event handlers (ended/error/abort/emptied/suspend).
+ */
+const PlaybackEventHandlersLifecycle = (() => {
+    const create = (options = {}) => {
+        const video = options.video;
+        const videoId = options.videoId;
+        const tracker = options.tracker;
+        const state = options.state;
+        const setState = options.setState;
+        const onReset = options.onReset || (() => {});
+        const logEvent = options.logEvent;
+
+        return {
             ended: () => {
                 state.pauseFromStall = false;
                 logEvent('ended', () => ({
@@ -3911,6 +3961,48 @@ const PlaybackEventHandlers = (() => {
                     state: state.state
                 }));
             }
+        };
+    };
+
+    return { create };
+})();
+
+// --- PlaybackEventHandlers ---
+/**
+ * Wires media element events to playback state tracking.
+ */
+const PlaybackEventHandlers = (() => {
+    const create = (options) => {
+        const video = options.video;
+        const videoId = options.videoId;
+        const logDebug = options.logDebug;
+        const tracker = options.tracker;
+        const state = options.state;
+        const setState = options.setState;
+        const onReset = options.onReset || (() => {});
+        const isActive = options.isActive || (() => true);
+        const eventLogger = PlaybackEventLogger.create({
+            logDebug,
+            state,
+            isActive
+        });
+        const logEvent = eventLogger.logEvent;
+
+        const handlerOptions = {
+            video,
+            videoId,
+            tracker,
+            state,
+            setState,
+            onReset,
+            logEvent
+        };
+
+        const handlers = {
+            ...PlaybackEventHandlersProgress.create(handlerOptions),
+            ...PlaybackEventHandlersReady.create(handlerOptions),
+            ...PlaybackEventHandlersStall.create(handlerOptions),
+            ...PlaybackEventHandlersLifecycle.create(handlerOptions)
         };
 
         const attach = () => {
