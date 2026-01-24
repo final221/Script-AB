@@ -248,7 +248,7 @@ ${stallSummaryLine}${stallRecentLine}${healerLine}
                 const icon = l.level === 'error' ? '\u274C' : l.level === 'warn' ? '\u26A0\uFE0F' : '\uD83D\uDCCB';
                 const message = stripConsoleTimestamp(l.message);
                 const split = splitConsoleMessage(message);
-                const detail = JSON.stringify({ message: split.detail });
+                const detail = split.detail || '';
                 return formatLine(`[${time}] ${icon} `, split.summary, detail, true);
             } else {
                 // Internal script log
@@ -263,16 +263,18 @@ ${stallSummaryLine}${stallRecentLine}${healerLine}
                 const rawTag = match[1];
                 const rest = match[2];
                 const parsed = parseInlinePairs(rest);
-                let mergedDetail = mergeDetail(parsed.pairs, sanitized);
-                if (parsed.prefix) {
-                    mergedDetail = mergedDetail && typeof mergedDetail === 'object'
-                        ? { message: parsed.prefix, ...mergedDetail }
-                        : { message: parsed.prefix };
-                }
+                const mergedDetail = mergeDetail(parsed.pairs, sanitized);
                 const formatted = formatTaggedMessage(rawTag);
-                const detail = mergedDetail && Object.keys(mergedDetail).length > 0
-                    ? JSON.stringify(mergedDetail)
-                    : '';
+                const detail = (() => {
+                    const messageText = parsed.prefix || '';
+                    const jsonDetail = mergedDetail && Object.keys(mergedDetail).length > 0
+                        ? JSON.stringify(mergedDetail)
+                        : '';
+                    if (messageText && jsonDetail) {
+                        return `${messageText} | ${jsonDetail}`;
+                    }
+                    return messageText || jsonDetail;
+                })();
                 return formatLine(`[${time}] ${formatted.icon} `, formatted.text, detail);
             }
         }).join('\n');

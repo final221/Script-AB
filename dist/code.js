@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.1.53
+// @version       4.1.54
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -142,7 +142,7 @@ const CONFIG = (() => {
  * Build metadata helpers (version injected at build time).
  */
 const BuildInfo = (() => {
-    const VERSION = '4.1.53';
+    const VERSION = '4.1.54';
 
     const getVersion = () => {
         const gmVersion = (typeof GM_info !== 'undefined' && GM_info?.script?.version)
@@ -153,7 +153,7 @@ const BuildInfo = (() => {
             ? unsafeWindow.GM_info.script.version
             : null;
         if (unsafeVersion) return unsafeVersion;
-        if (VERSION && VERSION !== '4.1.53') return VERSION;
+        if (VERSION && VERSION !== '4.1.54') return VERSION;
         return null;
     };
 
@@ -1510,7 +1510,7 @@ ${stallSummaryLine}${stallRecentLine}${healerLine}
                 const icon = l.level === 'error' ? '\u274C' : l.level === 'warn' ? '\u26A0\uFE0F' : '\uD83D\uDCCB';
                 const message = stripConsoleTimestamp(l.message);
                 const split = splitConsoleMessage(message);
-                const detail = JSON.stringify({ message: split.detail });
+                const detail = split.detail || '';
                 return formatLine(`[${time}] ${icon} `, split.summary, detail, true);
             } else {
                 // Internal script log
@@ -1525,16 +1525,18 @@ ${stallSummaryLine}${stallRecentLine}${healerLine}
                 const rawTag = match[1];
                 const rest = match[2];
                 const parsed = parseInlinePairs(rest);
-                let mergedDetail = mergeDetail(parsed.pairs, sanitized);
-                if (parsed.prefix) {
-                    mergedDetail = mergedDetail && typeof mergedDetail === 'object'
-                        ? { message: parsed.prefix, ...mergedDetail }
-                        : { message: parsed.prefix };
-                }
+                const mergedDetail = mergeDetail(parsed.pairs, sanitized);
                 const formatted = formatTaggedMessage(rawTag);
-                const detail = mergedDetail && Object.keys(mergedDetail).length > 0
-                    ? JSON.stringify(mergedDetail)
-                    : '';
+                const detail = (() => {
+                    const messageText = parsed.prefix || '';
+                    const jsonDetail = mergedDetail && Object.keys(mergedDetail).length > 0
+                        ? JSON.stringify(mergedDetail)
+                        : '';
+                    if (messageText && jsonDetail) {
+                        return `${messageText} | ${jsonDetail}`;
+                    }
+                    return messageText || jsonDetail;
+                })();
                 return formatLine(`[${time}] ${formatted.icon} `, formatted.text, detail);
             }
         }).join('\n');
