@@ -151,40 +151,20 @@ const CandidateSelector = (() => {
                 const entry = monitorsById.get(activeCandidateId);
                 const result = scoreVideo(entry.video, entry.monitor, activeCandidateId);
                 const trustInfo = CandidateTrust.getTrustInfo(result);
-                current = {
-                    id: activeCandidateId,
-                    state: entry.monitor.state.state,
-                    monitorState: entry.monitor.state,
-                    ...result
-                };
-                current.trusted = trustInfo.trusted;
-                current.trustReason = trustInfo.reason;
+                current = CandidateScoreRecord.buildCandidate(activeCandidateId, entry, result, trustInfo);
             }
 
             for (const [videoId, entry] of monitorsById.entries()) {
                 const result = scoreVideo(entry.video, entry.monitor, videoId);
                 const trustInfo = CandidateTrust.getTrustInfo(result);
                 const trusted = trustInfo.trusted;
-                scores.push({
-                    id: videoId,
-                    score: result.score,
-                    progressAgoMs: result.progressAgoMs,
-                    progressStreakMs: result.progressStreakMs,
-                    progressEligible: result.progressEligible,
-                    paused: result.vs.paused,
-                    readyState: result.vs.readyState,
-                    hasSrc: Boolean(result.vs.currentSrc),
-                    state: entry.monitor.state.state,
-                    reasons: result.reasons,
-                    trusted,
-                    trustReason: trustInfo.reason
-                });
+                scores.push(CandidateScoreRecord.buildScoreRecord(videoId, entry, result, trustInfo));
 
                 if (!best || result.score > best.score) {
-                    best = { id: videoId, ...result, trusted };
+                    best = CandidateScoreRecord.buildCandidate(videoId, entry, result, trustInfo);
                 }
                 if (trusted && (!bestTrusted || result.score > bestTrusted.score)) {
-                    bestTrusted = { id: videoId, ...result, trusted };
+                    bestTrusted = CandidateScoreRecord.buildCandidate(videoId, entry, result, trustInfo);
                 }
             }
 

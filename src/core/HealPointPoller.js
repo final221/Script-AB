@@ -64,7 +64,7 @@ const HealPointPoller = (() => {
                                 gapSize: gapSize.toFixed(2) + 's',
                                 minGap: gapOverrideMin + 's',
                                 healPoint: `${healPoint.start.toFixed(2)}-${healPoint.end.toFixed(2)}`,
-                                buffers: BufferGapFinder.formatRanges(BufferGapFinder.getBufferRanges(video))
+                                buffers: BufferGapFinder.analyze(video).formattedRanges
                             });
                             return {
                                 healPoint,
@@ -79,13 +79,13 @@ const HealPointPoller = (() => {
                                 bufferHeadroom: headroom,
                                 minRequired: CONFIG.recovery.MIN_HEAL_HEADROOM_S,
                                 healPoint: `${healPoint.start.toFixed(2)}-${healPoint.end.toFixed(2)}`,
-                                buffers: BufferGapFinder.formatRanges(BufferGapFinder.getBufferRanges(video))
+                                buffers: BufferGapFinder.analyze(video).formattedRanges
                             });
                             logDebug(deferSummary, {
                                 bufferHeadroom: headroom.toFixed(2) + 's',
                                 minRequired: CONFIG.recovery.MIN_HEAL_HEADROOM_S + 's',
                                 healPoint: `${healPoint.start.toFixed(2)}-${healPoint.end.toFixed(2)}`,
-                                buffers: BufferGapFinder.formatRanges(BufferGapFinder.getBufferRanges(video))
+                                buffers: BufferGapFinder.analyze(video).formattedRanges
                             });
                         }
                         await Fn.sleep(CONFIG.stall.HEAL_POLL_INTERVAL_MS);
@@ -109,7 +109,7 @@ const HealPointPoller = (() => {
                     logDebug(LogEvents.TAG.POLLING, {
                         attempt: pollCount,
                         elapsed: (Date.now() - startTime) + 'ms',
-                        buffers: BufferGapFinder.formatRanges(BufferGapFinder.getBufferRanges(video))
+                        buffers: BufferGapFinder.analyze(video).formattedRanges
                     });
                 }
 

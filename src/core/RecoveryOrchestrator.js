@@ -111,7 +111,7 @@ const RecoveryOrchestrator = (() => {
         };
 
         const logStallDetected = (context, details, now) => {
-            const snapshot = context.getSnapshot();
+            const snapshot = context.getLogSnapshot();
             const summary = LogEvents.summary.stallDetected({
                 videoId: context.videoId,
                 trigger: details.trigger,

@@ -5,7 +5,26 @@
  * This module finds that new range so we can seek to it.
  */
 const BufferGapFinder = (() => {
+    const analyze = (video, options = {}) => {
+        const ranges = BufferRanges.getBufferRanges(video);
+        const formattedRanges = BufferRanges.formatRanges(ranges);
+        const bufferAhead = BufferRanges.getBufferAhead(video);
+        const bufferExhausted = BufferRanges.isBufferExhausted(video);
+        const includeHealPoint = options.includeHealPoint === true;
+        const healPoint = includeHealPoint
+            ? HealPointFinder.findHealPoint(video, { silent: true })
+            : null;
+        return {
+            ranges,
+            formattedRanges,
+            bufferAhead,
+            bufferExhausted,
+            healPoint
+        };
+    };
+
     return {
+        analyze,
         findHealPoint: HealPointFinder.findHealPoint,
         isBufferExhausted: BufferRanges.isBufferExhausted,
         getBufferRanges: BufferRanges.getBufferRanges,

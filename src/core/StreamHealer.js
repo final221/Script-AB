@@ -26,7 +26,7 @@ const StreamHealer = (() => {
 
     const logWithState = (message, videoOrContext, detail = {}) => {
         const context = RecoveryContext.from(videoOrContext, null, monitoring.getVideoId);
-        const snapshot = StateSnapshot.full(context.video, context.videoId);
+        const snapshot = context.getLogSnapshot();
         Logger.add(message, {
             ...detail,
             videoId: detail.videoId || context.videoId,

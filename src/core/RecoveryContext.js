@@ -18,8 +18,10 @@ const RecoveryContext = (() => {
             detail,
             getSnapshot: () => StateSnapshot.full(video, videoId),
             getLiteSnapshot: () => StateSnapshot.lite(video, videoId),
+            getLogSnapshot: () => VideoStateSnapshot.forLog(video, videoId),
+            getLiteLogSnapshot: () => VideoStateSnapshot.forLog(video, videoId, 'lite'),
             getRanges: () => BufferGapFinder.getBufferRanges(video),
-            getRangesFormatted: () => BufferGapFinder.formatRanges(BufferGapFinder.getBufferRanges(video)),
+            getRangesFormatted: () => BufferGapFinder.analyze(video).formattedRanges,
             getBufferAhead: () => BufferGapFinder.getBufferAhead(video)
         };
     };

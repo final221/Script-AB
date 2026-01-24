@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.1.65
+// @version       4.1.66
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -144,7 +144,7 @@ const CONFIG = (() => {
  * Build metadata helpers (version injected at build time).
  */
 const BuildInfo = (() => {
-    const VERSION = '4.1.65';
+    const VERSION = '4.1.66';
 
     const getVersion = () => {
         const gmVersion = (typeof GM_info !== 'undefined' && GM_info?.script?.version)
@@ -155,7 +155,7 @@ const BuildInfo = (() => {
             ? unsafeWindow.GM_info.script.version
             : null;
         if (unsafeVersion) return unsafeVersion;
-        if (VERSION && VERSION !== '4.1.65') return VERSION;
+        if (VERSION && VERSION !== '4.1.66') return VERSION;
         return null;
     };
 
@@ -580,7 +580,26 @@ const HealPointFinder = (() => {
  * This module finds that new range so we can seek to it.
  */
 const BufferGapFinder = (() => {
+    const analyze = (video, options = {}) => {
+        const ranges = BufferRanges.getBufferRanges(video);
+        const formattedRanges = BufferRanges.formatRanges(ranges);
+        const bufferAhead = BufferRanges.getBufferAhead(video);
+        const bufferExhausted = BufferRanges.isBufferExhausted(video);
+        const includeHealPoint = options.includeHealPoint === true;
+        const healPoint = includeHealPoint
+            ? HealPointFinder.findHealPoint(video, { silent: true })
+            : null;
+        return {
+            ranges,
+            formattedRanges,
+            bufferAhead,
+            bufferExhausted,
+            healPoint
+        };
+    };
+
     return {
+        analyze,
         findHealPoint: HealPointFinder.findHealPoint,
         isBufferExhausted: BufferRanges.isBufferExhausted,
         getBufferRanges: BufferRanges.getBufferRanges,
@@ -667,7 +686,7 @@ const LiveEdgeSeeker = (() => {
         const target = SeekTargetCalculator.calculateSafeTarget(healPoint);
 
         const validation = SeekTargetCalculator.validateSeekTarget(video, target);
-        const bufferRanges = BufferGapFinder.formatRanges(BufferGapFinder.getBufferRanges(video));
+        const bufferRanges = BufferGapFinder.analyze(video).formattedRanges;
 
         Logger.add(LogEvents.tagged('SEEK', 'Attempting seek'), {
             from: fromTime.toFixed(3),
@@ -2821,7 +2840,7 @@ const MediaState = (() => {
     const full = (video, id) => VideoState.get(video, id);
     const lite = (video, id) => VideoState.getLite(video, id);
     const ranges = (video) => BufferGapFinder.getBufferRanges(video);
-    const formattedRanges = (video) => BufferGapFinder.formatRanges(BufferGapFinder.getBufferRanges(video));
+    const formattedRanges = (video) => BufferGapFinder.analyze(video).formattedRanges;
     const bufferAhead = (video) => BufferGapFinder.getBufferAhead(video);
     const isBufferExhausted = (video) => BufferGapFinder.isBufferExhausted(video);
 
@@ -2835,52 +2854,11 @@ const MediaState = (() => {
     };
 })();
 
-// --- RecoveryContext ---
+// --- PlaybackStateStore ---
 /**
- * Shared context wrapper for recovery flows.
+ * Builds playback state objects with alias mapping.
  */
-const RecoveryContext = (() => {
-    const create = (video, monitorState, getVideoId, detail = {}) => {
-        const videoId = detail.videoId || (typeof getVideoId === 'function'
-            ? getVideoId(video)
-            : 'unknown');
-        const now = Number.isFinite(detail.now) ? detail.now : Date.now();
-        return {
-            video,
-            monitorState,
-            videoId,
-            now,
-            trigger: detail.trigger || null,
-            reason: detail.reason || null,
-            detail,
-            getSnapshot: () => StateSnapshot.full(video, videoId),
-            getLiteSnapshot: () => StateSnapshot.lite(video, videoId),
-            getRanges: () => BufferGapFinder.getBufferRanges(video),
-            getRangesFormatted: () => BufferGapFinder.formatRanges(BufferGapFinder.getBufferRanges(video)),
-            getBufferAhead: () => BufferGapFinder.getBufferAhead(video)
-        };
-    };
-
-    const from = (videoOrContext, monitorState, getVideoId, detail = {}) => {
-        if (videoOrContext && typeof videoOrContext === 'object' && videoOrContext.video) {
-            return videoOrContext;
-        }
-        return create(videoOrContext, monitorState, getVideoId, detail);
-    };
-
-    return {
-        create,
-        from
-    };
-})();
-
-// --- PlaybackStateTracker ---
-/**
- * Shared playback state tracking for PlaybackMonitor.
- */
-const PlaybackStateTracker = (() => {
-    const PROGRESS_EPSILON = 0.05;
-
+const PlaybackStateStore = (() => {
     const defineAlias = (target, key, path) => {
         Object.defineProperty(target, key, {
             configurable: true,
@@ -2899,7 +2877,7 @@ const PlaybackStateTracker = (() => {
         Object.entries(map).forEach(([key, path]) => defineAlias(target, key, path));
     };
 
-    const create = (video, videoId, logDebug) => {
+    const create = (video) => {
         const state = {
             status: {
                 value: 'PLAYING'
@@ -3058,6 +3036,66 @@ const PlaybackStateTracker = (() => {
             lastCatchUpTime: ['catchUp', 'lastCatchUpTime']
         });
 
+        return state;
+    };
+
+    return {
+        create,
+        applyAliases
+    };
+})();
+
+// --- RecoveryContext ---
+/**
+ * Shared context wrapper for recovery flows.
+ */
+const RecoveryContext = (() => {
+    const create = (video, monitorState, getVideoId, detail = {}) => {
+        const videoId = detail.videoId || (typeof getVideoId === 'function'
+            ? getVideoId(video)
+            : 'unknown');
+        const now = Number.isFinite(detail.now) ? detail.now : Date.now();
+        return {
+            video,
+            monitorState,
+            videoId,
+            now,
+            trigger: detail.trigger || null,
+            reason: detail.reason || null,
+            detail,
+            getSnapshot: () => StateSnapshot.full(video, videoId),
+            getLiteSnapshot: () => StateSnapshot.lite(video, videoId),
+            getLogSnapshot: () => VideoStateSnapshot.forLog(video, videoId),
+            getLiteLogSnapshot: () => VideoStateSnapshot.forLog(video, videoId, 'lite'),
+            getRanges: () => BufferGapFinder.getBufferRanges(video),
+            getRangesFormatted: () => BufferGapFinder.analyze(video).formattedRanges,
+            getBufferAhead: () => BufferGapFinder.getBufferAhead(video)
+        };
+    };
+
+    const from = (videoOrContext, monitorState, getVideoId, detail = {}) => {
+        if (videoOrContext && typeof videoOrContext === 'object' && videoOrContext.video) {
+            return videoOrContext;
+        }
+        return create(videoOrContext, monitorState, getVideoId, detail);
+    };
+
+    return {
+        create,
+        from
+    };
+})();
+
+// --- PlaybackStateTracker ---
+/**
+ * Shared playback state tracking for PlaybackMonitor.
+ */
+const PlaybackStateTracker = (() => {
+    const PROGRESS_EPSILON = 0.05;
+
+    const create = (video, videoId, logDebug) => {
+        const state = PlaybackStateStore.create(video);
+
         const logHelper = PlaybackLogHelper.create({ video, videoId, state });
 
         const logDebugLazy = (messageOrFactory, detailFactory) => {
@@ -3110,7 +3148,7 @@ const PlaybackStateTracker = (() => {
                         hasSrc: Boolean(snapshot.currentSrc || snapshot.src),
                         readyState: snapshot.readyState,
                         networkState: snapshot.networkState,
-                        buffered: snapshot.buffered || BufferGapFinder.formatRanges(BufferGapFinder.getBufferRanges(video))
+                        buffered: snapshot.buffered || BufferGapFinder.analyze(video).formattedRanges
                     }
                 };
             });
@@ -4240,6 +4278,41 @@ const CandidateTrust = (() => {
     };
 })();
 
+// --- CandidateScoreRecord ---
+/**
+ * Standardizes candidate score and trust records.
+ */
+const CandidateScoreRecord = (() => {
+    const buildScoreRecord = (videoId, entry, result, trustInfo) => ({
+        id: videoId,
+        score: result.score,
+        progressAgoMs: result.progressAgoMs,
+        progressStreakMs: result.progressStreakMs,
+        progressEligible: result.progressEligible,
+        paused: result.vs.paused,
+        readyState: result.vs.readyState,
+        hasSrc: Boolean(result.vs.currentSrc),
+        state: entry.monitor.state.state,
+        reasons: result.reasons,
+        trusted: trustInfo.trusted,
+        trustReason: trustInfo.reason
+    });
+
+    const buildCandidate = (videoId, entry, result, trustInfo) => ({
+        id: videoId,
+        state: entry.monitor.state.state,
+        monitorState: entry.monitor.state,
+        trusted: trustInfo.trusted,
+        trustReason: trustInfo.reason,
+        ...result
+    });
+
+    return {
+        buildScoreRecord,
+        buildCandidate
+    };
+})();
+
 // --- CandidateSelector ---
 /**
  * Scores and selects the best video candidate for healing.
@@ -4393,40 +4466,20 @@ const CandidateSelector = (() => {
                 const entry = monitorsById.get(activeCandidateId);
                 const result = scoreVideo(entry.video, entry.monitor, activeCandidateId);
                 const trustInfo = CandidateTrust.getTrustInfo(result);
-                current = {
-                    id: activeCandidateId,
-                    state: entry.monitor.state.state,
-                    monitorState: entry.monitor.state,
-                    ...result
-                };
-                current.trusted = trustInfo.trusted;
-                current.trustReason = trustInfo.reason;
+                current = CandidateScoreRecord.buildCandidate(activeCandidateId, entry, result, trustInfo);
             }
 
             for (const [videoId, entry] of monitorsById.entries()) {
                 const result = scoreVideo(entry.video, entry.monitor, videoId);
                 const trustInfo = CandidateTrust.getTrustInfo(result);
                 const trusted = trustInfo.trusted;
-                scores.push({
-                    id: videoId,
-                    score: result.score,
-                    progressAgoMs: result.progressAgoMs,
-                    progressStreakMs: result.progressStreakMs,
-                    progressEligible: result.progressEligible,
-                    paused: result.vs.paused,
-                    readyState: result.vs.readyState,
-                    hasSrc: Boolean(result.vs.currentSrc),
-                    state: entry.monitor.state.state,
-                    reasons: result.reasons,
-                    trusted,
-                    trustReason: trustInfo.reason
-                });
+                scores.push(CandidateScoreRecord.buildScoreRecord(videoId, entry, result, trustInfo));
 
                 if (!best || result.score > best.score) {
-                    best = { id: videoId, ...result, trusted };
+                    best = CandidateScoreRecord.buildCandidate(videoId, entry, result, trustInfo);
                 }
                 if (trusted && (!bestTrusted || result.score > bestTrusted.score)) {
-                    bestTrusted = { id: videoId, ...result, trusted };
+                    bestTrusted = CandidateScoreRecord.buildCandidate(videoId, entry, result, trustInfo);
                 }
             }
 
@@ -5974,7 +6027,7 @@ const HealPointPoller = (() => {
                                 gapSize: gapSize.toFixed(2) + 's',
                                 minGap: gapOverrideMin + 's',
                                 healPoint: `${healPoint.start.toFixed(2)}-${healPoint.end.toFixed(2)}`,
-                                buffers: BufferGapFinder.formatRanges(BufferGapFinder.getBufferRanges(video))
+                                buffers: BufferGapFinder.analyze(video).formattedRanges
                             });
                             return {
                                 healPoint,
@@ -5989,13 +6042,13 @@ const HealPointPoller = (() => {
                                 bufferHeadroom: headroom,
                                 minRequired: CONFIG.recovery.MIN_HEAL_HEADROOM_S,
                                 healPoint: `${healPoint.start.toFixed(2)}-${healPoint.end.toFixed(2)}`,
-                                buffers: BufferGapFinder.formatRanges(BufferGapFinder.getBufferRanges(video))
+                                buffers: BufferGapFinder.analyze(video).formattedRanges
                             });
                             logDebug(deferSummary, {
                                 bufferHeadroom: headroom.toFixed(2) + 's',
                                 minRequired: CONFIG.recovery.MIN_HEAL_HEADROOM_S + 's',
                                 healPoint: `${healPoint.start.toFixed(2)}-${healPoint.end.toFixed(2)}`,
-                                buffers: BufferGapFinder.formatRanges(BufferGapFinder.getBufferRanges(video))
+                                buffers: BufferGapFinder.analyze(video).formattedRanges
                             });
                         }
                         await Fn.sleep(CONFIG.stall.HEAL_POLL_INTERVAL_MS);
@@ -6019,7 +6072,7 @@ const HealPointPoller = (() => {
                     logDebug(LogEvents.TAG.POLLING, {
                         attempt: pollCount,
                         elapsed: (Date.now() - startTime) + 'ms',
-                        buffers: BufferGapFinder.formatRanges(BufferGapFinder.getBufferRanges(video))
+                        buffers: BufferGapFinder.analyze(video).formattedRanges
                     });
                 }
 
@@ -6264,13 +6317,13 @@ const HealPipeline = (() => {
                     const noPointSummary = LogEvents.summary.noHealPoint({
                         duration: noPointDuration,
                         currentTime: video.currentTime,
-                        bufferRanges: BufferGapFinder.formatRanges(BufferGapFinder.getBufferRanges(video))
+                        bufferRanges: BufferGapFinder.analyze(video).formattedRanges
                     });
                     Logger.add(noPointSummary, {
                         duration: noPointDuration + 'ms',
                         suggestion: 'User may need to refresh page',
                         currentTime: video.currentTime?.toFixed(3),
-                        bufferRanges: BufferGapFinder.formatRanges(BufferGapFinder.getBufferRanges(video)),
+                        bufferRanges: BufferGapFinder.analyze(video).formattedRanges,
                         finalState: VideoStateSnapshot.forLog(video, videoId)
                     });
                     Metrics.increment('heals_failed');
@@ -6386,7 +6439,7 @@ const HealPipeline = (() => {
                         Logger.add(LogEvents.tagged('RETRY_SKIP', 'Retry skipped, no heal point available'), {
                             reason: 'abort_error',
                             currentTime: video.currentTime?.toFixed(3),
-                            bufferRanges: BufferGapFinder.formatRanges(BufferGapFinder.getBufferRanges(video))
+                            bufferRanges: BufferGapFinder.analyze(video).formattedRanges
                         });
                     }
                 }
@@ -6415,7 +6468,7 @@ const HealPipeline = (() => {
                 } else {
                     const repeatCount = updateHealPointRepeat(monitorState, finalPoint, false);
                     if (isAbortError(result)) {
-                        const bufferRanges = BufferGapFinder.formatRanges(BufferGapFinder.getBufferRanges(video));
+                        const bufferRanges = BufferGapFinder.analyze(video).formattedRanges;
                         Logger.add(LogEvents.tagged('ABORT_CONTEXT', 'Play aborted during heal'), {
                             error: result.error,
                             errorName: result.errorName,
@@ -7157,7 +7210,7 @@ const RecoveryOrchestrator = (() => {
         };
 
         const logStallDetected = (context, details, now) => {
-            const snapshot = context.getSnapshot();
+            const snapshot = context.getLogSnapshot();
             const summary = LogEvents.summary.stallDetected({
                 videoId: context.videoId,
                 trigger: details.trigger,
@@ -7272,7 +7325,7 @@ const StreamHealer = (() => {
 
     const logWithState = (message, videoOrContext, detail = {}) => {
         const context = RecoveryContext.from(videoOrContext, null, monitoring.getVideoId);
-        const snapshot = StateSnapshot.full(context.video, context.videoId);
+        const snapshot = context.getLogSnapshot();
         Logger.add(message, {
             ...detail,
             videoId: detail.videoId || context.videoId,

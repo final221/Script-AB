@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.1.66 - 2026-01-24T18:34:39.232Z
+Previous: 4.1.65
+Commit: 5525d4f
+Changes:
+- unify log event builder and suppress report export log
+
 ## 4.1.65 - 2026-01-24T18:18:46.917Z
 Previous: 4.1.64
 Commit: 28bd3a7

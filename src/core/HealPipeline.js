@@ -215,13 +215,13 @@ const HealPipeline = (() => {
                     const noPointSummary = LogEvents.summary.noHealPoint({
                         duration: noPointDuration,
                         currentTime: video.currentTime,
-                        bufferRanges: BufferGapFinder.formatRanges(BufferGapFinder.getBufferRanges(video))
+                        bufferRanges: BufferGapFinder.analyze(video).formattedRanges
                     });
                     Logger.add(noPointSummary, {
                         duration: noPointDuration + 'ms',
                         suggestion: 'User may need to refresh page',
                         currentTime: video.currentTime?.toFixed(3),
-                        bufferRanges: BufferGapFinder.formatRanges(BufferGapFinder.getBufferRanges(video)),
+                        bufferRanges: BufferGapFinder.analyze(video).formattedRanges,
                         finalState: VideoStateSnapshot.forLog(video, videoId)
                     });
                     Metrics.increment('heals_failed');
@@ -337,7 +337,7 @@ const HealPipeline = (() => {
                         Logger.add(LogEvents.tagged('RETRY_SKIP', 'Retry skipped, no heal point available'), {
                             reason: 'abort_error',
                             currentTime: video.currentTime?.toFixed(3),
-                            bufferRanges: BufferGapFinder.formatRanges(BufferGapFinder.getBufferRanges(video))
+                            bufferRanges: BufferGapFinder.analyze(video).formattedRanges
                         });
                     }
                 }
@@ -366,7 +366,7 @@ const HealPipeline = (() => {
                 } else {
                     const repeatCount = updateHealPointRepeat(monitorState, finalPoint, false);
                     if (isAbortError(result)) {
-                        const bufferRanges = BufferGapFinder.formatRanges(BufferGapFinder.getBufferRanges(video));
+                        const bufferRanges = BufferGapFinder.analyze(video).formattedRanges;
                         Logger.add(LogEvents.tagged('ABORT_CONTEXT', 'Play aborted during heal'), {
                             error: result.error,
                             errorName: result.errorName,

@@ -76,37 +76,39 @@ The build uses a priority list followed by auto-discovered modules, then the ent
 33. `core/StateSnapshot.js`
 34. `core/PlaybackLogHelper.js`
 35. `core/MediaState.js`
-36. `core/RecoveryContext.js`
-37. `core/PlaybackStateTracker.js`
-38. `core/PlaybackEventHandlers.js`
-39. `core/PlaybackWatchdog.js`
-40. `core/PlaybackMonitor.js`
-41. `core/CandidateScorer.js`
-42. `core/CandidateSwitchPolicy.js`
-43. `core/CandidateTrust.js`
-44. `core/CandidateSelector.js`
-45. `core/BackoffManager.js`
-46. `core/ProbationPolicy.js`
-47. `core/NoHealPointPolicy.js`
-48. `core/PlayErrorPolicy.js`
-49. `core/StallSkipPolicy.js`
-50. `core/RecoveryPolicyFactory.js`
-51. `core/RecoveryPolicy.js`
-52. `core/FailoverCandidatePicker.js`
-53. `core/FailoverManager.js`
-54. `core/RecoveryManager.js`
-55. `core/MonitorRegistry.js`
-56. `core/MonitorCoordinator.js`
-57. `core/HealPointPoller.js`
-58. `core/HealPipeline.js`
-59. `core/AdGapSignals.js`
-60. `core/PlayheadAttribution.js`
-61. `core/VideoDiscovery.js`
-62. `core/ExternalSignalRouter.js`
-63. `core/MonitoringOrchestrator.js`
-64. `core/RecoveryOrchestrator.js`
-65. `core/StreamHealer.js`
-66. `core/CoreOrchestrator.js`
+36. `core/PlaybackStateStore.js`
+37. `core/RecoveryContext.js`
+38. `core/PlaybackStateTracker.js`
+39. `core/PlaybackEventHandlers.js`
+40. `core/PlaybackWatchdog.js`
+41. `core/PlaybackMonitor.js`
+42. `core/CandidateScorer.js`
+43. `core/CandidateSwitchPolicy.js`
+44. `core/CandidateTrust.js`
+45. `core/CandidateScoreRecord.js`
+46. `core/CandidateSelector.js`
+47. `core/BackoffManager.js`
+48. `core/ProbationPolicy.js`
+49. `core/NoHealPointPolicy.js`
+50. `core/PlayErrorPolicy.js`
+51. `core/StallSkipPolicy.js`
+52. `core/RecoveryPolicyFactory.js`
+53. `core/RecoveryPolicy.js`
+54. `core/FailoverCandidatePicker.js`
+55. `core/FailoverManager.js`
+56. `core/RecoveryManager.js`
+57. `core/MonitorRegistry.js`
+58. `core/MonitorCoordinator.js`
+59. `core/HealPointPoller.js`
+60. `core/HealPipeline.js`
+61. `core/AdGapSignals.js`
+62. `core/PlayheadAttribution.js`
+63. `core/VideoDiscovery.js`
+64. `core/ExternalSignalRouter.js`
+65. `core/MonitoringOrchestrator.js`
+66. `core/RecoveryOrchestrator.js`
+67. `core/StreamHealer.js`
+68. `core/CoreOrchestrator.js`
 <!-- LOAD_ORDER_END -->
 
 
@@ -184,11 +186,13 @@ Script Logger.add() -> Logger.getMergedTimeline()
 - **VideoState.js** - Shared video state helper
 - **VideoStateSnapshot.js** - Standardized video state snapshots for logs
 - **PlaybackStateTracker.js** - Progress and stall state tracking
+- **PlaybackStateStore.js** - Playback state construction and alias mapping
 - **PlaybackEventHandlers.js** - Video event wiring for playback monitoring
 - **PlaybackWatchdog.js** - Watchdog interval for stall checks
 - **PlaybackMonitor.js** - Event-driven playback monitoring with watchdog
 - **CandidateScorer.js** - Scores video candidates
 - **CandidateSwitchPolicy.js** - Switch decision logic
+- **CandidateScoreRecord.js** - Standardized candidate score records
 - **CandidateSelector.js** - Scores and selects the active video
 - **BackoffManager.js** - No-heal-point backoff tracking
 - **FailoverCandidatePicker.js** - Failover candidate selection

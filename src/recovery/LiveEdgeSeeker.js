@@ -19,7 +19,7 @@ const LiveEdgeSeeker = (() => {
         const target = SeekTargetCalculator.calculateSafeTarget(healPoint);
 
         const validation = SeekTargetCalculator.validateSeekTarget(video, target);
-        const bufferRanges = BufferGapFinder.formatRanges(BufferGapFinder.getBufferRanges(video));
+        const bufferRanges = BufferGapFinder.analyze(video).formattedRanges;
 
         Logger.add(LogEvents.tagged('SEEK', 'Attempting seek'), {
             from: fromTime.toFixed(3),
