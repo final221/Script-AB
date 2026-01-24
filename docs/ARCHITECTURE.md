@@ -95,29 +95,32 @@ The build uses a priority list followed by auto-discovered modules, then the ent
 52. `core/CandidateSwitchPolicy.js`
 53. `core/CandidateTrust.js`
 54. `core/CandidateScoreRecord.js`
-55. `core/CandidateSelector.js`
-56. `core/BackoffManager.js`
-57. `core/ProbationPolicy.js`
-58. `core/NoHealPointPolicy.js`
-59. `core/PlayErrorPolicy.js`
-60. `core/StallSkipPolicy.js`
-61. `core/RecoveryPolicyFactory.js`
-62. `core/RecoveryPolicy.js`
-63. `core/FailoverCandidatePicker.js`
-64. `core/FailoverManager.js`
-65. `core/RecoveryManager.js`
-66. `core/MonitorRegistry.js`
-67. `core/MonitorCoordinator.js`
-68. `core/HealPointPoller.js`
-69. `core/HealPipeline.js`
-70. `core/AdGapSignals.js`
-71. `core/PlayheadAttribution.js`
-72. `core/VideoDiscovery.js`
-73. `core/ExternalSignalRouter.js`
-74. `core/MonitoringOrchestrator.js`
-75. `core/RecoveryOrchestrator.js`
-76. `core/StreamHealer.js`
-77. `core/CoreOrchestrator.js`
+55. `core/CandidateEvaluation.js`
+56. `core/CandidateSelectionLogger.js`
+57. `core/CandidateSelector.js`
+58. `core/BackoffManager.js`
+59. `core/ProbationPolicy.js`
+60. `core/NoHealPointPolicy.js`
+61. `core/PlayErrorPolicy.js`
+62. `core/StallSkipPolicy.js`
+63. `core/RecoveryPolicyFactory.js`
+64. `core/RecoveryPolicy.js`
+65. `core/FailoverCandidatePicker.js`
+66. `core/FailoverManager.js`
+67. `core/RecoveryManager.js`
+68. `core/MonitorRegistry.js`
+69. `core/MonitorCoordinator.js`
+70. `core/CatchUpController.js`
+71. `core/HealPointPoller.js`
+72. `core/HealPipeline.js`
+73. `core/AdGapSignals.js`
+74. `core/PlayheadAttribution.js`
+75. `core/VideoDiscovery.js`
+76. `core/ExternalSignalRouter.js`
+77. `core/MonitoringOrchestrator.js`
+78. `core/RecoveryOrchestrator.js`
+79. `core/StreamHealer.js`
+80. `core/CoreOrchestrator.js`
 <!-- LOAD_ORDER_END -->
 
 
@@ -211,6 +214,8 @@ Script Logger.add() -> Logger.getMergedTimeline()
 - **CandidateScorer.js** - Scores video candidates
 - **CandidateSwitchPolicy.js** - Switch decision logic
 - **CandidateScoreRecord.js** - Standardized candidate score records
+- **CandidateEvaluation.js** - Candidate scoring aggregation
+- **CandidateSelectionLogger.js** - Candidate selection log summaries
 - **CandidateSelector.js** - Scores and selects the active video
 - **BackoffManager.js** - No-heal-point backoff tracking
 - **FailoverCandidatePicker.js** - Failover candidate selection
@@ -218,6 +223,7 @@ Script Logger.add() -> Logger.getMergedTimeline()
 - **RecoveryManager.js** - Backoff and failover coordination
 - **MonitorRegistry.js** - Tracks monitored video lifecycle
 - **HealPointPoller.js** - Polls for heal points
+- **CatchUpController.js** - Post-heal live-edge catch-up scheduler
 - **HealPipeline.js** - Polls for heal points and executes seeks
 - **ExternalSignalRouter.js** - Handles console signal hints
 - **StreamHealer.js** - Main orchestrator for stall detection and healing

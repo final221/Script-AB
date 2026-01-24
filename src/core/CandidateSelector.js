@@ -16,18 +16,13 @@ const CandidateSelector = (() => {
         let lastGoodCandidateId = null;
         let probationUntil = 0;
         let probationReason = null;
-        let lastDecisionLogTime = 0;
-        let suppressionSummary = {
-            lastLogTime: Date.now(),
-            counts: {},
-            lastSample: null
-        };
         const scorer = CandidateScorer.create({ minProgressMs, isFallbackSource });
         const switchPolicy = CandidateSwitchPolicy.create({
             switchDelta,
             minProgressMs,
             logDebug
         });
+        const selectionLogger = CandidateSelectionLogger.create({ logDebug });
 
         const setLockChecker = (fn) => {
             lockChecker = fn;
@@ -56,55 +51,8 @@ const CandidateSelector = (() => {
             return false;
         };
 
-        const shouldLogDecision = (reason) => (
-            reason !== 'interval'
-            || (Date.now() - lastDecisionLogTime) >= CONFIG.logging.ACTIVE_LOG_MS
-        );
-
-        const logDecision = (detail) => {
-            if (!detail || !shouldLogDecision(detail.reason)) return;
-            lastDecisionLogTime = Date.now();
-            Logger.add(LogEvents.tagged('CANDIDATE_DECISION', 'Selection summary'), detail);
-        };
-
-        const logSuppression = (detail) => {
-            if (!detail) return;
-            if (detail.reason !== 'interval') {
-                logDebug(LogEvents.tagged('CANDIDATE', 'Switch suppressed'), detail);
-                return;
-            }
-            const cause = detail.cause || 'unknown';
-            suppressionSummary.counts[cause] = (suppressionSummary.counts[cause] || 0) + 1;
-            suppressionSummary.lastSample = {
-                from: detail.from,
-                to: detail.to,
-                cause,
-                reason: detail.reason,
-                activeState: detail.activeState,
-                probationActive: detail.probationActive
-            };
-
-            const now = Date.now();
-            const windowMs = now - suppressionSummary.lastLogTime;
-            if (windowMs < CONFIG.logging.SUPPRESSION_LOG_MS) {
-                return;
-            }
-            const total = Object.values(suppressionSummary.counts)
-                .reduce((sum, count) => sum + count, 0);
-            if (total > 0) {
-                Logger.add(LogEvents.tagged('SUPPRESSION', 'Switch suppressed summary'), {
-                    windowMs,
-                    total,
-                    byCause: suppressionSummary.counts,
-                    lastSample: suppressionSummary.lastSample
-                });
-            }
-            suppressionSummary = {
-                lastLogTime: now,
-                counts: {},
-                lastSample: null
-            };
-        };
+        const logDecision = selectionLogger.logDecision;
+        const logSuppression = selectionLogger.logSuppression;
 
         const getActiveId = () => {
             if (!activeCandidateId && monitorsById.size > 0) {
@@ -142,40 +90,17 @@ const CandidateSelector = (() => {
                 return null;
             }
 
-            let best = null;
-            let bestNonDead = null;
-            let current = null;
-            let bestTrusted = null;
-            let bestTrustedNonDead = null;
-            const scores = [];
-
-            if (activeCandidateId && monitorsById.has(activeCandidateId)) {
-                const entry = monitorsById.get(activeCandidateId);
-                const result = scoreVideo(entry.video, entry.monitor, activeCandidateId);
-                const trustInfo = CandidateTrust.getTrustInfo(result);
-                current = CandidateScoreRecord.buildCandidate(activeCandidateId, entry, result, trustInfo);
-            }
-
-            for (const [videoId, entry] of monitorsById.entries()) {
-                const result = scoreVideo(entry.video, entry.monitor, videoId);
-                const trustInfo = CandidateTrust.getTrustInfo(result);
-                const trusted = trustInfo.trusted;
-                scores.push(CandidateScoreRecord.buildScoreRecord(videoId, entry, result, trustInfo));
-
-                if (!best || result.score > best.score) {
-                    best = CandidateScoreRecord.buildCandidate(videoId, entry, result, trustInfo);
-                }
-                if (!result.deadCandidate && (!bestNonDead || result.score > bestNonDead.score)) {
-                    bestNonDead = CandidateScoreRecord.buildCandidate(videoId, entry, result, trustInfo);
-                }
-                if (trusted && (!bestTrusted || result.score > bestTrusted.score)) {
-                    bestTrusted = CandidateScoreRecord.buildCandidate(videoId, entry, result, trustInfo);
-                }
-                if (trusted && !result.deadCandidate
-                    && (!bestTrustedNonDead || result.score > bestTrustedNonDead.score)) {
-                    bestTrustedNonDead = CandidateScoreRecord.buildCandidate(videoId, entry, result, trustInfo);
-                }
-            }
+            const evaluation = CandidateEvaluation.evaluate({
+                monitorsById,
+                activeCandidateId,
+                scoreVideo
+            });
+            const scores = evaluation.scores;
+            const current = evaluation.current;
+            const best = evaluation.best;
+            const bestNonDead = evaluation.bestNonDead;
+            const bestTrusted = evaluation.bestTrusted;
+            const bestTrustedNonDead = evaluation.bestTrustedNonDead;
 
             if (bestTrusted) {
                 lastGoodCandidateId = bestTrusted.id;

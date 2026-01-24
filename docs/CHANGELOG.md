@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.1.75 - 2026-01-24T19:58:28.831Z
+Previous: 4.1.74
+Commit: 9ca2738
+Changes:
+- refactor: split playback event handlers
+
 ## 4.1.74 - 2026-01-24T19:52:22.301Z
 Previous: 4.1.73
 Commit: d342328

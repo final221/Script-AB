@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.1.74
+// @version       4.1.75
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -152,7 +152,7 @@ const CONFIG = (() => {
  * Build metadata helpers (version injected at build time).
  */
 const BuildInfo = (() => {
-    const VERSION = '4.1.74';
+    const VERSION = '4.1.75';
 
     const getVersion = () => {
         const gmVersion = (typeof GM_info !== 'undefined' && GM_info?.script?.version)
@@ -163,7 +163,7 @@ const BuildInfo = (() => {
             ? unsafeWindow.GM_info.script.version
             : null;
         if (unsafeVersion) return unsafeVersion;
-        if (VERSION && VERSION !== '4.1.74') return VERSION;
+        if (VERSION && VERSION !== '4.1.75') return VERSION;
         return null;
     };
 
@@ -4577,62 +4577,76 @@ const CandidateScoreRecord = (() => {
     };
 })();
 
-// --- CandidateSelector ---
+// --- CandidateEvaluation ---
 /**
- * Scores and selects the best video candidate for healing.
+ * Aggregates candidate score snapshots for selection decisions.
  */
-const CandidateSelector = (() => {
-    const create = (options) => {
+const CandidateEvaluation = (() => {
+    const evaluate = (options = {}) => {
         const monitorsById = options.monitorsById;
-        const logDebug = options.logDebug;
-        const maxMonitors = options.maxMonitors;
-        const minProgressMs = options.minProgressMs;
-        const switchDelta = options.switchDelta;
-        const isFallbackSource = options.isFallbackSource;
+        const activeCandidateId = options.activeCandidateId;
+        const scoreVideo = options.scoreVideo;
 
-        let activeCandidateId = null;
-        let lockChecker = null;
-        let lastGoodCandidateId = null;
-        let probationUntil = 0;
-        let probationReason = null;
+        let best = null;
+        let bestNonDead = null;
+        let bestTrusted = null;
+        let bestTrustedNonDead = null;
+        let current = null;
+        const scores = [];
+
+        if (activeCandidateId && monitorsById.has(activeCandidateId)) {
+            const entry = monitorsById.get(activeCandidateId);
+            const result = scoreVideo(entry.video, entry.monitor, activeCandidateId);
+            const trustInfo = CandidateTrust.getTrustInfo(result);
+            current = CandidateScoreRecord.buildCandidate(activeCandidateId, entry, result, trustInfo);
+        }
+
+        for (const [videoId, entry] of monitorsById.entries()) {
+            const result = scoreVideo(entry.video, entry.monitor, videoId);
+            const trustInfo = CandidateTrust.getTrustInfo(result);
+            const trusted = trustInfo.trusted;
+            scores.push(CandidateScoreRecord.buildScoreRecord(videoId, entry, result, trustInfo));
+
+            if (!best || result.score > best.score) {
+                best = CandidateScoreRecord.buildCandidate(videoId, entry, result, trustInfo);
+            }
+            if (!result.deadCandidate && (!bestNonDead || result.score > bestNonDead.score)) {
+                bestNonDead = CandidateScoreRecord.buildCandidate(videoId, entry, result, trustInfo);
+            }
+            if (trusted && (!bestTrusted || result.score > bestTrusted.score)) {
+                bestTrusted = CandidateScoreRecord.buildCandidate(videoId, entry, result, trustInfo);
+            }
+            if (trusted && !result.deadCandidate
+                && (!bestTrustedNonDead || result.score > bestTrustedNonDead.score)) {
+                bestTrustedNonDead = CandidateScoreRecord.buildCandidate(videoId, entry, result, trustInfo);
+            }
+        }
+
+        return {
+            scores,
+            current,
+            best,
+            bestNonDead,
+            bestTrusted,
+            bestTrustedNonDead
+        };
+    };
+
+    return { evaluate };
+})();
+
+// --- CandidateSelectionLogger ---
+/**
+ * Logging helpers for candidate selection decisions/suppressions.
+ */
+const CandidateSelectionLogger = (() => {
+    const create = (options = {}) => {
+        const logDebug = options.logDebug || (() => {});
         let lastDecisionLogTime = 0;
         let suppressionSummary = {
             lastLogTime: Date.now(),
             counts: {},
             lastSample: null
-        };
-        const scorer = CandidateScorer.create({ minProgressMs, isFallbackSource });
-        const switchPolicy = CandidateSwitchPolicy.create({
-            switchDelta,
-            minProgressMs,
-            logDebug
-        });
-
-        const setLockChecker = (fn) => {
-            lockChecker = fn;
-        };
-
-        const activateProbation = (reason) => {
-            const windowMs = CONFIG.monitoring.PROBATION_WINDOW_MS;
-            probationUntil = Date.now() + windowMs;
-            probationReason = reason || 'unknown';
-            Logger.add(LogEvents.tagged('PROBATION', 'Window started'), {
-                reason: probationReason,
-                windowMs
-            });
-        };
-
-        const isProbationActive = () => {
-            if (!probationUntil) return false;
-            if (Date.now() <= probationUntil) {
-                return true;
-            }
-            Logger.add(LogEvents.tagged('PROBATION', 'Window ended'), {
-                reason: probationReason
-            });
-            probationUntil = 0;
-            probationReason = null;
-            return false;
         };
 
         const shouldLogDecision = (reason) => (
@@ -4685,6 +4699,71 @@ const CandidateSelector = (() => {
             };
         };
 
+        return {
+            logDecision,
+            logSuppression
+        };
+    };
+
+    return { create };
+})();
+
+// --- CandidateSelector ---
+/**
+ * Scores and selects the best video candidate for healing.
+ */
+const CandidateSelector = (() => {
+    const create = (options) => {
+        const monitorsById = options.monitorsById;
+        const logDebug = options.logDebug;
+        const maxMonitors = options.maxMonitors;
+        const minProgressMs = options.minProgressMs;
+        const switchDelta = options.switchDelta;
+        const isFallbackSource = options.isFallbackSource;
+
+        let activeCandidateId = null;
+        let lockChecker = null;
+        let lastGoodCandidateId = null;
+        let probationUntil = 0;
+        let probationReason = null;
+        const scorer = CandidateScorer.create({ minProgressMs, isFallbackSource });
+        const switchPolicy = CandidateSwitchPolicy.create({
+            switchDelta,
+            minProgressMs,
+            logDebug
+        });
+        const selectionLogger = CandidateSelectionLogger.create({ logDebug });
+
+        const setLockChecker = (fn) => {
+            lockChecker = fn;
+        };
+
+        const activateProbation = (reason) => {
+            const windowMs = CONFIG.monitoring.PROBATION_WINDOW_MS;
+            probationUntil = Date.now() + windowMs;
+            probationReason = reason || 'unknown';
+            Logger.add(LogEvents.tagged('PROBATION', 'Window started'), {
+                reason: probationReason,
+                windowMs
+            });
+        };
+
+        const isProbationActive = () => {
+            if (!probationUntil) return false;
+            if (Date.now() <= probationUntil) {
+                return true;
+            }
+            Logger.add(LogEvents.tagged('PROBATION', 'Window ended'), {
+                reason: probationReason
+            });
+            probationUntil = 0;
+            probationReason = null;
+            return false;
+        };
+
+        const logDecision = selectionLogger.logDecision;
+        const logSuppression = selectionLogger.logSuppression;
+
         const getActiveId = () => {
             if (!activeCandidateId && monitorsById.size > 0) {
                 const fallbackId = (lastGoodCandidateId && monitorsById.has(lastGoodCandidateId))
@@ -4721,40 +4800,17 @@ const CandidateSelector = (() => {
                 return null;
             }
 
-            let best = null;
-            let bestNonDead = null;
-            let current = null;
-            let bestTrusted = null;
-            let bestTrustedNonDead = null;
-            const scores = [];
-
-            if (activeCandidateId && monitorsById.has(activeCandidateId)) {
-                const entry = monitorsById.get(activeCandidateId);
-                const result = scoreVideo(entry.video, entry.monitor, activeCandidateId);
-                const trustInfo = CandidateTrust.getTrustInfo(result);
-                current = CandidateScoreRecord.buildCandidate(activeCandidateId, entry, result, trustInfo);
-            }
-
-            for (const [videoId, entry] of monitorsById.entries()) {
-                const result = scoreVideo(entry.video, entry.monitor, videoId);
-                const trustInfo = CandidateTrust.getTrustInfo(result);
-                const trusted = trustInfo.trusted;
-                scores.push(CandidateScoreRecord.buildScoreRecord(videoId, entry, result, trustInfo));
-
-                if (!best || result.score > best.score) {
-                    best = CandidateScoreRecord.buildCandidate(videoId, entry, result, trustInfo);
-                }
-                if (!result.deadCandidate && (!bestNonDead || result.score > bestNonDead.score)) {
-                    bestNonDead = CandidateScoreRecord.buildCandidate(videoId, entry, result, trustInfo);
-                }
-                if (trusted && (!bestTrusted || result.score > bestTrusted.score)) {
-                    bestTrusted = CandidateScoreRecord.buildCandidate(videoId, entry, result, trustInfo);
-                }
-                if (trusted && !result.deadCandidate
-                    && (!bestTrustedNonDead || result.score > bestTrustedNonDead.score)) {
-                    bestTrustedNonDead = CandidateScoreRecord.buildCandidate(videoId, entry, result, trustInfo);
-                }
-            }
+            const evaluation = CandidateEvaluation.evaluate({
+                monitorsById,
+                activeCandidateId,
+                scoreVideo
+            });
+            const scores = evaluation.scores;
+            const current = evaluation.current;
+            const best = evaluation.best;
+            const bestNonDead = evaluation.bestNonDead;
+            const bestTrusted = evaluation.bestTrusted;
+            const bestTrustedNonDead = evaluation.bestTrustedNonDead;
 
             if (bestTrusted) {
                 lastGoodCandidateId = bestTrusted.id;
@@ -6331,6 +6387,127 @@ const MonitorCoordinator = (() => {
     return { create };
 })();
 
+// --- CatchUpController ---
+/**
+ * Schedules catch-up seeks toward the live edge after healing.
+ */
+const CatchUpController = (() => {
+    const create = () => {
+        const scheduleCatchUp = (video, monitorState, videoId, reason) => {
+            if (!monitorState || monitorState.catchUpTimeoutId) return;
+            monitorState.catchUpAttempts = 0;
+            const delayMs = CONFIG.recovery.CATCH_UP_DELAY_MS;
+            Logger.add(LogEvents.tagged('CATCH_UP', 'Scheduled'), {
+                reason,
+                delayMs,
+                videoState: VideoStateSnapshot.forLog(video, videoId)
+            });
+            monitorState.catchUpTimeoutId = setTimeout(() => {
+                attemptCatchUp(video, monitorState, videoId, reason);
+            }, delayMs);
+        };
+
+        const attemptCatchUp = (video, monitorState, videoId, reason) => {
+            if (!monitorState) return;
+            monitorState.catchUpTimeoutId = null;
+            monitorState.catchUpAttempts += 1;
+
+            if (!document.contains(video)) {
+                Logger.add(LogEvents.tagged('CATCH_UP', 'Skipped (detached)'), {
+                    reason,
+                    attempts: monitorState.catchUpAttempts
+                });
+                return;
+            }
+
+            const now = Date.now();
+            const stallAgoMs = monitorState.lastStallEventTime
+                ? (now - monitorState.lastStallEventTime)
+                : null;
+            const progressOk = monitorState.progressStreakMs >= CONFIG.monitoring.CANDIDATE_MIN_PROGRESS_MS;
+            const stableEnough = !video.paused
+                && video.readyState >= 3
+                && progressOk
+                && (stallAgoMs === null || stallAgoMs >= CONFIG.recovery.CATCH_UP_STABLE_MS);
+
+            if (!stableEnough) {
+                Logger.add(LogEvents.tagged('CATCH_UP', 'Deferred (unstable)'), {
+                    reason,
+                    attempts: monitorState.catchUpAttempts,
+                    paused: video.paused,
+                    readyState: video.readyState,
+                    progressStreakMs: monitorState.progressStreakMs,
+                    stallAgoMs
+                });
+                if (monitorState.catchUpAttempts < CONFIG.recovery.CATCH_UP_MAX_ATTEMPTS) {
+                    monitorState.catchUpTimeoutId = setTimeout(() => {
+                        attemptCatchUp(video, monitorState, videoId, reason);
+                    }, CONFIG.recovery.CATCH_UP_RETRY_MS);
+                }
+                return;
+            }
+
+            const ranges = BufferGapFinder.getBufferRanges(video);
+            if (!ranges.length) {
+                Logger.add(LogEvents.tagged('CATCH_UP', 'Skipped (no buffer)'), {
+                    reason,
+                    attempts: monitorState.catchUpAttempts
+                });
+                return;
+            }
+
+            const liveRange = ranges[ranges.length - 1];
+            const bufferEnd = liveRange.end;
+            const behindS = bufferEnd - video.currentTime;
+
+            if (behindS < CONFIG.recovery.CATCH_UP_MIN_S) {
+                Logger.add(LogEvents.tagged('CATCH_UP', 'Skipped (already near live)'), {
+                    reason,
+                    behindS: behindS.toFixed(2)
+                });
+                return;
+            }
+
+            const target = Math.max(video.currentTime, bufferEnd - CONFIG.recovery.HEAL_EDGE_GUARD_S);
+            const validation = SeekTargetCalculator.validateSeekTarget(video, target);
+            const bufferRanges = BufferGapFinder.formatRanges(ranges);
+
+            if (!validation.valid) {
+                Logger.add(LogEvents.tagged('CATCH_UP', 'Skipped (invalid target)'), {
+                    reason,
+                    target: target.toFixed(3),
+                    behindS: behindS.toFixed(2),
+                    bufferRanges,
+                    validation: validation.reason
+                });
+                return;
+            }
+
+            try {
+                Logger.add(LogEvents.tagged('CATCH_UP', 'Seeking toward live edge'), {
+                    reason,
+                    from: video.currentTime.toFixed(3),
+                    to: target.toFixed(3),
+                    behindS: behindS.toFixed(2),
+                    bufferRanges
+                });
+                video.currentTime = target;
+                monitorState.lastCatchUpTime = now;
+            } catch (error) {
+                Logger.add(LogEvents.tagged('CATCH_UP', 'Seek failed'), {
+                    reason,
+                    error: error?.name,
+                    message: error?.message
+                });
+            }
+        };
+
+        return { scheduleCatchUp };
+    };
+
+    return { create };
+})();
+
 // --- HealPointPoller ---
 /**
  * Polls for heal points and detects self-recovery.
@@ -6486,6 +6663,7 @@ const HealPipeline = (() => {
             logDebug: options.logDebug,
             shouldAbort: (video) => (!document.contains(video) ? 'detached' : false)
         });
+        const catchUpController = CatchUpController.create();
 
         const state = {
             isHealing: false,
@@ -6499,114 +6677,6 @@ const HealPipeline = (() => {
             return end - video.currentTime;
         };
 
-        const scheduleCatchUp = (video, monitorState, videoId, reason) => {
-            if (!monitorState || monitorState.catchUpTimeoutId) return;
-            monitorState.catchUpAttempts = 0;
-            const delayMs = CONFIG.recovery.CATCH_UP_DELAY_MS;
-            Logger.add(LogEvents.tagged('CATCH_UP', 'Scheduled'), {
-                reason,
-                delayMs,
-                videoState: VideoStateSnapshot.forLog(video, videoId)
-            });
-            monitorState.catchUpTimeoutId = setTimeout(() => {
-                attemptCatchUp(video, monitorState, videoId, reason);
-            }, delayMs);
-        };
-
-        const attemptCatchUp = (video, monitorState, videoId, reason) => {
-            if (!monitorState) return;
-            monitorState.catchUpTimeoutId = null;
-            monitorState.catchUpAttempts += 1;
-
-            if (!document.contains(video)) {
-                    Logger.add(LogEvents.tagged('CATCH_UP', 'Skipped (detached)'), {
-                        reason,
-                        attempts: monitorState.catchUpAttempts
-                    });
-                return;
-            }
-
-            const now = Date.now();
-            const stallAgoMs = monitorState.lastStallEventTime
-                ? (now - monitorState.lastStallEventTime)
-                : null;
-            const progressOk = monitorState.progressStreakMs >= CONFIG.monitoring.CANDIDATE_MIN_PROGRESS_MS;
-            const stableEnough = !video.paused
-                && video.readyState >= 3
-                && progressOk
-                && (stallAgoMs === null || stallAgoMs >= CONFIG.recovery.CATCH_UP_STABLE_MS);
-
-            if (!stableEnough) {
-                Logger.add(LogEvents.tagged('CATCH_UP', 'Deferred (unstable)'), {
-                    reason,
-                    attempts: monitorState.catchUpAttempts,
-                    paused: video.paused,
-                    readyState: video.readyState,
-                    progressStreakMs: monitorState.progressStreakMs,
-                    stallAgoMs
-                });
-                if (monitorState.catchUpAttempts < CONFIG.recovery.CATCH_UP_MAX_ATTEMPTS) {
-                    monitorState.catchUpTimeoutId = setTimeout(() => {
-                        attemptCatchUp(video, monitorState, reason);
-                    }, CONFIG.recovery.CATCH_UP_RETRY_MS);
-                }
-                return;
-            }
-
-            const ranges = BufferGapFinder.getBufferRanges(video);
-            if (!ranges.length) {
-                Logger.add(LogEvents.tagged('CATCH_UP', 'Skipped (no buffer)'), {
-                    reason,
-                    attempts: monitorState.catchUpAttempts
-                });
-                return;
-            }
-
-            const liveRange = ranges[ranges.length - 1];
-            const bufferEnd = liveRange.end;
-            const behindS = bufferEnd - video.currentTime;
-
-            if (behindS < CONFIG.recovery.CATCH_UP_MIN_S) {
-                Logger.add(LogEvents.tagged('CATCH_UP', 'Skipped (already near live)'), {
-                    reason,
-                    behindS: behindS.toFixed(2)
-                });
-                return;
-            }
-
-            const target = Math.max(video.currentTime, bufferEnd - CONFIG.recovery.HEAL_EDGE_GUARD_S);
-            const validation = SeekTargetCalculator.validateSeekTarget(video, target);
-            const bufferRanges = BufferGapFinder.formatRanges(ranges);
-
-            if (!validation.valid) {
-                Logger.add(LogEvents.tagged('CATCH_UP', 'Skipped (invalid target)'), {
-                    reason,
-                    target: target.toFixed(3),
-                    behindS: behindS.toFixed(2),
-                    bufferRanges,
-                    validation: validation.reason
-                });
-                return;
-            }
-
-            try {
-                Logger.add(LogEvents.tagged('CATCH_UP', 'Seeking toward live edge'), {
-                    reason,
-                    from: video.currentTime.toFixed(3),
-                    to: target.toFixed(3),
-                    behindS: behindS.toFixed(2),
-                    bufferRanges
-                });
-                video.currentTime = target;
-                monitorState.lastCatchUpTime = now;
-            } catch (error) {
-                Logger.add(LogEvents.tagged('CATCH_UP', 'Seek failed'), {
-                    reason,
-                    error: error?.name,
-                    message: error?.message
-                });
-            }
-        };
 
         const attemptHeal = async (videoOrContext, monitorStateOverride) => {
             const context = RecoveryContext.from(videoOrContext, monitorStateOverride, getVideoId);
@@ -6834,7 +6904,7 @@ const HealPipeline = (() => {
                     if (recoveryManager.resetPlayError) {
                         recoveryManager.resetPlayError(monitorState, 'heal_success');
                     }
-                    scheduleCatchUp(video, monitorState, videoId, 'post_heal');
+                    catchUpController.scheduleCatchUp(video, monitorState, videoId, 'post_heal');
                 } else {
                     const repeatCount = updateHealPointRepeat(monitorState, finalPoint, false);
                     if (isAbortError(result)) {
