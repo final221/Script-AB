@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.1.50 - 2026-01-24T16:21:06.494Z
+Previous: 4.1.49
+Commit: a80dacd
+Changes:
+- Move inline key-value fields into details
+
 ## 4.1.49 - 2026-01-24T16:15:30.474Z
 Previous: 4.1.48
 Commit: a677c77

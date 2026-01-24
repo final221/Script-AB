@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.1.49
+// @version       4.1.50
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -142,7 +142,7 @@ const CONFIG = (() => {
  * Build metadata helpers (version injected at build time).
  */
 const BuildInfo = (() => {
-    const VERSION = '4.1.49';
+    const VERSION = '4.1.50';
 
     const getVersion = () => {
         const gmVersion = (typeof GM_info !== 'undefined' && GM_info?.script?.version)
@@ -153,7 +153,7 @@ const BuildInfo = (() => {
             ? unsafeWindow.GM_info.script.version
             : null;
         if (unsafeVersion) return unsafeVersion;
-        if (VERSION && VERSION !== '4.1.49') return VERSION;
+        if (VERSION && VERSION !== '4.1.50') return VERSION;
         return null;
     };
 
@@ -1461,7 +1461,7 @@ ${stallSummaryLine}${stallRecentLine}${healerLine}
             };
         };
 
-        const formatTaggedMessage = (rawTag, rest) => {
+        const formatTaggedMessage = (rawTag) => {
             let displayTag = rawTag;
             let tagKey = rawTag;
             if (rawTag.startsWith('HEALER:')) {
@@ -1473,7 +1473,7 @@ ${stallSummaryLine}${stallRecentLine}${healerLine}
             }
             const category = categoryForTag(tagKey);
             const icon = ICONS[category] || ICONS.other;
-            const text = rest ? `[${displayTag}] ${rest}` : `[${displayTag}]`;
+            const text = `[${displayTag}]`;
             return { icon, text };
         };
 
@@ -1525,8 +1525,13 @@ ${stallSummaryLine}${stallRecentLine}${healerLine}
                 const rawTag = match[1];
                 const rest = match[2];
                 const parsed = parseInlinePairs(rest);
-                const mergedDetail = mergeDetail(parsed.pairs, sanitized);
-                const formatted = formatTaggedMessage(rawTag, parsed.prefix);
+                let mergedDetail = mergeDetail(parsed.pairs, sanitized);
+                if (parsed.prefix) {
+                    mergedDetail = mergedDetail && typeof mergedDetail === 'object'
+                        ? { message: parsed.prefix, ...mergedDetail }
+                        : { message: parsed.prefix };
+                }
+                const formatted = formatTaggedMessage(rawTag);
                 const detail = mergedDetail && Object.keys(mergedDetail).length > 0
                     ? JSON.stringify(mergedDetail)
                     : '';

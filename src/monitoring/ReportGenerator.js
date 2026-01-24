@@ -199,7 +199,7 @@ ${stallSummaryLine}${stallRecentLine}${healerLine}
             };
         };
 
-        const formatTaggedMessage = (rawTag, rest) => {
+        const formatTaggedMessage = (rawTag) => {
             let displayTag = rawTag;
             let tagKey = rawTag;
             if (rawTag.startsWith('HEALER:')) {
@@ -211,7 +211,7 @@ ${stallSummaryLine}${stallRecentLine}${healerLine}
             }
             const category = categoryForTag(tagKey);
             const icon = ICONS[category] || ICONS.other;
-            const text = rest ? `[${displayTag}] ${rest}` : `[${displayTag}]`;
+            const text = `[${displayTag}]`;
             return { icon, text };
         };
 
@@ -263,8 +263,13 @@ ${stallSummaryLine}${stallRecentLine}${healerLine}
                 const rawTag = match[1];
                 const rest = match[2];
                 const parsed = parseInlinePairs(rest);
-                const mergedDetail = mergeDetail(parsed.pairs, sanitized);
-                const formatted = formatTaggedMessage(rawTag, parsed.prefix);
+                let mergedDetail = mergeDetail(parsed.pairs, sanitized);
+                if (parsed.prefix) {
+                    mergedDetail = mergedDetail && typeof mergedDetail === 'object'
+                        ? { message: parsed.prefix, ...mergedDetail }
+                        : { message: parsed.prefix };
+                }
+                const formatted = formatTaggedMessage(rawTag);
                 const detail = mergedDetail && Object.keys(mergedDetail).length > 0
                     ? JSON.stringify(mergedDetail)
                     : '';
