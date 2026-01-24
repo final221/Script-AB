@@ -4,7 +4,7 @@
  */
 const LogFormatter = (() => {
     const DEFAULT_DETAIL_COLUMN = 40;
-    const DEFAULT_MESSAGE_COLUMN = 32;
+    const DEFAULT_MESSAGE_COLUMN = 40;
 
     const ICONS = {
         healer: '\uD83E\uDE7A',

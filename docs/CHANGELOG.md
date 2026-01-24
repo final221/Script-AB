@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.1.60 - 2026-01-24T17:35:11.922Z
+Previous: 4.1.59
+Commit: 7fb3723
+Changes:
+- Tighten message column width
+
 ## 4.1.59 - 2026-01-24T17:34:33.283Z
 Previous: 4.1.58
 Commit: 7c739bf
