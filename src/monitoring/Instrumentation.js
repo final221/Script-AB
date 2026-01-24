@@ -9,16 +9,9 @@ const Instrumentation = (() => {
     let externalSignalHandler = null;
     let signalDetector = null;
     const PROCESSING_ASSET_PATTERN = /404_processing_640x360\.png/i;
-    const ADBLOCK_RESOURCE_PATTERNS = [
-        /amazon-adsystem\.com/i,
-        /imasdk\.googleapis\.com/i,
-        /googlesyndication\.com/i,
-        /doubleclick\.net/i,
-        /\/api\/ads?\//i,
-        /\/ad[s]?\/v\d+\//i
-    ];
     let lastResourceHintTime = 0;
-    let lastAdResourceHintTime = 0;
+    const resourceEvents = [];
+    const pendingResourceWindows = new Map();
     const truncateMessage = (message, maxLen) => (
         String(message).substring(0, maxLen)
     );
@@ -115,23 +108,60 @@ const Instrumentation = (() => {
         });
     };
 
-    const maybeEmitAdResource = (url, initiatorType) => {
+    const recordResource = (url, initiatorType) => {
         const now = Date.now();
-        if (now - lastAdResourceHintTime < CONFIG.logging.RESOURCE_HINT_THROTTLE_MS) {
-            return;
-        }
-        lastAdResourceHintTime = now;
-        Logger.add('[INSTRUMENT:AD_RESOURCE] Ad-like resource observed', {
+        resourceEvents.push({
+            ts: now,
             url: truncateMessage(url, CONFIG.logging.LOG_URL_MAX_LEN),
             initiatorType: initiatorType || null
         });
-        emitExternalSignal({
-            type: 'ad_resource',
-            level: 'resource',
-            message: truncateMessage(url, CONFIG.logging.LOG_URL_MAX_LEN),
-            initiatorType: initiatorType || null,
-            timestamp: new Date().toISOString()
+
+        const maxEntries = CONFIG.logging.RESOURCE_WINDOW_MAX || 8000;
+        if (resourceEvents.length > maxEntries) {
+            resourceEvents.splice(0, resourceEvents.length - maxEntries);
+        }
+    };
+
+    const logResourceWindow = (detail = {}) => {
+        const stallTime = detail.stallTime || Date.now();
+        const videoId = detail.videoId || 'unknown';
+        const key = `${videoId}:${stallTime}`;
+        if (pendingResourceWindows.has(key)) return;
+        pendingResourceWindows.set(key, true);
+
+        const pastMs = CONFIG.logging.RESOURCE_WINDOW_PAST_MS || 30000;
+        const futureMs = CONFIG.logging.RESOURCE_WINDOW_FUTURE_MS || 60000;
+
+        Logger.add('[INSTRUMENT:RESOURCE_WINDOW_SCHEDULED]', {
+            videoId,
+            reason: detail.reason || 'stall',
+            stalledFor: detail.stalledFor || null,
+            windowPastMs: pastMs,
+            windowFutureMs: futureMs
         });
+
+        setTimeout(() => {
+            const start = stallTime - pastMs;
+            const end = stallTime + futureMs;
+            const entries = resourceEvents
+                .filter(item => item.ts >= start && item.ts <= end)
+                .map(item => ({
+                    offsetMs: item.ts - stallTime,
+                    url: item.url,
+                    initiatorType: item.initiatorType
+                }));
+
+            Logger.add('[INSTRUMENT:RESOURCE_WINDOW]', {
+                videoId,
+                reason: detail.reason || 'stall',
+                stalledFor: detail.stalledFor || null,
+                windowPastMs: pastMs,
+                windowFutureMs: futureMs,
+                total: entries.length,
+                requests: entries
+            });
+            pendingResourceWindows.delete(key);
+        }, futureMs);
     };
 
     const setupResourceObserver = () => {
@@ -139,11 +169,10 @@ const Instrumentation = (() => {
         try {
             const observer = new PerformanceObserver((list) => {
                 for (const entry of list.getEntries()) {
-                    if (entry?.name && PROCESSING_ASSET_PATTERN.test(entry.name)) {
+                    if (!entry?.name) continue;
+                    recordResource(entry.name, entry.initiatorType);
+                    if (PROCESSING_ASSET_PATTERN.test(entry.name)) {
                         maybeEmitProcessingAsset(entry.name);
-                    }
-                    if (entry?.name && ADBLOCK_RESOURCE_PATTERNS.some(pattern => pattern.test(entry.name))) {
-                        maybeEmitAdResource(entry.name, entry.initiatorType);
                     }
                 }
             });
@@ -233,6 +262,8 @@ const Instrumentation = (() => {
             setupResourceObserver();
             consoleInterceptor.attach();
         },
+        logResourceWindow
     };
 })();
+
 

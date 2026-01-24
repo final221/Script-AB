@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.1.26
+// @version       4.1.27
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -114,6 +114,9 @@ const CONFIG = (() => {
             BACKOFF_LOG_INTERVAL_MS: 5000,  // Backoff skip log interval
             HEAL_DEFER_LOG_MS: 5000,        // Heal deferral log interval
             STARVE_LOG_MS: 10000,           // Buffer starvation log interval
+            RESOURCE_WINDOW_PAST_MS: 30000, // Resource log window before stall
+            RESOURCE_WINDOW_FUTURE_MS: 60000, // Resource log window after stall
+            RESOURCE_WINDOW_MAX: 8000,      // Max resource entries to keep in memory
             CONSOLE_SIGNAL_THROTTLE_MS: 2000, // Throttle console hint signals
             RESOURCE_HINT_THROTTLE_MS: 2000,  // Throttle resource hint signals
             LOG_MESSAGE_MAX_LEN: 300,       // Max length for log messages
@@ -127,6 +130,7 @@ const CONFIG = (() => {
 
     return Object.freeze(raw);
 })();
+
 
 // ============================================================================
 // 2. FUNCTIONAL UTILITIES
@@ -1047,6 +1051,7 @@ const ConsoleSignalDetector = (() => {
 })();
 
 
+
 // --- Instrumentation ---
 /**
  * Hooks into global events and console methods to monitor application behavior.
@@ -1058,16 +1063,9 @@ const Instrumentation = (() => {
     let externalSignalHandler = null;
     let signalDetector = null;
     const PROCESSING_ASSET_PATTERN = /404_processing_640x360\.png/i;
-    const ADBLOCK_RESOURCE_PATTERNS = [
-        /amazon-adsystem\.com/i,
-        /imasdk\.googleapis\.com/i,
-        /googlesyndication\.com/i,
-        /doubleclick\.net/i,
-        /\/api\/ads?\//i,
-        /\/ad[s]?\/v\d+\//i
-    ];
     let lastResourceHintTime = 0;
-    let lastAdResourceHintTime = 0;
+    const resourceEvents = [];
+    const pendingResourceWindows = new Map();
     const truncateMessage = (message, maxLen) => (
         String(message).substring(0, maxLen)
     );
@@ -1164,23 +1162,60 @@ const Instrumentation = (() => {
         });
     };
 
-    const maybeEmitAdResource = (url, initiatorType) => {
+    const recordResource = (url, initiatorType) => {
         const now = Date.now();
-        if (now - lastAdResourceHintTime < CONFIG.logging.RESOURCE_HINT_THROTTLE_MS) {
-            return;
-        }
-        lastAdResourceHintTime = now;
-        Logger.add('[INSTRUMENT:AD_RESOURCE] Ad-like resource observed', {
+        resourceEvents.push({
+            ts: now,
             url: truncateMessage(url, CONFIG.logging.LOG_URL_MAX_LEN),
             initiatorType: initiatorType || null
         });
-        emitExternalSignal({
-            type: 'ad_resource',
-            level: 'resource',
-            message: truncateMessage(url, CONFIG.logging.LOG_URL_MAX_LEN),
-            initiatorType: initiatorType || null,
-            timestamp: new Date().toISOString()
+
+        const maxEntries = CONFIG.logging.RESOURCE_WINDOW_MAX || 8000;
+        if (resourceEvents.length > maxEntries) {
+            resourceEvents.splice(0, resourceEvents.length - maxEntries);
+        }
+    };
+
+    const logResourceWindow = (detail = {}) => {
+        const stallTime = detail.stallTime || Date.now();
+        const videoId = detail.videoId || 'unknown';
+        const key = `${videoId}:${stallTime}`;
+        if (pendingResourceWindows.has(key)) return;
+        pendingResourceWindows.set(key, true);
+
+        const pastMs = CONFIG.logging.RESOURCE_WINDOW_PAST_MS || 30000;
+        const futureMs = CONFIG.logging.RESOURCE_WINDOW_FUTURE_MS || 60000;
+
+        Logger.add('[INSTRUMENT:RESOURCE_WINDOW_SCHEDULED]', {
+            videoId,
+            reason: detail.reason || 'stall',
+            stalledFor: detail.stalledFor || null,
+            windowPastMs: pastMs,
+            windowFutureMs: futureMs
         });
+
+        setTimeout(() => {
+            const start = stallTime - pastMs;
+            const end = stallTime + futureMs;
+            const entries = resourceEvents
+                .filter(item => item.ts >= start && item.ts <= end)
+                .map(item => ({
+                    offsetMs: item.ts - stallTime,
+                    url: item.url,
+                    initiatorType: item.initiatorType
+                }));
+
+            Logger.add('[INSTRUMENT:RESOURCE_WINDOW]', {
+                videoId,
+                reason: detail.reason || 'stall',
+                stalledFor: detail.stalledFor || null,
+                windowPastMs: pastMs,
+                windowFutureMs: futureMs,
+                total: entries.length,
+                requests: entries
+            });
+            pendingResourceWindows.delete(key);
+        }, futureMs);
     };
 
     const setupResourceObserver = () => {
@@ -1188,11 +1223,10 @@ const Instrumentation = (() => {
         try {
             const observer = new PerformanceObserver((list) => {
                 for (const entry of list.getEntries()) {
-                    if (entry?.name && PROCESSING_ASSET_PATTERN.test(entry.name)) {
+                    if (!entry?.name) continue;
+                    recordResource(entry.name, entry.initiatorType);
+                    if (PROCESSING_ASSET_PATTERN.test(entry.name)) {
                         maybeEmitProcessingAsset(entry.name);
-                    }
-                    if (entry?.name && ADBLOCK_RESOURCE_PATTERNS.some(pattern => pattern.test(entry.name))) {
-                        maybeEmitAdResource(entry.name, entry.initiatorType);
                     }
                 }
             });
@@ -1282,8 +1316,10 @@ const Instrumentation = (() => {
             setupResourceObserver();
             consoleInterceptor.attach();
         },
+        logResourceWindow
     };
 })();
+
 
 
 // --- VideoState ---
@@ -1416,7 +1452,9 @@ const PlaybackStateTracker = (() => {
             lastHealDeferralLogTime: 0,
             lastRefreshAt: 0,
             stallStartTime: 0,
-            lastSelfRecoverSkipLogTime: 0
+            lastSelfRecoverSkipLogTime: 0,
+            lastAdGapSignatureLogTime: 0,
+            lastResourceWindowLogTime: 0
         };
 
         const evaluateResetState = (vs) => {
@@ -1880,6 +1918,7 @@ const PlaybackStateTracker = (() => {
 
     return { create };
 })();
+
 
 // --- PlaybackEventHandlers ---
 /**
@@ -4718,6 +4757,35 @@ const ExternalSignalRouter = (() => {
                     videoState: VideoState.get(entry.video, attribution.id)
                 });
 
+                const ranges = BufferGapFinder.getBufferRanges(entry.video);
+                if (ranges.length >= 2 && Number.isFinite(attribution.playheadSeconds)) {
+                    const edgeThreshold = Math.max(0.25, CONFIG.recovery.HEAL_EDGE_GUARD_S || 0.25);
+                    for (let i = 0; i < ranges.length - 1; i++) {
+                        const range = ranges[i];
+                        const next = ranges[i + 1];
+                        if (attribution.playheadSeconds < range.start || attribution.playheadSeconds > range.end) {
+                            continue;
+                        }
+                        const gapSize = next.start - range.end;
+                        const nearEdge = Math.abs(range.end - attribution.playheadSeconds) <= edgeThreshold;
+                        if (gapSize > 0 && nearEdge) {
+                            const lastGapLog = state.lastAdGapSignatureLogTime || 0;
+                            if (now - lastGapLog >= CONFIG.logging.BACKOFF_LOG_INTERVAL_MS) {
+                                state.lastAdGapSignatureLogTime = now;
+                                Logger.add('[HEALER:AD_GAP_SIGNATURE]', {
+                                    videoId: attribution.id,
+                                    playheadSeconds: attribution.playheadSeconds,
+                                    rangeEnd: Number(range.end.toFixed(3)),
+                                    nextRangeStart: Number(next.start.toFixed(3)),
+                                    gapSize: Number(gapSize.toFixed(3)),
+                                    ranges: BufferGapFinder.formatRanges(ranges)
+                                });
+                            }
+                        }
+                        break;
+                    }
+                }
+
                 if (!state.hasProgress || !state.lastProgressTime) {
                     return;
                 }
@@ -4813,7 +4881,7 @@ const ExternalSignalRouter = (() => {
                 return;
             }
 
-            if (type === 'adblock_block' || type === 'ad_resource') {
+            if (type === 'adblock_block') {
                 Logger.add('[HEALER:ADBLOCK_HINT] Ad-block signal observed', {
                     type,
                     level,
@@ -4835,6 +4903,7 @@ const ExternalSignalRouter = (() => {
 
     return { create };
 })();
+
 
 
 // --- MonitoringOrchestrator ---
@@ -4985,6 +5054,19 @@ const RecoveryOrchestrator = (() => {
             const now = Date.now();
             const videoId = getVideoId(video);
 
+            if (state && (!state.lastResourceWindowLogTime
+                || (now - state.lastResourceWindowLogTime) > CONFIG.logging.BACKOFF_LOG_INTERVAL_MS)) {
+                state.lastResourceWindowLogTime = now;
+                if (Instrumentation && typeof Instrumentation.logResourceWindow === 'function') {
+                    Instrumentation.logResourceWindow({
+                        videoId,
+                        stallTime: now,
+                        reason: details.trigger || 'stall',
+                        stalledFor: details.stalledFor || null
+                    });
+                }
+            }
+
             if (recoveryManager.shouldSkipStall(videoId, state)) {
                 return;
             }
@@ -5070,6 +5152,7 @@ const RecoveryOrchestrator = (() => {
 
     return { create };
 })();
+
 
 // --- StreamHealer ---
 /**

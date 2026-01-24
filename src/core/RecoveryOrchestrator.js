@@ -32,6 +32,19 @@ const RecoveryOrchestrator = (() => {
             const now = Date.now();
             const videoId = getVideoId(video);
 
+            if (state && (!state.lastResourceWindowLogTime
+                || (now - state.lastResourceWindowLogTime) > CONFIG.logging.BACKOFF_LOG_INTERVAL_MS)) {
+                state.lastResourceWindowLogTime = now;
+                if (Instrumentation && typeof Instrumentation.logResourceWindow === 'function') {
+                    Instrumentation.logResourceWindow({
+                        videoId,
+                        stallTime: now,
+                        reason: details.trigger || 'stall',
+                        stalledFor: details.stalledFor || null
+                    });
+                }
+            }
+
             if (recoveryManager.shouldSkipStall(videoId, state)) {
                 return;
             }
@@ -117,3 +130,4 @@ const RecoveryOrchestrator = (() => {
 
     return { create };
 })();
+

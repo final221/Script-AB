@@ -101,6 +101,9 @@ const CONFIG = (() => {
             BACKOFF_LOG_INTERVAL_MS: 5000,  // Backoff skip log interval
             HEAL_DEFER_LOG_MS: 5000,        // Heal deferral log interval
             STARVE_LOG_MS: 10000,           // Buffer starvation log interval
+            RESOURCE_WINDOW_PAST_MS: 30000, // Resource log window before stall
+            RESOURCE_WINDOW_FUTURE_MS: 60000, // Resource log window after stall
+            RESOURCE_WINDOW_MAX: 8000,      // Max resource entries to keep in memory
             CONSOLE_SIGNAL_THROTTLE_MS: 2000, // Throttle console hint signals
             RESOURCE_HINT_THROTTLE_MS: 2000,  // Throttle resource hint signals
             LOG_MESSAGE_MAX_LEN: 300,       // Max length for log messages
@@ -114,3 +117,4 @@ const CONFIG = (() => {
 
     return Object.freeze(raw);
 })();
+

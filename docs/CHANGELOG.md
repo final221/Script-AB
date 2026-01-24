@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.1.27 - 2026-01-24T10:34:47.900Z
+Previous: 4.1.26
+Commit: 3488af0
+Changes:
+- Log adblock and ad-resource signals
+
 ## 4.1.26 - 2026-01-24T10:27:35.991Z
 Previous: 4.1.25
 Commit: ded26ae

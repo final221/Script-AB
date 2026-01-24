@@ -73,7 +73,9 @@ const PlaybackStateTracker = (() => {
             lastHealDeferralLogTime: 0,
             lastRefreshAt: 0,
             stallStartTime: 0,
-            lastSelfRecoverSkipLogTime: 0
+            lastSelfRecoverSkipLogTime: 0,
+            lastAdGapSignatureLogTime: 0,
+            lastResourceWindowLogTime: 0
         };
 
         const evaluateResetState = (vs) => {
@@ -537,3 +539,4 @@ const PlaybackStateTracker = (() => {
 
     return { create };
 })();
+

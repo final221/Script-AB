@@ -121,6 +121,35 @@ const ExternalSignalRouter = (() => {
                     videoState: VideoState.get(entry.video, attribution.id)
                 });
 
+                const ranges = BufferGapFinder.getBufferRanges(entry.video);
+                if (ranges.length >= 2 && Number.isFinite(attribution.playheadSeconds)) {
+                    const edgeThreshold = Math.max(0.25, CONFIG.recovery.HEAL_EDGE_GUARD_S || 0.25);
+                    for (let i = 0; i < ranges.length - 1; i++) {
+                        const range = ranges[i];
+                        const next = ranges[i + 1];
+                        if (attribution.playheadSeconds < range.start || attribution.playheadSeconds > range.end) {
+                            continue;
+                        }
+                        const gapSize = next.start - range.end;
+                        const nearEdge = Math.abs(range.end - attribution.playheadSeconds) <= edgeThreshold;
+                        if (gapSize > 0 && nearEdge) {
+                            const lastGapLog = state.lastAdGapSignatureLogTime || 0;
+                            if (now - lastGapLog >= CONFIG.logging.BACKOFF_LOG_INTERVAL_MS) {
+                                state.lastAdGapSignatureLogTime = now;
+                                Logger.add('[HEALER:AD_GAP_SIGNATURE]', {
+                                    videoId: attribution.id,
+                                    playheadSeconds: attribution.playheadSeconds,
+                                    rangeEnd: Number(range.end.toFixed(3)),
+                                    nextRangeStart: Number(next.start.toFixed(3)),
+                                    gapSize: Number(gapSize.toFixed(3)),
+                                    ranges: BufferGapFinder.formatRanges(ranges)
+                                });
+                            }
+                        }
+                        break;
+                    }
+                }
+
                 if (!state.hasProgress || !state.lastProgressTime) {
                     return;
                 }
@@ -216,7 +245,7 @@ const ExternalSignalRouter = (() => {
                 return;
             }
 
-            if (type === 'adblock_block' || type === 'ad_resource') {
+            if (type === 'adblock_block') {
                 Logger.add('[HEALER:ADBLOCK_HINT] Ad-block signal observed', {
                     type,
                     level,
@@ -238,4 +267,5 @@ const ExternalSignalRouter = (() => {
 
     return { create };
 })();
+
 
