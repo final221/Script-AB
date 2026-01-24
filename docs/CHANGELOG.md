@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.1.41 - 2026-01-24T14:53:23.039Z
+Previous: 4.1.40
+Commit: 5ef5161
+Changes:
+- Align log detail columns and use time-only timestamps
+
 ## 4.1.40 - 2026-01-24T14:44:56.533Z
 Previous: 4.1.39
 Commit: 4d13e57

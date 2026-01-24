@@ -49,11 +49,16 @@ Heal Rate: ${metricsSummary.heal_rate}
 Errors: ${metricsSummary.errors}
 ${stallSummaryLine}${stallRecentLine}${healerLine}
 [LEGEND]
-🔧 = Script internal log
-📋 = Console.log/info/debug
-⚠️ = Console.warn
-❌ = Console.error
-
+\uD83E\uDE7A = Healer core (STATE/STALL/HEAL)
+\uD83C\uDFAF = Candidate selection (CANDIDATE/PROBATION/SUPPRESSION)
+\uD83E\uDDED = Monitor & video (VIDEO/MONITOR/SCAN/SRC/MEDIA_STATE/EVENT)
+\uD83E\uDDEA = Instrumentation & signals (INSTRUMENT/RESOURCE/CONSOLE_HINT)
+\uD83E\uDDF0 = Recovery & failover (FAILOVER/BACKOFF/RESET/CATCH_UP)
+\uD83E\uDDFE = Metrics & config (SYNC/CONFIG)
+\u2699\uFE0F = Core/system
+\uD83D\uDCCB = Console.log/info/debug
+\u26A0\uFE0F = Console.warn
+\u274C = Console.error
 [TIMELINE - Merged script + console logs]
 `;
 
@@ -119,20 +124,85 @@ ${stallSummaryLine}${stallRecentLine}${healerLine}
             return sanitized;
         };
 
+        const ICONS = {
+            healer: '\uD83E\uDE7A',
+            candidate: '\uD83C\uDFAF',
+            monitor: '\uD83E\uDDED',
+            instrument: '\uD83E\uDDEA',
+            recovery: '\uD83E\uDDF0',
+            metrics: '\uD83E\uDDFE',
+            core: '\u2699\uFE0F',
+            other: '\uD83D\uDD27'
+        };
+
+        const categoryForTag = (tag) => {
+            if (!tag) return 'other';
+            const upper = tag.toUpperCase();
+            if (upper.startsWith('INSTRUMENT')) return 'instrument';
+            if (upper === 'CORE') return 'core';
+            if (upper.startsWith('CANDIDATE')
+                || upper.startsWith('PROBATION')
+                || upper.startsWith('SUPPRESSION')
+                || upper.startsWith('PROBE')) return 'candidate';
+            if (['VIDEO', 'MONITOR', 'SCAN', 'SCAN_ITEM', 'SRC', 'MEDIA_STATE', 'EVENT', 'EVENT_SUMMARY'].includes(upper)) {
+                return 'monitor';
+            }
+            if (upper.startsWith('FAILOVER')
+                || upper.startsWith('BACKOFF')
+                || upper.startsWith('RESET')
+                || upper.startsWith('CATCH_UP')
+                || upper.startsWith('REFRESH')
+                || upper.startsWith('DETACHED')
+                || upper.startsWith('BLOCKED')
+                || upper.startsWith('PLAY_BACKOFF')
+                || upper.startsWith('PRUNE')) {
+                return 'recovery';
+            }
+            if (upper.startsWith('SYNC') || upper.startsWith('CONFIG') || upper.startsWith('METRIC')) return 'metrics';
+            return 'healer';
+        };
+
+        const formatScriptMessage = (message) => {
+            const match = message.match(/^\[([^\]]+)\]\s*(.*)$/);
+            if (!match) {
+                return {
+                    icon: ICONS.other,
+                    text: message
+                };
+            }
+            const rawTag = match[1];
+            const rest = match[2];
+            let displayTag = rawTag;
+            let tagKey = rawTag;
+            if (rawTag.startsWith('HEALER:')) {
+                displayTag = rawTag.slice(7);
+                tagKey = displayTag;
+            } else if (rawTag.startsWith('INSTRUMENT:')) {
+                displayTag = `INSTRUMENT:${rawTag.slice(11)}`;
+                tagKey = displayTag;
+            }
+            const category = categoryForTag(tagKey);
+            const icon = ICONS[category] || ICONS.other;
+            const text = rest ? `[${displayTag}] ${rest}` : `[${displayTag}]`;
+            return { icon, text };
+        };
+
+
         const logContent = logs.map(l => {
             const time = formatTime(l.timestamp);
 
             if (l.source === 'CONSOLE' || l.type === 'console') {
                 // Console log entry
-                const icon = l.level === 'error' ? '❌' : l.level === 'warn' ? '⚠️' : '📋';
+                const icon = l.level === 'error' ? '\u274C' : l.level === 'warn' ? '\u26A0\uFE0F' : '\uD83D\uDCCB';
                 return formatLine(`[${time}] ${icon} `, l.message, null);
             } else {
                 // Internal script log
                 const sanitized = sanitizeDetail(l.detail, l.message);
+                const formatted = formatScriptMessage(l.message);
                 const detail = sanitized && Object.keys(sanitized).length > 0
                     ? JSON.stringify(sanitized)
                     : '';
-                return formatLine(`[${time}] 🔧 `, l.message, detail);
+                return formatLine(`[${time}] ${formatted.icon} `, formatted.text, detail);
             }
         }).join('\n');
 
