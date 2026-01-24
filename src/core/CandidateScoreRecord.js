@@ -12,6 +12,7 @@ const CandidateScoreRecord = (() => {
         paused: result.vs.paused,
         readyState: result.vs.readyState,
         hasSrc: Boolean(result.vs.currentSrc),
+        deadCandidate: result.deadCandidate,
         state: entry.monitor.state.state,
         reasons: result.reasons,
         trusted: trustInfo.trusted,
@@ -24,6 +25,7 @@ const CandidateScoreRecord = (() => {
         monitorState: entry.monitor.state,
         trusted: trustInfo.trusted,
         trustReason: trustInfo.reason,
+        deadCandidate: result.deadCandidate,
         ...result
     });
 

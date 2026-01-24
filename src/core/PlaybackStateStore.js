@@ -40,6 +40,7 @@ const PlaybackStateStore = (() => {
             },
             heal: {
                 noHealPointCount: 0,
+                noHealPointRefreshUntil: 0,
                 nextHealAllowedTime: 0,
                 playErrorCount: 0,
                 nextPlayHealAllowedTime: 0,
@@ -50,7 +51,8 @@ const PlaybackStateStore = (() => {
                 lastBackoffLogTime: 0,
                 lastHealAttemptTime: 0,
                 lastHealDeferralLogTime: 0,
-                lastRefreshAt: 0
+                lastRefreshAt: 0,
+                lastEmergencySwitchAt: 0
             },
             events: {
                 lastWatchdogLogTime: 0,
@@ -76,7 +78,9 @@ const PlaybackStateStore = (() => {
                         return 0;
                     }
                 })(),
-                mediaStateVerboseLogged: false
+                mediaStateVerboseLogged: false,
+                deadCandidateSince: 0,
+                deadCandidateUntil: 0
             },
             stall: {
                 lastStallEventTime: 0,
@@ -126,6 +130,7 @@ const PlaybackStateStore = (() => {
             initialProgressTimeoutLogged: ['progress', 'initialProgressTimeoutLogged'],
             initLogEmitted: ['progress', 'initLogEmitted'],
             noHealPointCount: ['heal', 'noHealPointCount'],
+            noHealPointRefreshUntil: ['heal', 'noHealPointRefreshUntil'],
             nextHealAllowedTime: ['heal', 'nextHealAllowedTime'],
             playErrorCount: ['heal', 'playErrorCount'],
             nextPlayHealAllowedTime: ['heal', 'nextPlayHealAllowedTime'],
@@ -137,6 +142,7 @@ const PlaybackStateStore = (() => {
             lastHealAttemptTime: ['heal', 'lastHealAttemptTime'],
             lastHealDeferralLogTime: ['heal', 'lastHealDeferralLogTime'],
             lastRefreshAt: ['heal', 'lastRefreshAt'],
+            lastEmergencySwitchAt: ['heal', 'lastEmergencySwitchAt'],
             lastWatchdogLogTime: ['events', 'lastWatchdogLogTime'],
             lastNonActiveEventLogTime: ['events', 'lastNonActiveEventLogTime'],
             nonActiveEventCounts: ['events', 'nonActiveEventCounts'],
@@ -153,6 +159,8 @@ const PlaybackStateStore = (() => {
             lastBufferedLengthChangeTime: ['media', 'lastBufferedLengthChangeTime'],
             lastBufferedLength: ['media', 'lastBufferedLength'],
             mediaStateVerboseLogged: ['media', 'mediaStateVerboseLogged'],
+            deadCandidateSince: ['media', 'deadCandidateSince'],
+            deadCandidateUntil: ['media', 'deadCandidateUntil'],
             lastStallEventTime: ['stall', 'lastStallEventTime'],
             pauseFromStall: ['stall', 'pauseFromStall'],
             stallStartTime: ['stall', 'stallStartTime'],

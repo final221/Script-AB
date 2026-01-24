@@ -16,6 +16,8 @@ const CandidateScorer = (() => {
             const progressStreakMs = state.progressStreakMs || 0;
             const progressEligible = state.progressEligible
                 || progressStreakMs >= minProgressMs;
+            const deadCandidateUntil = state.deadCandidateUntil || 0;
+            const deadCandidate = deadCandidateUntil > 0 && Date.now() < deadCandidateUntil;
             let score = 0;
             const reasons = [];
 
@@ -47,6 +49,11 @@ const CandidateScorer = (() => {
             if (state.state === 'ERROR') {
                 score -= 2;
                 reasons.push('error_state');
+            }
+
+            if (deadCandidate) {
+                score -= 6;
+                reasons.push('dead_candidate');
             }
 
             if (isFallbackSource(vs.currentSrc)) {
@@ -109,7 +116,8 @@ const CandidateScorer = (() => {
                 vs,
                 progressAgoMs,
                 progressStreakMs,
-                progressEligible
+                progressEligible,
+                deadCandidate
             };
         };
 

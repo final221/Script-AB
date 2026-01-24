@@ -142,7 +142,7 @@ Key settings in `Config.js`:
 
 ## Version
 
-Current: **4.1.69**
+Current: **4.1.70**
 
 Version increments automatically on each build (patch).
 Changelog: `docs/CHANGELOG.md`

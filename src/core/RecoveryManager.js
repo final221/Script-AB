@@ -30,6 +30,9 @@ const RecoveryManager = (() => {
         const handleNoHealPoint = (videoOrContext, monitorStateOverride, reason) => {
             const context = RecoveryContext.from(videoOrContext, monitorStateOverride, getVideoId, { reason });
             const result = policy.handleNoHealPoint(context, reason);
+            if (result.emergencySwitched) {
+                return;
+            }
             if (result.shouldFailover) {
                 failoverManager.attemptFailover(context.videoId, reason, context.monitorState);
             }

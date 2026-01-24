@@ -125,6 +125,19 @@ const PlaybackWatchdog = (() => {
                 state.lastNetworkStateChangeTime = now;
             }
 
+            const hasSrc = Boolean(currentSrc || srcAttr);
+            if (!hasSrc && readyState === 0) {
+                if (!state.deadCandidateSince) {
+                    state.deadCandidateSince = now;
+                }
+                if ((now - state.deadCandidateSince) >= CONFIG.monitoring.DEAD_CANDIDATE_AFTER_MS) {
+                    state.deadCandidateUntil = now + CONFIG.monitoring.DEAD_CANDIDATE_COOLDOWN_MS;
+                }
+            } else if (state.deadCandidateSince || state.deadCandidateUntil) {
+                state.deadCandidateSince = 0;
+                state.deadCandidateUntil = 0;
+            }
+
             let bufferedLength = 0;
             try {
                 bufferedLength = video.buffered ? video.buffered.length : 0;

@@ -89,6 +89,7 @@ const PlaybackProgressLogic = (() => {
                 }));
                 state.noHealPointCount = 0;
                 state.nextHealAllowedTime = 0;
+                state.noHealPointRefreshUntil = 0;
             }
 
             if (state.playErrorCount > 0 || state.nextPlayHealAllowedTime > 0 || state.healPointRepeatCount > 0) {
@@ -106,6 +107,10 @@ const PlaybackProgressLogic = (() => {
                 state.lastPlayBackoffLogTime = 0;
                 state.lastHealPointKey = null;
                 state.healPointRepeatCount = 0;
+            }
+
+            if (state.lastEmergencySwitchAt) {
+                state.lastEmergencySwitchAt = 0;
             }
 
             if (state.bufferStarved || state.bufferStarvedSince) {

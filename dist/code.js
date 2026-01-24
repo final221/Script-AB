@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.1.69
+// @version       4.1.70
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -71,6 +71,12 @@ const CONFIG = (() => {
             PROBATION_RESCAN_COOLDOWN_MS: 15000, // Min time between probation rescans
             REFRESH_AFTER_NO_HEAL_POINTS: 3, // Force refresh after repeated no-heal cycles
             REFRESH_COOLDOWN_MS: 120000,     // Minimum time between forced refreshes
+            NO_HEAL_POINT_REFRESH_DELAY_MS: 15000, // Delay refresh when headroom is low but src/readyState look valid
+            NO_HEAL_POINT_REFRESH_MIN_READY_STATE: 2, // ReadyState threshold to allow refresh delay
+            NO_HEAL_POINT_EMERGENCY_AFTER: 2, // Emergency switch after this many no-heal points
+            NO_HEAL_POINT_EMERGENCY_COOLDOWN_MS: 15000, // Cooldown between emergency switches
+            NO_HEAL_POINT_EMERGENCY_MIN_READY_STATE: 2, // Min readyState for emergency switch candidates
+            NO_HEAL_POINT_EMERGENCY_REQUIRE_SRC: true, // Require src for emergency switch candidates
         },
 
         monitoring: {
@@ -85,6 +91,8 @@ const CONFIG = (() => {
             PROGRESS_STALE_MS: 5000,        // "Stale progress" threshold for scoring
             TRUST_STALE_MS: 8000,           // Trust expires if progress is older than this
             PROBE_COOLDOWN_MS: 5000,        // Min time between probe attempts per candidate
+            DEAD_CANDIDATE_AFTER_MS: 5000,  // Mark candidate dead after sustained empty src + readyState 0
+            DEAD_CANDIDATE_COOLDOWN_MS: 20000, // Exclude dead candidates for this long
             SYNC_SAMPLE_MS: 5000,           // Sample window for drift detection
             SYNC_DRIFT_MAX_MS: 1000,        // Log if drift exceeds this threshold
             SYNC_RATE_MIN: 0.9,             // Log if playback rate falls below this ratio
@@ -144,7 +152,7 @@ const CONFIG = (() => {
  * Build metadata helpers (version injected at build time).
  */
 const BuildInfo = (() => {
-    const VERSION = '4.1.69';
+    const VERSION = '4.1.70';
 
     const getVersion = () => {
         const gmVersion = (typeof GM_info !== 'undefined' && GM_info?.script?.version)
@@ -155,7 +163,7 @@ const BuildInfo = (() => {
             ? unsafeWindow.GM_info.script.version
             : null;
         if (unsafeVersion) return unsafeVersion;
-        if (VERSION && VERSION !== '4.1.69') return VERSION;
+        if (VERSION && VERSION !== '4.1.70') return VERSION;
         return null;
     };
 
@@ -2896,6 +2904,7 @@ const PlaybackStateStore = (() => {
             },
             heal: {
                 noHealPointCount: 0,
+                noHealPointRefreshUntil: 0,
                 nextHealAllowedTime: 0,
                 playErrorCount: 0,
                 nextPlayHealAllowedTime: 0,
@@ -2906,7 +2915,8 @@ const PlaybackStateStore = (() => {
                 lastBackoffLogTime: 0,
                 lastHealAttemptTime: 0,
                 lastHealDeferralLogTime: 0,
-                lastRefreshAt: 0
+                lastRefreshAt: 0,
+                lastEmergencySwitchAt: 0
             },
             events: {
                 lastWatchdogLogTime: 0,
@@ -2932,7 +2942,9 @@ const PlaybackStateStore = (() => {
                         return 0;
                     }
                 })(),
-                mediaStateVerboseLogged: false
+                mediaStateVerboseLogged: false,
+                deadCandidateSince: 0,
+                deadCandidateUntil: 0
             },
             stall: {
                 lastStallEventTime: 0,
@@ -2982,6 +2994,7 @@ const PlaybackStateStore = (() => {
             initialProgressTimeoutLogged: ['progress', 'initialProgressTimeoutLogged'],
             initLogEmitted: ['progress', 'initLogEmitted'],
             noHealPointCount: ['heal', 'noHealPointCount'],
+            noHealPointRefreshUntil: ['heal', 'noHealPointRefreshUntil'],
             nextHealAllowedTime: ['heal', 'nextHealAllowedTime'],
             playErrorCount: ['heal', 'playErrorCount'],
             nextPlayHealAllowedTime: ['heal', 'nextPlayHealAllowedTime'],
@@ -2993,6 +3006,7 @@ const PlaybackStateStore = (() => {
             lastHealAttemptTime: ['heal', 'lastHealAttemptTime'],
             lastHealDeferralLogTime: ['heal', 'lastHealDeferralLogTime'],
             lastRefreshAt: ['heal', 'lastRefreshAt'],
+            lastEmergencySwitchAt: ['heal', 'lastEmergencySwitchAt'],
             lastWatchdogLogTime: ['events', 'lastWatchdogLogTime'],
             lastNonActiveEventLogTime: ['events', 'lastNonActiveEventLogTime'],
             nonActiveEventCounts: ['events', 'nonActiveEventCounts'],
@@ -3009,6 +3023,8 @@ const PlaybackStateStore = (() => {
             lastBufferedLengthChangeTime: ['media', 'lastBufferedLengthChangeTime'],
             lastBufferedLength: ['media', 'lastBufferedLength'],
             mediaStateVerboseLogged: ['media', 'mediaStateVerboseLogged'],
+            deadCandidateSince: ['media', 'deadCandidateSince'],
+            deadCandidateUntil: ['media', 'deadCandidateUntil'],
             lastStallEventTime: ['stall', 'lastStallEventTime'],
             pauseFromStall: ['stall', 'pauseFromStall'],
             stallStartTime: ['stall', 'stallStartTime'],
@@ -3298,6 +3314,7 @@ const PlaybackProgressLogic = (() => {
                 }));
                 state.noHealPointCount = 0;
                 state.nextHealAllowedTime = 0;
+                state.noHealPointRefreshUntil = 0;
             }
 
             if (state.playErrorCount > 0 || state.nextPlayHealAllowedTime > 0 || state.healPointRepeatCount > 0) {
@@ -3315,6 +3332,10 @@ const PlaybackProgressLogic = (() => {
                 state.lastPlayBackoffLogTime = 0;
                 state.lastHealPointKey = null;
                 state.healPointRepeatCount = 0;
+            }
+
+            if (state.lastEmergencySwitchAt) {
+                state.lastEmergencySwitchAt = 0;
             }
 
             if (state.bufferStarved || state.bufferStarvedSince) {
@@ -4018,6 +4039,19 @@ const PlaybackWatchdog = (() => {
                 state.lastNetworkStateChangeTime = now;
             }
 
+            const hasSrc = Boolean(currentSrc || srcAttr);
+            if (!hasSrc && readyState === 0) {
+                if (!state.deadCandidateSince) {
+                    state.deadCandidateSince = now;
+                }
+                if ((now - state.deadCandidateSince) >= CONFIG.monitoring.DEAD_CANDIDATE_AFTER_MS) {
+                    state.deadCandidateUntil = now + CONFIG.monitoring.DEAD_CANDIDATE_COOLDOWN_MS;
+                }
+            } else if (state.deadCandidateSince || state.deadCandidateUntil) {
+                state.deadCandidateSince = 0;
+                state.deadCandidateUntil = 0;
+            }
+
             let bufferedLength = 0;
             try {
                 bufferedLength = video.buffered ? video.buffered.length : 0;
@@ -4187,6 +4221,8 @@ const CandidateScorer = (() => {
             const progressStreakMs = state.progressStreakMs || 0;
             const progressEligible = state.progressEligible
                 || progressStreakMs >= minProgressMs;
+            const deadCandidateUntil = state.deadCandidateUntil || 0;
+            const deadCandidate = deadCandidateUntil > 0 && Date.now() < deadCandidateUntil;
             let score = 0;
             const reasons = [];
 
@@ -4218,6 +4254,11 @@ const CandidateScorer = (() => {
             if (state.state === 'ERROR') {
                 score -= 2;
                 reasons.push('error_state');
+            }
+
+            if (deadCandidate) {
+                score -= 6;
+                reasons.push('dead_candidate');
             }
 
             if (isFallbackSource(vs.currentSrc)) {
@@ -4280,7 +4321,8 @@ const CandidateScorer = (() => {
                 vs,
                 progressAgoMs,
                 progressStreakMs,
-                progressEligible
+                progressEligible,
+                deadCandidate
             };
         };
 
@@ -4398,6 +4440,7 @@ const CandidateScoreRecord = (() => {
         paused: result.vs.paused,
         readyState: result.vs.readyState,
         hasSrc: Boolean(result.vs.currentSrc),
+        deadCandidate: result.deadCandidate,
         state: entry.monitor.state.state,
         reasons: result.reasons,
         trusted: trustInfo.trusted,
@@ -4410,6 +4453,7 @@ const CandidateScoreRecord = (() => {
         monitorState: entry.monitor.state,
         trusted: trustInfo.trusted,
         trustReason: trustInfo.reason,
+        deadCandidate: result.deadCandidate,
         ...result
     });
 
@@ -4564,8 +4608,10 @@ const CandidateSelector = (() => {
             }
 
             let best = null;
+            let bestNonDead = null;
             let current = null;
             let bestTrusted = null;
+            let bestTrustedNonDead = null;
             const scores = [];
 
             if (activeCandidateId && monitorsById.has(activeCandidateId)) {
@@ -4584,8 +4630,15 @@ const CandidateSelector = (() => {
                 if (!best || result.score > best.score) {
                     best = CandidateScoreRecord.buildCandidate(videoId, entry, result, trustInfo);
                 }
+                if (!result.deadCandidate && (!bestNonDead || result.score > bestNonDead.score)) {
+                    bestNonDead = CandidateScoreRecord.buildCandidate(videoId, entry, result, trustInfo);
+                }
                 if (trusted && (!bestTrusted || result.score > bestTrusted.score)) {
                     bestTrusted = CandidateScoreRecord.buildCandidate(videoId, entry, result, trustInfo);
+                }
+                if (trusted && !result.deadCandidate
+                    && (!bestTrustedNonDead || result.score > bestTrustedNonDead.score)) {
+                    bestTrustedNonDead = CandidateScoreRecord.buildCandidate(videoId, entry, result, trustInfo);
                 }
             }
 
@@ -4595,7 +4648,7 @@ const CandidateSelector = (() => {
                 lastGoodCandidateId = null;
             }
 
-            const preferred = bestTrusted || best;
+            const preferred = bestTrustedNonDead || bestNonDead || bestTrusted || best;
 
             if (!activeCandidateId || !monitorsById.has(activeCandidateId)) {
                 const fallbackId = (lastGoodCandidateId && monitorsById.has(lastGoodCandidateId))
@@ -4848,6 +4901,51 @@ const CandidateSelector = (() => {
             }
         };
 
+        const selectEmergencyCandidate = (reason, options = {}) => {
+            const minReadyState = Number.isFinite(options.minReadyState)
+                ? options.minReadyState
+                : CONFIG.stall.NO_HEAL_POINT_EMERGENCY_MIN_READY_STATE;
+            const requireSrc = options.requireSrc !== undefined
+                ? options.requireSrc
+                : CONFIG.stall.NO_HEAL_POINT_EMERGENCY_REQUIRE_SRC;
+            let best = null;
+            let bestScore = null;
+
+            for (const [videoId, entry] of monitorsById.entries()) {
+                if (videoId === activeCandidateId) continue;
+                const result = scoreVideo(entry.video, entry.monitor, videoId);
+                if (result.deadCandidate) continue;
+                const readyState = result.vs.readyState;
+                const hasSrc = Boolean(result.vs.currentSrc || result.vs.src);
+                if (readyState < minReadyState) continue;
+                if (requireSrc && !hasSrc) continue;
+                if (bestScore === null || result.score > bestScore) {
+                    bestScore = result.score;
+                    best = {
+                        id: videoId,
+                        entry,
+                        result,
+                        readyState,
+                        hasSrc
+                    };
+                }
+            }
+
+            if (!best) return null;
+
+            const fromId = activeCandidateId;
+            activeCandidateId = best.id;
+            Logger.add(LogEvents.tagged('CANDIDATE', 'Emergency switch after no-heal point'), {
+                from: fromId,
+                to: best.id,
+                reason,
+                readyState: best.readyState,
+                hasSrc: best.hasSrc,
+                score: bestScore
+            });
+            return best;
+        };
+
         return {
             evaluateCandidates,
             pruneMonitors,
@@ -4856,7 +4954,8 @@ const CandidateSelector = (() => {
             setActiveId,
             setLockChecker,
             activateProbation,
-            isProbationActive
+            isProbationActive,
+            selectEmergencyCandidate
         };
     };
 
@@ -4999,10 +5098,37 @@ const NoHealPointPolicy = (() => {
 
         const noBufferRescanTimes = new Map();
 
+        const maybeTriggerEmergencySwitch = (videoId, monitorState, reason) => {
+            if (!candidateSelector || typeof candidateSelector.selectEmergencyCandidate !== 'function') {
+                return false;
+            }
+            if (!CONFIG.stall.NO_HEAL_POINT_EMERGENCY_SWITCH) {
+                return false;
+            }
+            if (!monitorState) return false;
+            if ((monitorState.noHealPointCount || 0) < CONFIG.stall.NO_HEAL_POINT_EMERGENCY_AFTER) {
+                return false;
+            }
+            const now = Date.now();
+            const lastSwitch = monitorState.lastEmergencySwitchAt || 0;
+            if (now - lastSwitch < CONFIG.stall.NO_HEAL_POINT_EMERGENCY_COOLDOWN_MS) {
+                return false;
+            }
+            const switched = candidateSelector.selectEmergencyCandidate(reason);
+            if (switched) {
+                monitorState.lastEmergencySwitchAt = now;
+                return true;
+            }
+            return false;
+        };
+
         const maybeTriggerRefresh = (videoId, monitorState, reason) => {
             if (!monitorState) return false;
             const now = Date.now();
             if ((monitorState.noHealPointCount || 0) < CONFIG.stall.REFRESH_AFTER_NO_HEAL_POINTS) {
+                return false;
+            }
+            if (monitorState.noHealPointRefreshUntil && now < monitorState.noHealPointRefreshUntil) {
                 return false;
             }
             const nextAllowed = monitorState.lastRefreshAt
@@ -5012,6 +5138,7 @@ const NoHealPointPolicy = (() => {
                 return false;
             }
             monitorState.lastRefreshAt = now;
+            monitorState.noHealPointRefreshUntil = 0;
             logDebug(LogEvents.tagged('REFRESH', 'Refreshing video after repeated no-heal points'), {
                 videoId,
                 reason,
@@ -5031,6 +5158,24 @@ const NoHealPointPolicy = (() => {
             const videoId = context.videoId || (getVideoId ? getVideoId(video) : 'unknown');
 
             backoffManager.applyBackoff(videoId, monitorState, reason);
+
+            if (monitorState && (monitorState.noHealPointCount || 0) >= CONFIG.stall.REFRESH_AFTER_NO_HEAL_POINTS) {
+                const now = Date.now();
+                const ranges = MediaState.ranges(video);
+                if (ranges.length) {
+                    const end = ranges[ranges.length - 1].end;
+                    const headroom = Math.max(0, end - video.currentTime);
+                    const hasSrc = Boolean(video.currentSrc || video.getAttribute?.('src'));
+                    const readyState = video.readyState;
+                    if (headroom < CONFIG.recovery.MIN_HEAL_HEADROOM_S
+                        && hasSrc
+                        && readyState >= CONFIG.stall.NO_HEAL_POINT_REFRESH_MIN_READY_STATE) {
+                        if (!monitorState.noHealPointRefreshUntil) {
+                            monitorState.noHealPointRefreshUntil = now + CONFIG.stall.NO_HEAL_POINT_REFRESH_DELAY_MS;
+                        }
+                    }
+                }
+            }
 
             const ranges = MediaState.ranges(video);
             if (!ranges.length) {
@@ -5066,12 +5211,14 @@ const NoHealPointPolicy = (() => {
                 && (monitorState?.noHealPointCount >= CONFIG.stall.FAILOVER_AFTER_NO_HEAL_POINTS
                     || (stalledForMs !== null && stalledForMs >= CONFIG.stall.FAILOVER_AFTER_STALL_MS));
 
+            const emergencySwitched = maybeTriggerEmergencySwitch(videoId, monitorState, reason);
             const refreshed = maybeTriggerRefresh(videoId, monitorState, reason);
 
             return {
                 shouldFailover,
                 refreshed,
-                probationTriggered
+                probationTriggered,
+                emergencySwitched
             };
         };
 
@@ -5789,6 +5936,9 @@ const RecoveryManager = (() => {
         const handleNoHealPoint = (videoOrContext, monitorStateOverride, reason) => {
             const context = RecoveryContext.from(videoOrContext, monitorStateOverride, getVideoId, { reason });
             const result = policy.handleNoHealPoint(context, reason);
+            if (result.emergencySwitched) {
+                return;
+            }
             if (result.shouldFailover) {
                 failoverManager.attemptFailover(context.videoId, reason, context.monitorState);
             }

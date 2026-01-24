@@ -143,8 +143,10 @@ const CandidateSelector = (() => {
             }
 
             let best = null;
+            let bestNonDead = null;
             let current = null;
             let bestTrusted = null;
+            let bestTrustedNonDead = null;
             const scores = [];
 
             if (activeCandidateId && monitorsById.has(activeCandidateId)) {
@@ -163,8 +165,15 @@ const CandidateSelector = (() => {
                 if (!best || result.score > best.score) {
                     best = CandidateScoreRecord.buildCandidate(videoId, entry, result, trustInfo);
                 }
+                if (!result.deadCandidate && (!bestNonDead || result.score > bestNonDead.score)) {
+                    bestNonDead = CandidateScoreRecord.buildCandidate(videoId, entry, result, trustInfo);
+                }
                 if (trusted && (!bestTrusted || result.score > bestTrusted.score)) {
                     bestTrusted = CandidateScoreRecord.buildCandidate(videoId, entry, result, trustInfo);
+                }
+                if (trusted && !result.deadCandidate
+                    && (!bestTrustedNonDead || result.score > bestTrustedNonDead.score)) {
+                    bestTrustedNonDead = CandidateScoreRecord.buildCandidate(videoId, entry, result, trustInfo);
                 }
             }
 
@@ -174,7 +183,7 @@ const CandidateSelector = (() => {
                 lastGoodCandidateId = null;
             }
 
-            const preferred = bestTrusted || best;
+            const preferred = bestTrustedNonDead || bestNonDead || bestTrusted || best;
 
             if (!activeCandidateId || !monitorsById.has(activeCandidateId)) {
                 const fallbackId = (lastGoodCandidateId && monitorsById.has(lastGoodCandidateId))
@@ -427,6 +436,51 @@ const CandidateSelector = (() => {
             }
         };
 
+        const selectEmergencyCandidate = (reason, options = {}) => {
+            const minReadyState = Number.isFinite(options.minReadyState)
+                ? options.minReadyState
+                : CONFIG.stall.NO_HEAL_POINT_EMERGENCY_MIN_READY_STATE;
+            const requireSrc = options.requireSrc !== undefined
+                ? options.requireSrc
+                : CONFIG.stall.NO_HEAL_POINT_EMERGENCY_REQUIRE_SRC;
+            let best = null;
+            let bestScore = null;
+
+            for (const [videoId, entry] of monitorsById.entries()) {
+                if (videoId === activeCandidateId) continue;
+                const result = scoreVideo(entry.video, entry.monitor, videoId);
+                if (result.deadCandidate) continue;
+                const readyState = result.vs.readyState;
+                const hasSrc = Boolean(result.vs.currentSrc || result.vs.src);
+                if (readyState < minReadyState) continue;
+                if (requireSrc && !hasSrc) continue;
+                if (bestScore === null || result.score > bestScore) {
+                    bestScore = result.score;
+                    best = {
+                        id: videoId,
+                        entry,
+                        result,
+                        readyState,
+                        hasSrc
+                    };
+                }
+            }
+
+            if (!best) return null;
+
+            const fromId = activeCandidateId;
+            activeCandidateId = best.id;
+            Logger.add(LogEvents.tagged('CANDIDATE', 'Emergency switch after no-heal point'), {
+                from: fromId,
+                to: best.id,
+                reason,
+                readyState: best.readyState,
+                hasSrc: best.hasSrc,
+                score: bestScore
+            });
+            return best;
+        };
+
         return {
             evaluateCandidates,
             pruneMonitors,
@@ -435,7 +489,8 @@ const CandidateSelector = (() => {
             setActiveId,
             setLockChecker,
             activateProbation,
-            isProbationActive
+            isProbationActive,
+            selectEmergencyCandidate
         };
     };
 

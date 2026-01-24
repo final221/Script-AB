@@ -58,6 +58,12 @@ const CONFIG = (() => {
             PROBATION_RESCAN_COOLDOWN_MS: 15000, // Min time between probation rescans
             REFRESH_AFTER_NO_HEAL_POINTS: 3, // Force refresh after repeated no-heal cycles
             REFRESH_COOLDOWN_MS: 120000,     // Minimum time between forced refreshes
+            NO_HEAL_POINT_REFRESH_DELAY_MS: 15000, // Delay refresh when headroom is low but src/readyState look valid
+            NO_HEAL_POINT_REFRESH_MIN_READY_STATE: 2, // ReadyState threshold to allow refresh delay
+            NO_HEAL_POINT_EMERGENCY_AFTER: 2, // Emergency switch after this many no-heal points
+            NO_HEAL_POINT_EMERGENCY_COOLDOWN_MS: 15000, // Cooldown between emergency switches
+            NO_HEAL_POINT_EMERGENCY_MIN_READY_STATE: 2, // Min readyState for emergency switch candidates
+            NO_HEAL_POINT_EMERGENCY_REQUIRE_SRC: true, // Require src for emergency switch candidates
         },
 
         monitoring: {
@@ -72,6 +78,8 @@ const CONFIG = (() => {
             PROGRESS_STALE_MS: 5000,        // "Stale progress" threshold for scoring
             TRUST_STALE_MS: 8000,           // Trust expires if progress is older than this
             PROBE_COOLDOWN_MS: 5000,        // Min time between probe attempts per candidate
+            DEAD_CANDIDATE_AFTER_MS: 5000,  // Mark candidate dead after sustained empty src + readyState 0
+            DEAD_CANDIDATE_COOLDOWN_MS: 20000, // Exclude dead candidates for this long
             SYNC_SAMPLE_MS: 5000,           // Sample window for drift detection
             SYNC_DRIFT_MAX_MS: 1000,        // Log if drift exceeds this threshold
             SYNC_RATE_MIN: 0.9,             // Log if playback rate falls below this ratio

@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.1.70 - 2026-01-24T19:36:16.361Z
+Previous: 4.1.69
+Commit: d7a899a
+Changes:
+- clarify offline-looking crash note
+
 ## 4.1.69 - 2026-01-24T19:28:38.124Z
 Previous: 4.1.68
 Commit: c116ac6

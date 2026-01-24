@@ -15,10 +15,37 @@ const NoHealPointPolicy = (() => {
 
         const noBufferRescanTimes = new Map();
 
+        const maybeTriggerEmergencySwitch = (videoId, monitorState, reason) => {
+            if (!candidateSelector || typeof candidateSelector.selectEmergencyCandidate !== 'function') {
+                return false;
+            }
+            if (!CONFIG.stall.NO_HEAL_POINT_EMERGENCY_SWITCH) {
+                return false;
+            }
+            if (!monitorState) return false;
+            if ((monitorState.noHealPointCount || 0) < CONFIG.stall.NO_HEAL_POINT_EMERGENCY_AFTER) {
+                return false;
+            }
+            const now = Date.now();
+            const lastSwitch = monitorState.lastEmergencySwitchAt || 0;
+            if (now - lastSwitch < CONFIG.stall.NO_HEAL_POINT_EMERGENCY_COOLDOWN_MS) {
+                return false;
+            }
+            const switched = candidateSelector.selectEmergencyCandidate(reason);
+            if (switched) {
+                monitorState.lastEmergencySwitchAt = now;
+                return true;
+            }
+            return false;
+        };
+
         const maybeTriggerRefresh = (videoId, monitorState, reason) => {
             if (!monitorState) return false;
             const now = Date.now();
             if ((monitorState.noHealPointCount || 0) < CONFIG.stall.REFRESH_AFTER_NO_HEAL_POINTS) {
+                return false;
+            }
+            if (monitorState.noHealPointRefreshUntil && now < monitorState.noHealPointRefreshUntil) {
                 return false;
             }
             const nextAllowed = monitorState.lastRefreshAt
@@ -28,6 +55,7 @@ const NoHealPointPolicy = (() => {
                 return false;
             }
             monitorState.lastRefreshAt = now;
+            monitorState.noHealPointRefreshUntil = 0;
             logDebug(LogEvents.tagged('REFRESH', 'Refreshing video after repeated no-heal points'), {
                 videoId,
                 reason,
@@ -47,6 +75,24 @@ const NoHealPointPolicy = (() => {
             const videoId = context.videoId || (getVideoId ? getVideoId(video) : 'unknown');
 
             backoffManager.applyBackoff(videoId, monitorState, reason);
+
+            if (monitorState && (monitorState.noHealPointCount || 0) >= CONFIG.stall.REFRESH_AFTER_NO_HEAL_POINTS) {
+                const now = Date.now();
+                const ranges = MediaState.ranges(video);
+                if (ranges.length) {
+                    const end = ranges[ranges.length - 1].end;
+                    const headroom = Math.max(0, end - video.currentTime);
+                    const hasSrc = Boolean(video.currentSrc || video.getAttribute?.('src'));
+                    const readyState = video.readyState;
+                    if (headroom < CONFIG.recovery.MIN_HEAL_HEADROOM_S
+                        && hasSrc
+                        && readyState >= CONFIG.stall.NO_HEAL_POINT_REFRESH_MIN_READY_STATE) {
+                        if (!monitorState.noHealPointRefreshUntil) {
+                            monitorState.noHealPointRefreshUntil = now + CONFIG.stall.NO_HEAL_POINT_REFRESH_DELAY_MS;
+                        }
+                    }
+                }
+            }
 
             const ranges = MediaState.ranges(video);
             if (!ranges.length) {
@@ -82,12 +128,14 @@ const NoHealPointPolicy = (() => {
                 && (monitorState?.noHealPointCount >= CONFIG.stall.FAILOVER_AFTER_NO_HEAL_POINTS
                     || (stalledForMs !== null && stalledForMs >= CONFIG.stall.FAILOVER_AFTER_STALL_MS));
 
+            const emergencySwitched = maybeTriggerEmergencySwitch(videoId, monitorState, reason);
             const refreshed = maybeTriggerRefresh(videoId, monitorState, reason);
 
             return {
                 shouldFailover,
                 refreshed,
-                probationTriggered
+                probationTriggered,
+                emergencySwitched
             };
         };
 
