@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.1.55 - 2026-01-24T16:54:33.784Z
+Previous: 4.1.54
+Commit: d3ef2cc
+Changes:
+- Split message and detail columns
+
 ## 4.1.54 - 2026-01-24T16:49:37.535Z
 Previous: 4.1.53
 Commit: 328be60

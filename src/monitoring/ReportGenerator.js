@@ -105,11 +105,21 @@ ${stallSummaryLine}${stallRecentLine}${healerLine}
             });
         };
 
-        const sanitizeDetail = (detail, message) => {
+        const sanitizeDetail = (detail, message, seenSrcByVideo) => {
             if (!detail || typeof detail !== 'object') return detail;
             const sanitized = transformDetail(detail);
             const isVideoIntro = message.includes('[HEALER:VIDEO] Video registered');
-            if (!isVideoIntro) {
+            const isSrcChange = message.includes('[HEALER:SRC]')
+                || (message.includes('[HEALER:MEDIA_STATE]') && message.includes('src attribute changed'));
+            const videoKey = sanitized.video ?? sanitized.videoState?.id ?? null;
+            const allowSrc = isVideoIntro
+                || (isSrcChange && videoKey !== null && !seenSrcByVideo.has(videoKey));
+
+            if (isSrcChange && videoKey !== null) {
+                seenSrcByVideo.add(videoKey);
+            }
+
+            if (!allowSrc) {
                 stripKeys(sanitized, new Set(['currentSrc', 'src']));
             }
             if (message.includes('[HEALER:MEDIA_STATE]') && message.includes('src attribute changed')) {
@@ -240,6 +250,8 @@ ${stallSummaryLine}${stallRecentLine}${healerLine}
             return { ...inlinePairs, ...existing };
         };
 
+        const seenSrcByVideo = new Set();
+
         const logContent = logs.map(l => {
             const time = formatTime(l.timestamp);
 
@@ -252,7 +264,7 @@ ${stallSummaryLine}${stallRecentLine}${healerLine}
                 return formatLine(`[${time}] ${icon} `, split.summary, detail, true);
             } else {
                 // Internal script log
-                const sanitized = sanitizeDetail(l.detail, l.message);
+                const sanitized = sanitizeDetail(l.detail, l.message, seenSrcByVideo);
                 const match = l.message.match(/^\[([^\]]+)\]\s*(.*)$/);
                 if (!match) {
                     const detail = sanitized && Object.keys(sanitized).length > 0
