@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.1.59 - 2026-01-24T17:34:33.283Z
+Previous: 4.1.58
+Commit: 7c739bf
+Changes:
+- Align detail JSON column
+
 ## 4.1.58 - 2026-01-24T17:27:08.004Z
 Previous: 4.1.57
 Commit: ca6ad5e
