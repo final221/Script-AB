@@ -10,8 +10,32 @@ const CoreOrchestrator = (() => {
         init: () => {
             Logger.add('[CORE] Initializing Stream Healer');
 
-            // Don't run in iframes
-            if (window.self !== window.top) return;
+            // Expose debug functions robustly (including iframe proxy)
+            const exposeGlobal = (name, fn) => {
+                try {
+                    window[name] = fn;
+                    if (typeof unsafeWindow !== 'undefined') {
+                        unsafeWindow[name] = fn;
+                    }
+                } catch (e) {
+                    console.error('[CORE] Failed to expose global:', name, e);
+                }
+            };
+
+            if (window.self !== window.top) {
+                exposeGlobal('exportTwitchAdLogs', () => {
+                    try {
+                        if (window.top && typeof window.top.exportTwitchAdLogs === 'function') {
+                            window.top.exportTwitchAdLogs();
+                            return;
+                        }
+                    } catch (e) {
+                        Logger.add('[CORE] exportTwitchAdLogs proxy failed', { error: e?.message });
+                    }
+                    Logger.add('[CORE] exportTwitchAdLogs not available in top window');
+                });
+                return;
+            }
 
             const streamHealer = StreamHealer.create();
             StreamHealer.setDefault(streamHealer);
@@ -33,18 +57,6 @@ const CoreOrchestrator = (() => {
             } else {
                 document.addEventListener('DOMContentLoaded', startMonitoring, { once: true });
             }
-
-            // Expose debug functions robustly
-            const exposeGlobal = (name, fn) => {
-                try {
-                    window[name] = fn;
-                    if (typeof unsafeWindow !== 'undefined') {
-                        unsafeWindow[name] = fn;
-                    }
-                } catch (e) {
-                    console.error('[CORE] Failed to expose global:', name, e);
-                }
-            };
 
             exposeGlobal('exportTwitchAdLogs', () => {
                 const healerStats = streamHealer.getStats();

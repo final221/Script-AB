@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.4.26 - 2026-01-25T15:46:07.855Z
+Previous: 4.4.25
+Commit: dcbde94
+Changes:
+- Harden report export download flow
+
 ## 4.4.25 - 2026-01-25T15:44:16.140Z
 Previous: 4.4.24
 Commit: 6bf169e
