@@ -28,8 +28,19 @@ const PlaybackStateStore = (() => {
         return state;
     };
 
+    const setState = (state, nextState, detail = {}) => {
+        if (!state || state.state === nextState) return false;
+        const prevState = state.state;
+        state.state = nextState;
+        if (typeof detail.log === 'function') {
+            detail.log(prevState, nextState, detail.reason);
+        }
+        return true;
+    };
+
     return {
         create,
-        applyAliases
+        applyAliases,
+        setState
     };
 })();

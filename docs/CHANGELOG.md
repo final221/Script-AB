@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.4.21 - 2026-01-25T15:19:46.160Z
+Previous: 4.4.20
+Commit: 3941063
+Changes:
+- Deduplicate candidate scoring in evaluation
+
 ## 4.4.20 - 2026-01-25T15:17:33.185Z
 Previous: 4.4.19
 Commit: ef7a171

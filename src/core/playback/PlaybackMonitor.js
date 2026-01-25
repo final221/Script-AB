@@ -24,13 +24,13 @@ const PlaybackMonitor = (() => {
         const state = tracker.state;
         const logHelper = PlaybackLogHelper.create({ video, videoId, state });
 
-        const setState = (nextState, reason) => {
-            if (state.state === nextState) return;
-            const prevState = state.state;
-            state.state = nextState;
-            const entry = logHelper.buildStateChange(prevState, nextState, reason);
-            logDebug(entry.message, entry.detail);
-        };
+        const setState = (nextState, reason) => PlaybackStateStore.setState(state, nextState, {
+            reason,
+            log: (prevState, next, changeReason) => {
+                const entry = logHelper.buildStateChange(prevState, next, changeReason);
+                logDebug(entry.message, entry.detail);
+            }
+        });
 
         const eventHandlers = PlaybackEventHandlers.create({
             video,

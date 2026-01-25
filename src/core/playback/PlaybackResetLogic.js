@@ -119,7 +119,7 @@ const PlaybackResetLogic = (() => {
             const pendingReason = state.resetPendingReason || trigger;
             const pendingType = state.resetPendingType || (resetState.isHardReset ? 'hard' : 'soft');
 
-            state.state = MonitorStates.RESET;
+            PlaybackStateStore.setState(state, MonitorStates.RESET);
             logDebugLazy(LogEvents.tagged('RESET', 'Video reset'), () => ({
                 reason: pendingReason,
                 resetType: pendingType,

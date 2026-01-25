@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.4.20
+// @version       4.4.21
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -161,7 +161,7 @@ const CONFIG = (() => {
  * Build metadata helpers (version injected at build time).
  */
 const BuildInfo = (() => {
-    const VERSION = '4.4.20';
+    const VERSION = '4.4.21';
 
     const getVersion = () => {
         const gmVersion = (typeof GM_info !== 'undefined' && GM_info?.script?.version)
@@ -172,7 +172,7 @@ const BuildInfo = (() => {
             ? unsafeWindow.GM_info.script.version
             : null;
         if (unsafeVersion) return unsafeVersion;
-        if (VERSION && VERSION !== '4.4.20') return VERSION;
+        if (VERSION && VERSION !== '4.4.21') return VERSION;
         return null;
     };
 
@@ -3647,9 +3647,20 @@ const PlaybackStateStore = (() => {
         return state;
     };
 
+    const setState = (state, nextState, detail = {}) => {
+        if (!state || state.state === nextState) return false;
+        const prevState = state.state;
+        state.state = nextState;
+        if (typeof detail.log === 'function') {
+            detail.log(prevState, nextState, detail.reason);
+        }
+        return true;
+    };
+
     return {
         create,
-        applyAliases
+        applyAliases,
+        setState
     };
 })();
 
@@ -3774,7 +3785,7 @@ const PlaybackResetLogic = (() => {
             const pendingReason = state.resetPendingReason || trigger;
             const pendingType = state.resetPendingType || (resetState.isHardReset ? 'hard' : 'soft');
 
-            state.state = MonitorStates.RESET;
+            PlaybackStateStore.setState(state, MonitorStates.RESET);
             logDebugLazy(LogEvents.tagged('RESET', 'Video reset'), () => ({
                 reason: pendingReason,
                 resetType: pendingType,
@@ -4767,13 +4778,13 @@ const PlaybackMonitor = (() => {
         const state = tracker.state;
         const logHelper = PlaybackLogHelper.create({ video, videoId, state });
 
-        const setState = (nextState, reason) => {
-            if (state.state === nextState) return;
-            const prevState = state.state;
-            state.state = nextState;
-            const entry = logHelper.buildStateChange(prevState, nextState, reason);
-            logDebug(entry.message, entry.detail);
-        };
+        const setState = (nextState, reason) => PlaybackStateStore.setState(state, nextState, {
+            reason,
+            log: (prevState, next, changeReason) => {
+                const entry = logHelper.buildStateChange(prevState, next, changeReason);
+                logDebug(entry.message, entry.detail);
+            }
+        });
 
         const eventHandlers = PlaybackEventHandlers.create({
             video,
@@ -7557,11 +7568,11 @@ const HealPipeline = (() => {
         const finalizeMonitorState = (monitorState, video) => {
             if (!monitorState) return;
             if (video.paused) {
-                monitorState.state = MonitorStates.PAUSED;
+                PlaybackStateStore.setState(monitorState, MonitorStates.PAUSED);
             } else if (poller.hasRecovered(video, monitorState)) {
-                monitorState.state = MonitorStates.PLAYING;
+                PlaybackStateStore.setState(monitorState, MonitorStates.PLAYING);
             } else {
-                monitorState.state = MonitorStates.STALLED;
+                PlaybackStateStore.setState(monitorState, MonitorStates.STALLED);
             }
         };
 
@@ -7584,7 +7595,7 @@ const HealPipeline = (() => {
             state.healAttempts++;
             const healStartTime = performance.now();
             if (monitorState) {
-                monitorState.state = MonitorStates.HEALING;
+                PlaybackStateStore.setState(monitorState, MonitorStates.HEALING);
                 monitorState.lastHealAttemptTime = Date.now();
             }
 

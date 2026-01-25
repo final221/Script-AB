@@ -69,11 +69,11 @@ const HealPipeline = (() => {
         const finalizeMonitorState = (monitorState, video) => {
             if (!monitorState) return;
             if (video.paused) {
-                monitorState.state = MonitorStates.PAUSED;
+                PlaybackStateStore.setState(monitorState, MonitorStates.PAUSED);
             } else if (poller.hasRecovered(video, monitorState)) {
-                monitorState.state = MonitorStates.PLAYING;
+                PlaybackStateStore.setState(monitorState, MonitorStates.PLAYING);
             } else {
-                monitorState.state = MonitorStates.STALLED;
+                PlaybackStateStore.setState(monitorState, MonitorStates.STALLED);
             }
         };
 
@@ -96,7 +96,7 @@ const HealPipeline = (() => {
             state.healAttempts++;
             const healStartTime = performance.now();
             if (monitorState) {
-                monitorState.state = MonitorStates.HEALING;
+                PlaybackStateStore.setState(monitorState, MonitorStates.HEALING);
                 monitorState.lastHealAttemptTime = Date.now();
             }
 
