@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.4.4 - 2026-01-25T11:54:49.666Z
+Previous: 4.4.3
+Commit: 586a66c
+Changes:
+- chore: clarify recommendation phrasing
+
 ## 4.4.3 - 2026-01-25T11:51:13.552Z
 Previous: 4.4.2
 Commit: 8086518

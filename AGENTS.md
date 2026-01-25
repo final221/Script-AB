@@ -9,6 +9,7 @@
 - If a request conflicts with the thin workflow, say no and propose the leaner alternative.
 - Do not add extra process/docs unless required for correctness or safety.
 - State recommendations plainly; base them on logic/efficiency, not assumed user desire.
+- Do not ask the user to choose when a single best path exists; choose and proceed.
 
 ## Start
 - docs/AI_CONTEXT.md
