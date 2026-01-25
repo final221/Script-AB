@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.4.9 - 2026-01-25T13:09:30.420Z
+Previous: 4.4.8
+Commit: 5c8d28a
+Changes:
+- chore: consolidate agent workflow
+
 ## 4.4.8 - 2026-01-25T12:46:54.581Z
 Previous: 4.4.7
 Commit: 70880ce

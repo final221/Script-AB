@@ -1,26 +1,15 @@
 const fs = require('fs');
 const path = require('path');
 
+const { listJsFilesRecursive } = require('./file-utils');
+
 const ROOT = path.join(__dirname, '..');
 const SRC = path.join(ROOT, 'src');
 const MANIFEST_PATH = path.join(__dirname, 'manifest.json');
 
 const toPosix = (filePath) => filePath.replace(/\\/g, '/');
 
-const listJsFiles = (dir) => {
-    const results = [];
-    if (!fs.existsSync(dir)) return results;
-    const entries = fs.readdirSync(dir, { withFileTypes: true });
-    for (const entry of entries) {
-        const full = path.join(dir, entry.name);
-        if (entry.isDirectory()) {
-            results.push(...listJsFiles(full));
-        } else if (entry.isFile() && entry.name.endsWith('.js')) {
-            results.push(full);
-        }
-    }
-    return results;
-};
+const listJsFiles = (dir) => listJsFilesRecursive(dir);
 
 const buildSection = (baseDir, orderedFiles, seen, options = {}) => {
     const section = [];

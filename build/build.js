@@ -3,6 +3,7 @@ const path = require('path');
 const { execSync } = require('child_process');
 
 const { generateManifest } = require('./generate-manifest');
+const { getLoadOrder } = require('./load-order');
 
 const CONFIG = {
     BASE: path.join(__dirname, '..'),
@@ -11,29 +12,6 @@ const CONFIG = {
     VERSION: path.join(__dirname, 'version.txt'),
     MANIFEST: path.join(__dirname, 'manifest.json'),
     CHANGELOG: path.join(__dirname, '..', 'docs', 'CHANGELOG.md')
-};
-
-/**
- * Recursively gets all files in a directory.
- * @param {string} dir - The directory to search.
- * @returns {string[]} List of absolute file paths.
- */
-const getFiles = (dir) => {
-    let results = [];
-    const list = fs.readdirSync(dir);
-
-    for (const file of list) {
-        const filePath = path.join(dir, file);
-        const stat = fs.statSync(filePath);
-
-        if (stat.isDirectory()) {
-            results = results.concat(getFiles(filePath));
-        } else {
-            results.push(filePath);
-        }
-    }
-
-    return results;
 };
 
 /**
@@ -195,23 +173,10 @@ const updateChangelog = (oldVersion, newVersion) => {
     }
 
     const srcDir = path.join(CONFIG.BASE, 'src');
-    const allFiles = getFiles(srcDir);
-    const normalize = p => path.normalize(p);
-
-    const priorityFiles = priority.map(file => path.join(srcDir, file));
-    const entryFile = path.join(srcDir, entry);
-
-    // Filter out: non-js, priority files, entry file
-    const otherFiles = allFiles.filter(file => {
-        if (!file.endsWith('.js')) return false;
-
-        const isPriority = priorityFiles.some(p => normalize(p) === normalize(file));
-        if (isPriority) return false;
-
-        const isEntry = normalize(file) === normalize(entryFile);
-        if (isEntry) return false;
-
-        return true;
+    const { priorityFiles, entryFile, otherFiles } = getLoadOrder({
+        srcDir,
+        manifestPath: CONFIG.MANIFEST,
+        manifest: { priority, entry }
     });
 
     const headerContent = fs.existsSync(CONFIG.HEADER)
