@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.4.13
+// @version       4.4.14
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -161,7 +161,7 @@ const CONFIG = (() => {
  * Build metadata helpers (version injected at build time).
  */
 const BuildInfo = (() => {
-    const VERSION = '4.4.13';
+    const VERSION = '4.4.14';
 
     const getVersion = () => {
         const gmVersion = (typeof GM_info !== 'undefined' && GM_info?.script?.version)
@@ -172,7 +172,7 @@ const BuildInfo = (() => {
             ? unsafeWindow.GM_info.script.version
             : null;
         if (unsafeVersion) return unsafeVersion;
-        if (VERSION && VERSION !== '4.4.13') return VERSION;
+        if (VERSION && VERSION !== '4.4.14') return VERSION;
         return null;
     };
 
@@ -2587,6 +2587,42 @@ const Instrumentation = (() => {
 
 
 
+// --- LogDebug ---
+/**
+ * Shared debug logger helper to avoid repeating CONFIG.debug checks.
+ */
+const LogDebug = (() => {
+    const resolveEnabled = (enabled) => {
+        if (typeof enabled === 'function') return Boolean(enabled());
+        if (enabled === undefined) return Boolean(CONFIG.debug);
+        return Boolean(enabled);
+    };
+
+    const normalizeDetail = (detail) => (
+        detail && typeof detail === 'object' ? { ...detail } : null
+    );
+
+    const create = (options = {}) => {
+        const baseDetail = normalizeDetail(options.baseDetail);
+        const enabled = options.enabled;
+
+        return (message, detail) => {
+            if (!resolveEnabled(enabled)) return;
+            if (baseDetail && detail && typeof detail === 'object') {
+                Logger.add(message, { ...baseDetail, ...detail });
+                return;
+            }
+            if (baseDetail) {
+                Logger.add(message, baseDetail);
+                return;
+            }
+            Logger.add(message, detail);
+        };
+    };
+
+    return { create };
+})();
+
 // --- VideoState ---
 /**
  * Shared helper for consistent video state logging.
@@ -3053,6 +3089,42 @@ const VideoDiscovery = (() => {
     };
 
     return { start };
+})();
+
+// --- LogContext ---
+/**
+ * Shared helper for consistent log payloads with video context.
+ */
+const LogContext = (() => {
+    const normalizeDetail = (detail) => (
+        detail && typeof detail === 'object' ? { ...detail } : {}
+    );
+
+    const withVideoState = (detail, snapshot, videoId) => {
+        const payload = normalizeDetail(detail);
+        if (payload.videoId === undefined && videoId) {
+            payload.videoId = videoId;
+        }
+        if (payload.videoState === undefined && snapshot) {
+            payload.videoState = snapshot;
+        }
+        return payload;
+    };
+
+    const fromContext = (context, detail) => (
+        withVideoState(detail, context?.getLogSnapshot?.(), context?.videoId)
+    );
+
+    const fromVideo = (video, videoId, detail, mode = 'full') => {
+        const snapshot = VideoStateSnapshot.forLog(video, videoId, mode);
+        return withVideoState(detail, snapshot, videoId);
+    };
+
+    return {
+        withVideoState,
+        fromContext,
+        fromVideo
+    };
 })();
 
 // --- PlaybackLogHelper ---
@@ -4616,14 +4688,9 @@ const PlaybackMonitor = (() => {
         const isActive = options.isActive || (() => true);
         const videoId = options.videoId || 'unknown';
 
-        const logDebug = (message, detail) => {
-            if (CONFIG.debug) {
-                Logger.add(message, {
-                    videoId,
-                    ...detail
-                });
-            }
-        };
+        const logDebug = LogDebug.create({
+            baseDetail: { videoId }
+        });
 
         const tracker = PlaybackStateTracker.create(video, videoId, logDebug);
         const state = tracker.state;
@@ -5154,6 +5221,105 @@ const CandidateSelector = (() => {
         const logDecision = selectionLogger.logDecision;
         const logSuppression = selectionLogger.logSuppression;
 
+        const buildSwitchDecision = ({ now, current, preferred, activeCandidateId, probationActive, scores, reason }) => {
+            if (!preferred || preferred.id === activeCandidateId) {
+                return { action: 'none' };
+            }
+
+            const activeState = current ? current.state : null;
+            const activeMonitorState = current ? current.monitorState : null;
+            const activeNoHealPoints = activeMonitorState?.noHealPointCount || 0;
+            const activeStalledForMs = activeMonitorState?.lastProgressTime
+                ? (now - activeMonitorState.lastProgressTime)
+                : null;
+            const activeHealing = activeState === 'HEALING';
+            const activeIsStalled = !current || ['STALLED', 'RESET', 'ERROR', 'ENDED'].includes(activeState);
+            const probationProgressOk = preferred.progressStreakMs >= CONFIG.monitoring.PROBATION_MIN_PROGRESS_MS;
+            const probationReady = probationActive
+                && probationProgressOk
+                && (preferred.vs.readyState >= CONFIG.monitoring.PROBATION_READY_STATE
+                    || preferred.vs.currentSrc);
+
+            const fastSwitchAllowed = activeHealing
+                && preferred.trusted
+                && preferred.progressEligible
+                && preferred.progressStreakMs >= CONFIG.monitoring.CANDIDATE_MIN_PROGRESS_MS
+                && (activeNoHealPoints >= CONFIG.stall.FAST_SWITCH_AFTER_NO_HEAL_POINTS
+                    || (activeStalledForMs !== null && activeStalledForMs >= CONFIG.stall.FAST_SWITCH_AFTER_STALL_MS));
+
+            const baseDecision = {
+                activeState,
+                activeIsStalled,
+                activeNoHealPoints,
+                activeStalledForMs,
+                probationActive,
+                probationReady,
+                preferred,
+                currentTrusted: current ? current.trusted : false
+            };
+
+            if (fastSwitchAllowed) {
+                return {
+                    action: 'fast_switch',
+                    ...baseDecision
+                };
+            }
+
+            if (!preferred.progressEligible && !probationReady) {
+                return {
+                    action: 'stay',
+                    suppression: 'preferred_not_progress_eligible',
+                    ...baseDecision
+                };
+            }
+
+            if (!activeIsStalled) {
+                return {
+                    action: 'stay',
+                    suppression: 'active_not_stalled',
+                    ...baseDecision
+                };
+            }
+
+            if (baseDecision.currentTrusted && !preferred.trusted) {
+                return {
+                    action: 'stay',
+                    suppression: 'trusted_active_blocks_untrusted',
+                    ...baseDecision
+                };
+            }
+
+            if (!preferred.trusted && !probationActive) {
+                return {
+                    action: 'stay',
+                    suppression: 'untrusted_outside_probation',
+                    ...baseDecision
+                };
+            }
+
+            const preferredForPolicy = probationReady
+                ? { ...preferred, progressEligible: true }
+                : preferred;
+            const policyDecision = switchPolicy.shouldSwitch(current, preferredForPolicy, scores, reason);
+
+            if (policyDecision.allow) {
+                return {
+                    action: 'switch',
+                    policyDecision,
+                    preferredForPolicy,
+                    ...baseDecision
+                };
+            }
+
+            return {
+                action: 'stay',
+                suppression: policyDecision.suppression || 'score_delta',
+                policyDecision,
+                preferredForPolicy,
+                ...baseDecision
+            };
+        };
+
         const getActiveId = () => {
             if (!activeCandidateId && monitorsById.size > 0) {
                 const fallbackId = (lastGoodCandidateId && monitorsById.has(lastGoodCandidateId))
@@ -5225,37 +5391,26 @@ const CandidateSelector = (() => {
             }
 
             if (preferred && preferred.id !== activeCandidateId) {
-                const activeState = current ? current.state : null;
-                const activeMonitorState = current ? current.monitorState : null;
-                const activeNoHealPoints = activeMonitorState?.noHealPointCount || 0;
-                const activeStalledForMs = activeMonitorState?.lastProgressTime
-                    ? (now - activeMonitorState.lastProgressTime)
-                    : null;
-                const activeHealing = activeState === 'HEALING';
-                const activeIsStalled = !current || ['STALLED', 'RESET', 'ERROR', 'ENDED'].includes(activeState);
                 const probationActive = isProbationActive();
-                const probationProgressOk = preferred.progressStreakMs >= CONFIG.monitoring.PROBATION_MIN_PROGRESS_MS;
-                const probationReady = probationActive
-                    && probationProgressOk
-                    && (preferred.vs.readyState >= CONFIG.monitoring.PROBATION_READY_STATE
-                        || preferred.vs.currentSrc);
+                const decision = buildSwitchDecision({
+                    now,
+                    current,
+                    preferred,
+                    activeCandidateId,
+                    probationActive,
+                    scores,
+                    reason
+                });
 
-                const fastSwitchAllowed = activeHealing
-                    && preferred.trusted
-                    && preferred.progressEligible
-                    && preferred.progressStreakMs >= CONFIG.monitoring.CANDIDATE_MIN_PROGRESS_MS
-                    && (activeNoHealPoints >= CONFIG.stall.FAST_SWITCH_AFTER_NO_HEAL_POINTS
-                        || (activeStalledForMs !== null && activeStalledForMs >= CONFIG.stall.FAST_SWITCH_AFTER_STALL_MS));
-
-                if (fastSwitchAllowed) {
+                if (decision.action === 'fast_switch') {
                     const fromId = activeCandidateId;
                     Logger.add(LogEvents.tagged('CANDIDATE', 'Fast switch from healing dead-end'), {
                         from: fromId,
                         to: preferred.id,
                         reason,
-                        activeState,
-                        noHealPointCount: activeNoHealPoints,
-                        stalledForMs: activeStalledForMs,
+                        activeState: decision.activeState,
+                        noHealPointCount: decision.activeNoHealPoints,
+                        stalledForMs: decision.activeStalledForMs,
                         preferredScore: preferred.score,
                         preferredProgressStreakMs: preferred.progressStreakMs,
                         preferredTrusted: preferred.trusted
@@ -5266,7 +5421,7 @@ const CandidateSelector = (() => {
                         action: 'fast_switch',
                         from: fromId,
                         to: activeCandidateId,
-                        activeState,
+                        activeState: decision.activeState,
                         preferredScore: preferred.score,
                         preferredProgressEligible: preferred.progressEligible,
                         preferredTrusted: preferred.trusted,
@@ -5275,76 +5430,48 @@ const CandidateSelector = (() => {
                     return preferred;
                 }
 
-                if (!preferred.progressEligible && !probationReady) {
+                if (decision.action === 'stay' && decision.suppression === 'preferred_not_progress_eligible') {
                     logSuppression({
                         from: activeCandidateId,
                         to: preferred.id,
                         reason,
-                        cause: 'preferred_not_progress_eligible',
-                        activeState,
+                        cause: decision.suppression,
+                        activeState: decision.activeState,
                         probationActive,
                         scores
                     });
                     logDecision({
                         reason,
                         action: 'stay',
-                        suppression: 'preferred_not_progress_eligible',
+                        suppression: decision.suppression,
                         activeId: activeCandidateId,
-                        activeState,
+                        activeState: decision.activeState,
                         preferredId: preferred.id,
                         preferredScore: preferred.score,
                         preferredProgressEligible: preferred.progressEligible,
                         preferredTrusted: preferred.trusted,
                         probationActive,
-                        probationReady
+                        probationReady: decision.probationReady
                     });
                     return preferred;
                 }
 
-                if (!activeIsStalled) {
+                if (decision.action === 'stay' && decision.suppression === 'active_not_stalled') {
                     logSuppression({
                         from: activeCandidateId,
                         to: preferred.id,
                         reason,
-                        cause: 'active_not_stalled',
-                        activeState,
+                        cause: decision.suppression,
+                        activeState: decision.activeState,
                         probationActive,
                         scores
                     });
                     logDecision({
                         reason,
                         action: 'stay',
-                        suppression: 'active_not_stalled',
+                        suppression: decision.suppression,
                         activeId: activeCandidateId,
-                        activeState,
-                        preferredId: preferred.id,
-                        preferredScore: preferred.score,
-                        preferredProgressEligible: preferred.progressEligible,
-                        preferredTrusted: preferred.trusted,
-                        probationActive
-                    });
-                    return preferred;
-                }
-
-                const currentTrusted = current ? current.trusted : false;
-                if (currentTrusted && !preferred.trusted) {
-                    logSuppression({
-                        from: activeCandidateId,
-                        to: preferred.id,
-                        reason,
-                        cause: 'trusted_active_blocks_untrusted',
-                        activeState,
-                        probationActive,
-                        currentTrusted,
-                        preferredTrusted: preferred.trusted,
-                        scores
-                    });
-                    logDecision({
-                        reason,
-                        action: 'stay',
-                        suppression: 'trusted_active_blocks_untrusted',
-                        activeId: activeCandidateId,
-                        activeState,
+                        activeState: decision.activeState,
                         preferredId: preferred.id,
                         preferredScore: preferred.score,
                         preferredProgressEligible: preferred.progressEligible,
@@ -5354,22 +5481,24 @@ const CandidateSelector = (() => {
                     return preferred;
                 }
 
-                if (!preferred.trusted && !probationActive) {
+                if (decision.action === 'stay' && decision.suppression === 'trusted_active_blocks_untrusted') {
                     logSuppression({
                         from: activeCandidateId,
                         to: preferred.id,
                         reason,
-                        cause: 'untrusted_outside_probation',
-                        activeState,
+                        cause: decision.suppression,
+                        activeState: decision.activeState,
                         probationActive,
+                        currentTrusted: decision.currentTrusted,
+                        preferredTrusted: preferred.trusted,
                         scores
                     });
                     logDecision({
                         reason,
                         action: 'stay',
-                        suppression: 'untrusted_outside_probation',
+                        suppression: decision.suppression,
                         activeId: activeCandidateId,
-                        activeState,
+                        activeState: decision.activeState,
                         preferredId: preferred.id,
                         preferredScore: preferred.score,
                         preferredProgressEligible: preferred.progressEligible,
@@ -5379,18 +5508,39 @@ const CandidateSelector = (() => {
                     return preferred;
                 }
 
-                const preferredForPolicy = probationReady
-                    ? { ...preferred, progressEligible: true }
-                    : preferred;
-                const decision = switchPolicy.shouldSwitch(current, preferredForPolicy, scores, reason);
-                if (decision.allow) {
+                if (decision.action === 'stay' && decision.suppression === 'untrusted_outside_probation') {
+                    logSuppression({
+                        from: activeCandidateId,
+                        to: preferred.id,
+                        reason,
+                        cause: decision.suppression,
+                        activeState: decision.activeState,
+                        probationActive,
+                        scores
+                    });
+                    logDecision({
+                        reason,
+                        action: 'stay',
+                        suppression: decision.suppression,
+                        activeId: activeCandidateId,
+                        activeState: decision.activeState,
+                        preferredId: preferred.id,
+                        preferredScore: preferred.score,
+                        preferredProgressEligible: preferred.progressEligible,
+                        preferredTrusted: preferred.trusted,
+                        probationActive
+                    });
+                    return preferred;
+                }
+
+                if (decision.action === 'switch') {
                     const fromId = activeCandidateId;
                     Logger.add(LogEvents.tagged('CANDIDATE', 'Active video switched'), {
                         from: activeCandidateId,
                         to: preferred.id,
                         reason,
-                        delta: decision.delta,
-                        currentScore: decision.currentScore,
+                        delta: decision.policyDecision.delta,
+                        currentScore: decision.policyDecision.currentScore,
                         bestScore: preferred.score,
                         bestProgressStreakMs: preferred.progressStreakMs,
                         bestProgressEligible: preferred.progressEligible,
@@ -5403,19 +5553,19 @@ const CandidateSelector = (() => {
                         action: 'switch',
                         from: fromId,
                         to: activeCandidateId,
-                        activeState,
+                        activeState: decision.activeState,
                         preferredScore: preferred.score,
                         preferredProgressEligible: preferred.progressEligible,
                         preferredTrusted: preferred.trusted,
                         probationActive
                     });
-                } else {
+                } else if (decision.action === 'stay') {
                     logDecision({
                         reason,
                         action: 'stay',
-                        suppression: decision.suppression || 'score_delta',
+                        suppression: decision.suppression,
                         activeId: activeCandidateId,
-                        activeState,
+                        activeState: decision.activeState,
                         preferredId: preferred.id,
                         preferredScore: preferred.score,
                         preferredProgressEligible: preferred.progressEligible,
@@ -7008,6 +7158,11 @@ const HealPointPoller = (() => {
 
             while (Date.now() - startTime < timeoutMs) {
                 pollCount++;
+                let analysis = null;
+                const getAnalysis = () => {
+                    if (!analysis) analysis = BufferGapFinder.analyze(video);
+                    return analysis;
+                };
 
                 const abortReason = shouldAbort(video, monitorState);
                 if (abortReason) {
@@ -7047,7 +7202,7 @@ const HealPointPoller = (() => {
                                 gapSize: gapSize.toFixed(2) + 's',
                                 minGap: gapOverrideMin + 's',
                                 healPoint: `${healPoint.start.toFixed(2)}-${healPoint.end.toFixed(2)}`,
-                                buffers: BufferGapFinder.analyze(video).formattedRanges
+                                buffers: getAnalysis().formattedRanges
                             });
                             return {
                                 healPoint,
@@ -7068,7 +7223,7 @@ const HealPointPoller = (() => {
                                 bufferHeadroom: headroom.toFixed(2) + 's',
                                 minRequired: CONFIG.recovery.MIN_HEAL_HEADROOM_S + 's',
                                 healPoint: `${healPoint.start.toFixed(2)}-${healPoint.end.toFixed(2)}`,
-                                buffers: BufferGapFinder.analyze(video).formattedRanges
+                                buffers: getAnalysis().formattedRanges
                             });
                         }
                         await Fn.sleep(CONFIG.stall.HEAL_POLL_INTERVAL_MS);
@@ -7092,7 +7247,7 @@ const HealPointPoller = (() => {
                     logDebug(LogEvents.TAG.POLLING, {
                         attempt: pollCount,
                         elapsed: (Date.now() - startTime) + 'ms',
-                        buffers: BufferGapFinder.analyze(video).formattedRanges
+                        buffers: getAnalysis().formattedRanges
                     });
                 }
 
@@ -7144,6 +7299,40 @@ const HealPipeline = (() => {
             healAttempts: 0
         };
 
+        const resetRecovery = (monitorState, reason) => {
+            recoveryManager.resetBackoff(monitorState, reason);
+            if (recoveryManager.resetPlayError) {
+                recoveryManager.resetPlayError(monitorState, reason);
+            }
+        };
+
+        const resetHealPointTracking = (monitorState) => {
+            if (!monitorState) return;
+            monitorState.lastHealPointKey = null;
+            monitorState.healPointRepeatCount = 0;
+        };
+
+        const ensureAttached = (video, videoId, reason, message) => {
+            if (document.contains(video)) return true;
+            Logger.add(LogEvents.tagged('DETACHED', message), {
+                reason,
+                videoId
+            });
+            onDetached(video, reason);
+            return false;
+        };
+
+        const finalizeMonitorState = (monitorState, video) => {
+            if (!monitorState) return;
+            if (video.paused) {
+                monitorState.state = 'PAUSED';
+            } else if (poller.hasRecovered(video, monitorState)) {
+                monitorState.state = 'PLAYING';
+            } else {
+                monitorState.state = 'STALLED';
+            }
+        };
+
         const attemptHeal = async (videoOrContext, monitorStateOverride) => {
             const context = RecoveryContext.from(videoOrContext, monitorStateOverride, getVideoId);
             const video = context.video;
@@ -7155,12 +7344,7 @@ const HealPipeline = (() => {
                 return;
             }
 
-            if (!document.contains(video)) {
-                Logger.add(LogEvents.tagged('DETACHED', 'Heal skipped, video not in DOM'), {
-                    reason: 'pre_heal',
-                    videoId
-                });
-                onDetached(video, 'pre_heal');
+            if (!ensureAttached(video, videoId, 'pre_heal', 'Heal skipped, video not in DOM')) {
                 return;
             }
 
@@ -7203,10 +7387,7 @@ const HealPipeline = (() => {
                             video,
                             videoId
                         );
-                        recoveryManager.resetBackoff(monitorState, 'self_recovered');
-                        if (recoveryManager.resetPlayError) {
-                            recoveryManager.resetPlayError(monitorState, 'self_recovered');
-                        }
+                        resetRecovery(monitorState, 'self_recovered');
                         return;
                     }
 
@@ -7214,19 +7395,11 @@ const HealPipeline = (() => {
                     attemptLogger.logNoHealPoint(noPointDuration, video, videoId);
                     Metrics.increment('heals_failed');
                     recoveryManager.handleNoHealPoint(video, monitorState, 'no_heal_point');
-                    if (monitorState) {
-                        monitorState.lastHealPointKey = null;
-                        monitorState.healPointRepeatCount = 0;
-                    }
+                    resetHealPointTracking(monitorState);
                     return;
                 }
 
-                if (!document.contains(video)) {
-                    Logger.add(LogEvents.tagged('DETACHED', 'Heal aborted before revalidation'), {
-                        reason: 'pre_revalidate',
-                        videoId
-                    });
-                    onDetached(video, 'pre_revalidate');
+                if (!ensureAttached(video, videoId, 'pre_revalidate', 'Heal aborted before revalidation')) {
                     return;
                 }
 
@@ -7236,28 +7409,17 @@ const HealPipeline = (() => {
                         attemptLogger.logStaleRecovered(
                             Number((performance.now() - healStartTime).toFixed(0))
                         );
-                        recoveryManager.resetBackoff(monitorState, 'stale_recovered');
-                        if (recoveryManager.resetPlayError) {
-                            recoveryManager.resetPlayError(monitorState, 'stale_recovered');
-                        }
+                        resetRecovery(monitorState, 'stale_recovered');
                         return;
                     }
                     attemptLogger.logStaleGone(healPoint, video, videoId);
                     Metrics.increment('heals_failed');
                     recoveryManager.handleNoHealPoint(video, monitorState, 'stale_gone');
-                    if (monitorState) {
-                        monitorState.lastHealPointKey = null;
-                        monitorState.healPointRepeatCount = 0;
-                    }
+                    resetHealPointTracking(monitorState);
                     return;
                 }
 
-                if (!document.contains(video)) {
-                    Logger.add(LogEvents.tagged('DETACHED', 'Heal aborted before seek'), {
-                        reason: 'pre_seek',
-                        videoId
-                    });
-                    onDetached(video, 'pre_seek');
+                if (!ensureAttached(video, videoId, 'pre_seek', 'Heal aborted before seek')) {
                     return;
                 }
 
@@ -7299,10 +7461,7 @@ const HealPipeline = (() => {
                         videoId
                     });
                     Metrics.increment('heals_successful');
-                    recoveryManager.resetBackoff(monitorState, 'heal_success');
-                    if (recoveryManager.resetPlayError) {
-                        recoveryManager.resetPlayError(monitorState, 'heal_success');
-                    }
+                    resetRecovery(monitorState, 'heal_success');
                     catchUpController.scheduleCatchUp(video, monitorState, videoId, 'post_heal');
                 } else {
                     const repeatCount = HealAttemptUtils.updateHealPointRepeat(monitorState, finalPoint, false);
@@ -7342,15 +7501,7 @@ const HealPipeline = (() => {
                 Metrics.increment('heals_failed');
             } finally {
                 state.isHealing = false;
-                if (monitorState) {
-                    if (video.paused) {
-                        monitorState.state = 'PAUSED';
-                    } else if (poller.hasRecovered(video, monitorState)) {
-                        monitorState.state = 'PLAYING';
-                    } else {
-                        monitorState.state = 'STALLED';
-                    }
-                }
+                finalizeMonitorState(monitorState, video);
             }
         };
 
@@ -7522,6 +7673,174 @@ const PlayheadAttribution = (() => {
         };
 
         return { resolve };
+    };
+
+    return { create };
+})();
+
+// --- StallHandler ---
+/**
+ * Encapsulates stall handling flow (gating, logging, recovery triggers).
+ */
+const StallHandler = (() => {
+    const create = (options = {}) => {
+        const candidateSelector = options.candidateSelector;
+        const recoveryManager = options.recoveryManager;
+        const getVideoId = options.getVideoId;
+        const logDebug = options.logDebug || (() => {});
+        const healPipeline = options.healPipeline;
+        const scanForVideos = options.scanForVideos || (() => {});
+
+        const stallSkipLogTimes = new Map();
+
+        const maybeLogResourceWindow = (context, details, now) => {
+            const state = context.monitorState;
+            if (!state) return;
+            if (state.lastResourceWindowLogTime
+                && (now - state.lastResourceWindowLogTime) <= CONFIG.logging.BACKOFF_LOG_INTERVAL_MS) {
+                return;
+            }
+            state.lastResourceWindowLogTime = now;
+            const stallKey = state.stallStartTime
+                || state.lastProgressTime
+                || now;
+            if (Instrumentation && typeof Instrumentation.logResourceWindow === 'function') {
+                Instrumentation.logResourceWindow({
+                    videoId: context.videoId,
+                    stallTime: now,
+                    stallKey,
+                    reason: details.trigger || 'stall',
+                    stalledFor: details.stalledFor || null
+                });
+            }
+        };
+
+        const shouldDebounceAfterProgress = (context, now) => {
+            const state = context.monitorState;
+            if (!state) return false;
+            const progressedSinceAttempt = state.lastProgressTime > state.lastHealAttemptTime;
+            if (progressedSinceAttempt && now - state.lastHealAttemptTime < CONFIG.stall.RETRY_COOLDOWN_MS) {
+                logDebug(LogEvents.tagged('DEBOUNCE'), {
+                    cooldownMs: CONFIG.stall.RETRY_COOLDOWN_MS,
+                    lastHealAttemptAgoMs: now - state.lastHealAttemptTime,
+                    state: state.state,
+                    videoId: context.videoId
+                });
+                return true;
+            }
+            return false;
+        };
+
+        const markHealAttempt = (context, now) => {
+            if (context.monitorState) {
+                context.monitorState.lastHealAttemptTime = now;
+            }
+        };
+
+        const maybeRescanBufferStarved = (context, now) => {
+            const state = context.monitorState;
+            if (!state?.bufferStarved) return;
+            const lastRescan = state.lastBufferStarveRescanTime || 0;
+            if (now - lastRescan < CONFIG.stall.BUFFER_STARVE_RESCAN_COOLDOWN_MS) {
+                return;
+            }
+            state.lastBufferStarveRescanTime = now;
+            candidateSelector.activateProbation('buffer_starved');
+            const bufferInfo = MediaState.bufferAhead(context.video);
+            scanForVideos('buffer_starved', {
+                videoId: context.videoId,
+                bufferAhead: bufferInfo?.bufferAhead ?? null,
+                hasBuffer: bufferInfo?.hasBuffer ?? null
+            });
+        };
+
+        const shouldSkipNonActive = (context, details, now) => {
+            const activeCandidateId = candidateSelector.getActiveId();
+            if (!activeCandidateId || activeCandidateId === context.videoId) {
+                return false;
+            }
+            if (!context.monitorState?.progressEligible) {
+                recoveryManager.probeCandidate(context.videoId, 'stall_non_active');
+            }
+            const lastLog = stallSkipLogTimes.get(context.videoId) || 0;
+            const logIntervalMs = CONFIG.logging.NON_ACTIVE_LOG_MS;
+            if (now - lastLog >= logIntervalMs) {
+                stallSkipLogTimes.set(context.videoId, now);
+                logDebug(LogEvents.tagged('STALL_SKIP', 'Stall on non-active video'), {
+                    videoId: context.videoId,
+                    activeVideoId: activeCandidateId,
+                    stalledFor: details.stalledFor
+                });
+            }
+            return true;
+        };
+
+        const logStallDetected = (context, details, now) => {
+            const snapshot = context.getLogSnapshot();
+            const summary = LogEvents.summary.stallDetected({
+                videoId: context.videoId,
+                trigger: details.trigger,
+                stalledFor: details.stalledFor,
+                bufferExhausted: details.bufferExhausted,
+                paused: context.video.paused,
+                pauseFromStall: context.monitorState?.pauseFromStall,
+                lastProgressAgoMs: context.monitorState ? (now - context.monitorState.lastProgressTime) : null,
+                currentTime: snapshot?.currentTime ? Number(snapshot.currentTime) : null,
+                readyState: snapshot?.readyState,
+                networkState: snapshot?.networkState,
+                buffered: snapshot?.buffered
+            });
+            const detail = LogContext.withVideoState({
+                ...details,
+                lastProgressAgoMs: context.monitorState ? (now - context.monitorState.lastProgressTime) : undefined
+            }, snapshot, context.videoId);
+            Logger.add(summary, detail);
+        };
+
+        const onStallDetected = (video, details = {}, state = null) => {
+            const now = Date.now();
+            const context = RecoveryContext.create(video, state, getVideoId, {
+                trigger: details.trigger,
+                reason: details.trigger || 'stall',
+                stalledFor: details.stalledFor,
+                now
+            });
+
+            maybeLogResourceWindow(context, details, now);
+
+            if (recoveryManager.shouldSkipStall(context.videoId, context.monitorState)) {
+                return;
+            }
+
+            if (shouldDebounceAfterProgress(context, now)) {
+                return;
+            }
+            markHealAttempt(context, now);
+            maybeRescanBufferStarved(context, now);
+
+            AdGapSignals.maybeLog({
+                video: context.video,
+                videoId: context.videoId,
+                playheadSeconds: context.video?.currentTime,
+                monitorState: context.monitorState,
+                now,
+                reason: details.trigger || 'stall'
+            });
+
+            candidateSelector.evaluateCandidates('stall');
+            if (shouldSkipNonActive(context, details, now)) {
+                return;
+            }
+
+            logStallDetected(context, details, now);
+
+            Metrics.increment('stalls_detected');
+            healPipeline.attemptHeal(context);
+        };
+
+        return {
+            onStallDetected
+        };
     };
 
     return { create };
@@ -7969,8 +8288,6 @@ const RecoveryOrchestrator = (() => {
         const recoveryManager = monitoring.recoveryManager;
         const getVideoId = monitoring.getVideoId;
 
-        const stallSkipLogTimes = new Map();
-
         const healPipeline = HealPipeline.create({
             getVideoId,
             logWithState,
@@ -7984,152 +8301,16 @@ const RecoveryOrchestrator = (() => {
             }
         });
 
-        const maybeLogResourceWindow = (context, details, now) => {
-            const state = context.monitorState;
-            if (!state) return;
-            if (state.lastResourceWindowLogTime
-                && (now - state.lastResourceWindowLogTime) <= CONFIG.logging.BACKOFF_LOG_INTERVAL_MS) {
-                return;
-            }
-            state.lastResourceWindowLogTime = now;
-            const stallKey = state.stallStartTime
-                || state.lastProgressTime
-                || now;
-            if (Instrumentation && typeof Instrumentation.logResourceWindow === 'function') {
-                Instrumentation.logResourceWindow({
-                    videoId: context.videoId,
-                    stallTime: now,
-                    stallKey,
-                    reason: details.trigger || 'stall',
-                    stalledFor: details.stalledFor || null
-                });
-            }
-        };
+        const stallHandler = StallHandler.create({
+            candidateSelector,
+            recoveryManager,
+            getVideoId,
+            logDebug,
+            healPipeline,
+            scanForVideos: monitoring.scanForVideos
+        });
 
-        const shouldDebounceAfterProgress = (context, now) => {
-            const state = context.monitorState;
-            if (!state) return false;
-            const progressedSinceAttempt = state.lastProgressTime > state.lastHealAttemptTime;
-            if (progressedSinceAttempt && now - state.lastHealAttemptTime < CONFIG.stall.RETRY_COOLDOWN_MS) {
-                logDebug(LogEvents.tagged('DEBOUNCE'), {
-                    cooldownMs: CONFIG.stall.RETRY_COOLDOWN_MS,
-                    lastHealAttemptAgoMs: now - state.lastHealAttemptTime,
-                    state: state.state,
-                    videoId: context.videoId
-                });
-                return true;
-            }
-            return false;
-        };
-
-        const markHealAttempt = (context, now) => {
-            if (context.monitorState) {
-                context.monitorState.lastHealAttemptTime = now;
-            }
-        };
-
-        const maybeRescanBufferStarved = (context, now) => {
-            const state = context.monitorState;
-            if (!state?.bufferStarved) return;
-            const lastRescan = state.lastBufferStarveRescanTime || 0;
-            if (now - lastRescan < CONFIG.stall.BUFFER_STARVE_RESCAN_COOLDOWN_MS) {
-                return;
-            }
-            state.lastBufferStarveRescanTime = now;
-            candidateSelector.activateProbation('buffer_starved');
-            const bufferInfo = MediaState.bufferAhead(context.video);
-            monitoring.scanForVideos('buffer_starved', {
-                videoId: context.videoId,
-                bufferAhead: bufferInfo?.bufferAhead ?? null,
-                hasBuffer: bufferInfo?.hasBuffer ?? null
-            });
-        };
-
-        const shouldSkipNonActive = (context, details, now) => {
-            const activeCandidateId = candidateSelector.getActiveId();
-            if (!activeCandidateId || activeCandidateId === context.videoId) {
-                return false;
-            }
-            if (!context.monitorState?.progressEligible) {
-                recoveryManager.probeCandidate(context.videoId, 'stall_non_active');
-            }
-            const lastLog = stallSkipLogTimes.get(context.videoId) || 0;
-            const logIntervalMs = CONFIG.logging.NON_ACTIVE_LOG_MS;
-            if (now - lastLog >= logIntervalMs) {
-                stallSkipLogTimes.set(context.videoId, now);
-                logDebug(LogEvents.tagged('STALL_SKIP', 'Stall on non-active video'), {
-                    videoId: context.videoId,
-                    activeVideoId: activeCandidateId,
-                    stalledFor: details.stalledFor
-                });
-            }
-            return true;
-        };
-
-        const logStallDetected = (context, details, now) => {
-            const snapshot = context.getLogSnapshot();
-            const summary = LogEvents.summary.stallDetected({
-                videoId: context.videoId,
-                trigger: details.trigger,
-                stalledFor: details.stalledFor,
-                bufferExhausted: details.bufferExhausted,
-                paused: context.video.paused,
-                pauseFromStall: context.monitorState?.pauseFromStall,
-                lastProgressAgoMs: context.monitorState ? (now - context.monitorState.lastProgressTime) : null,
-                currentTime: snapshot?.currentTime ? Number(snapshot.currentTime) : null,
-                readyState: snapshot?.readyState,
-                networkState: snapshot?.networkState,
-                buffered: snapshot?.buffered
-            });
-            Logger.add(summary, {
-                ...details,
-                lastProgressAgoMs: context.monitorState ? (now - context.monitorState.lastProgressTime) : undefined,
-                videoId: context.videoId,
-                videoState: snapshot
-            });
-        };
-
-        const onStallDetected = (video, details = {}, state = null) => {
-            const now = Date.now();
-            const context = RecoveryContext.create(video, state, getVideoId, {
-                trigger: details.trigger,
-                reason: details.trigger || 'stall',
-                stalledFor: details.stalledFor,
-                now
-            });
-
-            maybeLogResourceWindow(context, details, now);
-
-            if (recoveryManager.shouldSkipStall(context.videoId, context.monitorState)) {
-                return;
-            }
-
-            if (shouldDebounceAfterProgress(context, now)) {
-                return;
-            }
-            markHealAttempt(context, now);
-            maybeRescanBufferStarved(context, now);
-
-            AdGapSignals.maybeLog({
-                video: context.video,
-                videoId: context.videoId,
-                playheadSeconds: context.video?.currentTime,
-                monitorState: context.monitorState,
-                now,
-                reason: details.trigger || 'stall'
-            });
-
-            candidateSelector.evaluateCandidates('stall');
-            if (shouldSkipNonActive(context, details, now)) {
-                return;
-            }
-
-            logStallDetected(context, details, now);
-
-            Metrics.increment('stalls_detected');
-            healPipeline.attemptHeal(context);
-        };
-
+        const onStallDetected = stallHandler.onStallDetected;
         monitoring.setStallHandler(onStallDetected);
 
         const externalSignalRouter = ExternalSignalRouter.create({
@@ -8162,52 +8343,72 @@ const RecoveryOrchestrator = (() => {
 const StreamHealer = (() => {
     const FALLBACK_SOURCE_PATTERN = /(404_processing|_404\/404_processing|_404_processing|_404)/i;
 
-    const logDebug = (message, detail) => {
-        if (CONFIG.debug) {
-            Logger.add(message, detail);
-        }
-    };
-
     const isFallbackSource = (src) => src && FALLBACK_SOURCE_PATTERN.test(src);
 
-    let recovery = {
-        isHealing: () => false
-    };
+    let defaultInstance = null;
 
-    const monitoring = MonitoringOrchestrator.create({
-        logDebug,
-        isHealing: () => recovery.isHealing(),
-        isFallbackSource
-    });
+    const create = () => {
+        const logDebug = LogDebug.create();
+        let recovery = {
+            isHealing: () => false
+        };
 
-    const logWithState = (message, videoOrContext, detail = {}) => {
-        const context = RecoveryContext.from(videoOrContext, null, monitoring.getVideoId);
-        const snapshot = context.getLogSnapshot();
-        Logger.add(message, {
-            ...detail,
-            videoId: detail.videoId || context.videoId,
-            videoState: snapshot
+        const monitoring = MonitoringOrchestrator.create({
+            logDebug,
+            isHealing: () => recovery.isHealing(),
+            isFallbackSource
         });
+
+        const logWithState = (message, videoOrContext, detail = {}) => {
+            const context = RecoveryContext.from(videoOrContext, null, monitoring.getVideoId);
+            Logger.add(message, LogContext.fromContext(context, detail));
+        };
+
+        recovery = RecoveryOrchestrator.create({
+            monitoring,
+            logWithState,
+            logDebug
+        });
+
+        return {
+            monitor: monitoring.monitor,
+            stopMonitoring: monitoring.stopMonitoring,
+            onStallDetected: recovery.onStallDetected,
+            attemptHeal: (video, state) => recovery.attemptHeal(video, state),
+            handleExternalSignal: (signal) => recovery.handleExternalSignal(signal),
+            scanForVideos: monitoring.scanForVideos,
+            getStats: () => ({
+                healAttempts: recovery.getAttempts(),
+                isHealing: recovery.isHealing(),
+                monitoredCount: monitoring.getMonitoredCount()
+            })
+        };
     };
 
-    recovery = RecoveryOrchestrator.create({
-        monitoring,
-        logWithState,
-        logDebug
-    });
+    const getDefault = () => {
+        if (!defaultInstance) {
+            defaultInstance = create();
+        }
+        return defaultInstance;
+    };
+
+    const setDefault = (instance) => {
+        defaultInstance = instance;
+    };
+
+    const callDefault = (method) => (...args) => getDefault()[method](...args);
 
     return {
-        monitor: monitoring.monitor,
-        stopMonitoring: monitoring.stopMonitoring,
-        onStallDetected: recovery.onStallDetected,
-        attemptHeal: (video, state) => recovery.attemptHeal(video, state),
-        handleExternalSignal: (signal) => recovery.handleExternalSignal(signal),
-        scanForVideos: monitoring.scanForVideos,
-        getStats: () => ({
-            healAttempts: recovery.getAttempts(),
-            isHealing: recovery.isHealing(),
-            monitoredCount: monitoring.getMonitoredCount()
-        })
+        create,
+        getDefault,
+        setDefault,
+        monitor: callDefault('monitor'),
+        stopMonitoring: callDefault('stopMonitoring'),
+        onStallDetected: callDefault('onStallDetected'),
+        attemptHeal: callDefault('attemptHeal'),
+        handleExternalSignal: callDefault('handleExternalSignal'),
+        scanForVideos: callDefault('scanForVideos'),
+        getStats: callDefault('getStats')
     };
 })();
 
@@ -8226,15 +8427,18 @@ const CoreOrchestrator = (() => {
             // Don't run in iframes
             if (window.self !== window.top) return;
 
+            const streamHealer = StreamHealer.create();
+            StreamHealer.setDefault(streamHealer);
+
             // Initialize essential modules only
             Instrumentation.init({
-                onSignal: StreamHealer.handleExternalSignal
+                onSignal: streamHealer.handleExternalSignal
             });  // Console capture + external hints
 
             // Wait for DOM then start monitoring
             const startMonitoring = () => {
                 VideoDiscovery.start((video) => {
-                    StreamHealer.monitor(video);
+                    streamHealer.monitor(video);
                 });
             };
 
@@ -8257,7 +8461,7 @@ const CoreOrchestrator = (() => {
             };
 
             exposeGlobal('exportTwitchAdLogs', () => {
-                const healerStats = StreamHealer.getStats();
+                const healerStats = streamHealer.getStats();
                 const metricsSummary = Metrics.getSummary();
                 const mergedLogs = Logger.getMergedTimeline();
                 ReportGenerator.exportReport(metricsSummary, mergedLogs, healerStats);

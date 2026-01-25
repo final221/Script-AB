@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.4.14 - 2026-01-25T13:41:50.358Z
+Previous: 4.4.13
+Commit: d7dbfd6
+Changes:
+- docs: clarify agent advice tone
+
 ## 4.4.13 - 2026-01-25T13:24:30.513Z
 Previous: 4.4.12
 Commit: 431946d

@@ -25,6 +25,11 @@ const HealPointPoller = (() => {
 
             while (Date.now() - startTime < timeoutMs) {
                 pollCount++;
+                let analysis = null;
+                const getAnalysis = () => {
+                    if (!analysis) analysis = BufferGapFinder.analyze(video);
+                    return analysis;
+                };
 
                 const abortReason = shouldAbort(video, monitorState);
                 if (abortReason) {
@@ -64,7 +69,7 @@ const HealPointPoller = (() => {
                                 gapSize: gapSize.toFixed(2) + 's',
                                 minGap: gapOverrideMin + 's',
                                 healPoint: `${healPoint.start.toFixed(2)}-${healPoint.end.toFixed(2)}`,
-                                buffers: BufferGapFinder.analyze(video).formattedRanges
+                                buffers: getAnalysis().formattedRanges
                             });
                             return {
                                 healPoint,
@@ -85,7 +90,7 @@ const HealPointPoller = (() => {
                                 bufferHeadroom: headroom.toFixed(2) + 's',
                                 minRequired: CONFIG.recovery.MIN_HEAL_HEADROOM_S + 's',
                                 healPoint: `${healPoint.start.toFixed(2)}-${healPoint.end.toFixed(2)}`,
-                                buffers: BufferGapFinder.analyze(video).formattedRanges
+                                buffers: getAnalysis().formattedRanges
                             });
                         }
                         await Fn.sleep(CONFIG.stall.HEAL_POLL_INTERVAL_MS);
@@ -109,7 +114,7 @@ const HealPointPoller = (() => {
                     logDebug(LogEvents.TAG.POLLING, {
                         attempt: pollCount,
                         elapsed: (Date.now() - startTime) + 'ms',
-                        buffers: BufferGapFinder.analyze(video).formattedRanges
+                        buffers: getAnalysis().formattedRanges
                     });
                 }
 

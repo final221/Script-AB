@@ -22,6 +22,40 @@ const HealPipeline = (() => {
             healAttempts: 0
         };
 
+        const resetRecovery = (monitorState, reason) => {
+            recoveryManager.resetBackoff(monitorState, reason);
+            if (recoveryManager.resetPlayError) {
+                recoveryManager.resetPlayError(monitorState, reason);
+            }
+        };
+
+        const resetHealPointTracking = (monitorState) => {
+            if (!monitorState) return;
+            monitorState.lastHealPointKey = null;
+            monitorState.healPointRepeatCount = 0;
+        };
+
+        const ensureAttached = (video, videoId, reason, message) => {
+            if (document.contains(video)) return true;
+            Logger.add(LogEvents.tagged('DETACHED', message), {
+                reason,
+                videoId
+            });
+            onDetached(video, reason);
+            return false;
+        };
+
+        const finalizeMonitorState = (monitorState, video) => {
+            if (!monitorState) return;
+            if (video.paused) {
+                monitorState.state = 'PAUSED';
+            } else if (poller.hasRecovered(video, monitorState)) {
+                monitorState.state = 'PLAYING';
+            } else {
+                monitorState.state = 'STALLED';
+            }
+        };
+
         const attemptHeal = async (videoOrContext, monitorStateOverride) => {
             const context = RecoveryContext.from(videoOrContext, monitorStateOverride, getVideoId);
             const video = context.video;
@@ -33,12 +67,7 @@ const HealPipeline = (() => {
                 return;
             }
 
-            if (!document.contains(video)) {
-                Logger.add(LogEvents.tagged('DETACHED', 'Heal skipped, video not in DOM'), {
-                    reason: 'pre_heal',
-                    videoId
-                });
-                onDetached(video, 'pre_heal');
+            if (!ensureAttached(video, videoId, 'pre_heal', 'Heal skipped, video not in DOM')) {
                 return;
             }
 
@@ -81,10 +110,7 @@ const HealPipeline = (() => {
                             video,
                             videoId
                         );
-                        recoveryManager.resetBackoff(monitorState, 'self_recovered');
-                        if (recoveryManager.resetPlayError) {
-                            recoveryManager.resetPlayError(monitorState, 'self_recovered');
-                        }
+                        resetRecovery(monitorState, 'self_recovered');
                         return;
                     }
 
@@ -92,19 +118,11 @@ const HealPipeline = (() => {
                     attemptLogger.logNoHealPoint(noPointDuration, video, videoId);
                     Metrics.increment('heals_failed');
                     recoveryManager.handleNoHealPoint(video, monitorState, 'no_heal_point');
-                    if (monitorState) {
-                        monitorState.lastHealPointKey = null;
-                        monitorState.healPointRepeatCount = 0;
-                    }
+                    resetHealPointTracking(monitorState);
                     return;
                 }
 
-                if (!document.contains(video)) {
-                    Logger.add(LogEvents.tagged('DETACHED', 'Heal aborted before revalidation'), {
-                        reason: 'pre_revalidate',
-                        videoId
-                    });
-                    onDetached(video, 'pre_revalidate');
+                if (!ensureAttached(video, videoId, 'pre_revalidate', 'Heal aborted before revalidation')) {
                     return;
                 }
 
@@ -114,28 +132,17 @@ const HealPipeline = (() => {
                         attemptLogger.logStaleRecovered(
                             Number((performance.now() - healStartTime).toFixed(0))
                         );
-                        recoveryManager.resetBackoff(monitorState, 'stale_recovered');
-                        if (recoveryManager.resetPlayError) {
-                            recoveryManager.resetPlayError(monitorState, 'stale_recovered');
-                        }
+                        resetRecovery(monitorState, 'stale_recovered');
                         return;
                     }
                     attemptLogger.logStaleGone(healPoint, video, videoId);
                     Metrics.increment('heals_failed');
                     recoveryManager.handleNoHealPoint(video, monitorState, 'stale_gone');
-                    if (monitorState) {
-                        monitorState.lastHealPointKey = null;
-                        monitorState.healPointRepeatCount = 0;
-                    }
+                    resetHealPointTracking(monitorState);
                     return;
                 }
 
-                if (!document.contains(video)) {
-                    Logger.add(LogEvents.tagged('DETACHED', 'Heal aborted before seek'), {
-                        reason: 'pre_seek',
-                        videoId
-                    });
-                    onDetached(video, 'pre_seek');
+                if (!ensureAttached(video, videoId, 'pre_seek', 'Heal aborted before seek')) {
                     return;
                 }
 
@@ -177,10 +184,7 @@ const HealPipeline = (() => {
                         videoId
                     });
                     Metrics.increment('heals_successful');
-                    recoveryManager.resetBackoff(monitorState, 'heal_success');
-                    if (recoveryManager.resetPlayError) {
-                        recoveryManager.resetPlayError(monitorState, 'heal_success');
-                    }
+                    resetRecovery(monitorState, 'heal_success');
                     catchUpController.scheduleCatchUp(video, monitorState, videoId, 'post_heal');
                 } else {
                     const repeatCount = HealAttemptUtils.updateHealPointRepeat(monitorState, finalPoint, false);
@@ -220,15 +224,7 @@ const HealPipeline = (() => {
                 Metrics.increment('heals_failed');
             } finally {
                 state.isHealing = false;
-                if (monitorState) {
-                    if (video.paused) {
-                        monitorState.state = 'PAUSED';
-                    } else if (poller.hasRecovered(video, monitorState)) {
-                        monitorState.state = 'PLAYING';
-                    } else {
-                        monitorState.state = 'STALLED';
-                    }
-                }
+                finalizeMonitorState(monitorState, video);
             }
         };
 

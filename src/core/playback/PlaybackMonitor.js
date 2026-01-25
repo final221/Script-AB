@@ -16,14 +16,9 @@ const PlaybackMonitor = (() => {
         const isActive = options.isActive || (() => true);
         const videoId = options.videoId || 'unknown';
 
-        const logDebug = (message, detail) => {
-            if (CONFIG.debug) {
-                Logger.add(message, {
-                    videoId,
-                    ...detail
-                });
-            }
-        };
+        const logDebug = LogDebug.create({
+            baseDetail: { videoId }
+        });
 
         const tracker = PlaybackStateTracker.create(video, videoId, logDebug);
         const state = tracker.state;

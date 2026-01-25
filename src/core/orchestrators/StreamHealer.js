@@ -6,51 +6,71 @@
 const StreamHealer = (() => {
     const FALLBACK_SOURCE_PATTERN = /(404_processing|_404\/404_processing|_404_processing|_404)/i;
 
-    const logDebug = (message, detail) => {
-        if (CONFIG.debug) {
-            Logger.add(message, detail);
-        }
-    };
-
     const isFallbackSource = (src) => src && FALLBACK_SOURCE_PATTERN.test(src);
 
-    let recovery = {
-        isHealing: () => false
-    };
+    let defaultInstance = null;
 
-    const monitoring = MonitoringOrchestrator.create({
-        logDebug,
-        isHealing: () => recovery.isHealing(),
-        isFallbackSource
-    });
+    const create = () => {
+        const logDebug = LogDebug.create();
+        let recovery = {
+            isHealing: () => false
+        };
 
-    const logWithState = (message, videoOrContext, detail = {}) => {
-        const context = RecoveryContext.from(videoOrContext, null, monitoring.getVideoId);
-        const snapshot = context.getLogSnapshot();
-        Logger.add(message, {
-            ...detail,
-            videoId: detail.videoId || context.videoId,
-            videoState: snapshot
+        const monitoring = MonitoringOrchestrator.create({
+            logDebug,
+            isHealing: () => recovery.isHealing(),
+            isFallbackSource
         });
+
+        const logWithState = (message, videoOrContext, detail = {}) => {
+            const context = RecoveryContext.from(videoOrContext, null, monitoring.getVideoId);
+            Logger.add(message, LogContext.fromContext(context, detail));
+        };
+
+        recovery = RecoveryOrchestrator.create({
+            monitoring,
+            logWithState,
+            logDebug
+        });
+
+        return {
+            monitor: monitoring.monitor,
+            stopMonitoring: monitoring.stopMonitoring,
+            onStallDetected: recovery.onStallDetected,
+            attemptHeal: (video, state) => recovery.attemptHeal(video, state),
+            handleExternalSignal: (signal) => recovery.handleExternalSignal(signal),
+            scanForVideos: monitoring.scanForVideos,
+            getStats: () => ({
+                healAttempts: recovery.getAttempts(),
+                isHealing: recovery.isHealing(),
+                monitoredCount: monitoring.getMonitoredCount()
+            })
+        };
     };
 
-    recovery = RecoveryOrchestrator.create({
-        monitoring,
-        logWithState,
-        logDebug
-    });
+    const getDefault = () => {
+        if (!defaultInstance) {
+            defaultInstance = create();
+        }
+        return defaultInstance;
+    };
+
+    const setDefault = (instance) => {
+        defaultInstance = instance;
+    };
+
+    const callDefault = (method) => (...args) => getDefault()[method](...args);
 
     return {
-        monitor: monitoring.monitor,
-        stopMonitoring: monitoring.stopMonitoring,
-        onStallDetected: recovery.onStallDetected,
-        attemptHeal: (video, state) => recovery.attemptHeal(video, state),
-        handleExternalSignal: (signal) => recovery.handleExternalSignal(signal),
-        scanForVideos: monitoring.scanForVideos,
-        getStats: () => ({
-            healAttempts: recovery.getAttempts(),
-            isHealing: recovery.isHealing(),
-            monitoredCount: monitoring.getMonitoredCount()
-        })
+        create,
+        getDefault,
+        setDefault,
+        monitor: callDefault('monitor'),
+        stopMonitoring: callDefault('stopMonitoring'),
+        onStallDetected: callDefault('onStallDetected'),
+        attemptHeal: callDefault('attemptHeal'),
+        handleExternalSignal: callDefault('handleExternalSignal'),
+        scanForVideos: callDefault('scanForVideos'),
+        getStats: callDefault('getStats')
     };
 })();

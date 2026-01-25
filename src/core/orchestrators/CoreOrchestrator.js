@@ -13,15 +13,18 @@ const CoreOrchestrator = (() => {
             // Don't run in iframes
             if (window.self !== window.top) return;
 
+            const streamHealer = StreamHealer.create();
+            StreamHealer.setDefault(streamHealer);
+
             // Initialize essential modules only
             Instrumentation.init({
-                onSignal: StreamHealer.handleExternalSignal
+                onSignal: streamHealer.handleExternalSignal
             });  // Console capture + external hints
 
             // Wait for DOM then start monitoring
             const startMonitoring = () => {
                 VideoDiscovery.start((video) => {
-                    StreamHealer.monitor(video);
+                    streamHealer.monitor(video);
                 });
             };
 
@@ -44,7 +47,7 @@ const CoreOrchestrator = (() => {
             };
 
             exposeGlobal('exportTwitchAdLogs', () => {
-                const healerStats = StreamHealer.getStats();
+                const healerStats = streamHealer.getStats();
                 const metricsSummary = Metrics.getSummary();
                 const mergedLogs = Logger.getMergedTimeline();
                 ReportGenerator.exportReport(metricsSummary, mergedLogs, healerStats);
