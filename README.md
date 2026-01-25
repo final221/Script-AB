@@ -11,6 +11,9 @@ Twitch stream healing userscript with comprehensive logging. When uBlock Origin 
 
 ## Quick Start
 
+### Agent Workflow
+For agents, the single authoritative workflow and constraints live in `AGENTS.md`.
+
 ### Build
 ```bash
 node build/build.js          # Patch: 4.0.5 -> 4.0.6
@@ -40,14 +43,6 @@ Quick knobs (see `docs/TUNING.md` for full mapping):
 - `stall.FAILOVER_*` (failover timing + cooldown)
 - `monitoring.CANDIDATE_*` (selection + scoring behavior)
 - `monitoring.TRUST_STALE_MS` (trust decay)
-
-### Contributing
-Run `npm test` and `npm run build` before committing changes.
-
-## Development Workflow (Agent-Friendly)
-- `npm test` runs `build/sync-docs.js --check` before tests, enforcing load-order sync.
-- `npm run build` runs sync-docs + tests, then generates `dist/code.js`.
-- `node build/build.js` updates `build/version.txt`, `package.json`, and `README.md` version.
 
 ## Generated Files
 - `dist/code.js` is build output; do not edit by hand.
@@ -81,10 +76,9 @@ Tw Adb/
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for detailed architecture.
 
 ## Docs & Navigation
-- [AGENTS.md](AGENTS.md) - Agent entrypoint and project constraints
+- [AGENTS.md](AGENTS.md) - Single authoritative agent workflow and constraints
 - [docs/INDEX.md](docs/INDEX.md) - Documentation index
 - [docs/AI_CONTEXT.md](docs/AI_CONTEXT.md) - AI agent context, constraints, load order
-- [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) - Workflow and bump policy
 - [docs/DEBUGGING.md](docs/DEBUGGING.md) - Log sequences and triage guide
 - [docs/CONFIG.md](docs/CONFIG.md) - Generated configuration defaults
 - [docs/LOG_TAGS.md](docs/LOG_TAGS.md) - Generated log tag reference
@@ -153,7 +147,7 @@ Key settings in `Config.js`:
 
 ## Version
 
-Current: **4.4.0**
+Current: **4.4.1**
 
 Version increments automatically on each build (patch).
 Changelog: `docs/CHANGELOG.md`

@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.4.1 - 2026-01-25T11:45:42.173Z
+Previous: 4.4.0
+Commit: 54f58d7
+Changes:
+- feat: last-resort switch after no-heal + starve
+
 ## 4.4.0 - 2026-01-25T10:48:09.095Z
 Previous: 4.3.0
 Commit: 658e92b
