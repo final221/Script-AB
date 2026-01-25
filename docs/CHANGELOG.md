@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.4.10 - 2026-01-25T13:10:44.214Z
+Previous: 4.4.9
+Commit: 12be7f7
+Changes:
+- refactor: streamline agent docs and load order
+
 ## 4.4.9 - 2026-01-25T13:09:30.420Z
 Previous: 4.4.8
 Commit: 5c8d28a

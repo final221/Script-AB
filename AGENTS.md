@@ -3,6 +3,7 @@
 ## Single entrypoint
 - This file is the authoritative agent workflow. Keep other docs thin and refer back here.
 - Avoid adding extra workflow/process docs (e.g., CONTRIBUTING, workflows) unless strictly necessary.
+- Do not reintroduce one-line stubs (e.g., docs/CONTRIBUTING.md, docs/INDEX.md, docs/OWNERSHIP.md, .agent/workflows/*); fold content into AGENTS.md or docs/AI_CONTEXT.md instead.
 
 ## Efficiency-first stance
 - Prioritize the thinnest, most direct path.
