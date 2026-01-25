@@ -9,6 +9,8 @@
 - docs/CONFIG.md (generated)
 - docs/LOG_TAGS.md (generated)
 - docs/TUNING.md
+- docs/OWNERSHIP.md
+- docs/CONTRIBUTING.md
 
 ## Debugging
 - docs/DEBUGGING.md

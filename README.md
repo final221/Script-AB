@@ -84,6 +84,7 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for detailed architecture.
 - [AGENTS.md](AGENTS.md) - Agent entrypoint and project constraints
 - [docs/INDEX.md](docs/INDEX.md) - Documentation index
 - [docs/AI_CONTEXT.md](docs/AI_CONTEXT.md) - AI agent context, constraints, load order
+- [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) - Workflow and bump policy
 - [docs/DEBUGGING.md](docs/DEBUGGING.md) - Log sequences and triage guide
 - [docs/CONFIG.md](docs/CONFIG.md) - Generated configuration defaults
 - [docs/LOG_TAGS.md](docs/LOG_TAGS.md) - Generated log tag reference
@@ -152,7 +153,7 @@ Key settings in `Config.js`:
 
 ## Version
 
-Current: **4.1.85**
+Current: **4.1.86**
 
 Version increments automatically on each build (patch).
 Changelog: `docs/CHANGELOG.md`

@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.1.86 - 2026-01-25T10:23:03.256Z
+Previous: 4.1.85
+Commit: bbc35a5
+Changes:
+- chore: add agent workflows and manifest generator
+
 ## 4.1.85 - 2026-01-25T10:13:18.091Z
 Previous: 4.1.84
 Commit: 61f2d28

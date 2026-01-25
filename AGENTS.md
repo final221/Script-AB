@@ -10,6 +10,7 @@ Twitch Stream Healer (userscript)
 - docs/LOG_TAGS.md (generated)
 - docs/DEBUGGING.md
 - docs/TUNING.md
+- docs/CONTRIBUTING.md
 
 ## Build and test
 - npm test (runs build/sync-docs.js --check)
