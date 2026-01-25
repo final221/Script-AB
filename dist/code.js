@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.4.21
+// @version       4.4.22
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -161,7 +161,7 @@ const CONFIG = (() => {
  * Build metadata helpers (version injected at build time).
  */
 const BuildInfo = (() => {
-    const VERSION = '4.4.21';
+    const VERSION = '4.4.22';
 
     const getVersion = () => {
         const gmVersion = (typeof GM_info !== 'undefined' && GM_info?.script?.version)
@@ -172,7 +172,7 @@ const BuildInfo = (() => {
             ? unsafeWindow.GM_info.script.version
             : null;
         if (unsafeVersion) return unsafeVersion;
-        if (VERSION && VERSION !== '4.4.21') return VERSION;
+        if (VERSION && VERSION !== '4.4.22') return VERSION;
         return null;
     };
 
@@ -3657,10 +3657,31 @@ const PlaybackStateStore = (() => {
         return true;
     };
 
+    const resetNoHealPointState = (state) => {
+        if (!state) return false;
+        state.noHealPointCount = 0;
+        state.nextHealAllowedTime = 0;
+        state.noHealPointRefreshUntil = 0;
+        return true;
+    };
+
+    const resetPlayErrorState = (state) => {
+        if (!state) return false;
+        state.playErrorCount = 0;
+        state.nextPlayHealAllowedTime = 0;
+        state.lastPlayErrorTime = 0;
+        state.lastPlayBackoffLogTime = 0;
+        state.lastHealPointKey = null;
+        state.healPointRepeatCount = 0;
+        return true;
+    };
+
     return {
         create,
         applyAliases,
-        setState
+        setState,
+        resetNoHealPointState,
+        resetPlayErrorState
     };
 })();
 
@@ -3844,9 +3865,7 @@ const PlaybackProgressReset = (() => {
                         ? (state.nextHealAllowedTime - now)
                         : 0
                 }));
-                state.noHealPointCount = 0;
-                state.nextHealAllowedTime = 0;
-                state.noHealPointRefreshUntil = 0;
+                PlaybackStateStore.resetNoHealPointState(state);
             }
         };
 
@@ -3860,12 +3879,7 @@ const PlaybackProgressReset = (() => {
                         : 0,
                     previousHealPointRepeats: state.healPointRepeatCount
                 }));
-                state.playErrorCount = 0;
-                state.nextPlayHealAllowedTime = 0;
-                state.lastPlayErrorTime = 0;
-                state.lastPlayBackoffLogTime = 0;
-                state.lastHealPointKey = null;
-                state.healPointRepeatCount = 0;
+                PlaybackStateStore.resetPlayErrorState(state);
             }
         };
 
@@ -5907,17 +5921,18 @@ const BackoffManager = (() => {
 
         const resetBackoff = (monitorState, reason) => {
             if (!monitorState) return;
-            if (monitorState.noHealPointCount > 0 || monitorState.nextHealAllowedTime > 0) {
+            const previousNoHealPoints = monitorState.noHealPointCount;
+            const previousNextHealAllowedMs = monitorState.nextHealAllowedTime
+                ? Math.max(monitorState.nextHealAllowedTime - Date.now(), 0)
+                : 0;
+            if (previousNoHealPoints > 0 || previousNextHealAllowedMs > 0) {
                 logDebug(LogEvents.tagged('BACKOFF', 'Reset'), {
                     reason,
-                    previousNoHealPoints: monitorState.noHealPointCount,
-                    previousNextHealAllowedMs: monitorState.nextHealAllowedTime
-                        ? Math.max(monitorState.nextHealAllowedTime - Date.now(), 0)
-                        : 0
+                    previousNoHealPoints,
+                    previousNextHealAllowedMs
                 });
             }
-            monitorState.noHealPointCount = 0;
-            monitorState.nextHealAllowedTime = 0;
+            PlaybackStateStore.resetNoHealPointState(monitorState);
         };
 
         const applyBackoff = (videoId, monitorState, reason) => {
@@ -6256,12 +6271,7 @@ const PlayErrorPolicy = (() => {
                     previousHealPointRepeats: monitorState.healPointRepeatCount
                 }));
             }
-            monitorState.playErrorCount = 0;
-            monitorState.nextPlayHealAllowedTime = 0;
-            monitorState.lastPlayErrorTime = 0;
-            monitorState.lastPlayBackoffLogTime = 0;
-            monitorState.lastHealPointKey = null;
-            monitorState.healPointRepeatCount = 0;
+            PlaybackStateStore.resetPlayErrorState(monitorState);
         };
 
         const handlePlayFailure = (context, detail = {}) => {

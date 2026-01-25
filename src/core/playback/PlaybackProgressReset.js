@@ -16,9 +16,7 @@ const PlaybackProgressReset = (() => {
                         ? (state.nextHealAllowedTime - now)
                         : 0
                 }));
-                state.noHealPointCount = 0;
-                state.nextHealAllowedTime = 0;
-                state.noHealPointRefreshUntil = 0;
+                PlaybackStateStore.resetNoHealPointState(state);
             }
         };
 
@@ -32,12 +30,7 @@ const PlaybackProgressReset = (() => {
                         : 0,
                     previousHealPointRepeats: state.healPointRepeatCount
                 }));
-                state.playErrorCount = 0;
-                state.nextPlayHealAllowedTime = 0;
-                state.lastPlayErrorTime = 0;
-                state.lastPlayBackoffLogTime = 0;
-                state.lastHealPointKey = null;
-                state.healPointRepeatCount = 0;
+                PlaybackStateStore.resetPlayErrorState(state);
             }
         };
 

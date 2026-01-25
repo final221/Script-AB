@@ -8,17 +8,18 @@ const BackoffManager = (() => {
 
         const resetBackoff = (monitorState, reason) => {
             if (!monitorState) return;
-            if (monitorState.noHealPointCount > 0 || monitorState.nextHealAllowedTime > 0) {
+            const previousNoHealPoints = monitorState.noHealPointCount;
+            const previousNextHealAllowedMs = monitorState.nextHealAllowedTime
+                ? Math.max(monitorState.nextHealAllowedTime - Date.now(), 0)
+                : 0;
+            if (previousNoHealPoints > 0 || previousNextHealAllowedMs > 0) {
                 logDebug(LogEvents.tagged('BACKOFF', 'Reset'), {
                     reason,
-                    previousNoHealPoints: monitorState.noHealPointCount,
-                    previousNextHealAllowedMs: monitorState.nextHealAllowedTime
-                        ? Math.max(monitorState.nextHealAllowedTime - Date.now(), 0)
-                        : 0
+                    previousNoHealPoints,
+                    previousNextHealAllowedMs
                 });
             }
-            monitorState.noHealPointCount = 0;
-            monitorState.nextHealAllowedTime = 0;
+            PlaybackStateStore.resetNoHealPointState(monitorState);
         };
 
         const applyBackoff = (videoId, monitorState, reason) => {

@@ -1,6 +1,6 @@
 {
   "name": "twitch-stream-healer",
-  "version": "4.4.21",
+  "version": "4.4.22",
   "description": "Twitch Stream Healer userscript with self-healing recovery",
   "private": true,
   "scripts": {

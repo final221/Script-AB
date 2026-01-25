@@ -23,12 +23,7 @@ const PlayErrorPolicy = (() => {
                     previousHealPointRepeats: monitorState.healPointRepeatCount
                 }));
             }
-            monitorState.playErrorCount = 0;
-            monitorState.nextPlayHealAllowedTime = 0;
-            monitorState.lastPlayErrorTime = 0;
-            monitorState.lastPlayBackoffLogTime = 0;
-            monitorState.lastHealPointKey = null;
-            monitorState.healPointRepeatCount = 0;
+            PlaybackStateStore.resetPlayErrorState(monitorState);
         };
 
         const handlePlayFailure = (context, detail = {}) => {

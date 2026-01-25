@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.4.22 - 2026-01-25T15:22:05.585Z
+Previous: 4.4.21
+Commit: 9987db7
+Changes:
+- Centralize monitor state transitions
+
 ## 4.4.21 - 2026-01-25T15:19:46.160Z
 Previous: 4.4.20
 Commit: 3941063

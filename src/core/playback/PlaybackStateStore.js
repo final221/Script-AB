@@ -38,9 +38,30 @@ const PlaybackStateStore = (() => {
         return true;
     };
 
+    const resetNoHealPointState = (state) => {
+        if (!state) return false;
+        state.noHealPointCount = 0;
+        state.nextHealAllowedTime = 0;
+        state.noHealPointRefreshUntil = 0;
+        return true;
+    };
+
+    const resetPlayErrorState = (state) => {
+        if (!state) return false;
+        state.playErrorCount = 0;
+        state.nextPlayHealAllowedTime = 0;
+        state.lastPlayErrorTime = 0;
+        state.lastPlayBackoffLogTime = 0;
+        state.lastHealPointKey = null;
+        state.healPointRepeatCount = 0;
+        return true;
+    };
+
     return {
         create,
         applyAliases,
-        setState
+        setState,
+        resetNoHealPointState,
+        resetPlayErrorState
     };
 })();
