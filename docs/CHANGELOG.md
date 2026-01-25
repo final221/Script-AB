@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.4.12 - 2026-01-25T13:19:41.423Z
+Previous: 4.4.11
+Commit: c85d0c4
+Changes:
+- docs: de-duplicate AI context workflow
+
 ## 4.4.11 - 2026-01-25T13:12:55.403Z
 Previous: 4.4.10
 Commit: 077a29e

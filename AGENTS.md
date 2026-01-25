@@ -16,6 +16,14 @@
 - docs/AI_CONTEXT.md
 - docs/ARCHITECTURE.md
 
+## Agent quick map
+- Entry point: `src/core/orchestrators/CoreOrchestrator.js`
+- Main logic: `src/core/orchestrators/StreamHealer.js`
+- Playback: `src/core/playback/PlaybackMonitor.js`
+- Recovery: `src/core/recovery/HealPipeline.js`
+- Buffer + seek: `src/recovery/BufferGapFinder.js`, `src/recovery/LiveEdgeSeeker.js`
+- Logging: `src/monitoring/Logger.js`, `src/monitoring/LogEvents.js`
+
 ## Workflow (always)
 1) Make changes
 2) Run `npm.cmd run agent:verify` after changes (tests + build + status; build bumps version + generates dist)

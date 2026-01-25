@@ -29,7 +29,7 @@
 - **Buffer Analysis Issues**: Check `src/recovery/BufferGapFinder.js`.
 - **Seek Failures**: Check `src/recovery/LiveEdgeSeeker.js`.
 - **Adding Logs**: Use `src/monitoring/Logger.js`.
-- **Updating Version**: Run `npm.cmd run build` (use `-- --minor` or `-- --major` for non-patch bumps).
+- **Verification + Build**: After changes run `npm.cmd run agent:verify` (tests + build + status; build bumps version + generates dist).
 - **Workflow + verification**: See `AGENTS.md`.
 
 ## Generated Artifacts

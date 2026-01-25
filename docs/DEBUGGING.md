@@ -52,7 +52,7 @@ Look for:
 - `[HEALER:WATCHDOG] Initial progress timeout`
 
 ## Quick Triage Tips
-- Offline screen can still be an online stream if the healer failed to recover (often after `POLL_TIMEOUT` -> `NO_HEAL_POINT`).
+- If the stream appears offline, treat it as a healing failure first; this crash pattern often follows `POLL_TIMEOUT` -> `NO_HEAL_POINT` -> refresh/switch suppression.
 - `[HEALER:ASSET_HINT]` can indicate Twitch swapped in a processing/offline element, but confirm whether the channel is actually live.
 - Stalls without `HEALER:START` likely indicate the video never became active or a failover lock is active.
 - Repeated `FAILOVER_REVERT` means candidates are present but not progressing; check readiness logs.
