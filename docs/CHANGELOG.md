@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.4.24 - 2026-01-25T15:28:15.236Z
+Previous: 4.4.23
+Commit: 31f7c28
+Changes:
+- Route rescan/probation triggers through policy
+
 ## 4.4.23 - 2026-01-25T15:25:28.233Z
 Previous: 4.4.22
 Commit: 0ee14d8

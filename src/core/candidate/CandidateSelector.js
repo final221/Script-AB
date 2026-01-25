@@ -46,6 +46,86 @@ const CandidateSelector = (() => {
             state.lastGoodCandidateId = id;
         };
 
+        const getActiveContext = () => {
+            const activeId = state.activeCandidateId;
+            const entry = activeId ? monitorsById.get(activeId) : null;
+            const monitorState = entry ? entry.monitor.state : null;
+            const activeState = monitorState ? monitorState.state : null;
+            const activeIsStalled = !entry || [
+                MonitorStates.STALLED,
+                MonitorStates.RESET,
+                MonitorStates.ERROR
+            ].includes(activeState);
+            const activeIsSevere = activeIsStalled
+                && (activeState === MonitorStates.RESET
+                    || activeState === MonitorStates.ERROR
+                    || monitorState?.bufferStarved);
+            return {
+                activeId,
+                entry,
+                monitorState,
+                activeState,
+                activeIsStalled,
+                activeIsSevere
+            };
+        };
+
+        const forceSwitch = (best, options = {}) => {
+            const context = getActiveContext();
+            const reason = options.reason || 'forced';
+            const shouldConsider = best && best.id && context.activeId && best.id !== context.activeId;
+            if (!shouldConsider) {
+                return {
+                    ...context,
+                    switched: false,
+                    suppressed: false
+                };
+            }
+
+            const requireProgressEligible = options.requireProgressEligible !== false;
+            const requireSevere = options.requireSevere !== false;
+            const progressEligible = !requireProgressEligible || best.progressEligible;
+            const activeOk = requireSevere ? context.activeIsSevere : context.activeIsStalled;
+            const allowSwitch = progressEligible && activeOk;
+
+            if (allowSwitch) {
+                const fromId = context.activeId;
+                setActiveId(best.id);
+                Logger.add(LogEvents.tagged('CANDIDATE', options.label || 'Forced switch'), {
+                    from: fromId,
+                    to: best.id,
+                    reason,
+                    bestScore: best.score,
+                    progressStreakMs: best.progressStreakMs,
+                    progressEligible: best.progressEligible,
+                    activeState: context.activeState,
+                    bufferStarved: context.monitorState?.bufferStarved || false
+                });
+                return {
+                    ...context,
+                    activeId: best.id,
+                    switched: true,
+                    suppressed: false
+                };
+            }
+
+            logDebug(LogEvents.tagged('CANDIDATE', options.suppressionLabel || 'Forced switch suppressed'), {
+                from: context.activeId,
+                to: best.id,
+                reason,
+                progressEligible: best.progressEligible,
+                activeState: context.activeState,
+                bufferStarved: context.monitorState?.bufferStarved || false,
+                activeIsSevere: context.activeIsSevere
+            });
+
+            return {
+                ...context,
+                switched: false,
+                suppressed: true
+            };
+        };
+
         const getActiveId = () => state.activeCandidateId;
 
         const selectionEngine = CandidateSelectionEngine.create({
@@ -87,7 +167,9 @@ const CandidateSelector = (() => {
             setLockChecker,
             activateProbation,
             isProbationActive,
-            selectEmergencyCandidate: emergencyPicker.selectEmergencyCandidate
+            selectEmergencyCandidate: emergencyPicker.selectEmergencyCandidate,
+            getActiveContext,
+            forceSwitch
         };
     };
 

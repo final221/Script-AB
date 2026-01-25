@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.4.23
+// @version       4.4.24
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -161,7 +161,7 @@ const CONFIG = (() => {
  * Build metadata helpers (version injected at build time).
  */
 const BuildInfo = (() => {
-    const VERSION = '4.4.23';
+    const VERSION = '4.4.24';
 
     const getVersion = () => {
         const gmVersion = (typeof GM_info !== 'undefined' && GM_info?.script?.version)
@@ -172,7 +172,7 @@ const BuildInfo = (() => {
             ? unsafeWindow.GM_info.script.version
             : null;
         if (unsafeVersion) return unsafeVersion;
-        if (VERSION && VERSION !== '4.4.23') return VERSION;
+        if (VERSION && VERSION !== '4.4.24') return VERSION;
         return null;
     };
 
@@ -5528,6 +5528,86 @@ const CandidateSelector = (() => {
             state.lastGoodCandidateId = id;
         };
 
+        const getActiveContext = () => {
+            const activeId = state.activeCandidateId;
+            const entry = activeId ? monitorsById.get(activeId) : null;
+            const monitorState = entry ? entry.monitor.state : null;
+            const activeState = monitorState ? monitorState.state : null;
+            const activeIsStalled = !entry || [
+                MonitorStates.STALLED,
+                MonitorStates.RESET,
+                MonitorStates.ERROR
+            ].includes(activeState);
+            const activeIsSevere = activeIsStalled
+                && (activeState === MonitorStates.RESET
+                    || activeState === MonitorStates.ERROR
+                    || monitorState?.bufferStarved);
+            return {
+                activeId,
+                entry,
+                monitorState,
+                activeState,
+                activeIsStalled,
+                activeIsSevere
+            };
+        };
+
+        const forceSwitch = (best, options = {}) => {
+            const context = getActiveContext();
+            const reason = options.reason || 'forced';
+            const shouldConsider = best && best.id && context.activeId && best.id !== context.activeId;
+            if (!shouldConsider) {
+                return {
+                    ...context,
+                    switched: false,
+                    suppressed: false
+                };
+            }
+
+            const requireProgressEligible = options.requireProgressEligible !== false;
+            const requireSevere = options.requireSevere !== false;
+            const progressEligible = !requireProgressEligible || best.progressEligible;
+            const activeOk = requireSevere ? context.activeIsSevere : context.activeIsStalled;
+            const allowSwitch = progressEligible && activeOk;
+
+            if (allowSwitch) {
+                const fromId = context.activeId;
+                setActiveId(best.id);
+                Logger.add(LogEvents.tagged('CANDIDATE', options.label || 'Forced switch'), {
+                    from: fromId,
+                    to: best.id,
+                    reason,
+                    bestScore: best.score,
+                    progressStreakMs: best.progressStreakMs,
+                    progressEligible: best.progressEligible,
+                    activeState: context.activeState,
+                    bufferStarved: context.monitorState?.bufferStarved || false
+                });
+                return {
+                    ...context,
+                    activeId: best.id,
+                    switched: true,
+                    suppressed: false
+                };
+            }
+
+            logDebug(LogEvents.tagged('CANDIDATE', options.suppressionLabel || 'Forced switch suppressed'), {
+                from: context.activeId,
+                to: best.id,
+                reason,
+                progressEligible: best.progressEligible,
+                activeState: context.activeState,
+                bufferStarved: context.monitorState?.bufferStarved || false,
+                activeIsSevere: context.activeIsSevere
+            });
+
+            return {
+                ...context,
+                switched: false,
+                suppressed: true
+            };
+        };
+
         const getActiveId = () => state.activeCandidateId;
 
         const selectionEngine = CandidateSelectionEngine.create({
@@ -5569,7 +5649,9 @@ const CandidateSelector = (() => {
             setLockChecker,
             activateProbation,
             isProbationActive,
-            selectEmergencyCandidate: emergencyPicker.selectEmergencyCandidate
+            selectEmergencyCandidate: emergencyPicker.selectEmergencyCandidate,
+            getActiveContext,
+            forceSwitch
         };
     };
 
@@ -8382,45 +8464,19 @@ const ExternalSignalHandlerAsset = (() => {
             }
 
             const best = candidateSelector.evaluateCandidates('processing_asset');
-            let activeId = candidateSelector.getActiveId();
-            const activeEntry = activeId ? monitorsById.get(activeId) : null;
-            const activeMonitorState = activeEntry ? activeEntry.monitor.state : null;
-            const activeState = activeMonitorState ? activeMonitorState.state : null;
-            const activeIsStalled = !activeEntry || [
-                MonitorStates.STALLED,
-                MonitorStates.RESET,
-                MonitorStates.ERROR
-            ].includes(activeState);
-            const activeIsSevere = activeIsStalled
-                && (activeState === MonitorStates.RESET
-                    || activeState === MonitorStates.ERROR
-                    || activeMonitorState?.bufferStarved);
+            const switchOutcome = candidateSelector.forceSwitch(best, {
+                reason: 'processing_asset',
+                label: 'Forced switch after processing asset',
+                suppressionLabel: 'Processing asset switch suppressed',
+                requireSevere: true,
+                requireProgressEligible: true
+            });
 
-            if (best && best.id && activeId && best.id !== activeId && best.progressEligible && activeIsSevere) {
-                const fromId = activeId;
-                activeId = best.id;
-                candidateSelector.setActiveId(activeId);
-                Logger.add(LogEvents.tagged('CANDIDATE', 'Forced switch after processing asset'), {
-                    from: fromId,
-                    to: activeId,
-                    bestScore: best.score,
-                    progressStreakMs: best.progressStreakMs,
-                    progressEligible: best.progressEligible,
-                    activeState,
-                    bufferStarved: activeMonitorState?.bufferStarved || false
-                });
-            } else if (best && best.id && best.id !== activeId) {
-                logDebug(LogEvents.tagged('CANDIDATE', 'Processing asset switch suppressed'), {
-                    from: activeId,
-                    to: best.id,
-                    progressEligible: best.progressEligible,
-                    activeState,
-                    bufferStarved: activeMonitorState?.bufferStarved || false,
-                    activeIsSevere
-                });
-                if (activeIsStalled) {
-                    recoveryManager.probeCandidate(best.id, 'processing_asset');
-                }
+            let activeId = switchOutcome.activeId;
+            const activeIsStalled = switchOutcome.activeIsStalled;
+
+            if (switchOutcome.suppressed && activeIsStalled && best?.id && best.id !== activeId) {
+                recoveryManager.probeCandidate(best.id, 'processing_asset');
             }
 
             if (activeIsStalled
