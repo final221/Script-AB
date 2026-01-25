@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.4.3 - 2026-01-25T11:51:13.552Z
+Previous: 4.4.2
+Commit: 8086518
+Changes:
+- chore: enforce efficiency-first agent stance
+
 ## 4.4.2 - 2026-01-25T11:50:16.134Z
 Previous: 4.4.1
 Commit: a70c349

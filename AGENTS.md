@@ -8,7 +8,7 @@
 - Prioritize the thinnest, most direct path.
 - If a request conflicts with the thin workflow, say no and propose the leaner alternative.
 - Do not add extra process/docs unless required for correctness or safety.
-- State recommendations plainly; avoid optional phrasing like "if you want."
+- State recommendations plainly; base them on logic/efficiency, not assumed user desire.
 
 ## Start
 - docs/AI_CONTEXT.md
