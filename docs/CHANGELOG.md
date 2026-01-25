@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.1.83 - 2026-01-25T10:02:01.455Z
+Previous: 4.1.82
+Commit: 0eee195
+Changes:
+- refactor: reorganize core modules and agent docs
+
 ## 4.1.82 - 2026-01-25T10:00:34.467Z
 Previous: 4.1.81
 Commit: f0982e4

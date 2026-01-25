@@ -63,12 +63,25 @@ const updateVersion = (type = 'patch') => {
     const newVersion = parts.join('.');
     fs.writeFileSync(CONFIG.VERSION, newVersion);
 
-    // Sync with package.json
+    // Sync with package.json and package-lock.json
     const packageJsonPath = path.join(CONFIG.BASE, 'package.json');
+    let packageJson = null;
     if (fs.existsSync(packageJsonPath)) {
-        const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+        packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
         packageJson.version = newVersion;
         fs.writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2));
+    }
+
+    const packageLockPath = path.join(CONFIG.BASE, 'package-lock.json');
+    if (packageJson && fs.existsSync(packageLockPath)) {
+        const packageLock = JSON.parse(fs.readFileSync(packageLockPath, 'utf8'));
+        packageLock.name = packageJson.name || packageLock.name;
+        packageLock.version = newVersion;
+        if (packageLock.packages && packageLock.packages['']) {
+            packageLock.packages[''].name = packageJson.name || packageLock.packages[''].name;
+            packageLock.packages[''].version = newVersion;
+        }
+        fs.writeFileSync(packageLockPath, JSON.stringify(packageLock, null, 2));
     }
 
     // Sync README current version

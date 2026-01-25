@@ -16,6 +16,15 @@ Twitch Stream Healer (userscript)
 - npm run build (sync-docs + tests + dist/code.js)
 - node build/build.js [--minor|--major] (bumps version + changelog)
 
+## Agent workflow (always)
+- Run tests and build after any change: `npm.cmd run build`
+- Commit and push after build succeeds
+- Bump policy:
+  - Patch: refactors, docs, tests, internal tooling
+  - Minor: new user-visible features or behavior changes
+  - Major: breaking changes to config, API, or expected behavior
+- Use `npm.cmd` on Windows to avoid PowerShell script policy blocks
+
 ## Constraints
 - dist/code.js and build/version.txt are generated.
 - Load order is controlled by build/manifest.json and enforced by build/sync-docs.js.
