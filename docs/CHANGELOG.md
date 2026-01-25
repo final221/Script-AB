@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.4.17 - 2026-01-25T15:10:18.962Z
+Previous: 4.4.16
+Commit: 060faae
+Changes:
+- Refactor tag registry, healing, and candidate selection
+
 ## 4.4.16 - 2026-01-25T15:00:16.843Z
 Previous: 4.4.15
 Commit: e417387

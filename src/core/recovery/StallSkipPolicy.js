@@ -56,6 +56,7 @@ const StallSkipPolicy = (() => {
                 if (stalledForMs !== null && (!maxMs || stalledForMs <= maxMs)) {
                     const signals = [];
                     const strongSignals = [];
+                    const lastProgressTime = monitorState?.lastProgressTime || 0;
                     const lastSrcChange = monitorState.lastSrcChangeTime || 0;
                     const lastReadyChange = monitorState.lastReadyStateChangeTime || 0;
                     const lastNetworkChange = monitorState.lastNetworkStateChangeTime || 0;
@@ -63,7 +64,7 @@ const StallSkipPolicy = (() => {
                     const lastBufferGrow = monitorState.lastBufferAheadIncreaseTime || 0;
 
                     const isWithin = (ts, windowMs) => (
-                        ts > lastProgress && (now - ts) <= windowMs
+                        ts > lastProgressTime && (now - ts) <= windowMs
                     );
 
                     if (isWithin(lastReadyChange, extendedGraceMs)) {
