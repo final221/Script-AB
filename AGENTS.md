@@ -43,6 +43,7 @@
 - Load order is controlled by `build/manifest.json` and `build/sync-docs.js`.
 - Userscript output must remain dependency-free (no external runtime deps).
 - Use `LogEvents` + `Logger` for logs; update LogTags when adding new tags.
+- File size cap: keep files ~200 lines (+/-50). Anything above is auto-flagged for refactor.
 
 ## Quick refs (only if needed)
 - docs/DEBUGGING.md

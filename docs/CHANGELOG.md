@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.4.19 - 2026-01-25T15:16:49.282Z
+Previous: 4.4.18
+Commit: 437e45e
+Changes:
+- Make active candidate getter side-effect free
+
 ## 4.4.18 - 2026-01-25T15:14:53.138Z
 Previous: 4.4.17
 Commit: ec00b2c
