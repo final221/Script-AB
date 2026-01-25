@@ -30,12 +30,7 @@
 - **Seek Failures**: Check `src/recovery/LiveEdgeSeeker.js`.
 - **Adding Logs**: Use `src/monitoring/Logger.js`.
 - **Updating Version**: Run `npm.cmd run build` (use `-- --minor` or `-- --major` for non-patch bumps).
-
-## Build and Test Flow
-- **Agent workflow**: Run `npm.cmd run agent:verify` after changes (tests + build + status; build bumps version + generates `dist/code.js`).
-- `npm.cmd test` runs `build/sync-docs.js --check` before Vitest.
-- `npm.cmd run build` runs sync-docs + tests, then writes `dist/code.js`.
-- `npm.cmd run build` (via `build/build.js`) bumps `build/version.txt`, `package.json`, and `README.md`, and updates `docs/CHANGELOG.md`.
+- **Workflow + verification**: See `AGENTS.md`.
 
 ## Generated Artifacts
 - `dist/code.js` is generated output; do not edit by hand.

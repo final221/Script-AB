@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.4.11 - 2026-01-25T13:12:55.403Z
+Previous: 4.4.10
+Commit: 077a29e
+Changes:
+- docs: forbid one-line stub reintroduction
+
 ## 4.4.10 - 2026-01-25T13:10:44.214Z
 Previous: 4.4.9
 Commit: 12be7f7
