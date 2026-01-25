@@ -157,7 +157,7 @@ const updateChangelog = (oldVersion, newVersion) => {
 
     const manifest = JSON.parse(fs.readFileSync(CONFIG.MANIFEST, 'utf8'));
     const priority = Array.isArray(manifest.priority) ? manifest.priority : [];
-    const entry = manifest.entry || 'core/CoreOrchestrator.js';
+    const entry = manifest.entry || 'core/orchestrators/CoreOrchestrator.js';
 
     const args = process.argv.slice(2);
     let versionType = 'patch';

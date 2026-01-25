@@ -1,4 +1,4 @@
-# Twitch AdBlocker Tests
+# Twitch Stream Healer Tests
 
 This project uses **Vitest** with **JSDOM** for unit testing.
 
@@ -17,7 +17,7 @@ This project uses **Vitest** with **JSDOM** for unit testing.
 
 Tests are written using the standard Vitest API (`describe`, `it`, `expect`).
 
-Global modules (e.g., `Logger`, `AdBlocker`) are available on `window` or `global` (or directly as variables) because `tests/setup.js` loads them from `src/`.
+Global modules (e.g., `Logger`, `StreamHealer`) are available on `window` or `global` (or directly as variables) because `tests/setup.js` loads them from `src/`.
 
 Example:
 ```javascript

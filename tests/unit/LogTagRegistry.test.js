@@ -28,6 +28,12 @@ const extractTagKeys = (content, regex, output) => {
 };
 
 describe('LogEvents Tag Registry', () => {
+    it('LogTags and LogEvents share the same tag map', () => {
+        expect(window.LogTags?.TAG).toBeDefined();
+        expect(window.LogEvents?.TAG).toBeDefined();
+        expect(window.LogEvents.TAG).toEqual(window.LogTags.TAG);
+    });
+
     it('all tagged/pairs usages reference existing tags', () => {
         const files = getFiles(SRC_DIR);
         const usedKeys = new Set();

@@ -1,6 +1,8 @@
 // --- MonitoringOrchestrator ---
 /**
  * Sets up monitoring, candidate scoring, and recovery helpers.
+ * Inputs: logDebug/isHealing/isFallbackSource callbacks, onStall handler.
+ * Outputs: monitor lifecycle methods + candidateSelector/recoveryManager wiring.
  */
 const MonitoringOrchestrator = (() => {
     const create = (options = {}) => {

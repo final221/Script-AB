@@ -12,7 +12,7 @@ const SRC_DIR = path.resolve(__dirname, '../src');
 const MANIFEST_PATH = path.resolve(__dirname, '../build/manifest.json');
 const manifest = JSON.parse(fs.readFileSync(MANIFEST_PATH, 'utf8'));
 const PRIORITY = Array.isArray(manifest.priority) ? manifest.priority : [];
-const ENTRY = manifest.entry || 'core/CoreOrchestrator.js';
+const ENTRY = manifest.entry || 'core/orchestrators/CoreOrchestrator.js';
 
 // Recursive file scanner
 const getFiles = (dir) => {
@@ -77,40 +77,26 @@ const loadSourceFiles = () => {
     // Combine in order
     const loadOrder = [...priorityFiles, ...otherFiles, entryFile];
 
+    const topLevelDecl = /^(?:const|let|var|function|class)\s+([a-zA-Z_][a-zA-Z0-9_]*)\b/gm;
+
     loadOrder.forEach(file => {
         if (fs.existsSync(file)) {
             const content = fs.readFileSync(file, 'utf8');
+            const names = new Set();
+            let match;
+
+            topLevelDecl.lastIndex = 0;
+            while ((match = topLevelDecl.exec(content)) !== null) {
+                names.add(match[1]);
+            }
+
             let exposedContent = content;
-            let modified = false;
-
-            // Transform 'const Module =' to 'var Module =' to expose to global scope via eval
-
-            // Regex for IIFE modules: const Name = (() =>
-            exposedContent = exposedContent.replace(
-                /^const\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*=\s*\(\s*\(\)\s*=>/gm,
-                (match, name) => {
-                    modified = true;
-                    return `var ${name} = window.${name} = global.${name} = (() =>`;
-                }
-            );
-
-            // Regex for object literals: const Name = {
-            exposedContent = exposedContent.replace(
-                /^const\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*=\s*\{/gm,
-                (match, name) => {
-                    modified = true;
-                    return `var ${name} = window.${name} = global.${name} = {`;
-                }
-            );
-
-            // Regex for functions: const Name = function
-            exposedContent = exposedContent.replace(
-                /^const\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*=\s*function/gm,
-                (match, name) => {
-                    modified = true;
-                    return `var ${name} = window.${name} = global.${name} = function`;
-                }
-            );
+            if (names.size > 0) {
+                const lines = Array.from(names).map(
+                    name => `window.${name} = global.${name} = ${name};`
+                );
+                exposedContent = `${content}\n\n// Expose top-level declarations for tests\n${lines.join('\n')}\n`;
+            }
 
             try {
                 // Execute in global scope

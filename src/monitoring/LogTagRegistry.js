@@ -1,6 +1,7 @@
 // --- LogTagRegistry ---
 /**
  * Central registry for log tag metadata (icons, groups, schemas).
+ * Canonical tag strings live in LogTags.js.
  */
 const LogTagRegistry = (() => {
     const ICONS = {

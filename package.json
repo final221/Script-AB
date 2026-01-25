@@ -1,7 +1,7 @@
 {
-  "name": "twitch-ad-blocker",
-  "version": "4.1.81",
-  "description": "Twitch ad blocker with self-healing recovery",
+  "name": "twitch-stream-healer",
+  "version": "4.1.82",
+  "description": "Twitch Stream Healer userscript with self-healing recovery",
   "private": true,
   "scripts": {
     "sync-docs": "node build/sync-docs.js",

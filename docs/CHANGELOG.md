@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.1.82 - 2026-01-25T10:00:34.467Z
+Previous: 4.1.81
+Commit: f0982e4
+Changes:
+- refactor: extract state defaults and probation
+
 ## 4.1.81 - 2026-01-24T20:23:07.672Z
 Previous: 4.1.80
 Commit: e0cea2a

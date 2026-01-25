@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.1.81
+// @version       4.1.82
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -152,7 +152,7 @@ const CONFIG = (() => {
  * Build metadata helpers (version injected at build time).
  */
 const BuildInfo = (() => {
-    const VERSION = '4.1.81';
+    const VERSION = '4.1.82';
 
     const getVersion = () => {
         const gmVersion = (typeof GM_info !== 'undefined' && GM_info?.script?.version)
@@ -163,7 +163,7 @@ const BuildInfo = (() => {
             ? unsafeWindow.GM_info.script.version
             : null;
         if (unsafeVersion) return unsafeVersion;
-        if (VERSION && VERSION !== '4.1.81') return VERSION;
+        if (VERSION && VERSION !== '4.1.82') return VERSION;
         return null;
     };
 
@@ -824,9 +824,114 @@ const ErrorClassifier = (() => {
 })();
 
 
+// --- LogTags ---
+/**
+ * Canonical log tag strings for Stream Healer.
+ */
+const LogTags = (() => {
+    const TAG = {
+        STATE: '[HEALER:STATE]',
+        WATCHDOG: '[HEALER:WATCHDOG]',
+        STALL: '[HEALER:STALL]',
+        READY: '[HEALER:READY]',
+        PROGRESS: '[HEALER:PROGRESS]',
+        BACKOFF: '[HEALER:BACKOFF]',
+        PLAY_BACKOFF: '[HEALER:PLAY_BACKOFF]',
+        STARVE: '[HEALER:STARVE]',
+        STARVE_CLEAR: '[HEALER:STARVE_CLEAR]',
+        STARVE_SKIP: '[HEALER:STARVE_SKIP]',
+        SYNC: '[HEALER:SYNC]',
+        RESET_CHECK: '[HEALER:RESET_CHECK]',
+        RESET_SKIP: '[HEALER:RESET_SKIP]',
+        RESET_PENDING: '[HEALER:RESET_PENDING]',
+        RESET: '[HEALER:RESET]',
+        RESET_CLEAR: '[HEALER:RESET_CLEAR]',
+        DEBOUNCE: '[HEALER:DEBOUNCE]',
+        STALL_SKIP: '[HEALER:STALL_SKIP]',
+        EVENT: '[HEALER:EVENT]',
+        EVENT_SUMMARY: '[HEALER:EVENT_SUMMARY]',
+        ERROR: '[HEALER:ERROR]',
+        SRC: '[HEALER:SRC]',
+        MEDIA_STATE: '[HEALER:MEDIA_STATE]',
+        MONITOR: '[HEALER:MONITOR]',
+        VIDEO: '[HEALER:VIDEO]',
+        SCAN: '[HEALER:SCAN]',
+        SCAN_ITEM: '[HEALER:SCAN_ITEM]',
+        BUFFER_ERROR: '[HEALER:BUFFER_ERROR]',
+        REFRESH: '[HEALER:REFRESH]',
+        STOP: '[HEALER:STOP]',
+        SKIP: '[HEALER:SKIP]',
+        NUDGE: '[HEALER:NUDGE]',
+        FOUND: '[HEALER:FOUND]',
+        EMERGENCY: '[HEALER:EMERGENCY]',
+        NONE: '[HEALER:NONE]',
+        CLEANUP: '[HEALER:CLEANUP]',
+        ENDED: '[HEALER:ENDED]',
+        CANDIDATE: '[HEALER:CANDIDATE]',
+        CANDIDATE_DECISION: '[HEALER:CANDIDATE_DECISION]',
+        CANDIDATE_SNAPSHOT: '[HEALER:CANDIDATE_SNAPSHOT]',
+        PROBATION: '[HEALER:PROBATION]',
+        SUPPRESSION: '[HEALER:SUPPRESSION_SUMMARY]',
+        PROBE_BURST: '[HEALER:PROBE_BURST]',
+        PROBE_SUMMARY: '[HEALER:PROBE_SUMMARY]',
+        FAILOVER: '[HEALER:FAILOVER]',
+        FAILOVER_SKIP: '[HEALER:FAILOVER_SKIP]',
+        FAILOVER_PLAY: '[HEALER:FAILOVER_PLAY]',
+        FAILOVER_SUCCESS: '[HEALER:FAILOVER_SUCCESS]',
+        FAILOVER_REVERT: '[HEALER:FAILOVER_REVERT]',
+        PRUNE: '[HEALER:PRUNE]',
+        PRUNE_SKIP: '[HEALER:PRUNE_SKIP]',
+        STALL_HINT: '[HEALER:STALL_HINT]',
+        STALL_HINT_UNATTRIBUTED: '[HEALER:STALL_HINT_UNATTRIBUTED]',
+        ASSET_HINT: '[HEALER:ASSET_HINT]',
+        ASSET_HINT_SKIP: '[HEALER:ASSET_HINT_SKIP]',
+        ASSET_HINT_PLAY: '[HEALER:ASSET_HINT_PLAY]',
+        ADBLOCK_HINT: '[HEALER:ADBLOCK_HINT]',
+        EXTERNAL: '[HEALER:EXTERNAL]',
+        STALL_DETECTED: '[STALL:DETECTED]',
+        STALL_DURATION: '[HEALER:STALL_DURATION]',
+        HEAL_START: '[HEALER:START]',
+        HEAL_FAILED: '[HEALER:FAILED]',
+        HEAL_COMPLETE: '[HEALER:COMPLETE]',
+        HEAL_DEFER: '[HEALER:DEFER]',
+        HEAL_NO_POINT: '[HEALER:NO_HEAL_POINT]',
+        HEALPOINT_STUCK: '[HEALER:HEALPOINT_STUCK]',
+        CATCH_UP: '[HEALER:CATCH_UP]',
+        BLOCKED: '[HEALER:BLOCKED]',
+        DETACHED: '[HEALER:DETACHED]',
+        SKIPPED: '[HEALER:SKIPPED]',
+        SELF_RECOVER_SKIP: '[HEALER:SELF_RECOVER_SKIP]',
+        STALE_RECOVERED: '[HEALER:STALE_RECOVERED]',
+        STALE_GONE: '[HEALER:STALE_GONE]',
+        POINT_UPDATED: '[HEALER:POINT_UPDATED]',
+        RETRY: '[HEALER:RETRY]',
+        RETRY_SKIP: '[HEALER:RETRY_SKIP]',
+        ABORT_CONTEXT: '[HEALER:ABORT_CONTEXT]',
+        SEEK: '[HEALER:SEEK]',
+        SEEK_ABORT: '[HEALER:SEEK_ABORT]',
+        SEEKED: '[HEALER:SEEKED]',
+        SEEK_ERROR: '[HEALER:SEEK_ERROR]',
+        PLAY: '[HEALER:PLAY]',
+        PLAY_STUCK: '[HEALER:PLAY_STUCK]',
+        PLAY_ERROR: '[HEALER:PLAY_ERROR]',
+        ALREADY_PLAYING: '[HEALER:ALREADY_PLAYING]',
+        SUCCESS: '[HEALER:SUCCESS]',
+        GAP_OVERRIDE: '[HEALER:GAP_OVERRIDE]',
+        POLL_START: '[HEALER:POLL_START]',
+        POLL_SUCCESS: '[HEALER:POLL_SUCCESS]',
+        POLL_TIMEOUT: '[HEALER:POLL_TIMEOUT]',
+        POLLING: '[HEALER:POLLING]',
+        SELF_RECOVERED: '[HEALER:SELF_RECOVERED]',
+        AD_GAP: '[HEALER:AD_GAP_SIGNATURE]'
+    };
+
+    return { TAG };
+})();
+
 // --- LogTagRegistry ---
 /**
  * Central registry for log tag metadata (icons, groups, schemas).
+ * Canonical tag strings live in LogTags.js.
  */
 const LogTagRegistry = (() => {
     const ICONS = {
@@ -1531,101 +1636,9 @@ const Logger = (() => {
  * Central log tags and summary helpers for consistent, compact log messages.
  */
 const LogEvents = (() => {
-    const TAG = {
-        STATE: '[HEALER:STATE]',
-        WATCHDOG: '[HEALER:WATCHDOG]',
-        STALL: '[HEALER:STALL]',
-        READY: '[HEALER:READY]',
-        PROGRESS: '[HEALER:PROGRESS]',
-        BACKOFF: '[HEALER:BACKOFF]',
-        PLAY_BACKOFF: '[HEALER:PLAY_BACKOFF]',
-        STARVE: '[HEALER:STARVE]',
-        STARVE_CLEAR: '[HEALER:STARVE_CLEAR]',
-        STARVE_SKIP: '[HEALER:STARVE_SKIP]',
-        SYNC: '[HEALER:SYNC]',
-        RESET_CHECK: '[HEALER:RESET_CHECK]',
-        RESET_SKIP: '[HEALER:RESET_SKIP]',
-        RESET_PENDING: '[HEALER:RESET_PENDING]',
-        RESET: '[HEALER:RESET]',
-        RESET_CLEAR: '[HEALER:RESET_CLEAR]',
-        DEBOUNCE: '[HEALER:DEBOUNCE]',
-        STALL_SKIP: '[HEALER:STALL_SKIP]',
-        EVENT: '[HEALER:EVENT]',
-        EVENT_SUMMARY: '[HEALER:EVENT_SUMMARY]',
-        ERROR: '[HEALER:ERROR]',
-        SRC: '[HEALER:SRC]',
-        MEDIA_STATE: '[HEALER:MEDIA_STATE]',
-        MONITOR: '[HEALER:MONITOR]',
-        VIDEO: '[HEALER:VIDEO]',
-        SCAN: '[HEALER:SCAN]',
-        SCAN_ITEM: '[HEALER:SCAN_ITEM]',
-        BUFFER_ERROR: '[HEALER:BUFFER_ERROR]',
-        REFRESH: '[HEALER:REFRESH]',
-        STOP: '[HEALER:STOP]',
-        SKIP: '[HEALER:SKIP]',
-        NUDGE: '[HEALER:NUDGE]',
-        FOUND: '[HEALER:FOUND]',
-        EMERGENCY: '[HEALER:EMERGENCY]',
-        NONE: '[HEALER:NONE]',
-        CLEANUP: '[HEALER:CLEANUP]',
-        ENDED: '[HEALER:ENDED]',
-        CANDIDATE: '[HEALER:CANDIDATE]',
-        CANDIDATE_DECISION: '[HEALER:CANDIDATE_DECISION]',
-        CANDIDATE_SNAPSHOT: '[HEALER:CANDIDATE_SNAPSHOT]',
-        PROBATION: '[HEALER:PROBATION]',
-        SUPPRESSION: '[HEALER:SUPPRESSION_SUMMARY]',
-        PROBE_BURST: '[HEALER:PROBE_BURST]',
-        PROBE_SUMMARY: '[HEALER:PROBE_SUMMARY]',
-        FAILOVER: '[HEALER:FAILOVER]',
-        FAILOVER_SKIP: '[HEALER:FAILOVER_SKIP]',
-        FAILOVER_PLAY: '[HEALER:FAILOVER_PLAY]',
-        FAILOVER_SUCCESS: '[HEALER:FAILOVER_SUCCESS]',
-        FAILOVER_REVERT: '[HEALER:FAILOVER_REVERT]',
-        PRUNE: '[HEALER:PRUNE]',
-        PRUNE_SKIP: '[HEALER:PRUNE_SKIP]',
-        STALL_HINT: '[HEALER:STALL_HINT]',
-        STALL_HINT_UNATTRIBUTED: '[HEALER:STALL_HINT_UNATTRIBUTED]',
-        ASSET_HINT: '[HEALER:ASSET_HINT]',
-        ASSET_HINT_SKIP: '[HEALER:ASSET_HINT_SKIP]',
-        ASSET_HINT_PLAY: '[HEALER:ASSET_HINT_PLAY]',
-        ADBLOCK_HINT: '[HEALER:ADBLOCK_HINT]',
-        EXTERNAL: '[HEALER:EXTERNAL]',
-        STALL_DETECTED: '[STALL:DETECTED]',
-        STALL_DURATION: '[HEALER:STALL_DURATION]',
-        HEAL_START: '[HEALER:START]',
-        HEAL_FAILED: '[HEALER:FAILED]',
-        HEAL_COMPLETE: '[HEALER:COMPLETE]',
-        HEAL_DEFER: '[HEALER:DEFER]',
-        HEAL_NO_POINT: '[HEALER:NO_HEAL_POINT]',
-        HEALPOINT_STUCK: '[HEALER:HEALPOINT_STUCK]',
-        CATCH_UP: '[HEALER:CATCH_UP]',
-        BLOCKED: '[HEALER:BLOCKED]',
-        DETACHED: '[HEALER:DETACHED]',
-        SKIPPED: '[HEALER:SKIPPED]',
-        SELF_RECOVER_SKIP: '[HEALER:SELF_RECOVER_SKIP]',
-        STALE_RECOVERED: '[HEALER:STALE_RECOVERED]',
-        STALE_GONE: '[HEALER:STALE_GONE]',
-        POINT_UPDATED: '[HEALER:POINT_UPDATED]',
-        RETRY: '[HEALER:RETRY]',
-        RETRY_SKIP: '[HEALER:RETRY_SKIP]',
-        ABORT_CONTEXT: '[HEALER:ABORT_CONTEXT]',
-        SEEK: '[HEALER:SEEK]',
-        SEEK_ABORT: '[HEALER:SEEK_ABORT]',
-        SEEKED: '[HEALER:SEEKED]',
-        SEEK_ERROR: '[HEALER:SEEK_ERROR]',
-        PLAY: '[HEALER:PLAY]',
-        PLAY_STUCK: '[HEALER:PLAY_STUCK]',
-        PLAY_ERROR: '[HEALER:PLAY_ERROR]',
-        ALREADY_PLAYING: '[HEALER:ALREADY_PLAYING]',
-        SUCCESS: '[HEALER:SUCCESS]',
-        GAP_OVERRIDE: '[HEALER:GAP_OVERRIDE]',
-        POLL_START: '[HEALER:POLL_START]',
-        POLL_SUCCESS: '[HEALER:POLL_SUCCESS]',
-        POLL_TIMEOUT: '[HEALER:POLL_TIMEOUT]',
-        POLLING: '[HEALER:POLLING]',
-        SELF_RECOVERED: '[HEALER:SELF_RECOVERED]',
-        AD_GAP: '[HEALER:AD_GAP_SIGNATURE]'
-    };
+    const TAG = (typeof LogTags !== 'undefined' && LogTags.TAG)
+        ? LogTags.TAG
+        : {};
 
     const roundNumber = (value, digits = 3) => {
         if (!Number.isFinite(value)) return value;
@@ -7821,6 +7834,8 @@ const ExternalSignalRouter = (() => {
 // --- MonitoringOrchestrator ---
 /**
  * Sets up monitoring, candidate scoring, and recovery helpers.
+ * Inputs: logDebug/isHealing/isFallbackSource callbacks, onStall handler.
+ * Outputs: monitor lifecycle methods + candidateSelector/recoveryManager wiring.
  */
 const MonitoringOrchestrator = (() => {
     const create = (options = {}) => {
@@ -7888,6 +7903,8 @@ const MonitoringOrchestrator = (() => {
 // --- RecoveryOrchestrator ---
 /**
  * Coordinates stall handling, healing, and external signal recovery.
+ * Inputs: monitoring facade + log helpers.
+ * Outputs: onStallDetected/attemptHeal/external signal handlers.
  */
 const RecoveryOrchestrator = (() => {
     const create = (options = {}) => {

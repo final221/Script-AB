@@ -1,6 +1,8 @@
 // --- RecoveryOrchestrator ---
 /**
  * Coordinates stall handling, healing, and external signal recovery.
+ * Inputs: monitoring facade + log helpers.
+ * Outputs: onStallDetected/attemptHeal/external signal handlers.
  */
 const RecoveryOrchestrator = (() => {
     const create = (options = {}) => {

@@ -32,7 +32,7 @@ exportTwitchAdLogs()      // Download report (healer + metrics + logs)
 See `docs/DEBUGGING.md` for log sequences and triage tips.
 
 ### Known Behavior (Important)
-- If the stream appears **offline**, it is most likely still **online**, treat it as a **healing failure**, not a real offline event. This is a known crash pattern where the script failed to heal (often following `POLL_TIMEOUT` → `NO_HEAL_POINT` → refresh/switch suppression).
+- If the stream appears **offline**, it is most likely still **online**, treat it as a **healing failure**, not a real offline event. This is a known crash pattern where the script failed to heal (often following `POLL_TIMEOUT` -> `NO_HEAL_POINT` -> refresh/switch suppression).
 
 ### Tuning
 Quick knobs (see `docs/TUNING.md` for full mapping):
@@ -60,7 +60,13 @@ Tw Adb/
 |-- src/
 |   |-- config/       # Configuration
 |   |-- utils/        # Utilities + DOM adapters
-|   |-- core/         # Orchestration + playback monitoring
+|   |-- core/         # Core runtime logic
+|   |   |-- orchestrators/ # Entry points + wiring
+|   |   |-- playback/      # Playback monitoring + stall detection
+|   |   |-- recovery/      # Heal pipeline + backoff/failover
+|   |   |-- candidate/     # Candidate scoring/selection
+|   |   |-- external/      # External signal handlers
+|   |   |-- video/         # Video discovery + registry
 |   |-- recovery/     # Buffer analysis + seeking
 |   |-- monitoring/   # Logging, metrics, instrumentation
 |-- build/            # Build scripts + manifest
@@ -75,8 +81,11 @@ Tw Adb/
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for detailed architecture.
 
 ## Docs & Navigation
+- [AGENTS.md](AGENTS.md) - Agent entrypoint and project constraints
 - [docs/AI_CONTEXT.md](docs/AI_CONTEXT.md) - AI agent context, constraints, load order
 - [docs/DEBUGGING.md](docs/DEBUGGING.md) - Log sequences and triage guide
+- [docs/CONFIG.md](docs/CONFIG.md) - Generated configuration defaults
+- [docs/LOG_TAGS.md](docs/LOG_TAGS.md) - Generated log tag reference
 - [docs/TUNING.md](docs/TUNING.md) - Configuration knobs and tuning workflow
 - [tests/README.md](tests/README.md) - Test harness and conventions
 
@@ -142,7 +151,7 @@ Key settings in `Config.js`:
 
 ## Version
 
-Current: **4.1.81**
+Current: **4.1.82**
 
 Version increments automatically on each build (patch).
 Changelog: `docs/CHANGELOG.md`
