@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.4.15
+// @version       4.4.16
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -161,7 +161,7 @@ const CONFIG = (() => {
  * Build metadata helpers (version injected at build time).
  */
 const BuildInfo = (() => {
-    const VERSION = '4.4.15';
+    const VERSION = '4.4.16';
 
     const getVersion = () => {
         const gmVersion = (typeof GM_info !== 'undefined' && GM_info?.script?.version)
@@ -172,7 +172,7 @@ const BuildInfo = (() => {
             ? unsafeWindow.GM_info.script.version
             : null;
         if (unsafeVersion) return unsafeVersion;
-        if (VERSION && VERSION !== '4.4.15') return VERSION;
+        if (VERSION && VERSION !== '4.4.16') return VERSION;
         return null;
     };
 
@@ -943,225 +943,19 @@ const LogTags = (() => {
  * Canonical tag strings live in LogTags.js.
  */
 const LogTagRegistry = (() => {
-    const ICONS = {
-        healer: '\uD83E\uDE7A',
-        candidate: '\uD83C\uDFAF',
-        monitor: '\uD83E\uDDED',
-        instrument: '\uD83E\uDDEA',
-        recovery: '\uD83E\uDDF0',
-        metrics: '\uD83E\uDDFE',
-        core: '\u2699\uFE0F',
-        other: '\uD83D\uDD27'
+    const FALLBACK_GROUP = {
+        id: 'other',
+        icon: '',
+        legend: 'Other',
+        includeInLegend: false,
+        match: () => true
     };
-
-    const GROUPS = [
-        {
-            id: 'healer',
-            icon: ICONS.healer,
-            legend: 'Healer core (STATE/STALL/HEAL)',
-            includeInLegend: true,
-            match: (tag) => (
-                !tag.startsWith('INSTRUMENT')
-                && tag !== 'CORE'
-                && !tag.startsWith('CANDIDATE')
-                && !tag.startsWith('PROBATION')
-                && !tag.startsWith('SUPPRESSION')
-                && !tag.startsWith('PROBE')
-                && !tag.startsWith('FAILOVER')
-                && !tag.startsWith('BACKOFF')
-                && !tag.startsWith('RESET')
-                && !tag.startsWith('CATCH_UP')
-                && !tag.startsWith('REFRESH')
-                && !tag.startsWith('DETACHED')
-                && !tag.startsWith('BLOCKED')
-                && !tag.startsWith('PLAY_BACKOFF')
-                && !tag.startsWith('PRUNE')
-                && !tag.startsWith('SYNC')
-                && !tag.startsWith('CONFIG')
-                && !tag.startsWith('METRIC')
-                && !['VIDEO', 'MONITOR', 'SCAN', 'SCAN_ITEM', 'SRC', 'MEDIA_STATE', 'EVENT', 'EVENT_SUMMARY'].includes(tag)
-            )
-        },
-        {
-            id: 'candidate',
-            icon: ICONS.candidate,
-            legend: 'Candidate selection (CANDIDATE/PROBATION/SUPPRESSION)',
-            includeInLegend: true,
-            match: (tag) => (
-                tag.startsWith('CANDIDATE')
-                || tag.startsWith('PROBATION')
-                || tag.startsWith('SUPPRESSION')
-                || tag.startsWith('PROBE')
-            )
-        },
-        {
-            id: 'monitor',
-            icon: ICONS.monitor,
-            legend: 'Monitor & video (VIDEO/MONITOR/SCAN/SRC/MEDIA_STATE/EVENT)',
-            includeInLegend: true,
-            match: (tag) => (
-                ['VIDEO', 'MONITOR', 'SCAN', 'SCAN_ITEM', 'SRC', 'MEDIA_STATE', 'EVENT', 'EVENT_SUMMARY'].includes(tag)
-            )
-        },
-        {
-            id: 'instrument',
-            icon: ICONS.instrument,
-            legend: 'Instrumentation & signals (INSTRUMENT/RESOURCE/CONSOLE_HINT)',
-            includeInLegend: true,
-            match: (tag) => tag.startsWith('INSTRUMENT')
-        },
-        {
-            id: 'recovery',
-            icon: ICONS.recovery,
-            legend: 'Recovery & failover (FAILOVER/BACKOFF/RESET/CATCH_UP)',
-            includeInLegend: true,
-            match: (tag) => (
-                tag.startsWith('FAILOVER')
-                || tag.startsWith('BACKOFF')
-                || tag.startsWith('RESET')
-                || tag.startsWith('CATCH_UP')
-                || tag.startsWith('REFRESH')
-                || tag.startsWith('DETACHED')
-                || tag.startsWith('BLOCKED')
-                || tag.startsWith('PLAY_BACKOFF')
-                || tag.startsWith('PRUNE')
-            )
-        },
-        {
-            id: 'metrics',
-            icon: ICONS.metrics,
-            legend: 'Metrics & config (SYNC/CONFIG)',
-            includeInLegend: true,
-            match: (tag) => (
-                tag.startsWith('SYNC')
-                || tag.startsWith('CONFIG')
-                || tag.startsWith('METRIC')
-            )
-        },
-        {
-            id: 'core',
-            icon: ICONS.core,
-            legend: 'Core/system',
-            includeInLegend: true,
-            match: (tag) => tag === 'CORE'
-        },
-        {
-            id: 'other',
-            icon: ICONS.other,
-            legend: 'Other',
-            includeInLegend: false,
-            match: () => true
-        }
-    ];
-
-    const SCHEMAS = {
-        STATE: [
-            'message',
-            'video',
-            'from',
-            'to',
-            'reason',
-            'currentTime',
-            'paused',
-            'readyState',
-            'networkState',
-            'buffered',
-            'lastProgressAgoMs',
-            'progressStreakMs',
-            'progressEligible',
-            'pauseFromStall'
-        ],
-        WATCHDOG: [
-            'message',
-            'video',
-            'stalledForMs',
-            'bufferExhausted',
-            'state',
-            'paused',
-            'pauseFromStall',
-            'currentTime',
-            'readyState',
-            'networkState',
-            'buffered'
-        ],
-        STALL_DURATION: [
-            'message',
-            'video',
-            'reason',
-            'durationMs',
-            'currentTime',
-            'bufferAhead',
-            'readyState',
-            'networkState'
-        ],
-        PROGRESS: [
-            'message',
-            'video',
-            'reason',
-            'currentTime',
-            'progressStreakMs',
-            'minProgressMs'
-        ],
-        READY: [
-            'message',
-            'video',
-            'reason',
-            'readyState'
-        ],
-        MEDIA_STATE: [
-            'message',
-            'video',
-            'changed',
-            'previous',
-            'current',
-            'videoState'
-        ],
-        SRC: [
-            'message',
-            'video',
-            'changed',
-            'previous',
-            'current',
-            'videoState'
-        ],
-        EVENT: [
-            'message',
-            'video',
-            'state'
-        ],
-        EVENT_SUMMARY: [
-            'message',
-            'video',
-            'events',
-            'sinceMs',
-            'state'
-        ],
-        BACKOFF: [
-            'message',
-            'video',
-            'reason',
-            'noHealPointCount',
-            'backoffMs',
-            'nextHealAllowedInMs'
-        ],
-        PLAY_BACKOFF: [
-            'message',
-            'video',
-            'reason',
-            'errorName',
-            'error',
-            'playErrorCount',
-            'backoffMs',
-            'nextHealAllowedInMs'
-        ],
-        FAILOVER: [
-            'message',
-            'from',
-            'to',
-            'reason',
-            'stalledForMs'
-        ]
-    };
+    const GROUPS = (typeof LogTagGroups !== 'undefined' && LogTagGroups?.GROUPS)
+        ? LogTagGroups.GROUPS
+        : [FALLBACK_GROUP];
+    const ICONS = (typeof LogTagGroups !== 'undefined' && LogTagGroups?.ICONS)
+        ? LogTagGroups.ICONS
+        : {};
 
     const normalizeTag = (rawTag) => {
         if (!rawTag) {
@@ -1179,10 +973,12 @@ const LogTagRegistry = (() => {
         return { rawTag, tagKey: rawTag, displayTag: rawTag };
     };
 
-    const getGroupForTag = (tagKey) => {
-        const normalized = String(tagKey || '').toUpperCase();
-        return GROUPS.find(group => group.match(normalized)) || GROUPS[GROUPS.length - 1];
-    };
+    const getGroupForTag = (tagKey) => (
+        typeof LogTagGroups !== 'undefined' && LogTagGroups?.getGroupForTag
+            ? LogTagGroups.getGroupForTag(tagKey)
+            : (GROUPS.find(group => group.match(String(tagKey || '').toUpperCase()))
+                || GROUPS[GROUPS.length - 1])
+    );
 
     const formatTag = (rawTag) => {
         const normalized = normalizeTag(rawTag);
@@ -1198,12 +994,17 @@ const LogTagRegistry = (() => {
     const getSchema = (rawTag) => {
         if (!rawTag) return null;
         const normalized = normalizeTag(rawTag).tagKey.toUpperCase();
-        return SCHEMAS[normalized] || null;
+        if (typeof LogTagSchemas !== 'undefined' && LogTagSchemas?.getSchema) {
+            return LogTagSchemas.getSchema(normalized);
+        }
+        return null;
     };
 
     const getLegendLines = () => (
-        GROUPS.filter(group => group.includeInLegend)
-            .map(group => `${group.icon} = ${group.legend}`)
+        typeof LogTagGroups !== 'undefined' && LogTagGroups?.getLegendLines
+            ? LogTagGroups.getLegendLines()
+            : GROUPS.filter(group => group.includeInLegend)
+                .map(group => `${group.icon} = ${group.legend}`)
     );
 
     return {
@@ -2621,6 +2422,266 @@ const LogDebug = (() => {
     };
 
     return { create };
+})();
+
+// --- LogTagGroups ---
+/**
+ * Log tag grouping metadata (icons, groups, legends).
+ */
+const LogTagGroups = (() => {
+    const ICONS = {
+        healer: '\uD83E\uDE7A',
+        candidate: '\uD83C\uDFAF',
+        monitor: '\uD83E\uDDED',
+        instrument: '\uD83E\uDDEA',
+        recovery: '\uD83E\uDDF0',
+        metrics: '\uD83E\uDDFE',
+        core: '\u2699\uFE0F',
+        other: '\uD83D\uDD27'
+    };
+
+    const GROUPS = [
+        {
+            id: 'healer',
+            icon: ICONS.healer,
+            legend: 'Healer core (STATE/STALL/HEAL)',
+            includeInLegend: true,
+            match: (tag) => (
+                !tag.startsWith('INSTRUMENT')
+                && tag !== 'CORE'
+                && !tag.startsWith('CANDIDATE')
+                && !tag.startsWith('PROBATION')
+                && !tag.startsWith('SUPPRESSION')
+                && !tag.startsWith('PROBE')
+                && !tag.startsWith('FAILOVER')
+                && !tag.startsWith('BACKOFF')
+                && !tag.startsWith('RESET')
+                && !tag.startsWith('CATCH_UP')
+                && !tag.startsWith('REFRESH')
+                && !tag.startsWith('DETACHED')
+                && !tag.startsWith('BLOCKED')
+                && !tag.startsWith('PLAY_BACKOFF')
+                && !tag.startsWith('PRUNE')
+                && !tag.startsWith('SYNC')
+                && !tag.startsWith('CONFIG')
+                && !tag.startsWith('METRIC')
+                && !['VIDEO', 'MONITOR', 'SCAN', 'SCAN_ITEM', 'SRC', 'MEDIA_STATE', 'EVENT', 'EVENT_SUMMARY'].includes(tag)
+            )
+        },
+        {
+            id: 'candidate',
+            icon: ICONS.candidate,
+            legend: 'Candidate selection (CANDIDATE/PROBATION/SUPPRESSION)',
+            includeInLegend: true,
+            match: (tag) => (
+                tag.startsWith('CANDIDATE')
+                || tag.startsWith('PROBATION')
+                || tag.startsWith('SUPPRESSION')
+                || tag.startsWith('PROBE')
+            )
+        },
+        {
+            id: 'monitor',
+            icon: ICONS.monitor,
+            legend: 'Monitor & video (VIDEO/MONITOR/SCAN/SRC/MEDIA_STATE/EVENT)',
+            includeInLegend: true,
+            match: (tag) => (
+                ['VIDEO', 'MONITOR', 'SCAN', 'SCAN_ITEM', 'SRC', 'MEDIA_STATE', 'EVENT', 'EVENT_SUMMARY'].includes(tag)
+            )
+        },
+        {
+            id: 'instrument',
+            icon: ICONS.instrument,
+            legend: 'Instrumentation & signals (INSTRUMENT/RESOURCE/CONSOLE_HINT)',
+            includeInLegend: true,
+            match: (tag) => tag.startsWith('INSTRUMENT')
+        },
+        {
+            id: 'recovery',
+            icon: ICONS.recovery,
+            legend: 'Recovery & failover (FAILOVER/BACKOFF/RESET/CATCH_UP)',
+            includeInLegend: true,
+            match: (tag) => (
+                tag.startsWith('FAILOVER')
+                || tag.startsWith('BACKOFF')
+                || tag.startsWith('RESET')
+                || tag.startsWith('CATCH_UP')
+                || tag.startsWith('REFRESH')
+                || tag.startsWith('DETACHED')
+                || tag.startsWith('BLOCKED')
+                || tag.startsWith('PLAY_BACKOFF')
+                || tag.startsWith('PRUNE')
+            )
+        },
+        {
+            id: 'metrics',
+            icon: ICONS.metrics,
+            legend: 'Metrics & config (SYNC/CONFIG)',
+            includeInLegend: true,
+            match: (tag) => (
+                tag.startsWith('SYNC')
+                || tag.startsWith('CONFIG')
+                || tag.startsWith('METRIC')
+            )
+        },
+        {
+            id: 'core',
+            icon: ICONS.core,
+            legend: 'Core/system',
+            includeInLegend: true,
+            match: (tag) => tag === 'CORE'
+        },
+        {
+            id: 'other',
+            icon: ICONS.other,
+            legend: 'Other',
+            includeInLegend: false,
+            match: () => true
+        }
+    ];
+
+    const getGroupForTag = (tagKey) => {
+        const normalized = String(tagKey || '').toUpperCase();
+        return GROUPS.find(group => group.match(normalized)) || GROUPS[GROUPS.length - 1];
+    };
+
+    const getLegendLines = () => (
+        GROUPS.filter(group => group.includeInLegend)
+            .map(group => `${group.icon} = ${group.legend}`)
+    );
+
+    return {
+        ICONS,
+        GROUPS,
+        getGroupForTag,
+        getLegendLines
+    };
+})();
+
+// --- LogTagSchemas ---
+/**
+ * Optional key ordering hints for log detail payloads.
+ */
+const LogTagSchemas = (() => {
+    const SCHEMAS = {
+        STATE: [
+            'message',
+            'video',
+            'from',
+            'to',
+            'reason',
+            'currentTime',
+            'paused',
+            'readyState',
+            'networkState',
+            'buffered',
+            'lastProgressAgoMs',
+            'progressStreakMs',
+            'progressEligible',
+            'pauseFromStall'
+        ],
+        WATCHDOG: [
+            'message',
+            'video',
+            'stalledForMs',
+            'bufferExhausted',
+            'state',
+            'paused',
+            'pauseFromStall',
+            'currentTime',
+            'readyState',
+            'networkState',
+            'buffered'
+        ],
+        STALL_DURATION: [
+            'message',
+            'video',
+            'reason',
+            'durationMs',
+            'currentTime',
+            'bufferAhead',
+            'readyState',
+            'networkState'
+        ],
+        PROGRESS: [
+            'message',
+            'video',
+            'reason',
+            'currentTime',
+            'progressStreakMs',
+            'minProgressMs'
+        ],
+        READY: [
+            'message',
+            'video',
+            'reason',
+            'readyState'
+        ],
+        MEDIA_STATE: [
+            'message',
+            'video',
+            'changed',
+            'previous',
+            'current',
+            'videoState'
+        ],
+        SRC: [
+            'message',
+            'video',
+            'changed',
+            'previous',
+            'current',
+            'videoState'
+        ],
+        EVENT: [
+            'message',
+            'video',
+            'state'
+        ],
+        EVENT_SUMMARY: [
+            'message',
+            'video',
+            'events',
+            'sinceMs',
+            'state'
+        ],
+        BACKOFF: [
+            'message',
+            'video',
+            'reason',
+            'noHealPointCount',
+            'backoffMs',
+            'nextHealAllowedInMs'
+        ],
+        PLAY_BACKOFF: [
+            'message',
+            'video',
+            'reason',
+            'errorName',
+            'error',
+            'playErrorCount',
+            'backoffMs',
+            'nextHealAllowedInMs'
+        ],
+        FAILOVER: [
+            'message',
+            'from',
+            'to',
+            'reason',
+            'stalledForMs'
+        ]
+    };
+
+    const getSchema = (tagKey) => {
+        if (!tagKey) return null;
+        const normalized = String(tagKey).toUpperCase();
+        return SCHEMAS[normalized] || null;
+    };
+
+    return {
+        SCHEMAS,
+        getSchema
+    };
 })();
 
 // --- VideoState ---
@@ -5408,9 +5469,12 @@ const CandidateSelector = (() => {
         const switchDelta = options.switchDelta;
         const isFallbackSource = options.isFallbackSource;
 
-        let activeCandidateId = null;
+        const state = {
+            activeCandidateId: null,
+            lastGoodCandidateId: null
+        };
         let lockChecker = null;
-        let lastGoodCandidateId = null;
+
         const scorer = CandidateScorer.create({ minProgressMs, isFallbackSource });
         const switchPolicy = CandidateSwitchPolicy.create({
             switchDelta,
@@ -5430,133 +5494,97 @@ const CandidateSelector = (() => {
 
         const logOutcome = selectionLogger.logOutcome;
 
+        const scoreVideo = (video, monitor, videoId) => scorer.score(video, monitor, videoId);
+        const getActiveIdRaw = () => state.activeCandidateId;
+        const setActiveId = (id) => {
+            state.activeCandidateId = id;
+        };
+        const getLastGoodId = () => state.lastGoodCandidateId;
+        const setLastGoodId = (id) => {
+            state.lastGoodCandidateId = id;
+        };
+
         const getActiveId = () => {
-            if (!activeCandidateId && monitorsById.size > 0) {
-                const fallbackId = (lastGoodCandidateId && monitorsById.has(lastGoodCandidateId))
-                    ? lastGoodCandidateId
+            if (!state.activeCandidateId && monitorsById.size > 0) {
+                const fallbackId = (state.lastGoodCandidateId && monitorsById.has(state.lastGoodCandidateId))
+                    ? state.lastGoodCandidateId
                     : monitorsById.keys().next().value;
                 if (fallbackId) {
-                    activeCandidateId = fallbackId;
+                    state.activeCandidateId = fallbackId;
                     Logger.add(LogEvents.tagged('CANDIDATE', 'Active video set'), {
-                        to: activeCandidateId,
+                        to: state.activeCandidateId,
                         reason: 'fallback'
                     });
                 }
             }
-            return activeCandidateId;
-        };
-        const setActiveId = (id) => {
-            activeCandidateId = id;
+            return state.activeCandidateId;
         };
 
-        const scoreVideo = (video, monitor, videoId) => scorer.score(video, monitor, videoId);
-        const evaluateCandidates = (reason) => {
-            const now = Date.now();
-            if (lockChecker && lockChecker()) {
-                logDebug(LogEvents.tagged('CANDIDATE', 'Failover lock active'), {
-                    reason,
-                    activeVideoId: activeCandidateId
-                });
-                return activeCandidateId ? { id: activeCandidateId } : null;
-            }
+        const selectionEngine = CandidateSelectionEngine.create({
+            monitorsById,
+            logDebug,
+            scoreVideo,
+            decisionEngine,
+            probation,
+            logOutcome,
+            getActiveId: getActiveIdRaw,
+            setActiveId,
+            getLastGoodId,
+            setLastGoodId,
+            getLockChecker: () => lockChecker
+        });
 
-            if (monitorsById.size === 0) {
-                activeCandidateId = null;
-                lastGoodCandidateId = null;
-                return null;
-            }
+        const pruner = CandidatePruner.create({
+            monitorsById,
+            logDebug,
+            maxMonitors,
+            scoreVideo,
+            getActiveId: getActiveIdRaw,
+            getLastGoodId
+        });
 
-            const evaluation = CandidateEvaluation.evaluate({
-                monitorsById,
-                activeCandidateId,
-                scoreVideo
-            });
-            const scores = evaluation.scores;
-            const current = evaluation.current;
-            const best = evaluation.best;
-            const bestNonDead = evaluation.bestNonDead;
-            const bestTrusted = evaluation.bestTrusted;
-            const bestTrustedNonDead = evaluation.bestTrustedNonDead;
+        const emergencyPicker = EmergencyCandidatePicker.create({
+            monitorsById,
+            scoreVideo,
+            getActiveId: getActiveIdRaw,
+            setActiveId
+        });
 
-            if (bestTrusted) {
-                lastGoodCandidateId = bestTrusted.id;
-            } else if (lastGoodCandidateId && !monitorsById.has(lastGoodCandidateId)) {
-                lastGoodCandidateId = null;
-            }
-
-            const preferred = bestTrustedNonDead || bestNonDead || bestTrusted || best;
-
-            if (!activeCandidateId || !monitorsById.has(activeCandidateId)) {
-                const fallbackId = (lastGoodCandidateId && monitorsById.has(lastGoodCandidateId))
-                    ? lastGoodCandidateId
-                    : preferred?.id;
-                if (fallbackId) {
-                    Logger.add(LogEvents.tagged('CANDIDATE', 'Active video set'), {
-                        to: fallbackId,
-                        reason: 'no_active',
-                        scores
-                    });
-                    activeCandidateId = fallbackId;
-                }
-            }
-
-            if (preferred && preferred.id !== activeCandidateId) {
-                const probationActive = isProbationActive();
-                const decision = decisionEngine.decide({
-                    now,
-                    current,
-                    preferred,
-                    activeCandidateId,
-                    probationActive,
-                    scores,
-                    reason
-                });
-
-                if (decision.action === 'fast_switch') {
-                    const fromId = decision.fromId;
-                    Logger.add(LogEvents.tagged('CANDIDATE', 'Fast switch from healing dead-end'), {
-                        from: fromId,
-                        to: decision.toId,
-                        reason: decision.reason,
-                        activeState: decision.activeState,
-                        noHealPointCount: decision.activeNoHealPoints,
-                        stalledForMs: decision.activeStalledForMs,
-                        preferredScore: decision.preferred.score,
-                        preferredProgressStreakMs: decision.preferred.progressStreakMs,
-                        preferredTrusted: decision.preferred.trusted
-                    });
-                    activeCandidateId = decision.toId;
-                    logOutcome(decision);
-                    return preferred;
-                }
-
-                if (decision.action === 'switch') {
-                    const fromId = decision.fromId;
-                    Logger.add(LogEvents.tagged('CANDIDATE', 'Active video switched'), {
-                        from: fromId,
-                        to: decision.toId,
-                        reason: decision.reason,
-                        delta: decision.policyDecision.delta,
-                        currentScore: decision.policyDecision.currentScore,
-                        bestScore: decision.preferred.score,
-                        bestProgressStreakMs: decision.preferred.progressStreakMs,
-                        bestProgressEligible: decision.preferred.progressEligible,
-                        probationActive,
-                        scores
-                    });
-                    activeCandidateId = decision.toId;
-                }
-
-                logOutcome(decision);
-            }
-
-            return preferred;
+        return {
+            evaluateCandidates: selectionEngine.evaluateCandidates,
+            pruneMonitors: pruner.pruneMonitors,
+            scoreVideo,
+            getActiveId,
+            setActiveId,
+            setLockChecker,
+            activateProbation,
+            isProbationActive,
+            selectEmergencyCandidate: emergencyPicker.selectEmergencyCandidate
         };
+    };
+
+    return { create };
+})();
+
+// --- CandidatePruner ---
+/**
+ * Enforces the monitor cap by pruning the worst candidate.
+ */
+const CandidatePruner = (() => {
+    const create = (options) => {
+        const monitorsById = options.monitorsById;
+        const logDebug = options.logDebug;
+        const maxMonitors = options.maxMonitors;
+        const scoreVideo = options.scoreVideo;
+        const getActiveId = options.getActiveId;
+        const getLastGoodId = options.getLastGoodId;
 
         const pruneMonitors = (excludeId, stopMonitoring) => {
             if (monitorsById.size <= maxMonitors) return;
 
             const protectedIds = new Set();
+            const activeCandidateId = getActiveId();
+            const lastGoodCandidateId = getLastGoodId();
             if (activeCandidateId) protectedIds.add(activeCandidateId);
             if (lastGoodCandidateId) protectedIds.add(lastGoodCandidateId);
 
@@ -5586,20 +5614,174 @@ const CandidateSelector = (() => {
             }
         };
 
-        const selectEmergencyCandidate = (reason, options = {}) => {
-            const minReadyState = Number.isFinite(options.minReadyState)
-                ? options.minReadyState
+        return { pruneMonitors };
+    };
+
+    return { create };
+})();
+
+// --- CandidateSelectionEngine ---
+/**
+ * Evaluation flow for selecting the active candidate.
+ */
+const CandidateSelectionEngine = (() => {
+    const create = (options) => {
+        const monitorsById = options.monitorsById;
+        const logDebug = options.logDebug;
+        const scoreVideo = options.scoreVideo;
+        const decisionEngine = options.decisionEngine;
+        const probation = options.probation;
+        const logOutcome = options.logOutcome;
+        const getActiveId = options.getActiveId;
+        const setActiveId = options.setActiveId;
+        const getLastGoodId = options.getLastGoodId;
+        const setLastGoodId = options.setLastGoodId;
+        const getLockChecker = options.getLockChecker;
+
+        const evaluateCandidates = (reason) => {
+            const now = Date.now();
+            const lockChecker = getLockChecker ? getLockChecker() : null;
+            let activeCandidateId = getActiveId();
+            let lastGoodCandidateId = getLastGoodId();
+
+            if (lockChecker && lockChecker()) {
+                logDebug(LogEvents.tagged('CANDIDATE', 'Failover lock active'), {
+                    reason,
+                    activeVideoId: activeCandidateId
+                });
+                return activeCandidateId ? { id: activeCandidateId } : null;
+            }
+
+            if (monitorsById.size === 0) {
+                setActiveId(null);
+                setLastGoodId(null);
+                return null;
+            }
+
+            const evaluation = CandidateEvaluation.evaluate({
+                monitorsById,
+                activeCandidateId,
+                scoreVideo
+            });
+            const scores = evaluation.scores;
+            const current = evaluation.current;
+            const best = evaluation.best;
+            const bestNonDead = evaluation.bestNonDead;
+            const bestTrusted = evaluation.bestTrusted;
+            const bestTrustedNonDead = evaluation.bestTrustedNonDead;
+
+            if (bestTrusted) {
+                lastGoodCandidateId = bestTrusted.id;
+                setLastGoodId(lastGoodCandidateId);
+            } else if (lastGoodCandidateId && !monitorsById.has(lastGoodCandidateId)) {
+                lastGoodCandidateId = null;
+                setLastGoodId(null);
+            }
+
+            const preferred = bestTrustedNonDead || bestNonDead || bestTrusted || best;
+
+            if (!activeCandidateId || !monitorsById.has(activeCandidateId)) {
+                const fallbackId = (lastGoodCandidateId && monitorsById.has(lastGoodCandidateId))
+                    ? lastGoodCandidateId
+                    : preferred?.id;
+                if (fallbackId) {
+                    Logger.add(LogEvents.tagged('CANDIDATE', 'Active video set'), {
+                        to: fallbackId,
+                        reason: 'no_active',
+                        scores
+                    });
+                    activeCandidateId = fallbackId;
+                    setActiveId(activeCandidateId);
+                }
+            }
+
+            if (preferred && preferred.id !== activeCandidateId) {
+                const probationActive = probation.isActive();
+                const decision = decisionEngine.decide({
+                    now,
+                    current,
+                    preferred,
+                    activeCandidateId,
+                    probationActive,
+                    scores,
+                    reason
+                });
+
+                if (decision.action === 'fast_switch') {
+                    const fromId = decision.fromId;
+                    Logger.add(LogEvents.tagged('CANDIDATE', 'Fast switch from healing dead-end'), {
+                        from: fromId,
+                        to: decision.toId,
+                        reason: decision.reason,
+                        activeState: decision.activeState,
+                        noHealPointCount: decision.activeNoHealPoints,
+                        stalledForMs: decision.activeStalledForMs,
+                        preferredScore: decision.preferred.score,
+                        preferredProgressStreakMs: decision.preferred.progressStreakMs,
+                        preferredTrusted: decision.preferred.trusted
+                    });
+                    activeCandidateId = decision.toId;
+                    setActiveId(activeCandidateId);
+                    logOutcome(decision);
+                    return preferred;
+                }
+
+                if (decision.action === 'switch') {
+                    const fromId = decision.fromId;
+                    Logger.add(LogEvents.tagged('CANDIDATE', 'Active video switched'), {
+                        from: fromId,
+                        to: decision.toId,
+                        reason: decision.reason,
+                        delta: decision.policyDecision.delta,
+                        currentScore: decision.policyDecision.currentScore,
+                        bestScore: decision.preferred.score,
+                        bestProgressStreakMs: decision.preferred.progressStreakMs,
+                        bestProgressEligible: decision.preferred.progressEligible,
+                        probationActive,
+                        scores
+                    });
+                    activeCandidateId = decision.toId;
+                    setActiveId(activeCandidateId);
+                }
+
+                logOutcome(decision);
+            }
+
+            return preferred;
+        };
+
+        return { evaluateCandidates };
+    };
+
+    return { create };
+})();
+
+// --- EmergencyCandidatePicker ---
+/**
+ * Emergency candidate selection for no-heal-point scenarios.
+ */
+const EmergencyCandidatePicker = (() => {
+    const create = (options) => {
+        const monitorsById = options.monitorsById;
+        const scoreVideo = options.scoreVideo;
+        const getActiveId = options.getActiveId;
+        const setActiveId = options.setActiveId;
+
+        const selectEmergencyCandidate = (reason, optionsOverride = {}) => {
+            const minReadyState = Number.isFinite(optionsOverride.minReadyState)
+                ? optionsOverride.minReadyState
                 : CONFIG.stall.NO_HEAL_POINT_EMERGENCY_MIN_READY_STATE;
-            const requireSrc = options.requireSrc !== undefined
-                ? options.requireSrc
+            const requireSrc = optionsOverride.requireSrc !== undefined
+                ? optionsOverride.requireSrc
                 : CONFIG.stall.NO_HEAL_POINT_EMERGENCY_REQUIRE_SRC;
-            const allowDead = options.allowDead !== undefined
-                ? options.allowDead
+            const allowDead = optionsOverride.allowDead !== undefined
+                ? optionsOverride.allowDead
                 : Boolean(CONFIG.stall.NO_HEAL_POINT_EMERGENCY_ALLOW_DEAD);
-            const label = options.label || 'Emergency switch after no-heal point';
+            const label = optionsOverride.label || 'Emergency switch after no-heal point';
             let best = null;
             let bestScore = null;
 
+            const activeCandidateId = getActiveId();
             for (const [videoId, entry] of monitorsById.entries()) {
                 if (videoId === activeCandidateId) continue;
                 const result = scoreVideo(entry.video, entry.monitor, videoId);
@@ -5623,7 +5805,7 @@ const CandidateSelector = (() => {
             if (!best) return null;
 
             const fromId = activeCandidateId;
-            activeCandidateId = best.id;
+            setActiveId(best.id);
             Logger.add(LogEvents.tagged('CANDIDATE', label), {
                 from: fromId,
                 to: best.id,
@@ -5635,17 +5817,7 @@ const CandidateSelector = (() => {
             return best;
         };
 
-        return {
-            evaluateCandidates,
-            pruneMonitors,
-            scoreVideo,
-            getActiveId,
-            setActiveId,
-            setLockChecker,
-            activateProbation,
-            isProbationActive,
-            selectEmergencyCandidate
-        };
+        return { selectEmergencyCandidate };
     };
 
     return { create };
@@ -7352,6 +7524,8 @@ const HealPipeline = (() => {
             healAttempts: 0
         };
 
+        const getDurationMs = (startTime) => Number((performance.now() - startTime).toFixed(0));
+
         const resetRecovery = (monitorState, reason) => {
             recoveryManager.resetBackoff(monitorState, reason);
             if (recoveryManager.resetPlayError) {
@@ -7364,6 +7538,25 @@ const HealPipeline = (() => {
             monitorState.lastHealPointKey = null;
             monitorState.healPointRepeatCount = 0;
         };
+
+        const pollHelpers = HealPipelinePoller.create({
+            poller,
+            attemptLogger,
+            recoveryManager,
+            resetRecovery,
+            resetHealPointTracking,
+            getDurationMs,
+            onDetached
+        });
+        const revalidateHelpers = HealPipelineRevalidate.create({
+            poller,
+            attemptLogger,
+            recoveryManager,
+            resetRecovery,
+            resetHealPointTracking,
+            getDurationMs
+        });
+        const seekHelpers = HealPipelineSeek.create({ attemptLogger });
 
         const ensureAttached = (video, videoId, reason, message) => {
             if (document.contains(video)) return true;
@@ -7384,95 +7577,6 @@ const HealPipeline = (() => {
             } else {
                 monitorState.state = MonitorStates.STALLED;
             }
-        };
-
-        const getDurationMs = (startTime) => Number((performance.now() - startTime).toFixed(0));
-
-        const handlePollAbort = (video, videoId, reason) => {
-            const abortReason = reason || 'poll_abort';
-            Logger.add(LogEvents.tagged('DETACHED', 'Heal aborted during polling'), {
-                reason: abortReason,
-                videoId
-            });
-            onDetached(video, abortReason);
-        };
-
-        const pollForHealPoint = async (video, monitorState, videoId, healStartTime) => {
-            const pollResult = await poller.pollForHealPoint(
-                video,
-                monitorState,
-                CONFIG.stall.HEAL_TIMEOUT_S * 1000
-            );
-
-            if (pollResult.aborted) {
-                handlePollAbort(video, videoId, pollResult.reason);
-                return { status: 'aborted' };
-            }
-
-            const healPoint = pollResult.healPoint;
-            if (!healPoint) {
-                if (poller.hasRecovered(video, monitorState)) {
-                    attemptLogger.logSelfRecovered(getDurationMs(healStartTime), video, videoId);
-                    resetRecovery(monitorState, 'self_recovered');
-                    return { status: 'recovered' };
-                }
-
-                const noPointDuration = getDurationMs(healStartTime);
-                attemptLogger.logNoHealPoint(noPointDuration, video, videoId);
-                Metrics.increment('heals_failed');
-                recoveryManager.handleNoHealPoint(video, monitorState, 'no_heal_point');
-                resetHealPointTracking(monitorState);
-                return { status: 'no_point' };
-            }
-
-            return { status: 'found', healPoint };
-        };
-
-        const revalidateHealPoint = (video, monitorState, videoId, healPoint, healStartTime) => {
-            const freshPoint = BufferGapFinder.findHealPoint(video, { silent: true });
-            if (!freshPoint) {
-                if (poller.hasRecovered(video, monitorState)) {
-                    attemptLogger.logStaleRecovered(getDurationMs(healStartTime));
-                    resetRecovery(monitorState, 'stale_recovered');
-                    return { status: 'recovered' };
-                }
-                attemptLogger.logStaleGone(healPoint, video, videoId);
-                Metrics.increment('heals_failed');
-                recoveryManager.handleNoHealPoint(video, monitorState, 'stale_gone');
-                resetHealPointTracking(monitorState);
-                return { status: 'stale_gone' };
-            }
-
-            if (freshPoint.start !== healPoint.start || freshPoint.end !== healPoint.end) {
-                attemptLogger.logPointUpdated(healPoint, freshPoint);
-            }
-
-            return { status: 'ready', healPoint: freshPoint };
-        };
-
-        const attemptSeekWithRetry = async (video, targetPoint) => {
-            const attemptSeekAndPlay = async (point, label) => {
-                if (label) {
-                    attemptLogger.logRetry(label, point);
-                }
-                return LiveEdgeSeeker.seekAndPlay(video, point);
-            };
-
-            let result = await attemptSeekAndPlay(targetPoint, null);
-            let finalPoint = targetPoint;
-
-            if (!result.success && HealAttemptUtils.isAbortError(result)) {
-                await Fn.sleep(CONFIG.recovery.HEAL_RETRY_DELAY_MS);
-                const retryPoint = BufferGapFinder.findHealPoint(video, { silent: true });
-                if (retryPoint) {
-                    finalPoint = retryPoint;
-                    result = await attemptSeekAndPlay(retryPoint, 'abort_error');
-                } else {
-                    attemptLogger.logRetrySkip(video, 'abort_error');
-                }
-            }
-
-            return { result, finalPoint };
         };
 
         const attemptHeal = async (videoOrContext, monitorStateOverride) => {
@@ -7506,7 +7610,7 @@ const HealPipeline = (() => {
             });
 
             try {
-                const pollOutcome = await pollForHealPoint(video, monitorState, videoId, healStartTime);
+                const pollOutcome = await pollHelpers.pollForHealPoint(video, monitorState, videoId, healStartTime);
                 if (pollOutcome.status !== 'found') {
                     return;
                 }
@@ -7515,7 +7619,7 @@ const HealPipeline = (() => {
                     return;
                 }
 
-                const revalidateOutcome = revalidateHealPoint(
+                const revalidateOutcome = revalidateHelpers.revalidateHealPoint(
                     video,
                     monitorState,
                     videoId,
@@ -7530,7 +7634,7 @@ const HealPipeline = (() => {
                     return;
                 }
 
-                const seekOutcome = await attemptSeekWithRetry(video, revalidateOutcome.healPoint);
+                const seekOutcome = await seekHelpers.attemptSeekWithRetry(video, revalidateOutcome.healPoint);
                 const duration = getDurationMs(healStartTime);
 
                 if (seekOutcome.result.success) {
@@ -7763,6 +7867,146 @@ const PlayheadAttribution = (() => {
         };
 
         return { resolve };
+    };
+
+    return { create };
+})();
+
+// --- HealPipelinePoller ---
+/**
+ * Polling helpers for heal points.
+ */
+const HealPipelinePoller = (() => {
+    const create = (options) => {
+        const poller = options.poller;
+        const attemptLogger = options.attemptLogger;
+        const recoveryManager = options.recoveryManager;
+        const resetRecovery = options.resetRecovery;
+        const resetHealPointTracking = options.resetHealPointTracking;
+        const getDurationMs = options.getDurationMs;
+        const onDetached = options.onDetached || (() => {});
+
+        const handlePollAbort = (video, videoId, reason) => {
+            const abortReason = reason || 'poll_abort';
+            Logger.add(LogEvents.tagged('DETACHED', 'Heal aborted during polling'), {
+                reason: abortReason,
+                videoId
+            });
+            onDetached(video, abortReason);
+        };
+
+        const pollForHealPoint = async (video, monitorState, videoId, healStartTime) => {
+            const pollResult = await poller.pollForHealPoint(
+                video,
+                monitorState,
+                CONFIG.stall.HEAL_TIMEOUT_S * 1000
+            );
+
+            if (pollResult.aborted) {
+                handlePollAbort(video, videoId, pollResult.reason);
+                return { status: 'aborted' };
+            }
+
+            const healPoint = pollResult.healPoint;
+            if (!healPoint) {
+                if (poller.hasRecovered(video, monitorState)) {
+                    attemptLogger.logSelfRecovered(getDurationMs(healStartTime), video, videoId);
+                    resetRecovery(monitorState, 'self_recovered');
+                    return { status: 'recovered' };
+                }
+
+                const noPointDuration = getDurationMs(healStartTime);
+                attemptLogger.logNoHealPoint(noPointDuration, video, videoId);
+                Metrics.increment('heals_failed');
+                recoveryManager.handleNoHealPoint(video, monitorState, 'no_heal_point');
+                resetHealPointTracking(monitorState);
+                return { status: 'no_point' };
+            }
+
+            return { status: 'found', healPoint };
+        };
+
+        return { pollForHealPoint };
+    };
+
+    return { create };
+})();
+
+// --- HealPipelineRevalidate ---
+/**
+ * Revalidation helpers for heal points.
+ */
+const HealPipelineRevalidate = (() => {
+    const create = (options) => {
+        const poller = options.poller;
+        const attemptLogger = options.attemptLogger;
+        const recoveryManager = options.recoveryManager;
+        const resetRecovery = options.resetRecovery;
+        const resetHealPointTracking = options.resetHealPointTracking;
+        const getDurationMs = options.getDurationMs;
+
+        const revalidateHealPoint = (video, monitorState, videoId, healPoint, healStartTime) => {
+            const freshPoint = BufferGapFinder.findHealPoint(video, { silent: true });
+            if (!freshPoint) {
+                if (poller.hasRecovered(video, monitorState)) {
+                    attemptLogger.logStaleRecovered(getDurationMs(healStartTime));
+                    resetRecovery(monitorState, 'stale_recovered');
+                    return { status: 'recovered' };
+                }
+                attemptLogger.logStaleGone(healPoint, video, videoId);
+                Metrics.increment('heals_failed');
+                recoveryManager.handleNoHealPoint(video, monitorState, 'stale_gone');
+                resetHealPointTracking(monitorState);
+                return { status: 'stale_gone' };
+            }
+
+            if (freshPoint.start !== healPoint.start || freshPoint.end !== healPoint.end) {
+                attemptLogger.logPointUpdated(healPoint, freshPoint);
+            }
+
+            return { status: 'ready', healPoint: freshPoint };
+        };
+
+        return { revalidateHealPoint };
+    };
+
+    return { create };
+})();
+
+// --- HealPipelineSeek ---
+/**
+ * Seek and retry helpers for heal attempts.
+ */
+const HealPipelineSeek = (() => {
+    const create = (options) => {
+        const attemptLogger = options.attemptLogger;
+
+        const attemptSeekWithRetry = async (video, targetPoint) => {
+            const attemptSeekAndPlay = async (point, label) => {
+                if (label) {
+                    attemptLogger.logRetry(label, point);
+                }
+                return LiveEdgeSeeker.seekAndPlay(video, point);
+            };
+
+            let result = await attemptSeekAndPlay(targetPoint, null);
+            let finalPoint = targetPoint;
+
+            if (!result.success && HealAttemptUtils.isAbortError(result)) {
+                await Fn.sleep(CONFIG.recovery.HEAL_RETRY_DELAY_MS);
+                const retryPoint = BufferGapFinder.findHealPoint(video, { silent: true });
+                if (retryPoint) {
+                    finalPoint = retryPoint;
+                    result = await attemptSeekAndPlay(retryPoint, 'abort_error');
+                } else {
+                    attemptLogger.logRetrySkip(video, 'abort_error');
+                }
+            }
+
+            return { result, finalPoint };
+        };
+
+        return { attemptSeekWithRetry };
     };
 
     return { create };

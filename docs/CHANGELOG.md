@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.4.16 - 2026-01-25T15:00:16.843Z
+Previous: 4.4.15
+Commit: e417387
+Changes:
+- refactor: streamline candidate and recovery flows
+
 ## 4.4.15 - 2026-01-25T14:05:28.283Z
 Previous: 4.4.14
 Commit: a288e32

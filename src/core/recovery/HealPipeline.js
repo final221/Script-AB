@@ -22,6 +22,8 @@ const HealPipeline = (() => {
             healAttempts: 0
         };
 
+        const getDurationMs = (startTime) => Number((performance.now() - startTime).toFixed(0));
+
         const resetRecovery = (monitorState, reason) => {
             recoveryManager.resetBackoff(monitorState, reason);
             if (recoveryManager.resetPlayError) {
@@ -34,6 +36,25 @@ const HealPipeline = (() => {
             monitorState.lastHealPointKey = null;
             monitorState.healPointRepeatCount = 0;
         };
+
+        const pollHelpers = HealPipelinePoller.create({
+            poller,
+            attemptLogger,
+            recoveryManager,
+            resetRecovery,
+            resetHealPointTracking,
+            getDurationMs,
+            onDetached
+        });
+        const revalidateHelpers = HealPipelineRevalidate.create({
+            poller,
+            attemptLogger,
+            recoveryManager,
+            resetRecovery,
+            resetHealPointTracking,
+            getDurationMs
+        });
+        const seekHelpers = HealPipelineSeek.create({ attemptLogger });
 
         const ensureAttached = (video, videoId, reason, message) => {
             if (document.contains(video)) return true;
@@ -54,95 +75,6 @@ const HealPipeline = (() => {
             } else {
                 monitorState.state = MonitorStates.STALLED;
             }
-        };
-
-        const getDurationMs = (startTime) => Number((performance.now() - startTime).toFixed(0));
-
-        const handlePollAbort = (video, videoId, reason) => {
-            const abortReason = reason || 'poll_abort';
-            Logger.add(LogEvents.tagged('DETACHED', 'Heal aborted during polling'), {
-                reason: abortReason,
-                videoId
-            });
-            onDetached(video, abortReason);
-        };
-
-        const pollForHealPoint = async (video, monitorState, videoId, healStartTime) => {
-            const pollResult = await poller.pollForHealPoint(
-                video,
-                monitorState,
-                CONFIG.stall.HEAL_TIMEOUT_S * 1000
-            );
-
-            if (pollResult.aborted) {
-                handlePollAbort(video, videoId, pollResult.reason);
-                return { status: 'aborted' };
-            }
-
-            const healPoint = pollResult.healPoint;
-            if (!healPoint) {
-                if (poller.hasRecovered(video, monitorState)) {
-                    attemptLogger.logSelfRecovered(getDurationMs(healStartTime), video, videoId);
-                    resetRecovery(monitorState, 'self_recovered');
-                    return { status: 'recovered' };
-                }
-
-                const noPointDuration = getDurationMs(healStartTime);
-                attemptLogger.logNoHealPoint(noPointDuration, video, videoId);
-                Metrics.increment('heals_failed');
-                recoveryManager.handleNoHealPoint(video, monitorState, 'no_heal_point');
-                resetHealPointTracking(monitorState);
-                return { status: 'no_point' };
-            }
-
-            return { status: 'found', healPoint };
-        };
-
-        const revalidateHealPoint = (video, monitorState, videoId, healPoint, healStartTime) => {
-            const freshPoint = BufferGapFinder.findHealPoint(video, { silent: true });
-            if (!freshPoint) {
-                if (poller.hasRecovered(video, monitorState)) {
-                    attemptLogger.logStaleRecovered(getDurationMs(healStartTime));
-                    resetRecovery(monitorState, 'stale_recovered');
-                    return { status: 'recovered' };
-                }
-                attemptLogger.logStaleGone(healPoint, video, videoId);
-                Metrics.increment('heals_failed');
-                recoveryManager.handleNoHealPoint(video, monitorState, 'stale_gone');
-                resetHealPointTracking(monitorState);
-                return { status: 'stale_gone' };
-            }
-
-            if (freshPoint.start !== healPoint.start || freshPoint.end !== healPoint.end) {
-                attemptLogger.logPointUpdated(healPoint, freshPoint);
-            }
-
-            return { status: 'ready', healPoint: freshPoint };
-        };
-
-        const attemptSeekWithRetry = async (video, targetPoint) => {
-            const attemptSeekAndPlay = async (point, label) => {
-                if (label) {
-                    attemptLogger.logRetry(label, point);
-                }
-                return LiveEdgeSeeker.seekAndPlay(video, point);
-            };
-
-            let result = await attemptSeekAndPlay(targetPoint, null);
-            let finalPoint = targetPoint;
-
-            if (!result.success && HealAttemptUtils.isAbortError(result)) {
-                await Fn.sleep(CONFIG.recovery.HEAL_RETRY_DELAY_MS);
-                const retryPoint = BufferGapFinder.findHealPoint(video, { silent: true });
-                if (retryPoint) {
-                    finalPoint = retryPoint;
-                    result = await attemptSeekAndPlay(retryPoint, 'abort_error');
-                } else {
-                    attemptLogger.logRetrySkip(video, 'abort_error');
-                }
-            }
-
-            return { result, finalPoint };
         };
 
         const attemptHeal = async (videoOrContext, monitorStateOverride) => {
@@ -176,7 +108,7 @@ const HealPipeline = (() => {
             });
 
             try {
-                const pollOutcome = await pollForHealPoint(video, monitorState, videoId, healStartTime);
+                const pollOutcome = await pollHelpers.pollForHealPoint(video, monitorState, videoId, healStartTime);
                 if (pollOutcome.status !== 'found') {
                     return;
                 }
@@ -185,7 +117,7 @@ const HealPipeline = (() => {
                     return;
                 }
 
-                const revalidateOutcome = revalidateHealPoint(
+                const revalidateOutcome = revalidateHelpers.revalidateHealPoint(
                     video,
                     monitorState,
                     videoId,
@@ -200,7 +132,7 @@ const HealPipeline = (() => {
                     return;
                 }
 
-                const seekOutcome = await attemptSeekWithRetry(video, revalidateOutcome.healPoint);
+                const seekOutcome = await seekHelpers.attemptSeekWithRetry(video, revalidateOutcome.healPoint);
                 const duration = getDurationMs(healStartTime);
 
                 if (seekOutcome.result.success) {
