@@ -1,5 +1,17 @@
 # Changelog
 
+## 4.1.85 - 2026-01-25T10:13:18.091Z
+Previous: 4.1.84
+Commit: 61f2d28
+Changes:
+- No commits detected since last build
+
+## 4.1.84 - 2026-01-25T10:12:50.712Z
+Previous: 4.1.83
+Commit: 61f2d28
+Changes:
+- chore: codify agent workflow
+
 ## 4.1.83 - 2026-01-25T10:02:01.455Z
 Previous: 4.1.82
 Commit: 0eee195

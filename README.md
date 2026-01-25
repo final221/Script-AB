@@ -82,6 +82,7 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for detailed architecture.
 
 ## Docs & Navigation
 - [AGENTS.md](AGENTS.md) - Agent entrypoint and project constraints
+- [docs/INDEX.md](docs/INDEX.md) - Documentation index
 - [docs/AI_CONTEXT.md](docs/AI_CONTEXT.md) - AI agent context, constraints, load order
 - [docs/DEBUGGING.md](docs/DEBUGGING.md) - Log sequences and triage guide
 - [docs/CONFIG.md](docs/CONFIG.md) - Generated configuration defaults
@@ -151,7 +152,7 @@ Key settings in `Config.js`:
 
 ## Version
 
-Current: **4.1.83**
+Current: **4.1.85**
 
 Version increments automatically on each build (patch).
 Changelog: `docs/CHANGELOG.md`

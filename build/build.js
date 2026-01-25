@@ -2,6 +2,8 @@ const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
 
+const { generateManifest } = require('./generate-manifest');
+
 const CONFIG = {
     BASE: path.join(__dirname, '..'),
     OUT: path.join(__dirname, '..', 'dist', 'code.js'),
@@ -168,6 +170,10 @@ const updateChangelog = (oldVersion, newVersion) => {
 (() => {
     console.log('🏗️  Building Stream Healer...');
 
+    const manifestResult = generateManifest({ check: false });
+    if (manifestResult.updated) {
+        console.log('[build] Updated build/manifest.json');
+    }
     const manifest = JSON.parse(fs.readFileSync(CONFIG.MANIFEST, 'utf8'));
     const priority = Array.isArray(manifest.priority) ? manifest.priority : [];
     const entry = manifest.entry || 'core/orchestrators/CoreOrchestrator.js';

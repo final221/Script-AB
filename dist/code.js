@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.1.83
+// @version       4.1.85
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -152,7 +152,7 @@ const CONFIG = (() => {
  * Build metadata helpers (version injected at build time).
  */
 const BuildInfo = (() => {
-    const VERSION = '4.1.83';
+    const VERSION = '4.1.85';
 
     const getVersion = () => {
         const gmVersion = (typeof GM_info !== 'undefined' && GM_info?.script?.version)
@@ -163,7 +163,7 @@ const BuildInfo = (() => {
             ? unsafeWindow.GM_info.script.version
             : null;
         if (unsafeVersion) return unsafeVersion;
-        if (VERSION && VERSION !== '4.1.83') return VERSION;
+        if (VERSION && VERSION !== '4.1.85') return VERSION;
         return null;
     };
 
@@ -2756,6 +2756,296 @@ const StateSnapshot = (() => {
     };
 })();
 
+// --- MonitorRegistry ---
+/**
+ * Tracks monitored videos and coordinates playback monitoring lifecycle.
+ */
+const MonitorRegistry = (() => {
+    const create = (options = {}) => {
+        const logDebug = options.logDebug || (() => {});
+        const isHealing = options.isHealing || (() => false);
+        const onStall = options.onStall || (() => {});
+
+        const monitoredVideos = new WeakMap();
+        const monitorsById = new Map();
+        const videoIds = new WeakMap();
+        let nextVideoId = 1;
+        let monitoredCount = 0;
+        let candidateIntervalId = null;
+        let candidateSelector = null;
+        let recoveryManager = null;
+
+        const bind = (handlers = {}) => {
+            candidateSelector = handlers.candidateSelector || null;
+            recoveryManager = handlers.recoveryManager || null;
+        };
+
+        const getVideoId = (video) => {
+            let id = videoIds.get(video);
+            if (!id) {
+                id = `video-${nextVideoId++}`;
+                videoIds.set(video, id);
+            }
+            return id;
+        };
+
+        const startCandidateEvaluation = () => {
+            if (candidateIntervalId || !candidateSelector) return;
+            candidateIntervalId = setInterval(() => {
+                candidateSelector.evaluateCandidates('interval');
+            }, CONFIG.stall.WATCHDOG_INTERVAL_MS);
+        };
+
+        const stopCandidateEvaluationIfIdle = () => {
+            if (monitorsById.size === 0 && candidateIntervalId) {
+                clearInterval(candidateIntervalId);
+                candidateIntervalId = null;
+                if (candidateSelector) {
+                    candidateSelector.setActiveId(null);
+                }
+            }
+        };
+
+        const stopMonitoring = (video) => {
+            const monitor = monitoredVideos.get(video);
+            if (!monitor) return;
+
+            monitor.stop();
+            monitoredVideos.delete(video);
+            const videoId = getVideoId(video);
+            monitorsById.delete(videoId);
+            monitoredCount--;
+            if (recoveryManager) {
+                recoveryManager.onMonitorRemoved(videoId);
+            }
+            if (candidateSelector && candidateSelector.getActiveId() === videoId) {
+                candidateSelector.setActiveId(null);
+                if (monitorsById.size > 0) {
+                    candidateSelector.evaluateCandidates('removed');
+                }
+            }
+            stopCandidateEvaluationIfIdle();
+            Logger.add(LogEvents.tagged('STOP', 'Stopped monitoring video'), {
+                remainingMonitors: monitoredCount,
+                videoId
+            });
+        };
+
+        const resetVideoId = (video) => {
+            if (!video) return;
+            videoIds.delete(video);
+        };
+
+        const monitor = (video) => {
+            if (!video) return;
+
+            if (!candidateSelector) {
+                logDebug(LogEvents.tagged('SKIP', 'Candidate selector not ready'));
+                return;
+            }
+
+            if (monitoredVideos.has(video)) {
+                logDebug(LogEvents.tagged('SKIP', 'Video already being monitored'));
+                return;
+            }
+
+            const videoId = getVideoId(video);
+            Logger.add(LogEvents.tagged('VIDEO', 'Video registered'), {
+                videoId,
+                videoState: VideoStateSnapshot.forLog(video, videoId)
+            });
+
+            const monitor = PlaybackMonitor.create(video, {
+                isHealing,
+                isActive: () => candidateSelector.getActiveId() === videoId,
+                onRemoved: () => stopMonitoring(video),
+                onStall: (details, state) => onStall(video, details, state),
+                onReset: (details) => {
+                    Logger.add(LogEvents.tagged('RESET', 'Video reset detected'), {
+                        videoId,
+                        ...details
+                    });
+                    candidateSelector.evaluateCandidates('reset');
+                },
+                videoId
+            });
+
+            monitor.start();
+
+            monitoredVideos.set(video, monitor);
+            monitorsById.set(videoId, { video, monitor });
+            monitoredCount++;
+            startCandidateEvaluation();
+            candidateSelector.pruneMonitors(videoId, stopMonitoring);
+            candidateSelector.evaluateCandidates('register');
+
+            Logger.add(LogEvents.tagged('MONITOR', 'Started monitoring video'), {
+                videoId,
+                debug: CONFIG.debug,
+                checkInterval: CONFIG.stall.WATCHDOG_INTERVAL_MS + 'ms',
+                totalMonitors: monitoredCount
+            });
+        };
+
+        return {
+            monitor,
+            stopMonitoring,
+            resetVideoId,
+            getVideoId,
+            bind,
+            monitorsById,
+            getMonitoredCount: () => monitoredCount
+        };
+    };
+
+    return { create };
+})();
+
+// --- MonitorCoordinator ---
+/**
+ * Coordinates monitor registry and candidate selection lifecycle.
+ */
+const MonitorCoordinator = (() => {
+    const create = (options = {}) => {
+        const monitorRegistry = options.monitorRegistry;
+        const candidateSelector = options.candidateSelector;
+        const logDebug = options.logDebug || (() => {});
+
+        const monitorsById = monitorRegistry.monitorsById;
+        const getVideoId = monitorRegistry.getVideoId;
+
+        const scanForVideos = (reason, detail = {}) => {
+            if (!document?.querySelectorAll) {
+                return;
+            }
+            const beforeCount = monitorsById.size;
+            const videos = Array.from(document.querySelectorAll('video'));
+            Logger.add(LogEvents.tagged('SCAN', 'Video rescan requested'), {
+                reason,
+                found: videos.length,
+                ...detail
+            });
+            for (const video of videos) {
+                const videoId = getVideoId(video);
+                logDebug(LogEvents.tagged('SCAN_ITEM', 'Video discovered'), {
+                    reason,
+                    videoId,
+                    alreadyMonitored: monitorsById.has(videoId)
+                });
+            }
+            for (const video of videos) {
+                monitorRegistry.monitor(video);
+            }
+            candidateSelector.evaluateCandidates(`scan_${reason || 'manual'}`);
+            candidateSelector.getActiveId();
+            const afterCount = monitorsById.size;
+            Logger.add(LogEvents.tagged('SCAN', 'Video rescan complete'), {
+                reason,
+                found: videos.length,
+                newMonitors: Math.max(afterCount - beforeCount, 0),
+                totalMonitors: afterCount
+            });
+        };
+
+        const refreshVideo = (videoId, detail = {}) => {
+            const entry = monitorsById.get(videoId);
+            if (!entry) return false;
+            const { video } = entry;
+            Logger.add(LogEvents.tagged('REFRESH', 'Refreshing video to escape stale state'), {
+                videoId,
+                detail
+            });
+            monitorRegistry.stopMonitoring(video);
+            monitorRegistry.resetVideoId(video);
+            setTimeout(() => {
+                scanForVideos('refresh', {
+                    videoId,
+                    ...detail
+                });
+            }, 100);
+            return true;
+        };
+
+        return {
+            monitor: monitorRegistry.monitor,
+            stopMonitoring: monitorRegistry.stopMonitoring,
+            scanForVideos,
+            refreshVideo,
+            monitorsById,
+            getVideoId,
+            getMonitoredCount: () => monitorRegistry.getMonitoredCount()
+        };
+    };
+
+    return { create };
+})();
+
+// --- VideoDiscovery ---
+/**
+ * Scans the DOM for video elements and wires the mutation observer.
+ */
+const VideoDiscovery = (() => {
+    const collectVideos = (targetNode) => {
+        if (targetNode) {
+            if (targetNode.nodeName === 'VIDEO') {
+                return [targetNode];
+            }
+            if (targetNode.querySelectorAll) {
+                return Array.from(targetNode.querySelectorAll('video'));
+            }
+            return [];
+        }
+        return Array.from(document.querySelectorAll('video'));
+    };
+
+    const notifyVideos = (videos, onVideo) => {
+        if (!videos.length) {
+            return;
+        }
+        Logger.add('[CORE] New video detected in DOM', {
+            count: videos.length
+        });
+        Logger.add('[CORE] Video elements found, starting StreamHealer', {
+            count: videos.length
+        });
+        videos.forEach(video => onVideo(video));
+    };
+
+    const start = (onVideo) => {
+        if (!document?.querySelectorAll) {
+            return null;
+        }
+
+        const scan = (targetNode = null) => {
+            const videos = collectVideos(targetNode);
+            notifyVideos(videos, onVideo);
+        };
+
+        scan();
+
+        const observer = new MutationObserver((mutations) => {
+            for (const mutation of mutations) {
+                for (const node of mutation.addedNodes) {
+                    if (node.nodeType === 1 && (node.nodeName === 'VIDEO'
+                        || (node.querySelector && node.querySelector('video')))) {
+                        scan(node);
+                    }
+                }
+            }
+        });
+
+        observer.observe(document.body, {
+            childList: true,
+            subtree: true
+        });
+
+        Logger.add('[CORE] DOM observer started');
+        return observer;
+    };
+
+    return { start };
+})();
+
 // --- PlaybackLogHelper ---
 /**
  * Shared logging helpers for playback-related modules.
@@ -3774,47 +4064,6 @@ const PlaybackStarvationLogic = (() => {
     };
 
     return { create };
-})();
-
-// --- RecoveryContext ---
-/**
- * Shared context wrapper for recovery flows.
- */
-const RecoveryContext = (() => {
-    const create = (video, monitorState, getVideoId, detail = {}) => {
-        const videoId = detail.videoId || (typeof getVideoId === 'function'
-            ? getVideoId(video)
-            : 'unknown');
-        const now = Number.isFinite(detail.now) ? detail.now : Date.now();
-        return {
-            video,
-            monitorState,
-            videoId,
-            now,
-            trigger: detail.trigger || null,
-            reason: detail.reason || null,
-            detail,
-            getSnapshot: () => StateSnapshot.full(video, videoId),
-            getLiteSnapshot: () => StateSnapshot.lite(video, videoId),
-            getLogSnapshot: () => VideoStateSnapshot.forLog(video, videoId),
-            getLiteLogSnapshot: () => VideoStateSnapshot.forLog(video, videoId, 'lite'),
-            getRanges: () => BufferGapFinder.getBufferRanges(video),
-            getRangesFormatted: () => BufferGapFinder.analyze(video).formattedRanges,
-            getBufferAhead: () => BufferGapFinder.getBufferAhead(video)
-        };
-    };
-
-    const from = (videoOrContext, monitorState, getVideoId, detail = {}) => {
-        if (videoOrContext && typeof videoOrContext === 'object' && videoOrContext.video) {
-            return videoOrContext;
-        }
-        return create(videoOrContext, monitorState, getVideoId, detail);
-    };
-
-    return {
-        create,
-        from
-    };
 })();
 
 // --- PlaybackStateTracker ---
@@ -5264,6 +5513,47 @@ const CandidateSelector = (() => {
     return { create };
 })();
 
+// --- RecoveryContext ---
+/**
+ * Shared context wrapper for recovery flows.
+ */
+const RecoveryContext = (() => {
+    const create = (video, monitorState, getVideoId, detail = {}) => {
+        const videoId = detail.videoId || (typeof getVideoId === 'function'
+            ? getVideoId(video)
+            : 'unknown');
+        const now = Number.isFinite(detail.now) ? detail.now : Date.now();
+        return {
+            video,
+            monitorState,
+            videoId,
+            now,
+            trigger: detail.trigger || null,
+            reason: detail.reason || null,
+            detail,
+            getSnapshot: () => StateSnapshot.full(video, videoId),
+            getLiteSnapshot: () => StateSnapshot.lite(video, videoId),
+            getLogSnapshot: () => VideoStateSnapshot.forLog(video, videoId),
+            getLiteLogSnapshot: () => VideoStateSnapshot.forLog(video, videoId, 'lite'),
+            getRanges: () => BufferGapFinder.getBufferRanges(video),
+            getRangesFormatted: () => BufferGapFinder.analyze(video).formattedRanges,
+            getBufferAhead: () => BufferGapFinder.getBufferAhead(video)
+        };
+    };
+
+    const from = (videoOrContext, monitorState, getVideoId, detail = {}) => {
+        if (videoOrContext && typeof videoOrContext === 'object' && videoOrContext.video) {
+            return videoOrContext;
+        }
+        return create(videoOrContext, monitorState, getVideoId, detail);
+    };
+
+    return {
+        create,
+        from
+    };
+})();
+
 // --- BackoffManager ---
 /**
  * Tracks stall backoff state for no-heal-point scenarios.
@@ -6310,230 +6600,6 @@ const RecoveryManager = (() => {
             shouldSkipStall,
             probeCandidate,
             onMonitorRemoved: failoverManager.onMonitorRemoved
-        };
-    };
-
-    return { create };
-})();
-
-// --- MonitorRegistry ---
-/**
- * Tracks monitored videos and coordinates playback monitoring lifecycle.
- */
-const MonitorRegistry = (() => {
-    const create = (options = {}) => {
-        const logDebug = options.logDebug || (() => {});
-        const isHealing = options.isHealing || (() => false);
-        const onStall = options.onStall || (() => {});
-
-        const monitoredVideos = new WeakMap();
-        const monitorsById = new Map();
-        const videoIds = new WeakMap();
-        let nextVideoId = 1;
-        let monitoredCount = 0;
-        let candidateIntervalId = null;
-        let candidateSelector = null;
-        let recoveryManager = null;
-
-        const bind = (handlers = {}) => {
-            candidateSelector = handlers.candidateSelector || null;
-            recoveryManager = handlers.recoveryManager || null;
-        };
-
-        const getVideoId = (video) => {
-            let id = videoIds.get(video);
-            if (!id) {
-                id = `video-${nextVideoId++}`;
-                videoIds.set(video, id);
-            }
-            return id;
-        };
-
-        const startCandidateEvaluation = () => {
-            if (candidateIntervalId || !candidateSelector) return;
-            candidateIntervalId = setInterval(() => {
-                candidateSelector.evaluateCandidates('interval');
-            }, CONFIG.stall.WATCHDOG_INTERVAL_MS);
-        };
-
-        const stopCandidateEvaluationIfIdle = () => {
-            if (monitorsById.size === 0 && candidateIntervalId) {
-                clearInterval(candidateIntervalId);
-                candidateIntervalId = null;
-                if (candidateSelector) {
-                    candidateSelector.setActiveId(null);
-                }
-            }
-        };
-
-        const stopMonitoring = (video) => {
-            const monitor = monitoredVideos.get(video);
-            if (!monitor) return;
-
-            monitor.stop();
-            monitoredVideos.delete(video);
-            const videoId = getVideoId(video);
-            monitorsById.delete(videoId);
-            monitoredCount--;
-            if (recoveryManager) {
-                recoveryManager.onMonitorRemoved(videoId);
-            }
-            if (candidateSelector && candidateSelector.getActiveId() === videoId) {
-                candidateSelector.setActiveId(null);
-                if (monitorsById.size > 0) {
-                    candidateSelector.evaluateCandidates('removed');
-                }
-            }
-            stopCandidateEvaluationIfIdle();
-            Logger.add(LogEvents.tagged('STOP', 'Stopped monitoring video'), {
-                remainingMonitors: monitoredCount,
-                videoId
-            });
-        };
-
-        const resetVideoId = (video) => {
-            if (!video) return;
-            videoIds.delete(video);
-        };
-
-        const monitor = (video) => {
-            if (!video) return;
-
-            if (!candidateSelector) {
-                logDebug(LogEvents.tagged('SKIP', 'Candidate selector not ready'));
-                return;
-            }
-
-            if (monitoredVideos.has(video)) {
-                logDebug(LogEvents.tagged('SKIP', 'Video already being monitored'));
-                return;
-            }
-
-            const videoId = getVideoId(video);
-            Logger.add(LogEvents.tagged('VIDEO', 'Video registered'), {
-                videoId,
-                videoState: VideoStateSnapshot.forLog(video, videoId)
-            });
-
-            const monitor = PlaybackMonitor.create(video, {
-                isHealing,
-                isActive: () => candidateSelector.getActiveId() === videoId,
-                onRemoved: () => stopMonitoring(video),
-                onStall: (details, state) => onStall(video, details, state),
-                onReset: (details) => {
-                    Logger.add(LogEvents.tagged('RESET', 'Video reset detected'), {
-                        videoId,
-                        ...details
-                    });
-                    candidateSelector.evaluateCandidates('reset');
-                },
-                videoId
-            });
-
-            monitor.start();
-
-            monitoredVideos.set(video, monitor);
-            monitorsById.set(videoId, { video, monitor });
-            monitoredCount++;
-            startCandidateEvaluation();
-            candidateSelector.pruneMonitors(videoId, stopMonitoring);
-            candidateSelector.evaluateCandidates('register');
-
-            Logger.add(LogEvents.tagged('MONITOR', 'Started monitoring video'), {
-                videoId,
-                debug: CONFIG.debug,
-                checkInterval: CONFIG.stall.WATCHDOG_INTERVAL_MS + 'ms',
-                totalMonitors: monitoredCount
-            });
-        };
-
-        return {
-            monitor,
-            stopMonitoring,
-            resetVideoId,
-            getVideoId,
-            bind,
-            monitorsById,
-            getMonitoredCount: () => monitoredCount
-        };
-    };
-
-    return { create };
-})();
-
-// --- MonitorCoordinator ---
-/**
- * Coordinates monitor registry and candidate selection lifecycle.
- */
-const MonitorCoordinator = (() => {
-    const create = (options = {}) => {
-        const monitorRegistry = options.monitorRegistry;
-        const candidateSelector = options.candidateSelector;
-        const logDebug = options.logDebug || (() => {});
-
-        const monitorsById = monitorRegistry.monitorsById;
-        const getVideoId = monitorRegistry.getVideoId;
-
-        const scanForVideos = (reason, detail = {}) => {
-            if (!document?.querySelectorAll) {
-                return;
-            }
-            const beforeCount = monitorsById.size;
-            const videos = Array.from(document.querySelectorAll('video'));
-            Logger.add(LogEvents.tagged('SCAN', 'Video rescan requested'), {
-                reason,
-                found: videos.length,
-                ...detail
-            });
-            for (const video of videos) {
-                const videoId = getVideoId(video);
-                logDebug(LogEvents.tagged('SCAN_ITEM', 'Video discovered'), {
-                    reason,
-                    videoId,
-                    alreadyMonitored: monitorsById.has(videoId)
-                });
-            }
-            for (const video of videos) {
-                monitorRegistry.monitor(video);
-            }
-            candidateSelector.evaluateCandidates(`scan_${reason || 'manual'}`);
-            candidateSelector.getActiveId();
-            const afterCount = monitorsById.size;
-            Logger.add(LogEvents.tagged('SCAN', 'Video rescan complete'), {
-                reason,
-                found: videos.length,
-                newMonitors: Math.max(afterCount - beforeCount, 0),
-                totalMonitors: afterCount
-            });
-        };
-
-        const refreshVideo = (videoId, detail = {}) => {
-            const entry = monitorsById.get(videoId);
-            if (!entry) return false;
-            const { video } = entry;
-            Logger.add(LogEvents.tagged('REFRESH', 'Refreshing video to escape stale state'), {
-                videoId,
-                detail
-            });
-            monitorRegistry.stopMonitoring(video);
-            monitorRegistry.resetVideoId(video);
-            setTimeout(() => {
-                scanForVideos('refresh', {
-                    videoId,
-                    ...detail
-                });
-            }, 100);
-            return true;
-        };
-
-        return {
-            monitor: monitorRegistry.monitor,
-            stopMonitoring: monitorRegistry.stopMonitoring,
-            scanForVideos,
-            refreshVideo,
-            monitorsById,
-            getVideoId,
-            getMonitoredCount: () => monitorRegistry.getMonitoredCount()
         };
     };
 
@@ -7705,72 +7771,6 @@ const ExternalSignalHandlerFallback = (() => {
     );
 
     return { create };
-})();
-
-// --- VideoDiscovery ---
-/**
- * Scans the DOM for video elements and wires the mutation observer.
- */
-const VideoDiscovery = (() => {
-    const collectVideos = (targetNode) => {
-        if (targetNode) {
-            if (targetNode.nodeName === 'VIDEO') {
-                return [targetNode];
-            }
-            if (targetNode.querySelectorAll) {
-                return Array.from(targetNode.querySelectorAll('video'));
-            }
-            return [];
-        }
-        return Array.from(document.querySelectorAll('video'));
-    };
-
-    const notifyVideos = (videos, onVideo) => {
-        if (!videos.length) {
-            return;
-        }
-        Logger.add('[CORE] New video detected in DOM', {
-            count: videos.length
-        });
-        Logger.add('[CORE] Video elements found, starting StreamHealer', {
-            count: videos.length
-        });
-        videos.forEach(video => onVideo(video));
-    };
-
-    const start = (onVideo) => {
-        if (!document?.querySelectorAll) {
-            return null;
-        }
-
-        const scan = (targetNode = null) => {
-            const videos = collectVideos(targetNode);
-            notifyVideos(videos, onVideo);
-        };
-
-        scan();
-
-        const observer = new MutationObserver((mutations) => {
-            for (const mutation of mutations) {
-                for (const node of mutation.addedNodes) {
-                    if (node.nodeType === 1 && (node.nodeName === 'VIDEO'
-                        || (node.querySelector && node.querySelector('video')))) {
-                        scan(node);
-                    }
-                }
-            }
-        });
-
-        observer.observe(document.body, {
-            childList: true,
-            subtree: true
-        });
-
-        Logger.add('[CORE] DOM observer started');
-        return observer;
-    };
-
-    return { start };
 })();
 
 // --- ExternalSignalRouter ---

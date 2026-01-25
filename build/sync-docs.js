@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
+const { generateManifest } = require('./generate-manifest');
 
 const ROOT = path.join(__dirname, '..');
 const MANIFEST_PATH = path.join(__dirname, 'manifest.json');
@@ -74,18 +75,24 @@ const renderConfigDoc = (config, newline) => {
     return lines.join(newline).trimEnd() + newline;
 };
 
-const renderLogTagsDoc = (logTags, newline) => {
+const renderLogTagsDoc = (logTags, logTagRegistry, newline) => {
     const tags = logTags && logTags.TAG ? Object.values(logTags.TAG) : [];
-    const groups = new Map();
-
-    tags.forEach(tag => {
-        const match = /^\[([A-Z_]+):/.exec(tag);
-        const group = match ? match[1] : 'OTHER';
-        if (!groups.has(group)) {
-            groups.set(group, []);
-        }
-        groups.get(group).push(tag);
-    });
+    const registryGroups = Array.isArray(logTagRegistry?.GROUPS) ? logTagRegistry.GROUPS : [];
+    const groupByTag = (tag) => {
+        const raw = tag.replace(/^\[|\]$/g, '');
+        const normalized = logTagRegistry?.normalizeTag
+            ? logTagRegistry.normalizeTag(raw)
+            : { tagKey: raw };
+        const group = logTagRegistry?.getGroupForTag
+            ? logTagRegistry.getGroupForTag(normalized.tagKey)
+            : null;
+        return group?.id || 'other';
+    };
+    const schemaForTag = (tag) => {
+        const raw = tag.replace(/^\[|\]$/g, '');
+        if (!logTagRegistry?.getSchema) return null;
+        return logTagRegistry.getSchema(raw);
+    };
 
     const lines = [
         '# Log Tags',
@@ -94,11 +101,24 @@ const renderLogTagsDoc = (logTags, newline) => {
         ''
     ];
 
-    Array.from(groups.entries()).forEach(([group, groupTags]) => {
-        lines.push(`## ${group}`);
-        groupTags.forEach(tag => lines.push(`- ${tag}`));
-        lines.push('');
+    lines.push('## Groups');
+    lines.push('| Group | Legend |');
+    lines.push('| --- | --- |');
+    registryGroups.forEach(group => {
+        lines.push(`| ${group.id} | ${group.legend} |`);
     });
+    lines.push('');
+
+    lines.push('## Tags');
+    lines.push('| Tag | Group | Schema |');
+    lines.push('| --- | --- | --- |');
+    tags.forEach(tag => {
+        const group = groupByTag(tag);
+        const schema = schemaForTag(tag);
+        const schemaText = schema ? schema.join(', ') : '';
+        lines.push(`| ${tag} | ${group} | ${schemaText} |`);
+    });
+    lines.push('');
 
     return lines.join(newline).trimEnd() + newline;
 };
@@ -127,15 +147,19 @@ const syncDoc = (docPath, content, label, isCheck) => {
 const isCheck = process.argv.includes('--check');
 let ok = true;
 
-const manifest = JSON.parse(fs.readFileSync(MANIFEST_PATH, 'utf8'));
+const docBuffer = fs.readFileSync(DOC_PATH);
+const docText = docBuffer.toString('utf8');
+const newline = detectNewline(docText);
+const manifestResult = generateManifest({ check: isCheck });
+if (isCheck && !manifestResult.ok) {
+    console.error('[sync-docs] build/manifest.json is out of sync');
+    ok = false;
+}
+const manifest = manifestResult.manifest || JSON.parse(fs.readFileSync(MANIFEST_PATH, 'utf8'));
 const ordered = [
     ...(Array.isArray(manifest.priority) ? manifest.priority : []),
     manifest.entry || 'core/orchestrators/CoreOrchestrator.js'
 ];
-
-const docBuffer = fs.readFileSync(DOC_PATH);
-const docText = docBuffer.toString('utf8');
-const newline = detectNewline(docText);
 const list = ordered
     .map((file, index) => `${index + 1}. \`${file}\``)
     .join(newline);
@@ -170,8 +194,12 @@ if (isCheck) {
 try {
     const config = loadExport(CONFIG_SRC_PATH, 'CONFIG');
     const logTags = loadExport(LOG_TAGS_SRC_PATH, 'LogTags');
+    const logTagRegistry = loadExport(
+        path.join(ROOT, 'src', 'monitoring', 'LogTagRegistry.js'),
+        'LogTagRegistry'
+    );
     const configDoc = renderConfigDoc(config, '\n');
-    const logTagsDoc = renderLogTagsDoc(logTags, '\n');
+    const logTagsDoc = renderLogTagsDoc(logTags, logTagRegistry, '\n');
     ok = syncDoc(CONFIG_DOC_PATH, configDoc, 'docs/CONFIG.md', isCheck) && ok;
     ok = syncDoc(LOG_TAGS_DOC_PATH, logTagsDoc, 'docs/LOG_TAGS.md', isCheck) && ok;
 } catch (err) {

@@ -24,6 +24,7 @@ Twitch Stream Healer (userscript)
   - Minor: new user-visible features or behavior changes
   - Major: breaking changes to config, API, or expected behavior
 - Use `npm.cmd` on Windows to avoid PowerShell script policy blocks
+- If build/test cannot run, stop and report why before making changes
 
 ## Constraints
 - dist/code.js and build/version.txt are generated.
