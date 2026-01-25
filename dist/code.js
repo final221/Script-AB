@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.4.17
+// @version       4.4.18
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -161,7 +161,7 @@ const CONFIG = (() => {
  * Build metadata helpers (version injected at build time).
  */
 const BuildInfo = (() => {
-    const VERSION = '4.4.17';
+    const VERSION = '4.4.18';
 
     const getVersion = () => {
         const gmVersion = (typeof GM_info !== 'undefined' && GM_info?.script?.version)
@@ -172,7 +172,7 @@ const BuildInfo = (() => {
             ? unsafeWindow.GM_info.script.version
             : null;
         if (unsafeVersion) return unsafeVersion;
-        if (VERSION && VERSION !== '4.4.17') return VERSION;
+        if (VERSION && VERSION !== '4.4.18') return VERSION;
         return null;
     };
 
@@ -5504,21 +5504,7 @@ const CandidateSelector = (() => {
             state.lastGoodCandidateId = id;
         };
 
-        const getActiveId = () => {
-            if (!state.activeCandidateId && monitorsById.size > 0) {
-                const fallbackId = (state.lastGoodCandidateId && monitorsById.has(state.lastGoodCandidateId))
-                    ? state.lastGoodCandidateId
-                    : monitorsById.keys().next().value;
-                if (fallbackId) {
-                    state.activeCandidateId = fallbackId;
-                    Logger.add(LogEvents.tagged('CANDIDATE', 'Active video set'), {
-                        to: state.activeCandidateId,
-                        reason: 'fallback'
-                    });
-                }
-            }
-            return state.activeCandidateId;
-        };
+        const getActiveId = () => state.activeCandidateId;
 
         const selectionEngine = CandidateSelectionEngine.create({
             monitorsById,

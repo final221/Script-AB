@@ -46,21 +46,7 @@ const CandidateSelector = (() => {
             state.lastGoodCandidateId = id;
         };
 
-        const getActiveId = () => {
-            if (!state.activeCandidateId && monitorsById.size > 0) {
-                const fallbackId = (state.lastGoodCandidateId && monitorsById.has(state.lastGoodCandidateId))
-                    ? state.lastGoodCandidateId
-                    : monitorsById.keys().next().value;
-                if (fallbackId) {
-                    state.activeCandidateId = fallbackId;
-                    Logger.add(LogEvents.tagged('CANDIDATE', 'Active video set'), {
-                        to: state.activeCandidateId,
-                        reason: 'fallback'
-                    });
-                }
-            }
-            return state.activeCandidateId;
-        };
+        const getActiveId = () => state.activeCandidateId;
 
         const selectionEngine = CandidateSelectionEngine.create({
             monitorsById,

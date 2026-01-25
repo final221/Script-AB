@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.4.18 - 2026-01-25T15:14:53.138Z
+Previous: 4.4.17
+Commit: ec00b2c
+Changes:
+- Fix stall self-recovery window gating
+
 ## 4.4.17 - 2026-01-25T15:10:18.962Z
 Previous: 4.4.16
 Commit: 060faae
