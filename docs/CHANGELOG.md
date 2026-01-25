@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.4.13 - 2026-01-25T13:24:30.513Z
+Previous: 4.4.12
+Commit: 431946d
+Changes:
+- docs: streamline agent guidance and cleanup
+
 ## 4.4.12 - 2026-01-25T13:19:41.423Z
 Previous: 4.4.11
 Commit: c85d0c4

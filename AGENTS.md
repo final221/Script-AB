@@ -11,6 +11,7 @@
 - Do not add extra process/docs unless required for correctness or safety.
 - State recommendations plainly; base them on logic/efficiency, not assumed user desire.
 - Do not ask the user to choose when a single best path exists; choose and proceed.
+- Avoid "if you want" or optional suggestion phrasing; give a direct opinion on whether anything else should be done, or say explicitly that nothing else is needed.
 
 ## Start
 - docs/AI_CONTEXT.md
