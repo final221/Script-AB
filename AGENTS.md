@@ -4,6 +4,12 @@
 - This file is the authoritative agent workflow. Keep other docs thin and refer back here.
 - Avoid adding extra workflow/process docs (e.g., CONTRIBUTING, workflows) unless strictly necessary.
 
+## Efficiency-first stance
+- Prioritize the thinnest, most direct path.
+- If a request conflicts with the thin workflow, say no and propose the leaner alternative.
+- Do not add extra process/docs unless required for correctness or safety.
+- State recommendations plainly; avoid optional phrasing like "if you want."
+
 ## Start
 - docs/AI_CONTEXT.md
 - docs/ARCHITECTURE.md

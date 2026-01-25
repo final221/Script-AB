@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.4.2 - 2026-01-25T11:50:16.134Z
+Previous: 4.4.1
+Commit: a70c349
+Changes:
+- chore: slim agent workflow entrypoint
+
 ## 4.4.1 - 2026-01-25T11:45:42.173Z
 Previous: 4.4.0
 Commit: 54f58d7
