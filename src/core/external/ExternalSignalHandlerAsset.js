@@ -71,6 +71,19 @@ const ExternalSignalHandlerAsset = (() => {
                 }
             }
 
+            if (activeIsStalled
+                && CONFIG.stall.PROCESSING_ASSET_LAST_RESORT_SWITCH
+                && candidateSelector
+                && typeof candidateSelector.selectEmergencyCandidate === 'function') {
+                candidateSelector.selectEmergencyCandidate('processing_asset_last_resort', {
+                    minReadyState: CONFIG.stall.NO_HEAL_POINT_LAST_RESORT_MIN_READY_STATE,
+                    requireSrc: CONFIG.stall.NO_HEAL_POINT_LAST_RESORT_REQUIRE_SRC,
+                    allowDead: CONFIG.stall.NO_HEAL_POINT_LAST_RESORT_ALLOW_DEAD,
+                    label: 'Last-resort switch after processing asset'
+                });
+                activeId = candidateSelector.getActiveId();
+            }
+
             if (activeIsStalled) {
                 helpers.probeCandidates(recoveryManager, monitorsById, 'processing_asset', activeId);
             }

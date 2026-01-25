@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.2.0
+// @version       4.3.0
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -77,11 +77,13 @@ const CONFIG = (() => {
             NO_HEAL_POINT_EMERGENCY_COOLDOWN_MS: 15000, // Cooldown between emergency switches
             NO_HEAL_POINT_EMERGENCY_MIN_READY_STATE: 2, // Min readyState for emergency switch candidates
             NO_HEAL_POINT_EMERGENCY_REQUIRE_SRC: true, // Require src for emergency switch candidates
+            NO_HEAL_POINT_EMERGENCY_ALLOW_DEAD: false, // Allow emergency switches to dead candidates
             NO_HEAL_POINT_EMERGENCY_SWITCH: true, // Enable emergency candidate switching
             NO_HEAL_POINT_LAST_RESORT_SWITCH: true, // Attempt last-resort candidate switch before refresh
             NO_HEAL_POINT_LAST_RESORT_MIN_READY_STATE: 0, // Allow last-resort candidates with any readyState
             NO_HEAL_POINT_LAST_RESORT_REQUIRE_SRC: false, // Allow last-resort candidates without src
             NO_HEAL_POINT_LAST_RESORT_ALLOW_DEAD: true, // Allow last-resort switches to dead candidates
+            PROCESSING_ASSET_LAST_RESORT_SWITCH: true, // Attempt last-resort switch on processing asset hint
         },
 
         monitoring: {
@@ -157,7 +159,7 @@ const CONFIG = (() => {
  * Build metadata helpers (version injected at build time).
  */
 const BuildInfo = (() => {
-    const VERSION = '4.2.0';
+    const VERSION = '4.3.0';
 
     const getVersion = () => {
         const gmVersion = (typeof GM_info !== 'undefined' && GM_info?.script?.version)
@@ -168,7 +170,7 @@ const BuildInfo = (() => {
             ? unsafeWindow.GM_info.script.version
             : null;
         if (unsafeVersion) return unsafeVersion;
-        if (VERSION && VERSION !== '4.2.0') return VERSION;
+        if (VERSION && VERSION !== '4.3.0') return VERSION;
         return null;
     };
 
@@ -5467,6 +5469,7 @@ const CandidateSelector = (() => {
             const allowDead = options.allowDead !== undefined
                 ? options.allowDead
                 : Boolean(CONFIG.stall.NO_HEAL_POINT_EMERGENCY_ALLOW_DEAD);
+            const label = options.label || 'Emergency switch after no-heal point';
             let best = null;
             let bestScore = null;
 
@@ -5494,7 +5497,7 @@ const CandidateSelector = (() => {
 
             const fromId = activeCandidateId;
             activeCandidateId = best.id;
-            Logger.add(LogEvents.tagged('CANDIDATE', 'Emergency switch after no-heal point'), {
+            Logger.add(LogEvents.tagged('CANDIDATE', label), {
                 from: fromId,
                 to: best.id,
                 reason,
@@ -7739,6 +7742,19 @@ const ExternalSignalHandlerAsset = (() => {
                 if (activeIsStalled) {
                     recoveryManager.probeCandidate(best.id, 'processing_asset');
                 }
+            }
+
+            if (activeIsStalled
+                && CONFIG.stall.PROCESSING_ASSET_LAST_RESORT_SWITCH
+                && candidateSelector
+                && typeof candidateSelector.selectEmergencyCandidate === 'function') {
+                candidateSelector.selectEmergencyCandidate('processing_asset_last_resort', {
+                    minReadyState: CONFIG.stall.NO_HEAL_POINT_LAST_RESORT_MIN_READY_STATE,
+                    requireSrc: CONFIG.stall.NO_HEAL_POINT_LAST_RESORT_REQUIRE_SRC,
+                    allowDead: CONFIG.stall.NO_HEAL_POINT_LAST_RESORT_ALLOW_DEAD,
+                    label: 'Last-resort switch after processing asset'
+                });
+                activeId = candidateSelector.getActiveId();
             }
 
             if (activeIsStalled) {

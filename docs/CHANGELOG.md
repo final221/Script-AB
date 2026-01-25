@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.3.0 - 2026-01-25T10:41:44.651Z
+Previous: 4.2.0
+Commit: b3b2fe7
+Changes:
+- feat: last-resort switch before refresh
+
 ## 4.2.0 - 2026-01-25T10:38:52.904Z
 Previous: 4.1.86
 Commit: 6b73bbd

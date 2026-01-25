@@ -350,6 +350,7 @@ const CandidateSelector = (() => {
             const allowDead = options.allowDead !== undefined
                 ? options.allowDead
                 : Boolean(CONFIG.stall.NO_HEAL_POINT_EMERGENCY_ALLOW_DEAD);
+            const label = options.label || 'Emergency switch after no-heal point';
             let best = null;
             let bestScore = null;
 
@@ -377,7 +378,7 @@ const CandidateSelector = (() => {
 
             const fromId = activeCandidateId;
             activeCandidateId = best.id;
-            Logger.add(LogEvents.tagged('CANDIDATE', 'Emergency switch after no-heal point'), {
+            Logger.add(LogEvents.tagged('CANDIDATE', label), {
                 from: fromId,
                 to: best.id,
                 reason,

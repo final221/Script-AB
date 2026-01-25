@@ -64,11 +64,13 @@ const CONFIG = (() => {
             NO_HEAL_POINT_EMERGENCY_COOLDOWN_MS: 15000, // Cooldown between emergency switches
             NO_HEAL_POINT_EMERGENCY_MIN_READY_STATE: 2, // Min readyState for emergency switch candidates
             NO_HEAL_POINT_EMERGENCY_REQUIRE_SRC: true, // Require src for emergency switch candidates
+            NO_HEAL_POINT_EMERGENCY_ALLOW_DEAD: false, // Allow emergency switches to dead candidates
             NO_HEAL_POINT_EMERGENCY_SWITCH: true, // Enable emergency candidate switching
             NO_HEAL_POINT_LAST_RESORT_SWITCH: true, // Attempt last-resort candidate switch before refresh
             NO_HEAL_POINT_LAST_RESORT_MIN_READY_STATE: 0, // Allow last-resort candidates with any readyState
             NO_HEAL_POINT_LAST_RESORT_REQUIRE_SRC: false, // Allow last-resort candidates without src
             NO_HEAL_POINT_LAST_RESORT_ALLOW_DEAD: true, // Allow last-resort switches to dead candidates
+            PROCESSING_ASSET_LAST_RESORT_SWITCH: true, // Attempt last-resort switch on processing asset hint
         },
 
         monitoring: {
