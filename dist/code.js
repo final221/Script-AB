@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.4.19
+// @version       4.4.20
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -161,7 +161,7 @@ const CONFIG = (() => {
  * Build metadata helpers (version injected at build time).
  */
 const BuildInfo = (() => {
-    const VERSION = '4.4.19';
+    const VERSION = '4.4.20';
 
     const getVersion = () => {
         const gmVersion = (typeof GM_info !== 'undefined' && GM_info?.script?.version)
@@ -172,7 +172,7 @@ const BuildInfo = (() => {
             ? unsafeWindow.GM_info.script.version
             : null;
         if (unsafeVersion) return unsafeVersion;
-        if (VERSION && VERSION !== '4.4.19') return VERSION;
+        if (VERSION && VERSION !== '4.4.20') return VERSION;
         return null;
     };
 
@@ -5281,31 +5281,30 @@ const CandidateEvaluation = (() => {
         let current = null;
         const scores = [];
 
-        if (activeCandidateId && monitorsById.has(activeCandidateId)) {
-            const entry = monitorsById.get(activeCandidateId);
-            const result = scoreVideo(entry.video, entry.monitor, activeCandidateId);
-            const trustInfo = CandidateTrust.getTrustInfo(result);
-            current = CandidateScoreRecord.buildCandidate(activeCandidateId, entry, result, trustInfo);
-        }
-
         for (const [videoId, entry] of monitorsById.entries()) {
             const result = scoreVideo(entry.video, entry.monitor, videoId);
             const trustInfo = CandidateTrust.getTrustInfo(result);
             const trusted = trustInfo.trusted;
-            scores.push(CandidateScoreRecord.buildScoreRecord(videoId, entry, result, trustInfo));
+            const scoreRecord = CandidateScoreRecord.buildScoreRecord(videoId, entry, result, trustInfo);
+            const candidate = CandidateScoreRecord.buildCandidate(videoId, entry, result, trustInfo);
+            scores.push(scoreRecord);
+
+            if (videoId === activeCandidateId) {
+                current = candidate;
+            }
 
             if (!best || result.score > best.score) {
-                best = CandidateScoreRecord.buildCandidate(videoId, entry, result, trustInfo);
+                best = candidate;
             }
             if (!result.deadCandidate && (!bestNonDead || result.score > bestNonDead.score)) {
-                bestNonDead = CandidateScoreRecord.buildCandidate(videoId, entry, result, trustInfo);
+                bestNonDead = candidate;
             }
             if (trusted && (!bestTrusted || result.score > bestTrusted.score)) {
-                bestTrusted = CandidateScoreRecord.buildCandidate(videoId, entry, result, trustInfo);
+                bestTrusted = candidate;
             }
             if (trusted && !result.deadCandidate
                 && (!bestTrustedNonDead || result.score > bestTrustedNonDead.score)) {
-                bestTrustedNonDead = CandidateScoreRecord.buildCandidate(videoId, entry, result, trustInfo);
+                bestTrustedNonDead = candidate;
             }
         }
 

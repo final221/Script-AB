@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.4.20 - 2026-01-25T15:17:33.185Z
+Previous: 4.4.19
+Commit: ef7a171
+Changes:
+- Document file size cap for refactor guidance
+
 ## 4.4.19 - 2026-01-25T15:16:49.282Z
 Previous: 4.4.18
 Commit: 437e45e

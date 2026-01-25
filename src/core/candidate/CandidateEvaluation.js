@@ -15,31 +15,30 @@ const CandidateEvaluation = (() => {
         let current = null;
         const scores = [];
 
-        if (activeCandidateId && monitorsById.has(activeCandidateId)) {
-            const entry = monitorsById.get(activeCandidateId);
-            const result = scoreVideo(entry.video, entry.monitor, activeCandidateId);
-            const trustInfo = CandidateTrust.getTrustInfo(result);
-            current = CandidateScoreRecord.buildCandidate(activeCandidateId, entry, result, trustInfo);
-        }
-
         for (const [videoId, entry] of monitorsById.entries()) {
             const result = scoreVideo(entry.video, entry.monitor, videoId);
             const trustInfo = CandidateTrust.getTrustInfo(result);
             const trusted = trustInfo.trusted;
-            scores.push(CandidateScoreRecord.buildScoreRecord(videoId, entry, result, trustInfo));
+            const scoreRecord = CandidateScoreRecord.buildScoreRecord(videoId, entry, result, trustInfo);
+            const candidate = CandidateScoreRecord.buildCandidate(videoId, entry, result, trustInfo);
+            scores.push(scoreRecord);
+
+            if (videoId === activeCandidateId) {
+                current = candidate;
+            }
 
             if (!best || result.score > best.score) {
-                best = CandidateScoreRecord.buildCandidate(videoId, entry, result, trustInfo);
+                best = candidate;
             }
             if (!result.deadCandidate && (!bestNonDead || result.score > bestNonDead.score)) {
-                bestNonDead = CandidateScoreRecord.buildCandidate(videoId, entry, result, trustInfo);
+                bestNonDead = candidate;
             }
             if (trusted && (!bestTrusted || result.score > bestTrusted.score)) {
-                bestTrusted = CandidateScoreRecord.buildCandidate(videoId, entry, result, trustInfo);
+                bestTrusted = candidate;
             }
             if (trusted && !result.deadCandidate
                 && (!bestTrustedNonDead || result.score > bestTrustedNonDead.score)) {
-                bestTrustedNonDead = CandidateScoreRecord.buildCandidate(videoId, entry, result, trustInfo);
+                bestTrustedNonDead = candidate;
             }
         }
 
