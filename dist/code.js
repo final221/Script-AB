@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.4.24
+// @version       4.4.25
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -161,7 +161,7 @@ const CONFIG = (() => {
  * Build metadata helpers (version injected at build time).
  */
 const BuildInfo = (() => {
-    const VERSION = '4.4.24';
+    const VERSION = '4.4.25';
 
     const getVersion = () => {
         const gmVersion = (typeof GM_info !== 'undefined' && GM_info?.script?.version)
@@ -172,7 +172,7 @@ const BuildInfo = (() => {
             ? unsafeWindow.GM_info.script.version
             : null;
         if (unsafeVersion) return unsafeVersion;
-        if (VERSION && VERSION !== '4.4.24') return VERSION;
+        if (VERSION && VERSION !== '4.4.25') return VERSION;
         return null;
     };
 
@@ -2044,16 +2044,60 @@ Total entries: ${logs.length}
         return header + logContent + footer;
     };
 
+    const scheduleRevoke = (url) => {
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+    };
+
+    const attemptAnchorDownload = (url, filename) => {
+        const root = document.body || document.documentElement;
+        if (!root) return { ok: false, reason: 'no_dom_root' };
+        try {
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.rel = 'noopener';
+            a.style.display = 'none';
+            root.appendChild(a);
+            a.click();
+            root.removeChild(a);
+            return { ok: true };
+        } catch (error) {
+            return { ok: false, reason: 'anchor_failed', error };
+        }
+    };
+
+    const attemptOpenDownload = (url) => {
+        try {
+            const opened = window.open(url, '_blank', 'noopener');
+            return { ok: Boolean(opened), reason: opened ? null : 'popup_blocked' };
+        } catch (error) {
+            return { ok: false, reason: 'open_failed', error };
+        }
+    };
+
     const downloadFile = (content, filename) => {
         const blob = new Blob([content], { type: 'text/plain' });
         const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = filename || `stream_healer_logs_${getTimestampSuffix()}.txt`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
+        const safeName = filename || `stream_healer_logs_${getTimestampSuffix()}.txt`;
+
+        const anchorResult = attemptAnchorDownload(url, safeName);
+        if (anchorResult.ok) {
+            scheduleRevoke(url);
+            return true;
+        }
+
+        const openResult = attemptOpenDownload(url);
+        if (openResult.ok) {
+            scheduleRevoke(url);
+            return true;
+        }
+
+        scheduleRevoke(url);
+        Logger.add(LogEvents.tagged('ERROR', 'Report export failed'), {
+            reason: anchorResult.reason || openResult.reason,
+            error: anchorResult.error?.message || openResult.error?.message || null
+        });
+        return false;
     };
 
     return {

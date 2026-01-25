@@ -25,16 +25,60 @@ Total entries: ${logs.length}
         return header + logContent + footer;
     };
 
+    const scheduleRevoke = (url) => {
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+    };
+
+    const attemptAnchorDownload = (url, filename) => {
+        const root = document.body || document.documentElement;
+        if (!root) return { ok: false, reason: 'no_dom_root' };
+        try {
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.rel = 'noopener';
+            a.style.display = 'none';
+            root.appendChild(a);
+            a.click();
+            root.removeChild(a);
+            return { ok: true };
+        } catch (error) {
+            return { ok: false, reason: 'anchor_failed', error };
+        }
+    };
+
+    const attemptOpenDownload = (url) => {
+        try {
+            const opened = window.open(url, '_blank', 'noopener');
+            return { ok: Boolean(opened), reason: opened ? null : 'popup_blocked' };
+        } catch (error) {
+            return { ok: false, reason: 'open_failed', error };
+        }
+    };
+
     const downloadFile = (content, filename) => {
         const blob = new Blob([content], { type: 'text/plain' });
         const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = filename || `stream_healer_logs_${getTimestampSuffix()}.txt`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
+        const safeName = filename || `stream_healer_logs_${getTimestampSuffix()}.txt`;
+
+        const anchorResult = attemptAnchorDownload(url, safeName);
+        if (anchorResult.ok) {
+            scheduleRevoke(url);
+            return true;
+        }
+
+        const openResult = attemptOpenDownload(url);
+        if (openResult.ok) {
+            scheduleRevoke(url);
+            return true;
+        }
+
+        scheduleRevoke(url);
+        Logger.add(LogEvents.tagged('ERROR', 'Report export failed'), {
+            reason: anchorResult.reason || openResult.reason,
+            error: anchorResult.error?.message || openResult.error?.message || null
+        });
+        return false;
     };
 
     return {

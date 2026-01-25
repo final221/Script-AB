@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.4.25 - 2026-01-25T15:44:16.140Z
+Previous: 4.4.24
+Commit: 6bf169e
+Changes:
+- Centralize forced candidate switch handling
+
 ## 4.4.24 - 2026-01-25T15:28:15.236Z
 Previous: 4.4.23
 Commit: 31f7c28
