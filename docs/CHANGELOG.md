@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.4.0 - 2026-01-25T10:48:09.095Z
+Previous: 4.3.0
+Commit: 658e92b
+Changes:
+- feat: last-resort switch on processing asset
+
 ## 4.3.0 - 2026-01-25T10:41:44.651Z
 Previous: 4.2.0
 Commit: b3b2fe7

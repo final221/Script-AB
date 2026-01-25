@@ -44,7 +44,10 @@ const NoHealPointPolicy = (() => {
                 return false;
             }
             if (!monitorState) return false;
-            if ((monitorState.noHealPointCount || 0) < CONFIG.stall.REFRESH_AFTER_NO_HEAL_POINTS) {
+            if ((monitorState.noHealPointCount || 0) < CONFIG.stall.NO_HEAL_POINT_LAST_RESORT_AFTER) {
+                return false;
+            }
+            if (CONFIG.stall.NO_HEAL_POINT_LAST_RESORT_REQUIRE_STARVED && !monitorState.bufferStarved) {
                 return false;
             }
             if (!monitorsById || monitorsById.size < 2) {

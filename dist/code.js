@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.3.0
+// @version       4.4.0
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -80,6 +80,8 @@ const CONFIG = (() => {
             NO_HEAL_POINT_EMERGENCY_ALLOW_DEAD: false, // Allow emergency switches to dead candidates
             NO_HEAL_POINT_EMERGENCY_SWITCH: true, // Enable emergency candidate switching
             NO_HEAL_POINT_LAST_RESORT_SWITCH: true, // Attempt last-resort candidate switch before refresh
+            NO_HEAL_POINT_LAST_RESORT_AFTER: 1, // Trigger last-resort after this many no-heal points
+            NO_HEAL_POINT_LAST_RESORT_REQUIRE_STARVED: true, // Require buffer starvation before last-resort switch
             NO_HEAL_POINT_LAST_RESORT_MIN_READY_STATE: 0, // Allow last-resort candidates with any readyState
             NO_HEAL_POINT_LAST_RESORT_REQUIRE_SRC: false, // Allow last-resort candidates without src
             NO_HEAL_POINT_LAST_RESORT_ALLOW_DEAD: true, // Allow last-resort switches to dead candidates
@@ -159,7 +161,7 @@ const CONFIG = (() => {
  * Build metadata helpers (version injected at build time).
  */
 const BuildInfo = (() => {
-    const VERSION = '4.3.0';
+    const VERSION = '4.4.0';
 
     const getVersion = () => {
         const gmVersion = (typeof GM_info !== 'undefined' && GM_info?.script?.version)
@@ -170,7 +172,7 @@ const BuildInfo = (() => {
             ? unsafeWindow.GM_info.script.version
             : null;
         if (unsafeVersion) return unsafeVersion;
-        if (VERSION && VERSION !== '4.3.0') return VERSION;
+        if (VERSION && VERSION !== '4.4.0') return VERSION;
         return null;
     };
 
@@ -5730,7 +5732,10 @@ const NoHealPointPolicy = (() => {
                 return false;
             }
             if (!monitorState) return false;
-            if ((monitorState.noHealPointCount || 0) < CONFIG.stall.REFRESH_AFTER_NO_HEAL_POINTS) {
+            if ((monitorState.noHealPointCount || 0) < CONFIG.stall.NO_HEAL_POINT_LAST_RESORT_AFTER) {
+                return false;
+            }
+            if (CONFIG.stall.NO_HEAL_POINT_LAST_RESORT_REQUIRE_STARVED && !monitorState.bufferStarved) {
                 return false;
             }
             if (!monitorsById || monitorsById.size < 2) {

@@ -67,6 +67,8 @@ const CONFIG = (() => {
             NO_HEAL_POINT_EMERGENCY_ALLOW_DEAD: false, // Allow emergency switches to dead candidates
             NO_HEAL_POINT_EMERGENCY_SWITCH: true, // Enable emergency candidate switching
             NO_HEAL_POINT_LAST_RESORT_SWITCH: true, // Attempt last-resort candidate switch before refresh
+            NO_HEAL_POINT_LAST_RESORT_AFTER: 1, // Trigger last-resort after this many no-heal points
+            NO_HEAL_POINT_LAST_RESORT_REQUIRE_STARVED: true, // Require buffer starvation before last-resort switch
             NO_HEAL_POINT_LAST_RESORT_MIN_READY_STATE: 0, // Allow last-resort candidates with any readyState
             NO_HEAL_POINT_LAST_RESORT_REQUIRE_SRC: false, // Allow last-resort candidates without src
             NO_HEAL_POINT_LAST_RESORT_ALLOW_DEAD: true, // Allow last-resort switches to dead candidates
