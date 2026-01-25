@@ -1,5 +1,23 @@
 # Changelog
 
+## 4.4.8 - 2026-01-25T12:46:54.581Z
+Previous: 4.4.7
+Commit: 70880ce
+Changes:
+- No commits detected since last build
+
+## 4.4.7 - 2026-01-25T12:46:37.464Z
+Previous: 4.4.6
+Commit: 70880ce
+Changes:
+- No commits detected since last build
+
+## 4.4.6 - 2026-01-25T12:40:00.875Z
+Previous: 4.4.5
+Commit: 70880ce
+Changes:
+- chore: streamline agent build workflow
+
 ## 4.4.5 - 2026-01-25T11:57:23.124Z
 Previous: 4.4.4
 Commit: 1308c1a

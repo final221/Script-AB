@@ -16,9 +16,9 @@ For agents, the single authoritative workflow and constraints live in `AGENTS.md
 
 ### Build
 ```bash
-node build/build.js          # Patch: 4.0.5 -> 4.0.6
-node build/build.js --minor  # Minor: 4.0.5 -> 4.1.0
-node build/build.js --major  # Major: 4.0.5 -> 5.0.0
+npm.cmd run build             # Patch: 4.0.5 -> 4.0.6
+npm.cmd run build -- --minor   # Minor: 4.0.5 -> 4.1.0
+npm.cmd run build -- --major   # Major: 4.0.5 -> 5.0.0
 ```
 
 Output: `dist/code.js`
@@ -46,7 +46,7 @@ Quick knobs (see `docs/TUNING.md` for full mapping):
 
 ## Generated Files
 - `dist/code.js` is build output; do not edit by hand.
-- `build/version.txt` is managed by `build/build.js`.
+- `build/version.txt` is managed by `build/build.js` (via `npm.cmd run build`).
 
 ## Project Structure
 
@@ -147,7 +147,7 @@ Key settings in `Config.js`:
 
 ## Version
 
-Current: **4.4.5**
+Current: **4.4.8**
 
 Version increments automatically on each build (patch).
 Changelog: `docs/CHANGELOG.md`
