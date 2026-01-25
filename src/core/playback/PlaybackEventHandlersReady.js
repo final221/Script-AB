@@ -18,8 +18,8 @@ const PlaybackEventHandlersReady = (() => {
                 logEvent('playing', () => ({
                     state: state.state
                 }));
-                if (state.state !== 'HEALING') {
-                    setState('PLAYING', 'playing');
+                if (state.state !== MonitorStates.HEALING) {
+                    setState(MonitorStates.PLAYING, 'playing');
                 }
             },
             loadedmetadata: () => {

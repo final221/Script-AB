@@ -8,9 +8,12 @@ const StallSkipPolicy = (() => {
         const logDebug = options.logDebug || (() => {});
 
         const shouldSkipStall = (context) => {
-            const videoId = context.videoId;
+            const decisionContext = context.getDecisionContext
+                ? context.getDecisionContext()
+                : RecoveryContext.buildDecisionContext(context);
+            const videoId = decisionContext.videoId;
             const monitorState = context.monitorState;
-            const now = Date.now();
+            const now = decisionContext.now;
             if (backoffManager.shouldSkip(videoId, monitorState)) {
                 return true;
             }
@@ -40,8 +43,7 @@ const StallSkipPolicy = (() => {
             }
 
             if (monitorState) {
-                const lastProgress = monitorState.lastProgressTime || 0;
-                const stalledForMs = lastProgress ? (now - lastProgress) : null;
+                const stalledForMs = decisionContext.stalledForMs;
                 const baseGraceMs = CONFIG.stall.SELF_RECOVER_GRACE_MS;
                 const allowExtraGrace = !monitorState.bufferStarved;
                 const extraGraceMs = allowExtraGrace ? (CONFIG.stall.SELF_RECOVER_EXTRA_MS || 0) : 0;

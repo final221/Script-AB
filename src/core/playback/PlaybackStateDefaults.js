@@ -2,10 +2,20 @@
 /**
  * Provides initial playback state structure and alias map.
  */
+const MonitorStates = (() => Object.freeze({
+    PLAYING: 'PLAYING',
+    PAUSED: 'PAUSED',
+    STALLED: 'STALLED',
+    HEALING: 'HEALING',
+    RESET: 'RESET',
+    ERROR: 'ERROR',
+    ENDED: 'ENDED'
+}))();
+
 const PlaybackStateDefaults = (() => {
     const create = (video) => ({
         status: {
-            value: 'PLAYING'
+            value: MonitorStates.PLAYING
         },
         progress: {
             lastProgressTime: 0,

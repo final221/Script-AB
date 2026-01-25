@@ -14,14 +14,14 @@ const PlayErrorPolicy = (() => {
         const resetPlayError = (monitorState, reason) => {
             if (!monitorState) return;
             if (monitorState.playErrorCount > 0 || monitorState.nextPlayHealAllowedTime > 0) {
-                logDebug(LogEvents.tagged('PLAY_BACKOFF', 'Reset'), {
+                logDebug(LogEvents.tagged('PLAY_BACKOFF', 'Reset'), RecoveryLogDetails.playBackoffReset({
                     reason,
                     previousPlayErrors: monitorState.playErrorCount,
                     previousNextPlayAllowedMs: monitorState.nextPlayHealAllowedTime
                         ? Math.max(monitorState.nextPlayHealAllowedTime - Date.now(), 0)
                         : 0,
                     previousHealPointRepeats: monitorState.healPointRepeatCount
-                });
+                }));
             }
             monitorState.playErrorCount = 0;
             monitorState.nextPlayHealAllowedTime = 0;
@@ -57,7 +57,7 @@ const PlayErrorPolicy = (() => {
             monitorState.lastPlayErrorTime = now;
             monitorState.nextPlayHealAllowedTime = now + backoffMs;
 
-            Logger.add(LogEvents.tagged('PLAY_BACKOFF', 'Play failed'), {
+            Logger.add(LogEvents.tagged('PLAY_BACKOFF', 'Play failed'), RecoveryLogDetails.playBackoff({
                 videoId,
                 reason: detail.reason,
                 error: detail.error,
@@ -68,7 +68,7 @@ const PlayErrorPolicy = (() => {
                 nextHealAllowedInMs: backoffMs,
                 healRange: detail.healRange || null,
                 healPointRepeatCount: detail.healPointRepeatCount || 0
-            });
+            }));
 
             const repeatCount = detail.healPointRepeatCount || 0;
             const repeatStuck = repeatCount >= CONFIG.stall.HEALPOINT_REPEAT_FAILOVER_COUNT;

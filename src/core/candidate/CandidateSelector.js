@@ -21,6 +21,7 @@ const CandidateSelector = (() => {
             logDebug
         });
         const selectionLogger = CandidateSelectionLogger.create({ logDebug });
+        const decisionEngine = CandidateDecision.create({ switchPolicy });
         const probation = CandidateProbation.create();
 
         const setLockChecker = (fn) => {
@@ -30,107 +31,7 @@ const CandidateSelector = (() => {
         const activateProbation = (reason) => probation.activate(reason);
         const isProbationActive = () => probation.isActive();
 
-        const logDecision = selectionLogger.logDecision;
-        const logSuppression = selectionLogger.logSuppression;
-
-        const buildSwitchDecision = ({ now, current, preferred, activeCandidateId, probationActive, scores, reason }) => {
-            if (!preferred || preferred.id === activeCandidateId) {
-                return { action: 'none' };
-            }
-
-            const activeState = current ? current.state : null;
-            const activeMonitorState = current ? current.monitorState : null;
-            const activeNoHealPoints = activeMonitorState?.noHealPointCount || 0;
-            const activeStalledForMs = activeMonitorState?.lastProgressTime
-                ? (now - activeMonitorState.lastProgressTime)
-                : null;
-            const activeHealing = activeState === 'HEALING';
-            const activeIsStalled = !current || ['STALLED', 'RESET', 'ERROR', 'ENDED'].includes(activeState);
-            const probationProgressOk = preferred.progressStreakMs >= CONFIG.monitoring.PROBATION_MIN_PROGRESS_MS;
-            const probationReady = probationActive
-                && probationProgressOk
-                && (preferred.vs.readyState >= CONFIG.monitoring.PROBATION_READY_STATE
-                    || preferred.vs.currentSrc);
-
-            const fastSwitchAllowed = activeHealing
-                && preferred.trusted
-                && preferred.progressEligible
-                && preferred.progressStreakMs >= CONFIG.monitoring.CANDIDATE_MIN_PROGRESS_MS
-                && (activeNoHealPoints >= CONFIG.stall.FAST_SWITCH_AFTER_NO_HEAL_POINTS
-                    || (activeStalledForMs !== null && activeStalledForMs >= CONFIG.stall.FAST_SWITCH_AFTER_STALL_MS));
-
-            const baseDecision = {
-                activeState,
-                activeIsStalled,
-                activeNoHealPoints,
-                activeStalledForMs,
-                probationActive,
-                probationReady,
-                preferred,
-                currentTrusted: current ? current.trusted : false
-            };
-
-            if (fastSwitchAllowed) {
-                return {
-                    action: 'fast_switch',
-                    ...baseDecision
-                };
-            }
-
-            if (!preferred.progressEligible && !probationReady) {
-                return {
-                    action: 'stay',
-                    suppression: 'preferred_not_progress_eligible',
-                    ...baseDecision
-                };
-            }
-
-            if (!activeIsStalled) {
-                return {
-                    action: 'stay',
-                    suppression: 'active_not_stalled',
-                    ...baseDecision
-                };
-            }
-
-            if (baseDecision.currentTrusted && !preferred.trusted) {
-                return {
-                    action: 'stay',
-                    suppression: 'trusted_active_blocks_untrusted',
-                    ...baseDecision
-                };
-            }
-
-            if (!preferred.trusted && !probationActive) {
-                return {
-                    action: 'stay',
-                    suppression: 'untrusted_outside_probation',
-                    ...baseDecision
-                };
-            }
-
-            const preferredForPolicy = probationReady
-                ? { ...preferred, progressEligible: true }
-                : preferred;
-            const policyDecision = switchPolicy.shouldSwitch(current, preferredForPolicy, scores, reason);
-
-            if (policyDecision.allow) {
-                return {
-                    action: 'switch',
-                    policyDecision,
-                    preferredForPolicy,
-                    ...baseDecision
-                };
-            }
-
-            return {
-                action: 'stay',
-                suppression: policyDecision.suppression || 'score_delta',
-                policyDecision,
-                preferredForPolicy,
-                ...baseDecision
-            };
-        };
+        const logOutcome = selectionLogger.logOutcome;
 
         const getActiveId = () => {
             if (!activeCandidateId && monitorsById.size > 0) {
@@ -204,7 +105,7 @@ const CandidateSelector = (() => {
 
             if (preferred && preferred.id !== activeCandidateId) {
                 const probationActive = isProbationActive();
-                const decision = buildSwitchDecision({
+                const decision = decisionEngine.decide({
                     now,
                     current,
                     preferred,
@@ -215,176 +116,41 @@ const CandidateSelector = (() => {
                 });
 
                 if (decision.action === 'fast_switch') {
-                    const fromId = activeCandidateId;
+                    const fromId = decision.fromId;
                     Logger.add(LogEvents.tagged('CANDIDATE', 'Fast switch from healing dead-end'), {
                         from: fromId,
-                        to: preferred.id,
-                        reason,
+                        to: decision.toId,
+                        reason: decision.reason,
                         activeState: decision.activeState,
                         noHealPointCount: decision.activeNoHealPoints,
                         stalledForMs: decision.activeStalledForMs,
-                        preferredScore: preferred.score,
-                        preferredProgressStreakMs: preferred.progressStreakMs,
-                        preferredTrusted: preferred.trusted
+                        preferredScore: decision.preferred.score,
+                        preferredProgressStreakMs: decision.preferred.progressStreakMs,
+                        preferredTrusted: decision.preferred.trusted
                     });
-                    activeCandidateId = preferred.id;
-                    logDecision({
-                        reason,
-                        action: 'fast_switch',
-                        from: fromId,
-                        to: activeCandidateId,
-                        activeState: decision.activeState,
-                        preferredScore: preferred.score,
-                        preferredProgressEligible: preferred.progressEligible,
-                        preferredTrusted: preferred.trusted,
-                        probationActive
-                    });
-                    return preferred;
-                }
-
-                if (decision.action === 'stay' && decision.suppression === 'preferred_not_progress_eligible') {
-                    logSuppression({
-                        from: activeCandidateId,
-                        to: preferred.id,
-                        reason,
-                        cause: decision.suppression,
-                        activeState: decision.activeState,
-                        probationActive,
-                        scores
-                    });
-                    logDecision({
-                        reason,
-                        action: 'stay',
-                        suppression: decision.suppression,
-                        activeId: activeCandidateId,
-                        activeState: decision.activeState,
-                        preferredId: preferred.id,
-                        preferredScore: preferred.score,
-                        preferredProgressEligible: preferred.progressEligible,
-                        preferredTrusted: preferred.trusted,
-                        probationActive,
-                        probationReady: decision.probationReady
-                    });
-                    return preferred;
-                }
-
-                if (decision.action === 'stay' && decision.suppression === 'active_not_stalled') {
-                    logSuppression({
-                        from: activeCandidateId,
-                        to: preferred.id,
-                        reason,
-                        cause: decision.suppression,
-                        activeState: decision.activeState,
-                        probationActive,
-                        scores
-                    });
-                    logDecision({
-                        reason,
-                        action: 'stay',
-                        suppression: decision.suppression,
-                        activeId: activeCandidateId,
-                        activeState: decision.activeState,
-                        preferredId: preferred.id,
-                        preferredScore: preferred.score,
-                        preferredProgressEligible: preferred.progressEligible,
-                        preferredTrusted: preferred.trusted,
-                        probationActive
-                    });
-                    return preferred;
-                }
-
-                if (decision.action === 'stay' && decision.suppression === 'trusted_active_blocks_untrusted') {
-                    logSuppression({
-                        from: activeCandidateId,
-                        to: preferred.id,
-                        reason,
-                        cause: decision.suppression,
-                        activeState: decision.activeState,
-                        probationActive,
-                        currentTrusted: decision.currentTrusted,
-                        preferredTrusted: preferred.trusted,
-                        scores
-                    });
-                    logDecision({
-                        reason,
-                        action: 'stay',
-                        suppression: decision.suppression,
-                        activeId: activeCandidateId,
-                        activeState: decision.activeState,
-                        preferredId: preferred.id,
-                        preferredScore: preferred.score,
-                        preferredProgressEligible: preferred.progressEligible,
-                        preferredTrusted: preferred.trusted,
-                        probationActive
-                    });
-                    return preferred;
-                }
-
-                if (decision.action === 'stay' && decision.suppression === 'untrusted_outside_probation') {
-                    logSuppression({
-                        from: activeCandidateId,
-                        to: preferred.id,
-                        reason,
-                        cause: decision.suppression,
-                        activeState: decision.activeState,
-                        probationActive,
-                        scores
-                    });
-                    logDecision({
-                        reason,
-                        action: 'stay',
-                        suppression: decision.suppression,
-                        activeId: activeCandidateId,
-                        activeState: decision.activeState,
-                        preferredId: preferred.id,
-                        preferredScore: preferred.score,
-                        preferredProgressEligible: preferred.progressEligible,
-                        preferredTrusted: preferred.trusted,
-                        probationActive
-                    });
+                    activeCandidateId = decision.toId;
+                    logOutcome(decision);
                     return preferred;
                 }
 
                 if (decision.action === 'switch') {
-                    const fromId = activeCandidateId;
+                    const fromId = decision.fromId;
                     Logger.add(LogEvents.tagged('CANDIDATE', 'Active video switched'), {
-                        from: activeCandidateId,
-                        to: preferred.id,
-                        reason,
+                        from: fromId,
+                        to: decision.toId,
+                        reason: decision.reason,
                         delta: decision.policyDecision.delta,
                         currentScore: decision.policyDecision.currentScore,
-                        bestScore: preferred.score,
-                        bestProgressStreakMs: preferred.progressStreakMs,
-                        bestProgressEligible: preferred.progressEligible,
+                        bestScore: decision.preferred.score,
+                        bestProgressStreakMs: decision.preferred.progressStreakMs,
+                        bestProgressEligible: decision.preferred.progressEligible,
                         probationActive,
                         scores
                     });
-                    activeCandidateId = preferred.id;
-                    logDecision({
-                        reason,
-                        action: 'switch',
-                        from: fromId,
-                        to: activeCandidateId,
-                        activeState: decision.activeState,
-                        preferredScore: preferred.score,
-                        preferredProgressEligible: preferred.progressEligible,
-                        preferredTrusted: preferred.trusted,
-                        probationActive
-                    });
-                } else if (decision.action === 'stay') {
-                    logDecision({
-                        reason,
-                        action: 'stay',
-                        suppression: decision.suppression,
-                        activeId: activeCandidateId,
-                        activeState: decision.activeState,
-                        preferredId: preferred.id,
-                        preferredScore: preferred.score,
-                        preferredProgressEligible: preferred.progressEligible,
-                        preferredTrusted: preferred.trusted,
-                        probationActive
-                    });
+                    activeCandidateId = decision.toId;
                 }
+
+                logOutcome(decision);
             }
 
             return preferred;

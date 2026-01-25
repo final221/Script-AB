@@ -130,6 +130,7 @@ const buildManifest = () => {
     priority.push(...buildCoreSection('candidate', [
         'CandidateScorer.js',
         'CandidateSwitchPolicy.js',
+        'CandidateDecision.js',
         'CandidateTrust.js',
         'CandidateScoreRecord.js',
         'CandidateProbation.js',
@@ -142,6 +143,7 @@ const buildManifest = () => {
         'RecoveryContext.js',
         'BackoffManager.js',
         'ProbationPolicy.js',
+        'RecoveryLogDetails.js',
         'NoHealPointPolicy.js',
         'PlayErrorPolicy.js',
         'StallSkipPolicy.js',

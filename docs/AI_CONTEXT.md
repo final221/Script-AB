@@ -24,6 +24,14 @@
 - `src/monitoring/`: Logging infrastructure.
 - `docs/ARCHITECTURE.md`: **Truth**. Always cross-reference this for module interactions.
 
+## Hot Paths (read first)
+- Stall detect: `PlaybackWatchdog.tick()` -> `PlaybackStateTracker` -> `StreamHealer.onStall()`
+- Heal attempt: `StreamHealer.attemptHeal()` -> `HealPipeline.attemptHeal()` -> `HealPointPoller.pollForHealPoint()` -> `LiveEdgeSeeker.seekAndPlay()`
+- No-heal-point: `HealPipeline.attemptHeal()` -> `RecoveryManager.handleNoHealPoint()` -> `NoHealPointPolicy.handleNoHealPoint()`
+- Play error: `HealPipeline.attemptHeal()` -> `RecoveryManager.handlePlayFailure()` -> `PlayErrorPolicy.handlePlayFailure()`
+- Candidate switch: `CandidateSelector.evaluateCandidates()` -> `CandidateDecision.decide()` -> `CandidateSwitchPolicy.shouldSwitch()`
+- Failover: `RecoveryManager.handleNoHealPoint()/handlePlayFailure()` -> `FailoverManager.attemptFailover()`
+
 ## Common Tasks & Files
 - **Fixing Heal Logic**: Check `src/core/orchestrators/StreamHealer.js`.
 - **Buffer Analysis Issues**: Check `src/recovery/BufferGapFinder.js`.

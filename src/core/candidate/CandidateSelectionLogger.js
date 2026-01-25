@@ -17,6 +17,56 @@ const CandidateSelectionLogger = (() => {
             || (Date.now() - lastDecisionLogTime) >= CONFIG.logging.ACTIVE_LOG_MS
         );
 
+        const buildDecisionDetail = (decision) => {
+            if (!decision) return null;
+            const preferred = decision.preferred || decision.preferredForPolicy;
+            const detail = {
+                reason: decision.reason,
+                action: decision.action,
+                activeState: decision.activeState,
+                preferredScore: preferred?.score,
+                preferredProgressEligible: preferred?.progressEligible,
+                preferredTrusted: preferred?.trusted,
+                probationActive: decision.probationActive
+            };
+
+            if (decision.action === 'stay') {
+                detail.suppression = decision.suppression;
+                detail.activeId = decision.fromId;
+                detail.preferredId = decision.toId;
+                if (decision.probationReady) {
+                    detail.probationReady = decision.probationReady;
+                }
+            }
+
+            if (decision.action === 'switch' || decision.action === 'fast_switch') {
+                detail.from = decision.fromId;
+                detail.to = decision.toId;
+            }
+
+            return detail;
+        };
+
+        const buildSuppressionDetail = (decision) => {
+            if (!decision || decision.action !== 'stay' || !decision.suppression) return null;
+            const detail = {
+                from: decision.fromId,
+                to: decision.toId,
+                reason: decision.reason,
+                cause: decision.suppression,
+                activeState: decision.activeState,
+                probationActive: decision.probationActive,
+                scores: decision.scores
+            };
+
+            if (decision.suppression === 'trusted_active_blocks_untrusted') {
+                detail.currentTrusted = decision.currentTrusted;
+                detail.preferredTrusted = decision.preferred?.trusted;
+            }
+
+            return detail;
+        };
+
         const logDecision = (detail) => {
             if (!detail || !shouldLogDecision(detail.reason)) return;
             lastDecisionLogTime = Date.now();
@@ -64,7 +114,18 @@ const CandidateSelectionLogger = (() => {
 
         return {
             logDecision,
-            logSuppression
+            logSuppression,
+            logOutcome: (decision) => {
+                if (!decision || decision.action === 'none') return;
+                const suppression = buildSuppressionDetail(decision);
+                if (suppression) {
+                    logSuppression(suppression);
+                }
+                const detail = buildDecisionDetail(decision);
+                if (detail) {
+                    logDecision(detail);
+                }
+            }
         };
     };
 

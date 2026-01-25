@@ -56,11 +56,11 @@ const PlaybackWatchdog = (() => {
                 pauseFromStall = true;
             }
             if (video.paused && !pauseFromStall) {
-                setState('PAUSED', 'watchdog_paused');
+                setState(MonitorStates.PAUSED, 'watchdog_paused');
                 return;
             }
-            if (video.paused && pauseFromStall && state.state !== 'STALLED') {
-                setState('STALLED', bufferExhausted ? 'paused_buffer_exhausted' : 'paused_after_stall');
+            if (video.paused && pauseFromStall && state.state !== MonitorStates.STALLED) {
+                setState(MonitorStates.STALLED, bufferExhausted ? 'paused_buffer_exhausted' : 'paused_after_stall');
             }
 
             if (tracker.shouldSkipUntilProgress()) {
@@ -88,8 +88,8 @@ const PlaybackWatchdog = (() => {
                 return;
             }
 
-            if (state.state !== 'STALLED') {
-                setState('STALLED', 'watchdog_no_progress');
+            if (state.state !== MonitorStates.STALLED) {
+                setState(MonitorStates.STALLED, 'watchdog_no_progress');
             }
 
             const logIntervalMs = Tuning.logIntervalMs(isActive());

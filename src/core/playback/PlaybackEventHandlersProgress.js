@@ -13,13 +13,13 @@ const PlaybackEventHandlersProgress = (() => {
         return {
             timeupdate: () => {
                 tracker.updateProgress('timeupdate');
-                if (state.state !== 'PLAYING') {
+                if (state.state !== MonitorStates.PLAYING) {
                     logEvent('timeupdate', () => ({
                         state: state.state
                     }));
                 }
-                if (!video.paused && state.state !== 'HEALING') {
-                    setState('PLAYING', 'timeupdate');
+                if (!video.paused && state.state !== MonitorStates.HEALING) {
+                    setState(MonitorStates.PLAYING, 'timeupdate');
                 }
             }
         };

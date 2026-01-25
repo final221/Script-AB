@@ -16,8 +16,8 @@ const PlaybackEventHandlersStall = (() => {
                 logEvent('waiting', () => ({
                     state: state.state
                 }));
-                if (!video.paused && state.state !== 'HEALING') {
-                    setState('STALLED', 'waiting');
+                if (!video.paused && state.state !== MonitorStates.HEALING) {
+                    setState(MonitorStates.STALLED, 'waiting');
                 }
             },
             stalled: () => {
@@ -25,8 +25,8 @@ const PlaybackEventHandlersStall = (() => {
                 logEvent('stalled', () => ({
                     state: state.state
                 }));
-                if (!video.paused && state.state !== 'HEALING') {
-                    setState('STALLED', 'stalled');
+                if (!video.paused && state.state !== MonitorStates.HEALING) {
+                    setState(MonitorStates.STALLED, 'stalled');
                 }
             },
             pause: () => {
@@ -37,12 +37,12 @@ const PlaybackEventHandlersStall = (() => {
                 }));
                 if (bufferExhausted && !video.ended) {
                     tracker.markStallEvent('pause_buffer_exhausted');
-                    if (state.state !== 'HEALING') {
-                        setState('STALLED', 'pause_buffer_exhausted');
+                    if (state.state !== MonitorStates.HEALING) {
+                        setState(MonitorStates.STALLED, 'pause_buffer_exhausted');
                     }
                     return;
                 }
-                setState('PAUSED', 'pause');
+                setState(MonitorStates.PAUSED, 'pause');
             }
         };
     };

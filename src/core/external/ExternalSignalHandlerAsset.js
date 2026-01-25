@@ -38,10 +38,14 @@ const ExternalSignalHandlerAsset = (() => {
             const activeEntry = activeId ? monitorsById.get(activeId) : null;
             const activeMonitorState = activeEntry ? activeEntry.monitor.state : null;
             const activeState = activeMonitorState ? activeMonitorState.state : null;
-            const activeIsStalled = !activeEntry || ['STALLED', 'RESET', 'ERROR'].includes(activeState);
+            const activeIsStalled = !activeEntry || [
+                MonitorStates.STALLED,
+                MonitorStates.RESET,
+                MonitorStates.ERROR
+            ].includes(activeState);
             const activeIsSevere = activeIsStalled
-                && (activeState === 'RESET'
-                    || activeState === 'ERROR'
+                && (activeState === MonitorStates.RESET
+                    || activeState === MonitorStates.ERROR
                     || activeMonitorState?.bufferStarved);
 
             if (best && best.id && activeId && best.id !== activeId && best.progressEligible && activeIsSevere) {

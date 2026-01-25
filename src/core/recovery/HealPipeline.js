@@ -48,12 +48,101 @@ const HealPipeline = (() => {
         const finalizeMonitorState = (monitorState, video) => {
             if (!monitorState) return;
             if (video.paused) {
-                monitorState.state = 'PAUSED';
+                monitorState.state = MonitorStates.PAUSED;
             } else if (poller.hasRecovered(video, monitorState)) {
-                monitorState.state = 'PLAYING';
+                monitorState.state = MonitorStates.PLAYING;
             } else {
-                monitorState.state = 'STALLED';
+                monitorState.state = MonitorStates.STALLED;
             }
+        };
+
+        const getDurationMs = (startTime) => Number((performance.now() - startTime).toFixed(0));
+
+        const handlePollAbort = (video, videoId, reason) => {
+            const abortReason = reason || 'poll_abort';
+            Logger.add(LogEvents.tagged('DETACHED', 'Heal aborted during polling'), {
+                reason: abortReason,
+                videoId
+            });
+            onDetached(video, abortReason);
+        };
+
+        const pollForHealPoint = async (video, monitorState, videoId, healStartTime) => {
+            const pollResult = await poller.pollForHealPoint(
+                video,
+                monitorState,
+                CONFIG.stall.HEAL_TIMEOUT_S * 1000
+            );
+
+            if (pollResult.aborted) {
+                handlePollAbort(video, videoId, pollResult.reason);
+                return { status: 'aborted' };
+            }
+
+            const healPoint = pollResult.healPoint;
+            if (!healPoint) {
+                if (poller.hasRecovered(video, monitorState)) {
+                    attemptLogger.logSelfRecovered(getDurationMs(healStartTime), video, videoId);
+                    resetRecovery(monitorState, 'self_recovered');
+                    return { status: 'recovered' };
+                }
+
+                const noPointDuration = getDurationMs(healStartTime);
+                attemptLogger.logNoHealPoint(noPointDuration, video, videoId);
+                Metrics.increment('heals_failed');
+                recoveryManager.handleNoHealPoint(video, monitorState, 'no_heal_point');
+                resetHealPointTracking(monitorState);
+                return { status: 'no_point' };
+            }
+
+            return { status: 'found', healPoint };
+        };
+
+        const revalidateHealPoint = (video, monitorState, videoId, healPoint, healStartTime) => {
+            const freshPoint = BufferGapFinder.findHealPoint(video, { silent: true });
+            if (!freshPoint) {
+                if (poller.hasRecovered(video, monitorState)) {
+                    attemptLogger.logStaleRecovered(getDurationMs(healStartTime));
+                    resetRecovery(monitorState, 'stale_recovered');
+                    return { status: 'recovered' };
+                }
+                attemptLogger.logStaleGone(healPoint, video, videoId);
+                Metrics.increment('heals_failed');
+                recoveryManager.handleNoHealPoint(video, monitorState, 'stale_gone');
+                resetHealPointTracking(monitorState);
+                return { status: 'stale_gone' };
+            }
+
+            if (freshPoint.start !== healPoint.start || freshPoint.end !== healPoint.end) {
+                attemptLogger.logPointUpdated(healPoint, freshPoint);
+            }
+
+            return { status: 'ready', healPoint: freshPoint };
+        };
+
+        const attemptSeekWithRetry = async (video, targetPoint) => {
+            const attemptSeekAndPlay = async (point, label) => {
+                if (label) {
+                    attemptLogger.logRetry(label, point);
+                }
+                return LiveEdgeSeeker.seekAndPlay(video, point);
+            };
+
+            let result = await attemptSeekAndPlay(targetPoint, null);
+            let finalPoint = targetPoint;
+
+            if (!result.success && HealAttemptUtils.isAbortError(result)) {
+                await Fn.sleep(CONFIG.recovery.HEAL_RETRY_DELAY_MS);
+                const retryPoint = BufferGapFinder.findHealPoint(video, { silent: true });
+                if (retryPoint) {
+                    finalPoint = retryPoint;
+                    result = await attemptSeekAndPlay(retryPoint, 'abort_error');
+                } else {
+                    attemptLogger.logRetrySkip(video, 'abort_error');
+                }
+            }
+
+            return { result, finalPoint };
         };
 
         const attemptHeal = async (videoOrContext, monitorStateOverride) => {
@@ -75,7 +164,7 @@ const HealPipeline = (() => {
             state.healAttempts++;
             const healStartTime = performance.now();
             if (monitorState) {
-                monitorState.state = 'HEALING';
+                monitorState.state = MonitorStates.HEALING;
                 monitorState.lastHealAttemptTime = Date.now();
             }
 
@@ -87,38 +176,8 @@ const HealPipeline = (() => {
             });
 
             try {
-                const pollResult = await poller.pollForHealPoint(
-                    video,
-                    monitorState,
-                    CONFIG.stall.HEAL_TIMEOUT_S * 1000
-                );
-
-                if (pollResult.aborted) {
-                    Logger.add(LogEvents.tagged('DETACHED', 'Heal aborted during polling'), {
-                        reason: pollResult.reason || 'poll_abort',
-                        videoId
-                    });
-                    onDetached(video, pollResult.reason || 'poll_abort');
-                    return;
-                }
-
-                const healPoint = pollResult.healPoint;
-                if (!healPoint) {
-                    if (poller.hasRecovered(video, monitorState)) {
-                        attemptLogger.logSelfRecovered(
-                            Number((performance.now() - healStartTime).toFixed(0)),
-                            video,
-                            videoId
-                        );
-                        resetRecovery(monitorState, 'self_recovered');
-                        return;
-                    }
-
-                    const noPointDuration = Number((performance.now() - healStartTime).toFixed(0));
-                    attemptLogger.logNoHealPoint(noPointDuration, video, videoId);
-                    Metrics.increment('heals_failed');
-                    recoveryManager.handleNoHealPoint(video, monitorState, 'no_heal_point');
-                    resetHealPointTracking(monitorState);
+                const pollOutcome = await pollForHealPoint(video, monitorState, videoId, healStartTime);
+                if (pollOutcome.status !== 'found') {
                     return;
                 }
 
@@ -126,19 +185,14 @@ const HealPipeline = (() => {
                     return;
                 }
 
-                const freshPoint = BufferGapFinder.findHealPoint(video, { silent: true });
-                if (!freshPoint) {
-                    if (poller.hasRecovered(video, monitorState)) {
-                        attemptLogger.logStaleRecovered(
-                            Number((performance.now() - healStartTime).toFixed(0))
-                        );
-                        resetRecovery(monitorState, 'stale_recovered');
-                        return;
-                    }
-                    attemptLogger.logStaleGone(healPoint, video, videoId);
-                    Metrics.increment('heals_failed');
-                    recoveryManager.handleNoHealPoint(video, monitorState, 'stale_gone');
-                    resetHealPointTracking(monitorState);
+                const revalidateOutcome = revalidateHealPoint(
+                    video,
+                    monitorState,
+                    videoId,
+                    pollOutcome.healPoint,
+                    healStartTime
+                );
+                if (revalidateOutcome.status !== 'ready') {
                     return;
                 }
 
@@ -146,35 +200,10 @@ const HealPipeline = (() => {
                     return;
                 }
 
-                const targetPoint = freshPoint;
-                if (freshPoint.start !== healPoint.start || freshPoint.end !== healPoint.end) {
-                    attemptLogger.logPointUpdated(healPoint, freshPoint);
-                }
+                const seekOutcome = await attemptSeekWithRetry(video, revalidateOutcome.healPoint);
+                const duration = getDurationMs(healStartTime);
 
-                const attemptSeekAndPlay = async (point, label) => {
-                    if (label) {
-                        attemptLogger.logRetry(label, point);
-                    }
-                    return LiveEdgeSeeker.seekAndPlay(video, point);
-                };
-
-                let result = await attemptSeekAndPlay(targetPoint, null);
-                let finalPoint = targetPoint;
-
-                if (!result.success && HealAttemptUtils.isAbortError(result)) {
-                    await Fn.sleep(CONFIG.recovery.HEAL_RETRY_DELAY_MS);
-                    const retryPoint = BufferGapFinder.findHealPoint(video, { silent: true });
-                    if (retryPoint) {
-                        finalPoint = retryPoint;
-                        result = await attemptSeekAndPlay(retryPoint, 'abort_error');
-                    } else {
-                        attemptLogger.logRetrySkip(video, 'abort_error');
-                    }
-                }
-
-                const duration = Number((performance.now() - healStartTime).toFixed(0));
-
-                if (result.success) {
+                if (seekOutcome.result.success) {
                     const bufferEndDelta = HealAttemptUtils.getBufferEndDelta(video);
                     attemptLogger.logHealComplete({
                         durationMs: duration,
@@ -187,30 +216,38 @@ const HealPipeline = (() => {
                     resetRecovery(monitorState, 'heal_success');
                     catchUpController.scheduleCatchUp(video, monitorState, videoId, 'post_heal');
                 } else {
-                    const repeatCount = HealAttemptUtils.updateHealPointRepeat(monitorState, finalPoint, false);
-                    if (HealAttemptUtils.isAbortError(result)) {
+                    const repeatCount = HealAttemptUtils.updateHealPointRepeat(
+                        monitorState,
+                        seekOutcome.finalPoint,
+                        false
+                    );
+                    if (HealAttemptUtils.isAbortError(seekOutcome.result)) {
                         attemptLogger.logAbortContext({
-                            result,
+                            result: seekOutcome.result,
                             monitorState,
                             video
                         });
                     }
                     attemptLogger.logHealFailed({
                         durationMs: duration,
-                        result,
-                        finalPoint,
+                        result: seekOutcome.result,
+                        finalPoint: seekOutcome.finalPoint,
                         video,
                         videoId
                     });
                     Metrics.increment('heals_failed');
                     if (monitorState && recoveryManager.handlePlayFailure
-                        && (HealAttemptUtils.isPlayFailure(result)
+                        && (HealAttemptUtils.isPlayFailure(seekOutcome.result)
                             || repeatCount >= CONFIG.stall.HEALPOINT_REPEAT_FAILOVER_COUNT)) {
                         recoveryManager.handlePlayFailure(video, monitorState, {
-                            reason: HealAttemptUtils.isPlayFailure(result) ? 'play_error' : 'healpoint_repeat',
-                            error: result.error,
-                            errorName: result.errorName,
-                            healRange: finalPoint ? `${finalPoint.start.toFixed(2)}-${finalPoint.end.toFixed(2)}` : null,
+                            reason: HealAttemptUtils.isPlayFailure(seekOutcome.result)
+                                ? 'play_error'
+                                : 'healpoint_repeat',
+                            error: seekOutcome.result.error,
+                            errorName: seekOutcome.result.errorName,
+                            healRange: seekOutcome.finalPoint
+                                ? `${seekOutcome.finalPoint.start.toFixed(2)}-${seekOutcome.finalPoint.end.toFixed(2)}`
+                                : null,
                             healPointRepeatCount: repeatCount
                         });
                     }

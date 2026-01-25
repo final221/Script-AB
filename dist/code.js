@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.4.14
+// @version       4.4.15
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -161,7 +161,7 @@ const CONFIG = (() => {
  * Build metadata helpers (version injected at build time).
  */
 const BuildInfo = (() => {
-    const VERSION = '4.4.14';
+    const VERSION = '4.4.15';
 
     const getVersion = () => {
         const gmVersion = (typeof GM_info !== 'undefined' && GM_info?.script?.version)
@@ -172,7 +172,7 @@ const BuildInfo = (() => {
             ? unsafeWindow.GM_info.script.version
             : null;
         if (unsafeVersion) return unsafeVersion;
-        if (VERSION && VERSION !== '4.4.14') return VERSION;
+        if (VERSION && VERSION !== '4.4.15') return VERSION;
         return null;
     };
 
@@ -3228,10 +3228,20 @@ const PlaybackLogHelper = (() => {
 /**
  * Provides initial playback state structure and alias map.
  */
+const MonitorStates = (() => Object.freeze({
+    PLAYING: 'PLAYING',
+    PAUSED: 'PAUSED',
+    STALLED: 'STALLED',
+    HEALING: 'HEALING',
+    RESET: 'RESET',
+    ERROR: 'ERROR',
+    ENDED: 'ENDED'
+}))();
+
 const PlaybackStateDefaults = (() => {
     const create = (video) => ({
         status: {
-            value: 'PLAYING'
+            value: MonitorStates.PLAYING
         },
         progress: {
             lastProgressTime: 0,
@@ -3703,7 +3713,7 @@ const PlaybackResetLogic = (() => {
             const pendingReason = state.resetPendingReason || trigger;
             const pendingType = state.resetPendingType || (resetState.isHardReset ? 'hard' : 'soft');
 
-            state.state = 'RESET';
+            state.state = MonitorStates.RESET;
             logDebugLazy(LogEvents.tagged('RESET', 'Video reset'), () => ({
                 reason: pendingReason,
                 resetType: pendingType,
@@ -4309,13 +4319,13 @@ const PlaybackEventHandlersProgress = (() => {
         return {
             timeupdate: () => {
                 tracker.updateProgress('timeupdate');
-                if (state.state !== 'PLAYING') {
+                if (state.state !== MonitorStates.PLAYING) {
                     logEvent('timeupdate', () => ({
                         state: state.state
                     }));
                 }
-                if (!video.paused && state.state !== 'HEALING') {
-                    setState('PLAYING', 'timeupdate');
+                if (!video.paused && state.state !== MonitorStates.HEALING) {
+                    setState(MonitorStates.PLAYING, 'timeupdate');
                 }
             }
         };
@@ -4344,8 +4354,8 @@ const PlaybackEventHandlersReady = (() => {
                 logEvent('playing', () => ({
                     state: state.state
                 }));
-                if (state.state !== 'HEALING') {
-                    setState('PLAYING', 'playing');
+                if (state.state !== MonitorStates.HEALING) {
+                    setState(MonitorStates.PLAYING, 'playing');
                 }
             },
             loadedmetadata: () => {
@@ -4390,8 +4400,8 @@ const PlaybackEventHandlersStall = (() => {
                 logEvent('waiting', () => ({
                     state: state.state
                 }));
-                if (!video.paused && state.state !== 'HEALING') {
-                    setState('STALLED', 'waiting');
+                if (!video.paused && state.state !== MonitorStates.HEALING) {
+                    setState(MonitorStates.STALLED, 'waiting');
                 }
             },
             stalled: () => {
@@ -4399,8 +4409,8 @@ const PlaybackEventHandlersStall = (() => {
                 logEvent('stalled', () => ({
                     state: state.state
                 }));
-                if (!video.paused && state.state !== 'HEALING') {
-                    setState('STALLED', 'stalled');
+                if (!video.paused && state.state !== MonitorStates.HEALING) {
+                    setState(MonitorStates.STALLED, 'stalled');
                 }
             },
             pause: () => {
@@ -4411,12 +4421,12 @@ const PlaybackEventHandlersStall = (() => {
                 }));
                 if (bufferExhausted && !video.ended) {
                     tracker.markStallEvent('pause_buffer_exhausted');
-                    if (state.state !== 'HEALING') {
-                        setState('STALLED', 'pause_buffer_exhausted');
+                    if (state.state !== MonitorStates.HEALING) {
+                        setState(MonitorStates.STALLED, 'pause_buffer_exhausted');
                     }
                     return;
                 }
-                setState('PAUSED', 'pause');
+                setState(MonitorStates.PAUSED, 'pause');
             }
         };
     };
@@ -4450,21 +4460,21 @@ const PlaybackEventHandlersLifecycle = (() => {
                         ? Number(video.currentTime.toFixed(3))
                         : null
                 });
-                setState('ENDED', 'ended');
+                setState(MonitorStates.ENDED, 'ended');
             },
             error: () => {
                 state.pauseFromStall = false;
                 logEvent('error', () => ({
                     state: state.state
                 }));
-                setState('ERROR', 'error');
+                setState(MonitorStates.ERROR, 'error');
             },
             abort: () => {
                 state.pauseFromStall = false;
                 logEvent('abort', () => ({
                     state: state.state
                 }));
-                setState('PAUSED', 'abort');
+                setState(MonitorStates.PAUSED, 'abort');
                 tracker.handleReset('abort', onReset);
             },
             emptied: () => {
@@ -4602,11 +4612,11 @@ const PlaybackWatchdog = (() => {
                 pauseFromStall = true;
             }
             if (video.paused && !pauseFromStall) {
-                setState('PAUSED', 'watchdog_paused');
+                setState(MonitorStates.PAUSED, 'watchdog_paused');
                 return;
             }
-            if (video.paused && pauseFromStall && state.state !== 'STALLED') {
-                setState('STALLED', bufferExhausted ? 'paused_buffer_exhausted' : 'paused_after_stall');
+            if (video.paused && pauseFromStall && state.state !== MonitorStates.STALLED) {
+                setState(MonitorStates.STALLED, bufferExhausted ? 'paused_buffer_exhausted' : 'paused_after_stall');
             }
 
             if (tracker.shouldSkipUntilProgress()) {
@@ -4634,8 +4644,8 @@ const PlaybackWatchdog = (() => {
                 return;
             }
 
-            if (state.state !== 'STALLED') {
-                setState('STALLED', 'watchdog_no_progress');
+            if (state.state !== MonitorStates.STALLED) {
+                setState(MonitorStates.STALLED, 'watchdog_no_progress');
             }
 
             const logIntervalMs = Tuning.logIntervalMs(isActive());
@@ -4792,7 +4802,7 @@ const CandidateScorer = (() => {
                 reasons.push('error');
             }
 
-            if (state.state === 'RESET') {
+            if (state.state === MonitorStates.RESET) {
                 score -= 3;
                 reasons.push('reset');
             }
@@ -4802,7 +4812,7 @@ const CandidateScorer = (() => {
                 reasons.push('reset_pending');
             }
 
-            if (state.state === 'ERROR') {
+            if (state.state === MonitorStates.ERROR) {
                 score -= 2;
                 reasons.push('error_state');
             }
@@ -4940,6 +4950,144 @@ const CandidateSwitchPolicy = (() => {
         };
 
         return { shouldSwitch };
+    };
+
+    return { create };
+})();
+
+// --- CandidateDecision ---
+/**
+ * Builds candidate switch decisions from scoring + policy inputs.
+ */
+const CandidateDecision = (() => {
+    const create = (options = {}) => {
+        const switchPolicy = options.switchPolicy;
+
+        const decide = ({
+            now,
+            current,
+            preferred,
+            activeCandidateId,
+            probationActive,
+            scores,
+            reason
+        }) => {
+            if (!preferred || preferred.id === activeCandidateId) {
+                return {
+                    action: 'none',
+                    reason,
+                    fromId: activeCandidateId,
+                    toId: preferred?.id || null,
+                    preferred,
+                    scores
+                };
+            }
+
+            const activeState = current ? current.state : null;
+            const activeMonitorState = current ? current.monitorState : null;
+            const activeNoHealPoints = activeMonitorState?.noHealPointCount || 0;
+            const activeStalledForMs = activeMonitorState?.lastProgressTime
+                ? (now - activeMonitorState.lastProgressTime)
+                : null;
+            const activeHealing = activeState === MonitorStates.HEALING;
+            const activeIsStalled = !current || [
+                MonitorStates.STALLED,
+                MonitorStates.RESET,
+                MonitorStates.ERROR,
+                MonitorStates.ENDED
+            ].includes(activeState);
+            const probationProgressOk = preferred.progressStreakMs >= CONFIG.monitoring.PROBATION_MIN_PROGRESS_MS;
+            const probationReady = probationActive
+                && probationProgressOk
+                && (preferred.vs.readyState >= CONFIG.monitoring.PROBATION_READY_STATE
+                    || preferred.vs.currentSrc);
+
+            const fastSwitchAllowed = activeHealing
+                && preferred.trusted
+                && preferred.progressEligible
+                && preferred.progressStreakMs >= CONFIG.monitoring.CANDIDATE_MIN_PROGRESS_MS
+                && (activeNoHealPoints >= CONFIG.stall.FAST_SWITCH_AFTER_NO_HEAL_POINTS
+                    || (activeStalledForMs !== null
+                        && activeStalledForMs >= CONFIG.stall.FAST_SWITCH_AFTER_STALL_MS));
+
+            const baseDecision = {
+                reason,
+                fromId: activeCandidateId,
+                toId: preferred.id,
+                activeState,
+                activeIsStalled,
+                activeNoHealPoints,
+                activeStalledForMs,
+                probationActive,
+                probationReady,
+                preferred,
+                scores,
+                currentTrusted: current ? current.trusted : false
+            };
+
+            if (fastSwitchAllowed) {
+                return {
+                    action: 'fast_switch',
+                    ...baseDecision
+                };
+            }
+
+            if (!preferred.progressEligible && !probationReady) {
+                return {
+                    action: 'stay',
+                    suppression: 'preferred_not_progress_eligible',
+                    ...baseDecision
+                };
+            }
+
+            if (!activeIsStalled) {
+                return {
+                    action: 'stay',
+                    suppression: 'active_not_stalled',
+                    ...baseDecision
+                };
+            }
+
+            if (baseDecision.currentTrusted && !preferred.trusted) {
+                return {
+                    action: 'stay',
+                    suppression: 'trusted_active_blocks_untrusted',
+                    ...baseDecision
+                };
+            }
+
+            if (!preferred.trusted && !probationActive) {
+                return {
+                    action: 'stay',
+                    suppression: 'untrusted_outside_probation',
+                    ...baseDecision
+                };
+            }
+
+            const preferredForPolicy = probationReady
+                ? { ...preferred, progressEligible: true }
+                : preferred;
+            const policyDecision = switchPolicy.shouldSwitch(current, preferredForPolicy, scores, reason);
+
+            if (policyDecision.allow) {
+                return {
+                    action: 'switch',
+                    policyDecision,
+                    preferredForPolicy,
+                    ...baseDecision
+                };
+            }
+
+            return {
+                action: 'stay',
+                suppression: policyDecision.suppression || 'score_delta',
+                policyDecision,
+                preferredForPolicy,
+                ...baseDecision
+            };
+        };
+
+        return { decide };
     };
 
     return { create };
@@ -5132,6 +5280,56 @@ const CandidateSelectionLogger = (() => {
             || (Date.now() - lastDecisionLogTime) >= CONFIG.logging.ACTIVE_LOG_MS
         );
 
+        const buildDecisionDetail = (decision) => {
+            if (!decision) return null;
+            const preferred = decision.preferred || decision.preferredForPolicy;
+            const detail = {
+                reason: decision.reason,
+                action: decision.action,
+                activeState: decision.activeState,
+                preferredScore: preferred?.score,
+                preferredProgressEligible: preferred?.progressEligible,
+                preferredTrusted: preferred?.trusted,
+                probationActive: decision.probationActive
+            };
+
+            if (decision.action === 'stay') {
+                detail.suppression = decision.suppression;
+                detail.activeId = decision.fromId;
+                detail.preferredId = decision.toId;
+                if (decision.probationReady) {
+                    detail.probationReady = decision.probationReady;
+                }
+            }
+
+            if (decision.action === 'switch' || decision.action === 'fast_switch') {
+                detail.from = decision.fromId;
+                detail.to = decision.toId;
+            }
+
+            return detail;
+        };
+
+        const buildSuppressionDetail = (decision) => {
+            if (!decision || decision.action !== 'stay' || !decision.suppression) return null;
+            const detail = {
+                from: decision.fromId,
+                to: decision.toId,
+                reason: decision.reason,
+                cause: decision.suppression,
+                activeState: decision.activeState,
+                probationActive: decision.probationActive,
+                scores: decision.scores
+            };
+
+            if (decision.suppression === 'trusted_active_blocks_untrusted') {
+                detail.currentTrusted = decision.currentTrusted;
+                detail.preferredTrusted = decision.preferred?.trusted;
+            }
+
+            return detail;
+        };
+
         const logDecision = (detail) => {
             if (!detail || !shouldLogDecision(detail.reason)) return;
             lastDecisionLogTime = Date.now();
@@ -5179,7 +5377,18 @@ const CandidateSelectionLogger = (() => {
 
         return {
             logDecision,
-            logSuppression
+            logSuppression,
+            logOutcome: (decision) => {
+                if (!decision || decision.action === 'none') return;
+                const suppression = buildSuppressionDetail(decision);
+                if (suppression) {
+                    logSuppression(suppression);
+                }
+                const detail = buildDecisionDetail(decision);
+                if (detail) {
+                    logDecision(detail);
+                }
+            }
         };
     };
 
@@ -5209,6 +5418,7 @@ const CandidateSelector = (() => {
             logDebug
         });
         const selectionLogger = CandidateSelectionLogger.create({ logDebug });
+        const decisionEngine = CandidateDecision.create({ switchPolicy });
         const probation = CandidateProbation.create();
 
         const setLockChecker = (fn) => {
@@ -5218,107 +5428,7 @@ const CandidateSelector = (() => {
         const activateProbation = (reason) => probation.activate(reason);
         const isProbationActive = () => probation.isActive();
 
-        const logDecision = selectionLogger.logDecision;
-        const logSuppression = selectionLogger.logSuppression;
-
-        const buildSwitchDecision = ({ now, current, preferred, activeCandidateId, probationActive, scores, reason }) => {
-            if (!preferred || preferred.id === activeCandidateId) {
-                return { action: 'none' };
-            }
-
-            const activeState = current ? current.state : null;
-            const activeMonitorState = current ? current.monitorState : null;
-            const activeNoHealPoints = activeMonitorState?.noHealPointCount || 0;
-            const activeStalledForMs = activeMonitorState?.lastProgressTime
-                ? (now - activeMonitorState.lastProgressTime)
-                : null;
-            const activeHealing = activeState === 'HEALING';
-            const activeIsStalled = !current || ['STALLED', 'RESET', 'ERROR', 'ENDED'].includes(activeState);
-            const probationProgressOk = preferred.progressStreakMs >= CONFIG.monitoring.PROBATION_MIN_PROGRESS_MS;
-            const probationReady = probationActive
-                && probationProgressOk
-                && (preferred.vs.readyState >= CONFIG.monitoring.PROBATION_READY_STATE
-                    || preferred.vs.currentSrc);
-
-            const fastSwitchAllowed = activeHealing
-                && preferred.trusted
-                && preferred.progressEligible
-                && preferred.progressStreakMs >= CONFIG.monitoring.CANDIDATE_MIN_PROGRESS_MS
-                && (activeNoHealPoints >= CONFIG.stall.FAST_SWITCH_AFTER_NO_HEAL_POINTS
-                    || (activeStalledForMs !== null && activeStalledForMs >= CONFIG.stall.FAST_SWITCH_AFTER_STALL_MS));
-
-            const baseDecision = {
-                activeState,
-                activeIsStalled,
-                activeNoHealPoints,
-                activeStalledForMs,
-                probationActive,
-                probationReady,
-                preferred,
-                currentTrusted: current ? current.trusted : false
-            };
-
-            if (fastSwitchAllowed) {
-                return {
-                    action: 'fast_switch',
-                    ...baseDecision
-                };
-            }
-
-            if (!preferred.progressEligible && !probationReady) {
-                return {
-                    action: 'stay',
-                    suppression: 'preferred_not_progress_eligible',
-                    ...baseDecision
-                };
-            }
-
-            if (!activeIsStalled) {
-                return {
-                    action: 'stay',
-                    suppression: 'active_not_stalled',
-                    ...baseDecision
-                };
-            }
-
-            if (baseDecision.currentTrusted && !preferred.trusted) {
-                return {
-                    action: 'stay',
-                    suppression: 'trusted_active_blocks_untrusted',
-                    ...baseDecision
-                };
-            }
-
-            if (!preferred.trusted && !probationActive) {
-                return {
-                    action: 'stay',
-                    suppression: 'untrusted_outside_probation',
-                    ...baseDecision
-                };
-            }
-
-            const preferredForPolicy = probationReady
-                ? { ...preferred, progressEligible: true }
-                : preferred;
-            const policyDecision = switchPolicy.shouldSwitch(current, preferredForPolicy, scores, reason);
-
-            if (policyDecision.allow) {
-                return {
-                    action: 'switch',
-                    policyDecision,
-                    preferredForPolicy,
-                    ...baseDecision
-                };
-            }
-
-            return {
-                action: 'stay',
-                suppression: policyDecision.suppression || 'score_delta',
-                policyDecision,
-                preferredForPolicy,
-                ...baseDecision
-            };
-        };
+        const logOutcome = selectionLogger.logOutcome;
 
         const getActiveId = () => {
             if (!activeCandidateId && monitorsById.size > 0) {
@@ -5392,7 +5502,7 @@ const CandidateSelector = (() => {
 
             if (preferred && preferred.id !== activeCandidateId) {
                 const probationActive = isProbationActive();
-                const decision = buildSwitchDecision({
+                const decision = decisionEngine.decide({
                     now,
                     current,
                     preferred,
@@ -5403,176 +5513,41 @@ const CandidateSelector = (() => {
                 });
 
                 if (decision.action === 'fast_switch') {
-                    const fromId = activeCandidateId;
+                    const fromId = decision.fromId;
                     Logger.add(LogEvents.tagged('CANDIDATE', 'Fast switch from healing dead-end'), {
                         from: fromId,
-                        to: preferred.id,
-                        reason,
+                        to: decision.toId,
+                        reason: decision.reason,
                         activeState: decision.activeState,
                         noHealPointCount: decision.activeNoHealPoints,
                         stalledForMs: decision.activeStalledForMs,
-                        preferredScore: preferred.score,
-                        preferredProgressStreakMs: preferred.progressStreakMs,
-                        preferredTrusted: preferred.trusted
+                        preferredScore: decision.preferred.score,
+                        preferredProgressStreakMs: decision.preferred.progressStreakMs,
+                        preferredTrusted: decision.preferred.trusted
                     });
-                    activeCandidateId = preferred.id;
-                    logDecision({
-                        reason,
-                        action: 'fast_switch',
-                        from: fromId,
-                        to: activeCandidateId,
-                        activeState: decision.activeState,
-                        preferredScore: preferred.score,
-                        preferredProgressEligible: preferred.progressEligible,
-                        preferredTrusted: preferred.trusted,
-                        probationActive
-                    });
-                    return preferred;
-                }
-
-                if (decision.action === 'stay' && decision.suppression === 'preferred_not_progress_eligible') {
-                    logSuppression({
-                        from: activeCandidateId,
-                        to: preferred.id,
-                        reason,
-                        cause: decision.suppression,
-                        activeState: decision.activeState,
-                        probationActive,
-                        scores
-                    });
-                    logDecision({
-                        reason,
-                        action: 'stay',
-                        suppression: decision.suppression,
-                        activeId: activeCandidateId,
-                        activeState: decision.activeState,
-                        preferredId: preferred.id,
-                        preferredScore: preferred.score,
-                        preferredProgressEligible: preferred.progressEligible,
-                        preferredTrusted: preferred.trusted,
-                        probationActive,
-                        probationReady: decision.probationReady
-                    });
-                    return preferred;
-                }
-
-                if (decision.action === 'stay' && decision.suppression === 'active_not_stalled') {
-                    logSuppression({
-                        from: activeCandidateId,
-                        to: preferred.id,
-                        reason,
-                        cause: decision.suppression,
-                        activeState: decision.activeState,
-                        probationActive,
-                        scores
-                    });
-                    logDecision({
-                        reason,
-                        action: 'stay',
-                        suppression: decision.suppression,
-                        activeId: activeCandidateId,
-                        activeState: decision.activeState,
-                        preferredId: preferred.id,
-                        preferredScore: preferred.score,
-                        preferredProgressEligible: preferred.progressEligible,
-                        preferredTrusted: preferred.trusted,
-                        probationActive
-                    });
-                    return preferred;
-                }
-
-                if (decision.action === 'stay' && decision.suppression === 'trusted_active_blocks_untrusted') {
-                    logSuppression({
-                        from: activeCandidateId,
-                        to: preferred.id,
-                        reason,
-                        cause: decision.suppression,
-                        activeState: decision.activeState,
-                        probationActive,
-                        currentTrusted: decision.currentTrusted,
-                        preferredTrusted: preferred.trusted,
-                        scores
-                    });
-                    logDecision({
-                        reason,
-                        action: 'stay',
-                        suppression: decision.suppression,
-                        activeId: activeCandidateId,
-                        activeState: decision.activeState,
-                        preferredId: preferred.id,
-                        preferredScore: preferred.score,
-                        preferredProgressEligible: preferred.progressEligible,
-                        preferredTrusted: preferred.trusted,
-                        probationActive
-                    });
-                    return preferred;
-                }
-
-                if (decision.action === 'stay' && decision.suppression === 'untrusted_outside_probation') {
-                    logSuppression({
-                        from: activeCandidateId,
-                        to: preferred.id,
-                        reason,
-                        cause: decision.suppression,
-                        activeState: decision.activeState,
-                        probationActive,
-                        scores
-                    });
-                    logDecision({
-                        reason,
-                        action: 'stay',
-                        suppression: decision.suppression,
-                        activeId: activeCandidateId,
-                        activeState: decision.activeState,
-                        preferredId: preferred.id,
-                        preferredScore: preferred.score,
-                        preferredProgressEligible: preferred.progressEligible,
-                        preferredTrusted: preferred.trusted,
-                        probationActive
-                    });
+                    activeCandidateId = decision.toId;
+                    logOutcome(decision);
                     return preferred;
                 }
 
                 if (decision.action === 'switch') {
-                    const fromId = activeCandidateId;
+                    const fromId = decision.fromId;
                     Logger.add(LogEvents.tagged('CANDIDATE', 'Active video switched'), {
-                        from: activeCandidateId,
-                        to: preferred.id,
-                        reason,
+                        from: fromId,
+                        to: decision.toId,
+                        reason: decision.reason,
                         delta: decision.policyDecision.delta,
                         currentScore: decision.policyDecision.currentScore,
-                        bestScore: preferred.score,
-                        bestProgressStreakMs: preferred.progressStreakMs,
-                        bestProgressEligible: preferred.progressEligible,
+                        bestScore: decision.preferred.score,
+                        bestProgressStreakMs: decision.preferred.progressStreakMs,
+                        bestProgressEligible: decision.preferred.progressEligible,
                         probationActive,
                         scores
                     });
-                    activeCandidateId = preferred.id;
-                    logDecision({
-                        reason,
-                        action: 'switch',
-                        from: fromId,
-                        to: activeCandidateId,
-                        activeState: decision.activeState,
-                        preferredScore: preferred.score,
-                        preferredProgressEligible: preferred.progressEligible,
-                        preferredTrusted: preferred.trusted,
-                        probationActive
-                    });
-                } else if (decision.action === 'stay') {
-                    logDecision({
-                        reason,
-                        action: 'stay',
-                        suppression: decision.suppression,
-                        activeId: activeCandidateId,
-                        activeState: decision.activeState,
-                        preferredId: preferred.id,
-                        preferredScore: preferred.score,
-                        preferredProgressEligible: preferred.progressEligible,
-                        preferredTrusted: preferred.trusted,
-                        probationActive
-                    });
+                    activeCandidateId = decision.toId;
                 }
+
+                logOutcome(decision);
             }
 
             return preferred;
@@ -5681,6 +5656,36 @@ const CandidateSelector = (() => {
  * Shared context wrapper for recovery flows.
  */
 const RecoveryContext = (() => {
+    const buildDecisionContext = (context) => {
+        const video = context?.video;
+        const monitorState = context?.monitorState;
+        const now = Number.isFinite(context?.now) ? context.now : Date.now();
+        const videoId = context?.videoId || 'unknown';
+        const ranges = video ? MediaState.ranges(video) : [];
+        const lastRange = ranges.length ? ranges[ranges.length - 1] : null;
+        const currentTime = video && Number.isFinite(video.currentTime) ? video.currentTime : null;
+        const bufferEnd = lastRange ? lastRange.end : null;
+        const headroom = (bufferEnd !== null && currentTime !== null)
+            ? Math.max(0, bufferEnd - currentTime)
+            : null;
+        const hasSrc = Boolean(video?.currentSrc || video?.getAttribute?.('src'));
+
+        return {
+            now,
+            videoId,
+            ranges,
+            bufferEnd,
+            headroom,
+            hasSrc,
+            currentTime,
+            readyState: video?.readyState ?? null,
+            networkState: video?.networkState ?? null,
+            stalledForMs: monitorState?.lastProgressTime
+                ? (now - monitorState.lastProgressTime)
+                : null
+        };
+    };
+
     const create = (video, monitorState, getVideoId, detail = {}) => {
         const videoId = detail.videoId || (typeof getVideoId === 'function'
             ? getVideoId(video)
@@ -5700,7 +5705,13 @@ const RecoveryContext = (() => {
             getLiteLogSnapshot: () => VideoStateSnapshot.forLog(video, videoId, 'lite'),
             getRanges: () => BufferGapFinder.getBufferRanges(video),
             getRangesFormatted: () => BufferGapFinder.analyze(video).formattedRanges,
-            getBufferAhead: () => BufferGapFinder.getBufferAhead(video)
+            getBufferAhead: () => BufferGapFinder.getBufferAhead(video),
+            getDecisionContext: () => buildDecisionContext({
+                video,
+                monitorState,
+                videoId,
+                now
+            })
         };
     };
 
@@ -5713,7 +5724,8 @@ const RecoveryContext = (() => {
 
     return {
         create,
-        from
+        from,
+        buildDecisionContext
     };
 })();
 
@@ -5836,6 +5848,44 @@ const ProbationPolicy = (() => {
     return { create };
 })();
 
+// --- RecoveryLogDetails ---
+/**
+ * Shared log detail builders for recovery policies.
+ */
+const RecoveryLogDetails = (() => {
+    const playBackoffReset = (detail = {}) => ({
+        reason: detail.reason,
+        previousPlayErrors: detail.previousPlayErrors,
+        previousNextPlayAllowedMs: detail.previousNextPlayAllowedMs,
+        previousHealPointRepeats: detail.previousHealPointRepeats
+    });
+
+    const playBackoff = (detail = {}) => ({
+        videoId: detail.videoId,
+        reason: detail.reason,
+        error: detail.error,
+        errorName: detail.errorName,
+        playErrorCount: detail.playErrorCount,
+        backoffMs: detail.backoffMs,
+        abortBackoff: detail.abortBackoff,
+        nextHealAllowedInMs: detail.nextHealAllowedInMs,
+        healRange: detail.healRange || null,
+        healPointRepeatCount: detail.healPointRepeatCount || 0
+    });
+
+    const refresh = (detail = {}) => ({
+        videoId: detail.videoId,
+        reason: detail.reason,
+        noHealPointCount: detail.noHealPointCount
+    });
+
+    return {
+        playBackoffReset,
+        playBackoff,
+        refresh
+    };
+})();
+
 // --- NoHealPointPolicy ---
 /**
  * Handles no-heal-point scenarios, refreshes, and failover decisions.
@@ -5915,11 +5965,14 @@ const NoHealPointPolicy = (() => {
             }
             monitorState.lastRefreshAt = now;
             monitorState.noHealPointRefreshUntil = 0;
-            logDebug(LogEvents.tagged('REFRESH', 'Refreshing video after repeated no-heal points'), {
-                videoId,
-                reason,
-                noHealPointCount: monitorState.noHealPointCount
-            });
+            logDebug(
+                LogEvents.tagged('REFRESH', 'Refreshing video after repeated no-heal points'),
+                RecoveryLogDetails.refresh({
+                    videoId,
+                    reason,
+                    noHealPointCount: monitorState.noHealPointCount
+                })
+            );
             monitorState.noHealPointCount = 0;
             onPersistentFailure(videoId, {
                 reason,
@@ -5932,17 +5985,19 @@ const NoHealPointPolicy = (() => {
             const video = context.video;
             const monitorState = context.monitorState;
             const videoId = context.videoId || (getVideoId ? getVideoId(video) : 'unknown');
+            const decisionContext = context.getDecisionContext
+                ? context.getDecisionContext()
+                : RecoveryContext.buildDecisionContext(context);
+            const now = decisionContext.now;
+            const ranges = decisionContext.ranges;
 
             backoffManager.applyBackoff(videoId, monitorState, reason);
 
             if (monitorState && (monitorState.noHealPointCount || 0) >= CONFIG.stall.REFRESH_AFTER_NO_HEAL_POINTS) {
-                const now = Date.now();
-                const ranges = MediaState.ranges(video);
                 if (ranges.length) {
-                    const end = ranges[ranges.length - 1].end;
-                    const headroom = Math.max(0, end - video.currentTime);
-                    const hasSrc = Boolean(video.currentSrc || video.getAttribute?.('src'));
-                    const readyState = video.readyState;
+                    const headroom = decisionContext.headroom;
+                    const hasSrc = decisionContext.hasSrc;
+                    const readyState = decisionContext.readyState;
                     if (headroom < CONFIG.recovery.MIN_HEAL_HEADROOM_S
                         && hasSrc
                         && readyState >= CONFIG.stall.NO_HEAL_POINT_REFRESH_MIN_READY_STATE) {
@@ -5953,9 +6008,7 @@ const NoHealPointPolicy = (() => {
                 }
             }
 
-            const ranges = MediaState.ranges(video);
             if (!ranges.length) {
-                const now = Date.now();
                 const lastNoBufferRescan = noBufferRescanTimes.get(videoId) || 0;
                 if (now - lastNoBufferRescan >= CONFIG.stall.PROBATION_RESCAN_COOLDOWN_MS) {
                     noBufferRescanTimes.set(videoId, now);
@@ -5980,9 +6033,7 @@ const NoHealPointPolicy = (() => {
                 )
                 : false;
 
-            const stalledForMs = monitorState?.lastProgressTime
-                ? (Date.now() - monitorState.lastProgressTime)
-                : null;
+            const stalledForMs = decisionContext.stalledForMs;
             const shouldFailover = monitorsById && monitorsById.size > 1
                 && (monitorState?.noHealPointCount >= CONFIG.stall.FAILOVER_AFTER_NO_HEAL_POINTS
                     || (stalledForMs !== null && stalledForMs >= CONFIG.stall.FAILOVER_AFTER_STALL_MS));
@@ -6028,14 +6079,14 @@ const PlayErrorPolicy = (() => {
         const resetPlayError = (monitorState, reason) => {
             if (!monitorState) return;
             if (monitorState.playErrorCount > 0 || monitorState.nextPlayHealAllowedTime > 0) {
-                logDebug(LogEvents.tagged('PLAY_BACKOFF', 'Reset'), {
+                logDebug(LogEvents.tagged('PLAY_BACKOFF', 'Reset'), RecoveryLogDetails.playBackoffReset({
                     reason,
                     previousPlayErrors: monitorState.playErrorCount,
                     previousNextPlayAllowedMs: monitorState.nextPlayHealAllowedTime
                         ? Math.max(monitorState.nextPlayHealAllowedTime - Date.now(), 0)
                         : 0,
                     previousHealPointRepeats: monitorState.healPointRepeatCount
-                });
+                }));
             }
             monitorState.playErrorCount = 0;
             monitorState.nextPlayHealAllowedTime = 0;
@@ -6071,7 +6122,7 @@ const PlayErrorPolicy = (() => {
             monitorState.lastPlayErrorTime = now;
             monitorState.nextPlayHealAllowedTime = now + backoffMs;
 
-            Logger.add(LogEvents.tagged('PLAY_BACKOFF', 'Play failed'), {
+            Logger.add(LogEvents.tagged('PLAY_BACKOFF', 'Play failed'), RecoveryLogDetails.playBackoff({
                 videoId,
                 reason: detail.reason,
                 error: detail.error,
@@ -6082,7 +6133,7 @@ const PlayErrorPolicy = (() => {
                 nextHealAllowedInMs: backoffMs,
                 healRange: detail.healRange || null,
                 healPointRepeatCount: detail.healPointRepeatCount || 0
-            });
+            }));
 
             const repeatCount = detail.healPointRepeatCount || 0;
             const repeatStuck = repeatCount >= CONFIG.stall.HEALPOINT_REPEAT_FAILOVER_COUNT;
@@ -6152,9 +6203,12 @@ const StallSkipPolicy = (() => {
         const logDebug = options.logDebug || (() => {});
 
         const shouldSkipStall = (context) => {
-            const videoId = context.videoId;
+            const decisionContext = context.getDecisionContext
+                ? context.getDecisionContext()
+                : RecoveryContext.buildDecisionContext(context);
+            const videoId = decisionContext.videoId;
             const monitorState = context.monitorState;
-            const now = Date.now();
+            const now = decisionContext.now;
             if (backoffManager.shouldSkip(videoId, monitorState)) {
                 return true;
             }
@@ -6184,8 +6238,7 @@ const StallSkipPolicy = (() => {
             }
 
             if (monitorState) {
-                const lastProgress = monitorState.lastProgressTime || 0;
-                const stalledForMs = lastProgress ? (now - lastProgress) : null;
+                const stalledForMs = decisionContext.stalledForMs;
                 const baseGraceMs = CONFIG.stall.SELF_RECOVER_GRACE_MS;
                 const allowExtraGrace = !monitorState.bufferStarved;
                 const extraGraceMs = allowExtraGrace ? (CONFIG.stall.SELF_RECOVER_EXTRA_MS || 0) : 0;
@@ -7325,12 +7378,101 @@ const HealPipeline = (() => {
         const finalizeMonitorState = (monitorState, video) => {
             if (!monitorState) return;
             if (video.paused) {
-                monitorState.state = 'PAUSED';
+                monitorState.state = MonitorStates.PAUSED;
             } else if (poller.hasRecovered(video, monitorState)) {
-                monitorState.state = 'PLAYING';
+                monitorState.state = MonitorStates.PLAYING;
             } else {
-                monitorState.state = 'STALLED';
+                monitorState.state = MonitorStates.STALLED;
             }
+        };
+
+        const getDurationMs = (startTime) => Number((performance.now() - startTime).toFixed(0));
+
+        const handlePollAbort = (video, videoId, reason) => {
+            const abortReason = reason || 'poll_abort';
+            Logger.add(LogEvents.tagged('DETACHED', 'Heal aborted during polling'), {
+                reason: abortReason,
+                videoId
+            });
+            onDetached(video, abortReason);
+        };
+
+        const pollForHealPoint = async (video, monitorState, videoId, healStartTime) => {
+            const pollResult = await poller.pollForHealPoint(
+                video,
+                monitorState,
+                CONFIG.stall.HEAL_TIMEOUT_S * 1000
+            );
+
+            if (pollResult.aborted) {
+                handlePollAbort(video, videoId, pollResult.reason);
+                return { status: 'aborted' };
+            }
+
+            const healPoint = pollResult.healPoint;
+            if (!healPoint) {
+                if (poller.hasRecovered(video, monitorState)) {
+                    attemptLogger.logSelfRecovered(getDurationMs(healStartTime), video, videoId);
+                    resetRecovery(monitorState, 'self_recovered');
+                    return { status: 'recovered' };
+                }
+
+                const noPointDuration = getDurationMs(healStartTime);
+                attemptLogger.logNoHealPoint(noPointDuration, video, videoId);
+                Metrics.increment('heals_failed');
+                recoveryManager.handleNoHealPoint(video, monitorState, 'no_heal_point');
+                resetHealPointTracking(monitorState);
+                return { status: 'no_point' };
+            }
+
+            return { status: 'found', healPoint };
+        };
+
+        const revalidateHealPoint = (video, monitorState, videoId, healPoint, healStartTime) => {
+            const freshPoint = BufferGapFinder.findHealPoint(video, { silent: true });
+            if (!freshPoint) {
+                if (poller.hasRecovered(video, monitorState)) {
+                    attemptLogger.logStaleRecovered(getDurationMs(healStartTime));
+                    resetRecovery(monitorState, 'stale_recovered');
+                    return { status: 'recovered' };
+                }
+                attemptLogger.logStaleGone(healPoint, video, videoId);
+                Metrics.increment('heals_failed');
+                recoveryManager.handleNoHealPoint(video, monitorState, 'stale_gone');
+                resetHealPointTracking(monitorState);
+                return { status: 'stale_gone' };
+            }
+
+            if (freshPoint.start !== healPoint.start || freshPoint.end !== healPoint.end) {
+                attemptLogger.logPointUpdated(healPoint, freshPoint);
+            }
+
+            return { status: 'ready', healPoint: freshPoint };
+        };
+
+        const attemptSeekWithRetry = async (video, targetPoint) => {
+            const attemptSeekAndPlay = async (point, label) => {
+                if (label) {
+                    attemptLogger.logRetry(label, point);
+                }
+                return LiveEdgeSeeker.seekAndPlay(video, point);
+            };
+
+            let result = await attemptSeekAndPlay(targetPoint, null);
+            let finalPoint = targetPoint;
+
+            if (!result.success && HealAttemptUtils.isAbortError(result)) {
+                await Fn.sleep(CONFIG.recovery.HEAL_RETRY_DELAY_MS);
+                const retryPoint = BufferGapFinder.findHealPoint(video, { silent: true });
+                if (retryPoint) {
+                    finalPoint = retryPoint;
+                    result = await attemptSeekAndPlay(retryPoint, 'abort_error');
+                } else {
+                    attemptLogger.logRetrySkip(video, 'abort_error');
+                }
+            }
+
+            return { result, finalPoint };
         };
 
         const attemptHeal = async (videoOrContext, monitorStateOverride) => {
@@ -7352,7 +7494,7 @@ const HealPipeline = (() => {
             state.healAttempts++;
             const healStartTime = performance.now();
             if (monitorState) {
-                monitorState.state = 'HEALING';
+                monitorState.state = MonitorStates.HEALING;
                 monitorState.lastHealAttemptTime = Date.now();
             }
 
@@ -7364,38 +7506,8 @@ const HealPipeline = (() => {
             });
 
             try {
-                const pollResult = await poller.pollForHealPoint(
-                    video,
-                    monitorState,
-                    CONFIG.stall.HEAL_TIMEOUT_S * 1000
-                );
-
-                if (pollResult.aborted) {
-                    Logger.add(LogEvents.tagged('DETACHED', 'Heal aborted during polling'), {
-                        reason: pollResult.reason || 'poll_abort',
-                        videoId
-                    });
-                    onDetached(video, pollResult.reason || 'poll_abort');
-                    return;
-                }
-
-                const healPoint = pollResult.healPoint;
-                if (!healPoint) {
-                    if (poller.hasRecovered(video, monitorState)) {
-                        attemptLogger.logSelfRecovered(
-                            Number((performance.now() - healStartTime).toFixed(0)),
-                            video,
-                            videoId
-                        );
-                        resetRecovery(monitorState, 'self_recovered');
-                        return;
-                    }
-
-                    const noPointDuration = Number((performance.now() - healStartTime).toFixed(0));
-                    attemptLogger.logNoHealPoint(noPointDuration, video, videoId);
-                    Metrics.increment('heals_failed');
-                    recoveryManager.handleNoHealPoint(video, monitorState, 'no_heal_point');
-                    resetHealPointTracking(monitorState);
+                const pollOutcome = await pollForHealPoint(video, monitorState, videoId, healStartTime);
+                if (pollOutcome.status !== 'found') {
                     return;
                 }
 
@@ -7403,19 +7515,14 @@ const HealPipeline = (() => {
                     return;
                 }
 
-                const freshPoint = BufferGapFinder.findHealPoint(video, { silent: true });
-                if (!freshPoint) {
-                    if (poller.hasRecovered(video, monitorState)) {
-                        attemptLogger.logStaleRecovered(
-                            Number((performance.now() - healStartTime).toFixed(0))
-                        );
-                        resetRecovery(monitorState, 'stale_recovered');
-                        return;
-                    }
-                    attemptLogger.logStaleGone(healPoint, video, videoId);
-                    Metrics.increment('heals_failed');
-                    recoveryManager.handleNoHealPoint(video, monitorState, 'stale_gone');
-                    resetHealPointTracking(monitorState);
+                const revalidateOutcome = revalidateHealPoint(
+                    video,
+                    monitorState,
+                    videoId,
+                    pollOutcome.healPoint,
+                    healStartTime
+                );
+                if (revalidateOutcome.status !== 'ready') {
                     return;
                 }
 
@@ -7423,35 +7530,10 @@ const HealPipeline = (() => {
                     return;
                 }
 
-                const targetPoint = freshPoint;
-                if (freshPoint.start !== healPoint.start || freshPoint.end !== healPoint.end) {
-                    attemptLogger.logPointUpdated(healPoint, freshPoint);
-                }
+                const seekOutcome = await attemptSeekWithRetry(video, revalidateOutcome.healPoint);
+                const duration = getDurationMs(healStartTime);
 
-                const attemptSeekAndPlay = async (point, label) => {
-                    if (label) {
-                        attemptLogger.logRetry(label, point);
-                    }
-                    return LiveEdgeSeeker.seekAndPlay(video, point);
-                };
-
-                let result = await attemptSeekAndPlay(targetPoint, null);
-                let finalPoint = targetPoint;
-
-                if (!result.success && HealAttemptUtils.isAbortError(result)) {
-                    await Fn.sleep(CONFIG.recovery.HEAL_RETRY_DELAY_MS);
-                    const retryPoint = BufferGapFinder.findHealPoint(video, { silent: true });
-                    if (retryPoint) {
-                        finalPoint = retryPoint;
-                        result = await attemptSeekAndPlay(retryPoint, 'abort_error');
-                    } else {
-                        attemptLogger.logRetrySkip(video, 'abort_error');
-                    }
-                }
-
-                const duration = Number((performance.now() - healStartTime).toFixed(0));
-
-                if (result.success) {
+                if (seekOutcome.result.success) {
                     const bufferEndDelta = HealAttemptUtils.getBufferEndDelta(video);
                     attemptLogger.logHealComplete({
                         durationMs: duration,
@@ -7464,30 +7546,38 @@ const HealPipeline = (() => {
                     resetRecovery(monitorState, 'heal_success');
                     catchUpController.scheduleCatchUp(video, monitorState, videoId, 'post_heal');
                 } else {
-                    const repeatCount = HealAttemptUtils.updateHealPointRepeat(monitorState, finalPoint, false);
-                    if (HealAttemptUtils.isAbortError(result)) {
+                    const repeatCount = HealAttemptUtils.updateHealPointRepeat(
+                        monitorState,
+                        seekOutcome.finalPoint,
+                        false
+                    );
+                    if (HealAttemptUtils.isAbortError(seekOutcome.result)) {
                         attemptLogger.logAbortContext({
-                            result,
+                            result: seekOutcome.result,
                             monitorState,
                             video
                         });
                     }
                     attemptLogger.logHealFailed({
                         durationMs: duration,
-                        result,
-                        finalPoint,
+                        result: seekOutcome.result,
+                        finalPoint: seekOutcome.finalPoint,
                         video,
                         videoId
                     });
                     Metrics.increment('heals_failed');
                     if (monitorState && recoveryManager.handlePlayFailure
-                        && (HealAttemptUtils.isPlayFailure(result)
+                        && (HealAttemptUtils.isPlayFailure(seekOutcome.result)
                             || repeatCount >= CONFIG.stall.HEALPOINT_REPEAT_FAILOVER_COUNT)) {
                         recoveryManager.handlePlayFailure(video, monitorState, {
-                            reason: HealAttemptUtils.isPlayFailure(result) ? 'play_error' : 'healpoint_repeat',
-                            error: result.error,
-                            errorName: result.errorName,
-                            healRange: finalPoint ? `${finalPoint.start.toFixed(2)}-${finalPoint.end.toFixed(2)}` : null,
+                            reason: HealAttemptUtils.isPlayFailure(seekOutcome.result)
+                                ? 'play_error'
+                                : 'healpoint_repeat',
+                            error: seekOutcome.result.error,
+                            errorName: seekOutcome.result.errorName,
+                            healRange: seekOutcome.finalPoint
+                                ? `${seekOutcome.finalPoint.start.toFixed(2)}-${seekOutcome.finalPoint.end.toFixed(2)}`
+                                : null,
                             healPointRepeatCount: repeatCount
                         });
                     }
@@ -8035,10 +8125,14 @@ const ExternalSignalHandlerAsset = (() => {
             const activeEntry = activeId ? monitorsById.get(activeId) : null;
             const activeMonitorState = activeEntry ? activeEntry.monitor.state : null;
             const activeState = activeMonitorState ? activeMonitorState.state : null;
-            const activeIsStalled = !activeEntry || ['STALLED', 'RESET', 'ERROR'].includes(activeState);
+            const activeIsStalled = !activeEntry || [
+                MonitorStates.STALLED,
+                MonitorStates.RESET,
+                MonitorStates.ERROR
+            ].includes(activeState);
             const activeIsSevere = activeIsStalled
-                && (activeState === 'RESET'
-                    || activeState === 'ERROR'
+                && (activeState === MonitorStates.RESET
+                    || activeState === MonitorStates.ERROR
                     || activeMonitorState?.bufferStarved);
 
             if (best && best.id && activeId && best.id !== activeId && best.progressEligible && activeIsSevere) {

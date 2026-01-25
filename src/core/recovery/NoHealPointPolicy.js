@@ -77,11 +77,14 @@ const NoHealPointPolicy = (() => {
             }
             monitorState.lastRefreshAt = now;
             monitorState.noHealPointRefreshUntil = 0;
-            logDebug(LogEvents.tagged('REFRESH', 'Refreshing video after repeated no-heal points'), {
-                videoId,
-                reason,
-                noHealPointCount: monitorState.noHealPointCount
-            });
+            logDebug(
+                LogEvents.tagged('REFRESH', 'Refreshing video after repeated no-heal points'),
+                RecoveryLogDetails.refresh({
+                    videoId,
+                    reason,
+                    noHealPointCount: monitorState.noHealPointCount
+                })
+            );
             monitorState.noHealPointCount = 0;
             onPersistentFailure(videoId, {
                 reason,
@@ -94,17 +97,19 @@ const NoHealPointPolicy = (() => {
             const video = context.video;
             const monitorState = context.monitorState;
             const videoId = context.videoId || (getVideoId ? getVideoId(video) : 'unknown');
+            const decisionContext = context.getDecisionContext
+                ? context.getDecisionContext()
+                : RecoveryContext.buildDecisionContext(context);
+            const now = decisionContext.now;
+            const ranges = decisionContext.ranges;
 
             backoffManager.applyBackoff(videoId, monitorState, reason);
 
             if (monitorState && (monitorState.noHealPointCount || 0) >= CONFIG.stall.REFRESH_AFTER_NO_HEAL_POINTS) {
-                const now = Date.now();
-                const ranges = MediaState.ranges(video);
                 if (ranges.length) {
-                    const end = ranges[ranges.length - 1].end;
-                    const headroom = Math.max(0, end - video.currentTime);
-                    const hasSrc = Boolean(video.currentSrc || video.getAttribute?.('src'));
-                    const readyState = video.readyState;
+                    const headroom = decisionContext.headroom;
+                    const hasSrc = decisionContext.hasSrc;
+                    const readyState = decisionContext.readyState;
                     if (headroom < CONFIG.recovery.MIN_HEAL_HEADROOM_S
                         && hasSrc
                         && readyState >= CONFIG.stall.NO_HEAL_POINT_REFRESH_MIN_READY_STATE) {
@@ -115,9 +120,7 @@ const NoHealPointPolicy = (() => {
                 }
             }
 
-            const ranges = MediaState.ranges(video);
             if (!ranges.length) {
-                const now = Date.now();
                 const lastNoBufferRescan = noBufferRescanTimes.get(videoId) || 0;
                 if (now - lastNoBufferRescan >= CONFIG.stall.PROBATION_RESCAN_COOLDOWN_MS) {
                     noBufferRescanTimes.set(videoId, now);
@@ -142,9 +145,7 @@ const NoHealPointPolicy = (() => {
                 )
                 : false;
 
-            const stalledForMs = monitorState?.lastProgressTime
-                ? (Date.now() - monitorState.lastProgressTime)
-                : null;
+            const stalledForMs = decisionContext.stalledForMs;
             const shouldFailover = monitorsById && monitorsById.size > 1
                 && (monitorState?.noHealPointCount >= CONFIG.stall.FAILOVER_AFTER_NO_HEAL_POINTS
                     || (stalledForMs !== null && stalledForMs >= CONFIG.stall.FAILOVER_AFTER_STALL_MS));

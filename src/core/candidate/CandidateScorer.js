@@ -36,7 +36,7 @@ const CandidateScorer = (() => {
                 reasons.push('error');
             }
 
-            if (state.state === 'RESET') {
+            if (state.state === MonitorStates.RESET) {
                 score -= 3;
                 reasons.push('reset');
             }
@@ -46,7 +46,7 @@ const CandidateScorer = (() => {
                 reasons.push('reset_pending');
             }
 
-            if (state.state === 'ERROR') {
+            if (state.state === MonitorStates.ERROR) {
                 score -= 2;
                 reasons.push('error_state');
             }

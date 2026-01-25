@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.4.15 - 2026-01-25T14:05:28.283Z
+Previous: 4.4.14
+Commit: a288e32
+Changes:
+- refactor: modularize stall handling and logging
+
 ## 4.4.14 - 2026-01-25T13:41:50.358Z
 Previous: 4.4.13
 Commit: d7dbfd6

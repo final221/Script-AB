@@ -24,21 +24,21 @@ const PlaybackEventHandlersLifecycle = (() => {
                         ? Number(video.currentTime.toFixed(3))
                         : null
                 });
-                setState('ENDED', 'ended');
+                setState(MonitorStates.ENDED, 'ended');
             },
             error: () => {
                 state.pauseFromStall = false;
                 logEvent('error', () => ({
                     state: state.state
                 }));
-                setState('ERROR', 'error');
+                setState(MonitorStates.ERROR, 'error');
             },
             abort: () => {
                 state.pauseFromStall = false;
                 logEvent('abort', () => ({
                     state: state.state
                 }));
-                setState('PAUSED', 'abort');
+                setState(MonitorStates.PAUSED, 'abort');
                 tracker.handleReset('abort', onReset);
             },
             emptied: () => {
