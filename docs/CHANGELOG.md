@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.4.5 - 2026-01-25T11:57:23.124Z
+Previous: 4.4.4
+Commit: 1308c1a
+Changes:
+- chore: forbid choice when best path exists
+
 ## 4.4.4 - 2026-01-25T11:54:49.666Z
 Previous: 4.4.3
 Commit: 586a66c

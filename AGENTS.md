@@ -17,8 +17,9 @@
 
 ## Workflow (always)
 1) Make changes
-2) Run `npm.cmd run build`
-3) Commit and push if build succeeds
+2) Run `npm.cmd test` after changes
+3) Run `npm.cmd run build` once before commit/push (this bumps version + generates dist)
+4) Commit and push if build succeeds
 
 - If build/test cannot run, stop and report why before making changes.
 - Use `npm.cmd` on Windows to avoid PowerShell script policy blocks.
