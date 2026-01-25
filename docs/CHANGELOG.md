@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.4.23 - 2026-01-25T15:25:28.233Z
+Previous: 4.4.22
+Commit: 0ee14d8
+Changes:
+- Centralize recovery backoff/play-error resets
+
 ## 4.4.22 - 2026-01-25T15:22:05.585Z
 Previous: 4.4.21
 Commit: 9987db7

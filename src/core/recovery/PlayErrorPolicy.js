@@ -88,20 +88,11 @@ const PlayErrorPolicy = (() => {
                 : false;
 
             if (repeatStuck && !probationTriggered) {
-                if (probationPolicy?.triggerRescan) {
-                    probationPolicy.triggerRescan('healpoint_stuck', {
-                        videoId,
-                        count: repeatCount,
-                        trigger: 'healpoint_stuck'
-                    });
-                } else if (candidateSelector) {
-                    candidateSelector.activateProbation('healpoint_stuck');
-                    onRescan('healpoint_stuck', {
-                        videoId,
-                        count: repeatCount,
-                        trigger: 'healpoint_stuck'
-                    });
-                }
+                probationPolicy?.triggerRescan('healpoint_stuck', {
+                    videoId,
+                    count: repeatCount,
+                    trigger: 'healpoint_stuck'
+                });
             }
 
             const shouldFailover = monitorsById && monitorsById.size > 1

@@ -13,8 +13,6 @@ const NoHealPointPolicy = (() => {
         const logDebug = options.logDebug || (() => {});
         const probationPolicy = options.probationPolicy;
 
-        const noBufferRescanTimes = new Map();
-
         const maybeTriggerEmergencySwitch = (videoId, monitorState, reason, options = {}) => {
             if (!candidateSelector || typeof candidateSelector.selectEmergencyCandidate !== 'function') {
                 return false;
@@ -121,12 +119,14 @@ const NoHealPointPolicy = (() => {
             }
 
             if (!ranges.length) {
-                const lastNoBufferRescan = noBufferRescanTimes.get(videoId) || 0;
-                if (now - lastNoBufferRescan >= CONFIG.stall.PROBATION_RESCAN_COOLDOWN_MS) {
-                    noBufferRescanTimes.set(videoId, now);
-                    if (candidateSelector) {
-                        candidateSelector.activateProbation('no_buffer');
-                    }
+                if (probationPolicy?.triggerRescanForKey) {
+                    probationPolicy.triggerRescanForKey(`no_buffer:${videoId}`, 'no_buffer', {
+                        videoId,
+                        reason,
+                        bufferRanges: 'none'
+                    });
+                } else if (candidateSelector) {
+                    candidateSelector.activateProbation('no_buffer');
                     onRescan('no_buffer', {
                         videoId,
                         reason,

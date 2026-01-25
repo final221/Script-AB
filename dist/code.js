@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.4.22
+// @version       4.4.23
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -161,7 +161,7 @@ const CONFIG = (() => {
  * Build metadata helpers (version injected at build time).
  */
 const BuildInfo = (() => {
-    const VERSION = '4.4.22';
+    const VERSION = '4.4.23';
 
     const getVersion = () => {
         const gmVersion = (typeof GM_info !== 'undefined' && GM_info?.script?.version)
@@ -172,7 +172,7 @@ const BuildInfo = (() => {
             ? unsafeWindow.GM_info.script.version
             : null;
         if (unsafeVersion) return unsafeVersion;
-        if (VERSION && VERSION !== '4.4.22') return VERSION;
+        if (VERSION && VERSION !== '4.4.23') return VERSION;
         return null;
     };
 
@@ -5990,6 +5990,7 @@ const ProbationPolicy = (() => {
         const onRescan = options.onRescan || (() => {});
 
         let lastProbationRescanAt = 0;
+        const lastRescanTimes = new Map();
 
         const canRescan = (now) => (
             now - lastProbationRescanAt >= CONFIG.stall.PROBATION_RESCAN_COOLDOWN_MS
@@ -6001,6 +6002,23 @@ const ProbationPolicy = (() => {
                 return false;
             }
             lastProbationRescanAt = now;
+            if (candidateSelector) {
+                candidateSelector.activateProbation(reason);
+            }
+            onRescan(reason, detail);
+            return true;
+        };
+
+        const triggerRescanForKey = (key, reason, detail = {}, cooldownMs = CONFIG.stall.PROBATION_RESCAN_COOLDOWN_MS) => {
+            const now = Date.now();
+            if (!key) {
+                return triggerRescan(reason, detail);
+            }
+            const lastRescanAt = lastRescanTimes.get(key) || 0;
+            if (now - lastRescanAt < cooldownMs) {
+                return false;
+            }
+            lastRescanTimes.set(key, now);
             if (candidateSelector) {
                 candidateSelector.activateProbation(reason);
             }
@@ -6024,6 +6042,7 @@ const ProbationPolicy = (() => {
         return {
             maybeTriggerProbation,
             triggerRescan,
+            triggerRescanForKey,
             canRescan: () => canRescan(Date.now())
         };
     };
@@ -6083,8 +6102,6 @@ const NoHealPointPolicy = (() => {
         const onPersistentFailure = options.onPersistentFailure || (() => {});
         const logDebug = options.logDebug || (() => {});
         const probationPolicy = options.probationPolicy;
-
-        const noBufferRescanTimes = new Map();
 
         const maybeTriggerEmergencySwitch = (videoId, monitorState, reason, options = {}) => {
             if (!candidateSelector || typeof candidateSelector.selectEmergencyCandidate !== 'function') {
@@ -6192,12 +6209,14 @@ const NoHealPointPolicy = (() => {
             }
 
             if (!ranges.length) {
-                const lastNoBufferRescan = noBufferRescanTimes.get(videoId) || 0;
-                if (now - lastNoBufferRescan >= CONFIG.stall.PROBATION_RESCAN_COOLDOWN_MS) {
-                    noBufferRescanTimes.set(videoId, now);
-                    if (candidateSelector) {
-                        candidateSelector.activateProbation('no_buffer');
-                    }
+                if (probationPolicy?.triggerRescanForKey) {
+                    probationPolicy.triggerRescanForKey(`no_buffer:${videoId}`, 'no_buffer', {
+                        videoId,
+                        reason,
+                        bufferRanges: 'none'
+                    });
+                } else if (candidateSelector) {
+                    candidateSelector.activateProbation('no_buffer');
                     onRescan('no_buffer', {
                         videoId,
                         reason,
@@ -6336,20 +6355,11 @@ const PlayErrorPolicy = (() => {
                 : false;
 
             if (repeatStuck && !probationTriggered) {
-                if (probationPolicy?.triggerRescan) {
-                    probationPolicy.triggerRescan('healpoint_stuck', {
-                        videoId,
-                        count: repeatCount,
-                        trigger: 'healpoint_stuck'
-                    });
-                } else if (candidateSelector) {
-                    candidateSelector.activateProbation('healpoint_stuck');
-                    onRescan('healpoint_stuck', {
-                        videoId,
-                        count: repeatCount,
-                        trigger: 'healpoint_stuck'
-                    });
-                }
+                probationPolicy?.triggerRescan('healpoint_stuck', {
+                    videoId,
+                    count: repeatCount,
+                    trigger: 'healpoint_stuck'
+                });
             }
 
             const shouldFailover = monitorsById && monitorsById.size > 1

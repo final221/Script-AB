@@ -8,6 +8,7 @@ const ProbationPolicy = (() => {
         const onRescan = options.onRescan || (() => {});
 
         let lastProbationRescanAt = 0;
+        const lastRescanTimes = new Map();
 
         const canRescan = (now) => (
             now - lastProbationRescanAt >= CONFIG.stall.PROBATION_RESCAN_COOLDOWN_MS
@@ -19,6 +20,23 @@ const ProbationPolicy = (() => {
                 return false;
             }
             lastProbationRescanAt = now;
+            if (candidateSelector) {
+                candidateSelector.activateProbation(reason);
+            }
+            onRescan(reason, detail);
+            return true;
+        };
+
+        const triggerRescanForKey = (key, reason, detail = {}, cooldownMs = CONFIG.stall.PROBATION_RESCAN_COOLDOWN_MS) => {
+            const now = Date.now();
+            if (!key) {
+                return triggerRescan(reason, detail);
+            }
+            const lastRescanAt = lastRescanTimes.get(key) || 0;
+            if (now - lastRescanAt < cooldownMs) {
+                return false;
+            }
+            lastRescanTimes.set(key, now);
             if (candidateSelector) {
                 candidateSelector.activateProbation(reason);
             }
@@ -42,6 +60,7 @@ const ProbationPolicy = (() => {
         return {
             maybeTriggerProbation,
             triggerRescan,
+            triggerRescanForKey,
             canRescan: () => canRescan(Date.now())
         };
     };
