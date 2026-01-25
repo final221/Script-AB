@@ -347,13 +347,16 @@ const CandidateSelector = (() => {
             const requireSrc = options.requireSrc !== undefined
                 ? options.requireSrc
                 : CONFIG.stall.NO_HEAL_POINT_EMERGENCY_REQUIRE_SRC;
+            const allowDead = options.allowDead !== undefined
+                ? options.allowDead
+                : Boolean(CONFIG.stall.NO_HEAL_POINT_EMERGENCY_ALLOW_DEAD);
             let best = null;
             let bestScore = null;
 
             for (const [videoId, entry] of monitorsById.entries()) {
                 if (videoId === activeCandidateId) continue;
                 const result = scoreVideo(entry.video, entry.monitor, videoId);
-                if (result.deadCandidate) continue;
+                if (result.deadCandidate && !allowDead) continue;
                 const readyState = result.vs.readyState;
                 const hasSrc = Boolean(result.vs.currentSrc || result.vs.src);
                 if (readyState < minReadyState) continue;

@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.2.0 - 2026-01-25T10:38:52.904Z
+Previous: 4.1.86
+Commit: 6b73bbd
+Changes:
+- chore: add agent docs and verification helpers
+
 ## 4.1.86 - 2026-01-25T10:23:03.256Z
 Previous: 4.1.85
 Commit: bbc35a5

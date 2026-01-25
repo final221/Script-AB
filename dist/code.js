@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.1.86
+// @version       4.2.0
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -77,6 +77,11 @@ const CONFIG = (() => {
             NO_HEAL_POINT_EMERGENCY_COOLDOWN_MS: 15000, // Cooldown between emergency switches
             NO_HEAL_POINT_EMERGENCY_MIN_READY_STATE: 2, // Min readyState for emergency switch candidates
             NO_HEAL_POINT_EMERGENCY_REQUIRE_SRC: true, // Require src for emergency switch candidates
+            NO_HEAL_POINT_EMERGENCY_SWITCH: true, // Enable emergency candidate switching
+            NO_HEAL_POINT_LAST_RESORT_SWITCH: true, // Attempt last-resort candidate switch before refresh
+            NO_HEAL_POINT_LAST_RESORT_MIN_READY_STATE: 0, // Allow last-resort candidates with any readyState
+            NO_HEAL_POINT_LAST_RESORT_REQUIRE_SRC: false, // Allow last-resort candidates without src
+            NO_HEAL_POINT_LAST_RESORT_ALLOW_DEAD: true, // Allow last-resort switches to dead candidates
         },
 
         monitoring: {
@@ -152,7 +157,7 @@ const CONFIG = (() => {
  * Build metadata helpers (version injected at build time).
  */
 const BuildInfo = (() => {
-    const VERSION = '4.1.86';
+    const VERSION = '4.2.0';
 
     const getVersion = () => {
         const gmVersion = (typeof GM_info !== 'undefined' && GM_info?.script?.version)
@@ -163,7 +168,7 @@ const BuildInfo = (() => {
             ? unsafeWindow.GM_info.script.version
             : null;
         if (unsafeVersion) return unsafeVersion;
-        if (VERSION && VERSION !== '4.1.86') return VERSION;
+        if (VERSION && VERSION !== '4.2.0') return VERSION;
         return null;
     };
 
@@ -5459,13 +5464,16 @@ const CandidateSelector = (() => {
             const requireSrc = options.requireSrc !== undefined
                 ? options.requireSrc
                 : CONFIG.stall.NO_HEAL_POINT_EMERGENCY_REQUIRE_SRC;
+            const allowDead = options.allowDead !== undefined
+                ? options.allowDead
+                : Boolean(CONFIG.stall.NO_HEAL_POINT_EMERGENCY_ALLOW_DEAD);
             let best = null;
             let bestScore = null;
 
             for (const [videoId, entry] of monitorsById.entries()) {
                 if (videoId === activeCandidateId) continue;
                 const result = scoreVideo(entry.video, entry.monitor, videoId);
-                if (result.deadCandidate) continue;
+                if (result.deadCandidate && !allowDead) continue;
                 const readyState = result.vs.readyState;
                 const hasSrc = Boolean(result.vs.currentSrc || result.vs.src);
                 if (readyState < minReadyState) continue;
@@ -5690,7 +5698,7 @@ const NoHealPointPolicy = (() => {
 
         const noBufferRescanTimes = new Map();
 
-        const maybeTriggerEmergencySwitch = (videoId, monitorState, reason) => {
+        const maybeTriggerEmergencySwitch = (videoId, monitorState, reason, options = {}) => {
             if (!candidateSelector || typeof candidateSelector.selectEmergencyCandidate !== 'function') {
                 return false;
             }
@@ -5706,12 +5714,30 @@ const NoHealPointPolicy = (() => {
             if (now - lastSwitch < CONFIG.stall.NO_HEAL_POINT_EMERGENCY_COOLDOWN_MS) {
                 return false;
             }
-            const switched = candidateSelector.selectEmergencyCandidate(reason);
+            const switched = candidateSelector.selectEmergencyCandidate(reason, options);
             if (switched) {
                 monitorState.lastEmergencySwitchAt = now;
                 return true;
             }
             return false;
+        };
+
+        const maybeTriggerLastResortSwitch = (videoId, monitorState, reason) => {
+            if (!CONFIG.stall.NO_HEAL_POINT_LAST_RESORT_SWITCH) {
+                return false;
+            }
+            if (!monitorState) return false;
+            if ((monitorState.noHealPointCount || 0) < CONFIG.stall.REFRESH_AFTER_NO_HEAL_POINTS) {
+                return false;
+            }
+            if (!monitorsById || monitorsById.size < 2) {
+                return false;
+            }
+            return maybeTriggerEmergencySwitch(videoId, monitorState, `${reason}_last_resort`, {
+                minReadyState: CONFIG.stall.NO_HEAL_POINT_LAST_RESORT_MIN_READY_STATE,
+                requireSrc: CONFIG.stall.NO_HEAL_POINT_LAST_RESORT_REQUIRE_SRC,
+                allowDead: CONFIG.stall.NO_HEAL_POINT_LAST_RESORT_ALLOW_DEAD
+            });
         };
 
         const maybeTriggerRefresh = (videoId, monitorState, reason) => {
@@ -5804,13 +5830,18 @@ const NoHealPointPolicy = (() => {
                     || (stalledForMs !== null && stalledForMs >= CONFIG.stall.FAILOVER_AFTER_STALL_MS));
 
             const emergencySwitched = maybeTriggerEmergencySwitch(videoId, monitorState, reason);
-            const refreshed = maybeTriggerRefresh(videoId, monitorState, reason);
+            const lastResortSwitched = !emergencySwitched
+                ? maybeTriggerLastResortSwitch(videoId, monitorState, reason)
+                : false;
+            const refreshed = !emergencySwitched && !lastResortSwitched
+                ? maybeTriggerRefresh(videoId, monitorState, reason)
+                : false;
 
             return {
                 shouldFailover,
                 refreshed,
                 probationTriggered,
-                emergencySwitched
+                emergencySwitched: emergencySwitched || lastResortSwitched
             };
         };
 

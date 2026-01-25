@@ -15,7 +15,7 @@ const NoHealPointPolicy = (() => {
 
         const noBufferRescanTimes = new Map();
 
-        const maybeTriggerEmergencySwitch = (videoId, monitorState, reason) => {
+        const maybeTriggerEmergencySwitch = (videoId, monitorState, reason, options = {}) => {
             if (!candidateSelector || typeof candidateSelector.selectEmergencyCandidate !== 'function') {
                 return false;
             }
@@ -31,12 +31,30 @@ const NoHealPointPolicy = (() => {
             if (now - lastSwitch < CONFIG.stall.NO_HEAL_POINT_EMERGENCY_COOLDOWN_MS) {
                 return false;
             }
-            const switched = candidateSelector.selectEmergencyCandidate(reason);
+            const switched = candidateSelector.selectEmergencyCandidate(reason, options);
             if (switched) {
                 monitorState.lastEmergencySwitchAt = now;
                 return true;
             }
             return false;
+        };
+
+        const maybeTriggerLastResortSwitch = (videoId, monitorState, reason) => {
+            if (!CONFIG.stall.NO_HEAL_POINT_LAST_RESORT_SWITCH) {
+                return false;
+            }
+            if (!monitorState) return false;
+            if ((monitorState.noHealPointCount || 0) < CONFIG.stall.REFRESH_AFTER_NO_HEAL_POINTS) {
+                return false;
+            }
+            if (!monitorsById || monitorsById.size < 2) {
+                return false;
+            }
+            return maybeTriggerEmergencySwitch(videoId, monitorState, `${reason}_last_resort`, {
+                minReadyState: CONFIG.stall.NO_HEAL_POINT_LAST_RESORT_MIN_READY_STATE,
+                requireSrc: CONFIG.stall.NO_HEAL_POINT_LAST_RESORT_REQUIRE_SRC,
+                allowDead: CONFIG.stall.NO_HEAL_POINT_LAST_RESORT_ALLOW_DEAD
+            });
         };
 
         const maybeTriggerRefresh = (videoId, monitorState, reason) => {
@@ -129,13 +147,18 @@ const NoHealPointPolicy = (() => {
                     || (stalledForMs !== null && stalledForMs >= CONFIG.stall.FAILOVER_AFTER_STALL_MS));
 
             const emergencySwitched = maybeTriggerEmergencySwitch(videoId, monitorState, reason);
-            const refreshed = maybeTriggerRefresh(videoId, monitorState, reason);
+            const lastResortSwitched = !emergencySwitched
+                ? maybeTriggerLastResortSwitch(videoId, monitorState, reason)
+                : false;
+            const refreshed = !emergencySwitched && !lastResortSwitched
+                ? maybeTriggerRefresh(videoId, monitorState, reason)
+                : false;
 
             return {
                 shouldFailover,
                 refreshed,
                 probationTriggered,
-                emergencySwitched
+                emergencySwitched: emergencySwitched || lastResortSwitched
             };
         };
 
