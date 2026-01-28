@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 
 describe('Core Modules', () => {
     console.log('[Test] Core Modules running');
@@ -34,6 +34,33 @@ describe('Core Modules', () => {
                     expect(Metrics.get('heals_successful')).toBe(1);
                 }
             }
+        });
+    });
+
+    describe('Export logs', () => {
+        it('exposes exportTwitchAdLogs and forwards to ReportGenerator', () => {
+            const exportFn = window.exportTwitchAdLogs;
+            expect(typeof exportFn).toBe('function');
+
+            const ReportGenerator = window.ReportGenerator;
+            expect(ReportGenerator).toBeDefined();
+            expect(typeof ReportGenerator.exportReport).toBe('function');
+
+            const originalExport = ReportGenerator.exportReport;
+            const spy = vi.fn();
+            ReportGenerator.exportReport = spy;
+
+            try {
+                exportFn();
+            } finally {
+                ReportGenerator.exportReport = originalExport;
+            }
+
+            expect(spy).toHaveBeenCalledTimes(1);
+            const [metricsSummary, mergedLogs, healerStats] = spy.mock.calls[0] || [];
+            expect(typeof metricsSummary).toBe('object');
+            expect(Array.isArray(mergedLogs)).toBe(true);
+            expect(typeof healerStats).toBe('object');
         });
     });
 

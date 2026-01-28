@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.4.28 - 2026-01-28T21:54:02.475Z
+Previous: 4.4.27
+Commit: 4265d42
+Changes:
+- Fix exportTwitchAdLogs exposure
+
 ## 4.4.27 - 2026-01-28T21:51:57.632Z
 Previous: 4.4.26
 Commit: e825cda
