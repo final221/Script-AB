@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.4.32 - 2026-01-28T22:13:38.893Z
+Previous: 4.4.31
+Commit: 9516181
+Changes:
+- Revert userscript grant to page injection
+
 ## 4.4.31 - 2026-01-28T22:10:26.818Z
 Previous: 4.4.30
 Commit: 29d093e
