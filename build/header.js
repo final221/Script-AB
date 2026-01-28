@@ -5,5 +5,5 @@
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
 // @run-at        document-start
-// @grant         none
+// @grant         unsafeWindow
 // ==/UserScript==

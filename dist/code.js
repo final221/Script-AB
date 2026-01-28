@@ -1,11 +1,11 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.4.28
+// @version       4.4.29
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
 // @run-at        document-start
-// @grant         none
+// @grant         unsafeWindow
 // ==/UserScript==
 
 (function () {
@@ -161,7 +161,7 @@ const CONFIG = (() => {
  * Build metadata helpers (version injected at build time).
  */
 const BuildInfo = (() => {
-    const VERSION = '4.4.28';
+    const VERSION = '4.4.29';
 
     const getVersion = () => {
         const gmVersion = (typeof GM_info !== 'undefined' && GM_info?.script?.version)
@@ -172,7 +172,7 @@ const BuildInfo = (() => {
             ? unsafeWindow.GM_info.script.version
             : null;
         if (unsafeVersion) return unsafeVersion;
-        if (VERSION && VERSION !== '4.4.28') return VERSION;
+        if (VERSION && VERSION !== '4.4.29') return VERSION;
         return null;
     };
 

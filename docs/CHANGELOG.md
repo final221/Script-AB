@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.4.29 - 2026-01-28T21:57:56.372Z
+Previous: 4.4.28
+Commit: 9710b02
+Changes:
+- Add exportTwitchAdLogs test
+
 ## 4.4.28 - 2026-01-28T21:54:02.475Z
 Previous: 4.4.27
 Commit: 4265d42
