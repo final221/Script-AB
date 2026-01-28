@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.4.31 - 2026-01-28T22:10:26.818Z
+Previous: 4.4.30
+Commit: 29d093e
+Changes:
+- Harden exportTwitchAdLogs exposure
+
 ## 4.4.30 - 2026-01-28T22:05:32.706Z
 Previous: 4.4.29
 Commit: 4f5421a
