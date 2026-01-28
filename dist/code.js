@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.4.26
+// @version       4.4.27
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -161,7 +161,7 @@ const CONFIG = (() => {
  * Build metadata helpers (version injected at build time).
  */
 const BuildInfo = (() => {
-    const VERSION = '4.4.26';
+    const VERSION = '4.4.27';
 
     const getVersion = () => {
         const gmVersion = (typeof GM_info !== 'undefined' && GM_info?.script?.version)
@@ -172,7 +172,7 @@ const BuildInfo = (() => {
             ? unsafeWindow.GM_info.script.version
             : null;
         if (unsafeVersion) return unsafeVersion;
-        if (VERSION && VERSION !== '4.4.26') return VERSION;
+        if (VERSION && VERSION !== '4.4.27') return VERSION;
         return null;
     };
 
@@ -8875,39 +8875,68 @@ const StreamHealer = (() => {
  * STREAMLINED: Focus on stream healing, not ad blocking (uBO handles that).
  */
 const CoreOrchestrator = (() => {
+    let streamHealer = null;
+
+    const exposeGlobal = (name, fn) => {
+        try {
+            window[name] = fn;
+            if (typeof unsafeWindow !== 'undefined') {
+                unsafeWindow[name] = fn;
+            }
+            if (typeof exportFunction === 'function' && window.wrappedJSObject) {
+                exportFunction(fn, window.wrappedJSObject, { defineAs: name });
+            } else if (window.wrappedJSObject) {
+                window.wrappedJSObject[name] = fn;
+            }
+        } catch (e) {
+            console.error('[CORE] Failed to expose global:', name, e);
+        }
+    };
+
+    const ensureStreamHealer = () => {
+        if (!streamHealer) {
+            streamHealer = StreamHealer.create();
+            StreamHealer.setDefault(streamHealer);
+        }
+        return streamHealer;
+    };
+
+    const exportLogs = () => {
+        try {
+            const healer = ensureStreamHealer();
+            const healerStats = healer?.getStats ? healer.getStats() : {};
+            const metricsSummary = Metrics?.getSummary ? Metrics.getSummary() : {};
+            const mergedLogs = Logger?.getMergedTimeline ? Logger.getMergedTimeline() : [];
+            ReportGenerator?.exportReport?.(metricsSummary, mergedLogs, healerStats);
+        } catch (error) {
+            Logger?.add?.('[CORE] exportTwitchAdLogs failed', { error: error?.message });
+        }
+    };
+
+    const exportLogsProxy = () => {
+        try {
+            if (window.top && typeof window.top.exportTwitchAdLogs === 'function') {
+                window.top.exportTwitchAdLogs();
+                return;
+            }
+        } catch (e) {
+            Logger?.add?.('[CORE] exportTwitchAdLogs proxy failed', { error: e?.message });
+        }
+        Logger?.add?.('[CORE] exportTwitchAdLogs not available in top window');
+    };
+
     return {
         init: () => {
             Logger.add('[CORE] Initializing Stream Healer');
 
-            // Expose debug functions robustly (including iframe proxy)
-            const exposeGlobal = (name, fn) => {
-                try {
-                    window[name] = fn;
-                    if (typeof unsafeWindow !== 'undefined') {
-                        unsafeWindow[name] = fn;
-                    }
-                } catch (e) {
-                    console.error('[CORE] Failed to expose global:', name, e);
-                }
-            };
+            const isTopWindow = window.self === window.top;
+            exposeGlobal('exportTwitchAdLogs', isTopWindow ? exportLogs : exportLogsProxy);
 
-            if (window.self !== window.top) {
-                exposeGlobal('exportTwitchAdLogs', () => {
-                    try {
-                        if (window.top && typeof window.top.exportTwitchAdLogs === 'function') {
-                            window.top.exportTwitchAdLogs();
-                            return;
-                        }
-                    } catch (e) {
-                        Logger.add('[CORE] exportTwitchAdLogs proxy failed', { error: e?.message });
-                    }
-                    Logger.add('[CORE] exportTwitchAdLogs not available in top window');
-                });
+            if (!isTopWindow) {
                 return;
             }
 
-            const streamHealer = StreamHealer.create();
-            StreamHealer.setDefault(streamHealer);
+            const streamHealer = ensureStreamHealer();
 
             // Initialize essential modules only
             Instrumentation.init({
@@ -8926,13 +8955,6 @@ const CoreOrchestrator = (() => {
             } else {
                 document.addEventListener('DOMContentLoaded', startMonitoring, { once: true });
             }
-
-            exposeGlobal('exportTwitchAdLogs', () => {
-                const healerStats = streamHealer.getStats();
-                const metricsSummary = Metrics.getSummary();
-                const mergedLogs = Logger.getMergedTimeline();
-                ReportGenerator.exportReport(metricsSummary, mergedLogs, healerStats);
-            });
 
             Logger.add('[CORE] Stream Healer ready', {
                 config: {

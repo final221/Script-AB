@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.4.27 - 2026-01-28T21:51:57.632Z
+Previous: 4.4.26
+Commit: e825cda
+Changes:
+- Expose exportTwitchAdLogs in iframe contexts
+
 ## 4.4.26 - 2026-01-25T15:46:07.855Z
 Previous: 4.4.25
 Commit: dcbde94
