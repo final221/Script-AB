@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.4.29
+// @version       4.4.30
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -161,7 +161,7 @@ const CONFIG = (() => {
  * Build metadata helpers (version injected at build time).
  */
 const BuildInfo = (() => {
-    const VERSION = '4.4.29';
+    const VERSION = '4.4.30';
 
     const getVersion = () => {
         const gmVersion = (typeof GM_info !== 'undefined' && GM_info?.script?.version)
@@ -172,7 +172,7 @@ const BuildInfo = (() => {
             ? unsafeWindow.GM_info.script.version
             : null;
         if (unsafeVersion) return unsafeVersion;
-        if (VERSION && VERSION !== '4.4.29') return VERSION;
+        if (VERSION && VERSION !== '4.4.30') return VERSION;
         return null;
     };
 
@@ -8878,18 +8878,55 @@ const CoreOrchestrator = (() => {
     let streamHealer = null;
 
     const exposeGlobal = (name, fn) => {
-        try {
-            window[name] = fn;
-            if (typeof unsafeWindow !== 'undefined') {
-                unsafeWindow[name] = fn;
+        const targets = [];
+
+        if (typeof globalThis !== 'undefined') {
+            targets.push(globalThis);
+        }
+        if (typeof window !== 'undefined' && window !== globalThis) {
+            targets.push(window);
+        }
+        if (typeof unsafeWindow !== 'undefined') {
+            targets.push(unsafeWindow);
+        }
+
+        const uniqueTargets = Array.from(new Set(targets));
+
+        uniqueTargets.forEach((target) => {
+            try {
+                target[name] = fn;
+            } catch (error) {
+                Logger?.add?.('[CORE] Failed to expose global target', {
+                    name,
+                    error: error?.message
+                });
             }
-            if (typeof exportFunction === 'function' && window.wrappedJSObject) {
-                exportFunction(fn, window.wrappedJSObject, { defineAs: name });
-            } else if (window.wrappedJSObject) {
-                window.wrappedJSObject[name] = fn;
-            }
-        } catch (e) {
-            console.error('[CORE] Failed to expose global:', name, e);
+        });
+
+        if (typeof exportFunction === 'function') {
+            uniqueTargets.forEach((target) => {
+                const rawTarget = target?.wrappedJSObject || target;
+                try {
+                    exportFunction(fn, rawTarget, { defineAs: name });
+                } catch (error) {
+                    Logger?.add?.('[CORE] Failed to export function', {
+                        name,
+                        error: error?.message
+                    });
+                }
+            });
+        } else {
+            uniqueTargets.forEach((target) => {
+                if (!target?.wrappedJSObject) return;
+                try {
+                    target.wrappedJSObject[name] = fn;
+                } catch (error) {
+                    Logger?.add?.('[CORE] Failed to expose wrapped global', {
+                        name,
+                        error: error?.message
+                    });
+                }
+            });
         }
     };
 
@@ -8930,7 +8967,9 @@ const CoreOrchestrator = (() => {
             Logger.add('[CORE] Initializing Stream Healer');
 
             const isTopWindow = window.self === window.top;
-            exposeGlobal('exportTwitchAdLogs', isTopWindow ? exportLogs : exportLogsProxy);
+            const exportFn = isTopWindow ? exportLogs : exportLogsProxy;
+            exposeGlobal('exportTwitchAdLogs', exportFn);
+            exposeGlobal('exporttwitchadlogs', exportFn);
 
             if (!isTopWindow) {
                 return;

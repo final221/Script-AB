@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.4.30 - 2026-01-28T22:05:32.706Z
+Previous: 4.4.29
+Commit: 4f5421a
+Changes:
+- Expose exportTwitchAdLogs in Firefox
+
 ## 4.4.29 - 2026-01-28T21:57:56.372Z
 Previous: 4.4.28
 Commit: 9710b02
