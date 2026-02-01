@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.4.61 - 2026-02-01T22:16:18.880Z
+Previous: 4.4.60
+Commit: da34060
+Changes:
+- Allow BUMP env to control version bumps
+
 ## 4.4.60 - 2026-02-01T22:11:31.254Z
 Previous: 4.4.59
 Commit: 17e95dc
