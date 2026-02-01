@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.4.47 - 2026-02-01T13:49:49.562Z
+Previous: 4.4.46
+Commit: 79ed3e6
+Changes:
+- refactor: consolidate candidate switch policy
+
 ## 4.4.46 - 2026-02-01T13:45:57.957Z
 Previous: 4.4.45
 Commit: 8dffdaf
