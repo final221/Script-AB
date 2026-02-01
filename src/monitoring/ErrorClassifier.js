@@ -9,7 +9,8 @@ const ErrorClassifier = (() => {
         'unauthenticated',
         'pinnedchatsettings',
         'go.apollo.dev/c/err',
-        'apollo.dev/c/err'
+        'apollo.dev/c/err',
+        'weakmap key "video-'
     ];
 
     return {

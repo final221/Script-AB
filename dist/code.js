@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.4.58
+// @version       4.4.59
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -121,6 +121,7 @@ const CONFIG = (() => {
             HEAL_EDGE_GUARD_S: 0.35,        // Avoid seeking too close to buffer end
             GAP_OVERRIDE_MIN_GAP_S: 0.25,   // Minimum gap size to allow low-headroom gap heal
             GAP_OVERRIDE_MIN_HEADROOM_S: 0.35, // Min headroom when overriding for ad gaps
+            HEAL_DEFER_ABORT_MS: 6000,      // Treat repeated low-headroom defers as no-heal after this long
             HEAL_RETRY_DELAY_MS: 200,       // Delay before retrying heal after AbortError
             SEEK_SETTLE_MS: 100,            // Wait after seek before validation
             PLAYBACK_VERIFY_MS: 200,        // Wait after play to verify playback
@@ -167,7 +168,7 @@ const CONFIG = (() => {
  * Build metadata helpers (version injected at build time).
  */
 const BuildInfo = (() => {
-    const VERSION = '4.4.58';
+    const VERSION = '4.4.59';
 
     const getVersion = () => {
         const gmVersion = (typeof GM_info !== 'undefined' && GM_info?.script?.version)
@@ -178,7 +179,7 @@ const BuildInfo = (() => {
             ? unsafeWindow.GM_info.script.version
             : null;
         if (unsafeVersion) return unsafeVersion;
-        if (VERSION && VERSION !== '4.4.58') return VERSION;
+        if (VERSION && VERSION !== '4.4.59') return VERSION;
         return null;
     };
 
@@ -812,7 +813,8 @@ const ErrorClassifier = (() => {
         'unauthenticated',
         'pinnedchatsettings',
         'go.apollo.dev/c/err',
-        'apollo.dev/c/err'
+        'apollo.dev/c/err',
+        'weakmap key "video-'
     ];
 
     return {
@@ -2522,7 +2524,9 @@ const Instrumentation = (() => {
     let externalSignalHandler = null;
     let signalDetector = null;
     const PROCESSING_ASSET_PATTERN = /404_processing_640x360\.png/i;
+    const DECODER_ERROR_PATTERN = /(amazon-ivs-wasmworker|runtimeerror:\s*index out of bounds)/i;
     let lastResourceHintTime = 0;
+    let lastDecoderSignalTime = 0;
     const truncateMessage = (message, maxLen) => (
         String(message).substring(0, maxLen)
     );
@@ -2552,6 +2556,7 @@ const Instrumentation = (() => {
                 action: classification.action,
                 videoState: getVideoState()
             });
+            maybeEmitDecoderError(event.message || '', event.filename?.split('/').pop(), event.lineno);
 
             if (classification.action !== 'LOG_ONLY') {
                 Metrics.increment('errors');
@@ -2586,6 +2591,25 @@ const Instrumentation = (() => {
                 message: e?.message
             });
         }
+    };
+
+    const maybeEmitDecoderError = (message, filename, lineno) => {
+        const now = Date.now();
+        if (now - lastDecoderSignalTime < CONFIG.logging.CONSOLE_SIGNAL_THROTTLE_MS) {
+            return;
+        }
+        if (!DECODER_ERROR_PATTERN.test(message || '') && !DECODER_ERROR_PATTERN.test(filename || '')) {
+            return;
+        }
+        lastDecoderSignalTime = now;
+        emitExternalSignal({
+            type: 'decoder_error',
+            level: 'error',
+            message: truncateMessage(message || '', CONFIG.logging.LOG_MESSAGE_MAX_LEN),
+            filename: filename || null,
+            lineno: Number.isFinite(lineno) ? lineno : null,
+            timestamp: new Date().toISOString()
+        });
     };
 
     const maybeEmitProcessingAsset = (url) => {
@@ -2668,6 +2692,7 @@ const Instrumentation = (() => {
                 severity: classification.severity,
                 action: classification.action
             });
+            maybeEmitDecoderError(msg, null, null);
 
             if (signalDetector) {
                 signalDetector.detect('error', msg);
@@ -3499,6 +3524,8 @@ const PlaybackStateDefaults = (() => {
             lastBackoffLogTime: 0,
             lastHealAttemptTime: 0,
             lastHealDeferralLogTime: 0,
+            healDeferSince: 0,
+            healDeferCount: 0,
             lastRefreshAt: 0,
             lastEmergencySwitchAt: 0
         },
@@ -3590,6 +3617,8 @@ const PlaybackStateDefaults = (() => {
         lastBackoffLogTime: ['heal', 'lastBackoffLogTime'],
         lastHealAttemptTime: ['heal', 'lastHealAttemptTime'],
         lastHealDeferralLogTime: ['heal', 'lastHealDeferralLogTime'],
+        healDeferSince: ['heal', 'healDeferSince'],
+        healDeferCount: ['heal', 'healDeferCount'],
         lastRefreshAt: ['heal', 'lastRefreshAt'],
         lastEmergencySwitchAt: ['heal', 'lastEmergencySwitchAt'],
         lastWatchdogLogTime: ['events', 'lastWatchdogLogTime'],
@@ -8549,6 +8578,13 @@ const HealPointPoller = (() => {
                 timeout: timeoutMs + 'ms'
             });
 
+            const resetDeferTracking = () => {
+                if (!monitorState) return;
+                monitorState.healDeferSince = 0;
+                monitorState.healDeferCount = 0;
+            };
+            resetDeferTracking();
+
             while (Date.now() - startTime < timeoutMs) {
                 pollCount++;
                 let analysis = null;
@@ -8571,6 +8607,7 @@ const HealPointPoller = (() => {
                         pollCount,
                         elapsed: (Date.now() - startTime) + 'ms'
                     });
+                    resetDeferTracking();
                     return {
                         healPoint: null,
                         aborted: false
@@ -8586,17 +8623,23 @@ const HealPointPoller = (() => {
                         const gapHeadroomMin = CONFIG.recovery.GAP_OVERRIDE_MIN_HEADROOM_S || 0;
                         const gapSize = healPoint.gapSize || 0;
                         const isGap = !healPoint.isNudge && gapSize > 0 && (healPoint.rangeIndex || 0) > 0;
-                        const canOverride = isGap && gapSize >= gapOverrideMin && headroom >= gapHeadroomMin;
+                        const bufferExhausted = getAnalysis().bufferExhausted;
+                        const canOverrideGap = isGap && gapSize >= gapOverrideMin && headroom >= gapHeadroomMin;
+                        const canOverrideExhausted = bufferExhausted && headroom >= gapHeadroomMin;
+                        const canOverride = canOverrideGap || canOverrideExhausted;
                         if (canOverride) {
-                            Logger.add(LogEvents.tagged('GAP_OVERRIDE', 'Low headroom gap heal allowed'), {
+                            Logger.add(LogEvents.tagged('GAP_OVERRIDE', 'Low headroom heal allowed'), {
                                 bufferHeadroom: headroom.toFixed(2) + 's',
                                 minRequired: CONFIG.recovery.MIN_HEAL_HEADROOM_S + 's',
                                 overrideMinHeadroom: gapHeadroomMin + 's',
                                 gapSize: gapSize.toFixed(2) + 's',
                                 minGap: gapOverrideMin + 's',
+                                bufferExhausted,
+                                overrideType: canOverrideGap ? 'gap' : 'buffer_exhausted',
                                 healPoint: `${healPoint.start.toFixed(2)}-${healPoint.end.toFixed(2)}`,
                                 buffers: getAnalysis().formattedRanges
                             });
+                            resetDeferTracking();
                             return {
                                 healPoint,
                                 aborted: false
@@ -8604,6 +8647,30 @@ const HealPointPoller = (() => {
                         }
 
                         const now = Date.now();
+                        if (monitorState) {
+                            if (!monitorState.healDeferSince) {
+                                monitorState.healDeferSince = now;
+                            }
+                            monitorState.healDeferCount = (monitorState.healDeferCount || 0) + 1;
+                            const deferMs = now - monitorState.healDeferSince;
+                            if (CONFIG.recovery.HEAL_DEFER_ABORT_MS
+                                && deferMs >= CONFIG.recovery.HEAL_DEFER_ABORT_MS) {
+                                Logger.add(LogEvents.tagged('HEAL_DEFER', 'Deferral limit reached, treating as no-heal point'), {
+                                    bufferHeadroom: headroom.toFixed(2) + 's',
+                                    minRequired: CONFIG.recovery.MIN_HEAL_HEADROOM_S + 's',
+                                    deferMs,
+                                    deferLimitMs: CONFIG.recovery.HEAL_DEFER_ABORT_MS,
+                                    healPoint: `${healPoint.start.toFixed(2)}-${healPoint.end.toFixed(2)}`,
+                                    buffers: getAnalysis().formattedRanges
+                                });
+                                resetDeferTracking();
+                                return {
+                                    healPoint: null,
+                                    aborted: false,
+                                    reason: 'defer_limit'
+                                };
+                            }
+                        }
                         if (monitorState && now - (monitorState.lastHealDeferralLogTime || 0) >= CONFIG.logging.HEAL_DEFER_LOG_MS) {
                             monitorState.lastHealDeferralLogTime = now;
                             const deferSummary = LogEvents.summary.healDefer({
@@ -8623,6 +8690,7 @@ const HealPointPoller = (() => {
                         continue;
                     }
 
+                    resetDeferTracking();
                     Logger.add(LogEvents.TAG.POLL_SUCCESS, {
                         attempts: pollCount,
                         type: healPoint.isNudge ? 'NUDGE' : 'GAP',

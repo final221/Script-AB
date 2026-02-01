@@ -43,6 +43,8 @@ const PlaybackStateDefaults = (() => {
             lastBackoffLogTime: 0,
             lastHealAttemptTime: 0,
             lastHealDeferralLogTime: 0,
+            healDeferSince: 0,
+            healDeferCount: 0,
             lastRefreshAt: 0,
             lastEmergencySwitchAt: 0
         },
@@ -134,6 +136,8 @@ const PlaybackStateDefaults = (() => {
         lastBackoffLogTime: ['heal', 'lastBackoffLogTime'],
         lastHealAttemptTime: ['heal', 'lastHealAttemptTime'],
         lastHealDeferralLogTime: ['heal', 'lastHealDeferralLogTime'],
+        healDeferSince: ['heal', 'healDeferSince'],
+        healDeferCount: ['heal', 'healDeferCount'],
         lastRefreshAt: ['heal', 'lastRefreshAt'],
         lastEmergencySwitchAt: ['heal', 'lastEmergencySwitchAt'],
         lastWatchdogLogTime: ['events', 'lastWatchdogLogTime'],

@@ -9,7 +9,9 @@ const Instrumentation = (() => {
     let externalSignalHandler = null;
     let signalDetector = null;
     const PROCESSING_ASSET_PATTERN = /404_processing_640x360\.png/i;
+    const DECODER_ERROR_PATTERN = /(amazon-ivs-wasmworker|runtimeerror:\s*index out of bounds)/i;
     let lastResourceHintTime = 0;
+    let lastDecoderSignalTime = 0;
     const truncateMessage = (message, maxLen) => (
         String(message).substring(0, maxLen)
     );
@@ -39,6 +41,7 @@ const Instrumentation = (() => {
                 action: classification.action,
                 videoState: getVideoState()
             });
+            maybeEmitDecoderError(event.message || '', event.filename?.split('/').pop(), event.lineno);
 
             if (classification.action !== 'LOG_ONLY') {
                 Metrics.increment('errors');
@@ -73,6 +76,25 @@ const Instrumentation = (() => {
                 message: e?.message
             });
         }
+    };
+
+    const maybeEmitDecoderError = (message, filename, lineno) => {
+        const now = Date.now();
+        if (now - lastDecoderSignalTime < CONFIG.logging.CONSOLE_SIGNAL_THROTTLE_MS) {
+            return;
+        }
+        if (!DECODER_ERROR_PATTERN.test(message || '') && !DECODER_ERROR_PATTERN.test(filename || '')) {
+            return;
+        }
+        lastDecoderSignalTime = now;
+        emitExternalSignal({
+            type: 'decoder_error',
+            level: 'error',
+            message: truncateMessage(message || '', CONFIG.logging.LOG_MESSAGE_MAX_LEN),
+            filename: filename || null,
+            lineno: Number.isFinite(lineno) ? lineno : null,
+            timestamp: new Date().toISOString()
+        });
     };
 
     const maybeEmitProcessingAsset = (url) => {
@@ -155,6 +177,7 @@ const Instrumentation = (() => {
                 severity: classification.severity,
                 action: classification.action
             });
+            maybeEmitDecoderError(msg, null, null);
 
             if (signalDetector) {
                 signalDetector.detect('error', msg);

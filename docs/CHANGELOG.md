@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.4.59 - 2026-02-01T22:03:09.046Z
+Previous: 4.4.58
+Commit: 630d939
+Changes:
+- Refactor recovery and stall decision flows
+
 ## 4.4.58 - 2026-02-01T21:09:04.783Z
 Previous: 4.4.57
 Commit: c3e9e4e

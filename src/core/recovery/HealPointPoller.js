@@ -23,6 +23,13 @@ const HealPointPoller = (() => {
                 timeout: timeoutMs + 'ms'
             });
 
+            const resetDeferTracking = () => {
+                if (!monitorState) return;
+                monitorState.healDeferSince = 0;
+                monitorState.healDeferCount = 0;
+            };
+            resetDeferTracking();
+
             while (Date.now() - startTime < timeoutMs) {
                 pollCount++;
                 let analysis = null;
@@ -45,6 +52,7 @@ const HealPointPoller = (() => {
                         pollCount,
                         elapsed: (Date.now() - startTime) + 'ms'
                     });
+                    resetDeferTracking();
                     return {
                         healPoint: null,
                         aborted: false
@@ -60,17 +68,23 @@ const HealPointPoller = (() => {
                         const gapHeadroomMin = CONFIG.recovery.GAP_OVERRIDE_MIN_HEADROOM_S || 0;
                         const gapSize = healPoint.gapSize || 0;
                         const isGap = !healPoint.isNudge && gapSize > 0 && (healPoint.rangeIndex || 0) > 0;
-                        const canOverride = isGap && gapSize >= gapOverrideMin && headroom >= gapHeadroomMin;
+                        const bufferExhausted = getAnalysis().bufferExhausted;
+                        const canOverrideGap = isGap && gapSize >= gapOverrideMin && headroom >= gapHeadroomMin;
+                        const canOverrideExhausted = bufferExhausted && headroom >= gapHeadroomMin;
+                        const canOverride = canOverrideGap || canOverrideExhausted;
                         if (canOverride) {
-                            Logger.add(LogEvents.tagged('GAP_OVERRIDE', 'Low headroom gap heal allowed'), {
+                            Logger.add(LogEvents.tagged('GAP_OVERRIDE', 'Low headroom heal allowed'), {
                                 bufferHeadroom: headroom.toFixed(2) + 's',
                                 minRequired: CONFIG.recovery.MIN_HEAL_HEADROOM_S + 's',
                                 overrideMinHeadroom: gapHeadroomMin + 's',
                                 gapSize: gapSize.toFixed(2) + 's',
                                 minGap: gapOverrideMin + 's',
+                                bufferExhausted,
+                                overrideType: canOverrideGap ? 'gap' : 'buffer_exhausted',
                                 healPoint: `${healPoint.start.toFixed(2)}-${healPoint.end.toFixed(2)}`,
                                 buffers: getAnalysis().formattedRanges
                             });
+                            resetDeferTracking();
                             return {
                                 healPoint,
                                 aborted: false
@@ -78,6 +92,30 @@ const HealPointPoller = (() => {
                         }
 
                         const now = Date.now();
+                        if (monitorState) {
+                            if (!monitorState.healDeferSince) {
+                                monitorState.healDeferSince = now;
+                            }
+                            monitorState.healDeferCount = (monitorState.healDeferCount || 0) + 1;
+                            const deferMs = now - monitorState.healDeferSince;
+                            if (CONFIG.recovery.HEAL_DEFER_ABORT_MS
+                                && deferMs >= CONFIG.recovery.HEAL_DEFER_ABORT_MS) {
+                                Logger.add(LogEvents.tagged('HEAL_DEFER', 'Deferral limit reached, treating as no-heal point'), {
+                                    bufferHeadroom: headroom.toFixed(2) + 's',
+                                    minRequired: CONFIG.recovery.MIN_HEAL_HEADROOM_S + 's',
+                                    deferMs,
+                                    deferLimitMs: CONFIG.recovery.HEAL_DEFER_ABORT_MS,
+                                    healPoint: `${healPoint.start.toFixed(2)}-${healPoint.end.toFixed(2)}`,
+                                    buffers: getAnalysis().formattedRanges
+                                });
+                                resetDeferTracking();
+                                return {
+                                    healPoint: null,
+                                    aborted: false,
+                                    reason: 'defer_limit'
+                                };
+                            }
+                        }
                         if (monitorState && now - (monitorState.lastHealDeferralLogTime || 0) >= CONFIG.logging.HEAL_DEFER_LOG_MS) {
                             monitorState.lastHealDeferralLogTime = now;
                             const deferSummary = LogEvents.summary.healDefer({
@@ -97,6 +135,7 @@ const HealPointPoller = (() => {
                         continue;
                     }
 
+                    resetDeferTracking();
                     Logger.add(LogEvents.TAG.POLL_SUCCESS, {
                         attempts: pollCount,
                         type: healPoint.isNudge ? 'NUDGE' : 'GAP',
