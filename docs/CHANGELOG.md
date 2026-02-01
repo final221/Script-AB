@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.5.4 - 2026-02-01T23:01:01.016Z
+Previous: 4.5.3
+Commit: db73f94
+Changes:
+- Add adversarial QA tests and verify build
+
 ## 4.5.3 - 2026-02-01T22:57:28.281Z
 Previous: 4.5.2
 Commit: 7e579e2

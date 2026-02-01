@@ -21,7 +21,7 @@
 ## Role registry (opt-in)
 - Roles are invoked by `Role: <name>` or `Use role: <name>` in the user request.
 
-### Adversarial QA
+### Red Team
 - Changes: tests only (no prod code).
 - Outputs: top-5 risk list with file refs + one test per risk.
 - Constraints: deterministic; no network; use existing test stack.
