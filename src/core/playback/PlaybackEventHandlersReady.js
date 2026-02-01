@@ -7,7 +7,7 @@ const PlaybackEventHandlersReady = (() => {
         const video = options.video;
         const tracker = options.tracker;
         const state = options.state;
-        const setState = options.setState;
+        const transitions = options.transitions;
         const logEvent = options.logEvent;
 
         return {
@@ -18,9 +18,7 @@ const PlaybackEventHandlersReady = (() => {
                 logEvent('playing', () => ({
                     state: state.state
                 }));
-                if (state.state !== MonitorStates.HEALING) {
-                    setState(MonitorStates.PLAYING, 'playing');
-                }
+                transitions.toPlaying('playing');
             },
             loadedmetadata: () => {
                 tracker.markReady('loadedmetadata');

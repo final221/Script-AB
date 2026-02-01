@@ -7,7 +7,7 @@ const PlaybackEventHandlersProgress = (() => {
         const video = options.video;
         const tracker = options.tracker;
         const state = options.state;
-        const setState = options.setState;
+        const transitions = options.transitions;
         const logEvent = options.logEvent;
 
         return {
@@ -18,8 +18,8 @@ const PlaybackEventHandlersProgress = (() => {
                         state: state.state
                     }));
                 }
-                if (!video.paused && state.state !== MonitorStates.HEALING) {
-                    setState(MonitorStates.PLAYING, 'timeupdate');
+                if (!video.paused) {
+                    transitions.toPlaying('timeupdate');
                 }
             }
         };

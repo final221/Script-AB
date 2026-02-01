@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.4.40
+// @version       4.4.42
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -162,7 +162,7 @@ const CONFIG = (() => {
  * Build metadata helpers (version injected at build time).
  */
 const BuildInfo = (() => {
-    const VERSION = '4.4.40';
+    const VERSION = '4.4.42';
 
     const getVersion = () => {
         const gmVersion = (typeof GM_info !== 'undefined' && GM_info?.script?.version)
@@ -173,7 +173,7 @@ const BuildInfo = (() => {
             ? unsafeWindow.GM_info.script.version
             : null;
         if (unsafeVersion) return unsafeVersion;
-        if (VERSION && VERSION !== '4.4.40') return VERSION;
+        if (VERSION && VERSION !== '4.4.42') return VERSION;
         return null;
     };
 
@@ -3730,6 +3730,48 @@ const PlaybackStateStore = (() => {
     };
 })();
 
+// --- PlaybackStateTransitions ---
+/**
+ * Centralizes guarded playback state transitions.
+ */
+const PlaybackStateTransitions = (() => {
+    const create = (options = {}) => {
+        const state = options.state;
+        const setState = options.setState || (() => false);
+
+        const canTransition = (nextState, allowDuringHealing) => {
+            if (!state) return false;
+            if (state.state !== MonitorStates.HEALING) {
+                return true;
+            }
+            if (nextState === MonitorStates.HEALING) {
+                return true;
+            }
+            return allowDuringHealing === true;
+        };
+
+        const transition = (nextState, reason, options = {}) => {
+            if (!canTransition(nextState, options.allowDuringHealing)) {
+                return false;
+            }
+            return setState(nextState, reason);
+        };
+
+        return {
+            transition,
+            toPlaying: (reason) => transition(MonitorStates.PLAYING, reason),
+            toPaused: (reason, options = {}) => transition(MonitorStates.PAUSED, reason, options),
+            toStalled: (reason, options = {}) => transition(MonitorStates.STALLED, reason, options),
+            toHealing: (reason) => transition(MonitorStates.HEALING, reason, { allowDuringHealing: true }),
+            toEnded: (reason) => transition(MonitorStates.ENDED, reason, { allowDuringHealing: true }),
+            toError: (reason) => transition(MonitorStates.ERROR, reason, { allowDuringHealing: true }),
+            toReset: (reason) => transition(MonitorStates.RESET, reason, { allowDuringHealing: true })
+        };
+    };
+
+    return { create };
+})();
+
 // --- PlaybackResetLogic ---
 /**
  * Reset evaluation + pending reset handling for playback state.
@@ -4444,7 +4486,7 @@ const PlaybackEventHandlersProgress = (() => {
         const video = options.video;
         const tracker = options.tracker;
         const state = options.state;
-        const setState = options.setState;
+        const transitions = options.transitions;
         const logEvent = options.logEvent;
 
         return {
@@ -4455,8 +4497,8 @@ const PlaybackEventHandlersProgress = (() => {
                         state: state.state
                     }));
                 }
-                if (!video.paused && state.state !== MonitorStates.HEALING) {
-                    setState(MonitorStates.PLAYING, 'timeupdate');
+                if (!video.paused) {
+                    transitions.toPlaying('timeupdate');
                 }
             }
         };
@@ -4474,7 +4516,7 @@ const PlaybackEventHandlersReady = (() => {
         const video = options.video;
         const tracker = options.tracker;
         const state = options.state;
-        const setState = options.setState;
+        const transitions = options.transitions;
         const logEvent = options.logEvent;
 
         return {
@@ -4485,9 +4527,7 @@ const PlaybackEventHandlersReady = (() => {
                 logEvent('playing', () => ({
                     state: state.state
                 }));
-                if (state.state !== MonitorStates.HEALING) {
-                    setState(MonitorStates.PLAYING, 'playing');
-                }
+                transitions.toPlaying('playing');
             },
             loadedmetadata: () => {
                 tracker.markReady('loadedmetadata');
@@ -4522,7 +4562,7 @@ const PlaybackEventHandlersStall = (() => {
         const video = options.video;
         const tracker = options.tracker;
         const state = options.state;
-        const setState = options.setState;
+        const transitions = options.transitions;
         const logEvent = options.logEvent;
 
         return {
@@ -4531,8 +4571,8 @@ const PlaybackEventHandlersStall = (() => {
                 logEvent('waiting', () => ({
                     state: state.state
                 }));
-                if (!video.paused && state.state !== MonitorStates.HEALING) {
-                    setState(MonitorStates.STALLED, 'waiting');
+                if (!video.paused) {
+                    transitions.toStalled('waiting');
                 }
             },
             stalled: () => {
@@ -4540,8 +4580,8 @@ const PlaybackEventHandlersStall = (() => {
                 logEvent('stalled', () => ({
                     state: state.state
                 }));
-                if (!video.paused && state.state !== MonitorStates.HEALING) {
-                    setState(MonitorStates.STALLED, 'stalled');
+                if (!video.paused) {
+                    transitions.toStalled('stalled');
                 }
             },
             pause: () => {
@@ -4552,12 +4592,10 @@ const PlaybackEventHandlersStall = (() => {
                 }));
                 if (bufferExhausted && !video.ended) {
                     tracker.markStallEvent('pause_buffer_exhausted');
-                    if (state.state !== MonitorStates.HEALING) {
-                        setState(MonitorStates.STALLED, 'pause_buffer_exhausted');
-                    }
+                    transitions.toStalled('pause_buffer_exhausted');
                     return;
                 }
-                setState(MonitorStates.PAUSED, 'pause');
+                transitions.toPaused('pause', { allowDuringHealing: true });
             }
         };
     };
@@ -4575,7 +4613,7 @@ const PlaybackEventHandlersLifecycle = (() => {
         const videoId = options.videoId;
         const tracker = options.tracker;
         const state = options.state;
-        const setState = options.setState;
+        const transitions = options.transitions;
         const onReset = options.onReset || (() => {});
         const logEvent = options.logEvent;
 
@@ -4591,21 +4629,21 @@ const PlaybackEventHandlersLifecycle = (() => {
                         ? Number(video.currentTime.toFixed(3))
                         : null
                 });
-                setState(MonitorStates.ENDED, 'ended');
+                transitions.toEnded('ended');
             },
             error: () => {
                 state.pauseFromStall = false;
                 logEvent('error', () => ({
                     state: state.state
                 }));
-                setState(MonitorStates.ERROR, 'error');
+                transitions.toError('error');
             },
             abort: () => {
                 state.pauseFromStall = false;
                 logEvent('abort', () => ({
                     state: state.state
                 }));
-                setState(MonitorStates.PAUSED, 'abort');
+                transitions.toPaused('abort', { allowDuringHealing: true });
                 tracker.handleReset('abort', onReset);
             },
             emptied: () => {
@@ -4637,7 +4675,7 @@ const PlaybackEventHandlers = (() => {
         const logDebug = options.logDebug;
         const tracker = options.tracker;
         const state = options.state;
-        const setState = options.setState;
+        const transitions = options.transitions;
         const onReset = options.onReset || (() => {});
         const isActive = options.isActive || (() => true);
         const eventLogger = PlaybackEventLogger.create({
@@ -4652,7 +4690,7 @@ const PlaybackEventHandlers = (() => {
             videoId,
             tracker,
             state,
-            setState,
+            transitions,
             onReset,
             logEvent
         };
@@ -4700,7 +4738,7 @@ const PlaybackWatchdog = (() => {
         const logDebug = options.logDebug;
         const tracker = options.tracker;
         const state = options.state;
-        const setState = options.setState;
+        const transitions = options.transitions;
         const isHealing = options.isHealing;
         const isActive = options.isActive || (() => true);
         const onRemoved = options.onRemoved || (() => {});
@@ -4743,11 +4781,11 @@ const PlaybackWatchdog = (() => {
                 pauseFromStall = true;
             }
             if (video.paused && !pauseFromStall) {
-                setState(MonitorStates.PAUSED, 'watchdog_paused');
+                transitions.toPaused('watchdog_paused');
                 return;
             }
             if (video.paused && pauseFromStall && state.state !== MonitorStates.STALLED) {
-                setState(MonitorStates.STALLED, bufferExhausted ? 'paused_buffer_exhausted' : 'paused_after_stall');
+                transitions.toStalled(bufferExhausted ? 'paused_buffer_exhausted' : 'paused_after_stall');
             }
 
             if (tracker.shouldSkipUntilProgress()) {
@@ -4776,7 +4814,7 @@ const PlaybackWatchdog = (() => {
             }
 
             if (state.state !== MonitorStates.STALLED) {
-                setState(MonitorStates.STALLED, 'watchdog_no_progress');
+                transitions.toStalled('watchdog_no_progress');
             }
 
             const logIntervalMs = Tuning.logIntervalMs(isActive());
@@ -4845,13 +4883,15 @@ const PlaybackMonitor = (() => {
             }
         });
 
+        const transitions = PlaybackStateTransitions.create({ state, setState });
+
         const eventHandlers = PlaybackEventHandlers.create({
             video,
             videoId,
             logDebug,
             tracker,
             state,
-            setState,
+            transitions,
             onReset,
             isActive
         });
@@ -4862,7 +4902,7 @@ const PlaybackMonitor = (() => {
             logDebug,
             tracker,
             state,
-            setState,
+            transitions,
             isHealing,
             isActive,
             onRemoved,
@@ -7714,12 +7754,18 @@ const HealPipeline = (() => {
 
         const finalizeMonitorState = (monitorState, video) => {
             if (!monitorState) return;
+            const transitions = PlaybackStateTransitions.create({
+                state: monitorState,
+                setState: (nextState, reason) => PlaybackStateStore.setState(monitorState, nextState, {
+                    reason
+                })
+            });
             if (video.paused) {
-                PlaybackStateStore.setState(monitorState, MonitorStates.PAUSED);
+                transitions.toPaused('heal_finalize_paused', { allowDuringHealing: true });
             } else if (poller.hasRecovered(video, monitorState)) {
-                PlaybackStateStore.setState(monitorState, MonitorStates.PLAYING);
+                transitions.toPlaying('heal_finalize_recovered', { allowDuringHealing: true });
             } else {
-                PlaybackStateStore.setState(monitorState, MonitorStates.STALLED);
+                transitions.toStalled('heal_finalize_stalled', { allowDuringHealing: true });
             }
         };
 
@@ -7742,7 +7788,13 @@ const HealPipeline = (() => {
             state.healAttempts++;
             const healStartTime = performance.now();
             if (monitorState) {
-                PlaybackStateStore.setState(monitorState, MonitorStates.HEALING);
+                const transitions = PlaybackStateTransitions.create({
+                    state: monitorState,
+                    setState: (nextState, reason) => PlaybackStateStore.setState(monitorState, nextState, {
+                        reason
+                    })
+                });
+                transitions.toHealing('heal_start');
                 monitorState.lastHealAttemptTime = Date.now();
             }
 

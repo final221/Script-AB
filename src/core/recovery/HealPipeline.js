@@ -68,12 +68,18 @@ const HealPipeline = (() => {
 
         const finalizeMonitorState = (monitorState, video) => {
             if (!monitorState) return;
+            const transitions = PlaybackStateTransitions.create({
+                state: monitorState,
+                setState: (nextState, reason) => PlaybackStateStore.setState(monitorState, nextState, {
+                    reason
+                })
+            });
             if (video.paused) {
-                PlaybackStateStore.setState(monitorState, MonitorStates.PAUSED);
+                transitions.toPaused('heal_finalize_paused', { allowDuringHealing: true });
             } else if (poller.hasRecovered(video, monitorState)) {
-                PlaybackStateStore.setState(monitorState, MonitorStates.PLAYING);
+                transitions.toPlaying('heal_finalize_recovered', { allowDuringHealing: true });
             } else {
-                PlaybackStateStore.setState(monitorState, MonitorStates.STALLED);
+                transitions.toStalled('heal_finalize_stalled', { allowDuringHealing: true });
             }
         };
 
@@ -96,7 +102,13 @@ const HealPipeline = (() => {
             state.healAttempts++;
             const healStartTime = performance.now();
             if (monitorState) {
-                PlaybackStateStore.setState(monitorState, MonitorStates.HEALING);
+                const transitions = PlaybackStateTransitions.create({
+                    state: monitorState,
+                    setState: (nextState, reason) => PlaybackStateStore.setState(monitorState, nextState, {
+                        reason
+                    })
+                });
+                transitions.toHealing('heal_start');
                 monitorState.lastHealAttemptTime = Date.now();
             }
 

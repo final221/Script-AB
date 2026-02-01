@@ -8,7 +8,7 @@ const PlaybackEventHandlersLifecycle = (() => {
         const videoId = options.videoId;
         const tracker = options.tracker;
         const state = options.state;
-        const setState = options.setState;
+        const transitions = options.transitions;
         const onReset = options.onReset || (() => {});
         const logEvent = options.logEvent;
 
@@ -24,21 +24,21 @@ const PlaybackEventHandlersLifecycle = (() => {
                         ? Number(video.currentTime.toFixed(3))
                         : null
                 });
-                setState(MonitorStates.ENDED, 'ended');
+                transitions.toEnded('ended');
             },
             error: () => {
                 state.pauseFromStall = false;
                 logEvent('error', () => ({
                     state: state.state
                 }));
-                setState(MonitorStates.ERROR, 'error');
+                transitions.toError('error');
             },
             abort: () => {
                 state.pauseFromStall = false;
                 logEvent('abort', () => ({
                     state: state.state
                 }));
-                setState(MonitorStates.PAUSED, 'abort');
+                transitions.toPaused('abort', { allowDuringHealing: true });
                 tracker.handleReset('abort', onReset);
             },
             emptied: () => {

@@ -7,7 +7,7 @@ const PlaybackEventHandlersStall = (() => {
         const video = options.video;
         const tracker = options.tracker;
         const state = options.state;
-        const setState = options.setState;
+        const transitions = options.transitions;
         const logEvent = options.logEvent;
 
         return {
@@ -16,8 +16,8 @@ const PlaybackEventHandlersStall = (() => {
                 logEvent('waiting', () => ({
                     state: state.state
                 }));
-                if (!video.paused && state.state !== MonitorStates.HEALING) {
-                    setState(MonitorStates.STALLED, 'waiting');
+                if (!video.paused) {
+                    transitions.toStalled('waiting');
                 }
             },
             stalled: () => {
@@ -25,8 +25,8 @@ const PlaybackEventHandlersStall = (() => {
                 logEvent('stalled', () => ({
                     state: state.state
                 }));
-                if (!video.paused && state.state !== MonitorStates.HEALING) {
-                    setState(MonitorStates.STALLED, 'stalled');
+                if (!video.paused) {
+                    transitions.toStalled('stalled');
                 }
             },
             pause: () => {
@@ -37,12 +37,10 @@ const PlaybackEventHandlersStall = (() => {
                 }));
                 if (bufferExhausted && !video.ended) {
                     tracker.markStallEvent('pause_buffer_exhausted');
-                    if (state.state !== MonitorStates.HEALING) {
-                        setState(MonitorStates.STALLED, 'pause_buffer_exhausted');
-                    }
+                    transitions.toStalled('pause_buffer_exhausted');
                     return;
                 }
-                setState(MonitorStates.PAUSED, 'pause');
+                transitions.toPaused('pause', { allowDuringHealing: true });
             }
         };
     };

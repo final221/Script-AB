@@ -1,5 +1,17 @@
 # Changelog
 
+## 4.4.42 - 2026-02-01T13:32:16.229Z
+Previous: 4.4.41
+Commit: e9ef8e7
+Changes:
+- No commits detected since last build
+
+## 4.4.41 - 2026-02-01T13:30:50.545Z
+Previous: 4.4.40
+Commit: e9ef8e7
+Changes:
+- Remove StreamHealer export entrypoint
+
 ## 4.4.40 - 2026-02-01T13:06:34.649Z
 Previous: 4.4.39
 Commit: 1806e7a

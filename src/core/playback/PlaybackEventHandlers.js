@@ -9,7 +9,7 @@ const PlaybackEventHandlers = (() => {
         const logDebug = options.logDebug;
         const tracker = options.tracker;
         const state = options.state;
-        const setState = options.setState;
+        const transitions = options.transitions;
         const onReset = options.onReset || (() => {});
         const isActive = options.isActive || (() => true);
         const eventLogger = PlaybackEventLogger.create({
@@ -24,7 +24,7 @@ const PlaybackEventHandlers = (() => {
             videoId,
             tracker,
             state,
-            setState,
+            transitions,
             onReset,
             logEvent
         };

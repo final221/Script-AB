@@ -32,13 +32,15 @@ const PlaybackMonitor = (() => {
             }
         });
 
+        const transitions = PlaybackStateTransitions.create({ state, setState });
+
         const eventHandlers = PlaybackEventHandlers.create({
             video,
             videoId,
             logDebug,
             tracker,
             state,
-            setState,
+            transitions,
             onReset,
             isActive
         });
@@ -49,7 +51,7 @@ const PlaybackMonitor = (() => {
             logDebug,
             tracker,
             state,
-            setState,
+            transitions,
             isHealing,
             isActive,
             onRemoved,

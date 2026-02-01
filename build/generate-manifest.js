@@ -113,6 +113,7 @@ const buildManifest = () => {
         'PlaybackMediaWatcher.js',
         'MediaState.js',
         'PlaybackStateStore.js',
+        'PlaybackStateTransitions.js',
         'PlaybackResetLogic.js',
         'PlaybackProgressReset.js',
         'PlaybackProgressLogic.js',
