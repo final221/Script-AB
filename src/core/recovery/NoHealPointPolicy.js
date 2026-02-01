@@ -65,7 +65,7 @@ const NoHealPointPolicy = (() => {
             }
             const switched = candidateSelector.selectEmergencyCandidate(reason, options);
             if (switched) {
-                monitorState.lastEmergencySwitchAt = now;
+                PlaybackStateStore.markEmergencySwitch(monitorState, now);
                 return true;
             }
             return false;
@@ -73,8 +73,8 @@ const NoHealPointPolicy = (() => {
 
         const applyRefresh = (videoId, monitorState, reason, now) => {
             if (!monitorState) return false;
-            monitorState.lastRefreshAt = now;
-            monitorState.noHealPointRefreshUntil = 0;
+            PlaybackStateStore.markRefresh(monitorState, now);
+            PlaybackStateStore.setNoHealPointRefreshUntil(monitorState, 0);
             logDebug(
                 LogEvents.tagged('REFRESH', 'Refreshing video after repeated no-heal points'),
                 RecoveryLogDetails.refresh({
@@ -83,7 +83,7 @@ const NoHealPointPolicy = (() => {
                     noHealPointCount: monitorState.noHealPointCount
                 })
             );
-            monitorState.noHealPointCount = 0;
+            PlaybackStateStore.setNoHealPointCount(monitorState, 0);
             onPersistentFailure(videoId, {
                 reason,
                 detail: 'no_heal_point'
@@ -144,7 +144,7 @@ const NoHealPointPolicy = (() => {
             backoffManager.applyBackoff(videoId, monitorState, reason);
 
             if (decision.shouldSetRefreshWindow && monitorState) {
-                monitorState.noHealPointRefreshUntil = decision.refreshUntil;
+                PlaybackStateStore.setNoHealPointRefreshUntil(monitorState, decision.refreshUntil);
             }
 
             if (decision.shouldRescanNoBuffer) {

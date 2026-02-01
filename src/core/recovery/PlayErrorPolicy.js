@@ -48,9 +48,12 @@ const PlayErrorPolicy = (() => {
                 : CONFIG.stall.PLAY_ERROR_BACKOFF_MAX_MS;
             const backoffMs = Math.min(base * count, max);
 
-            monitorState.playErrorCount = count;
-            monitorState.lastPlayErrorTime = now;
-            monitorState.nextPlayHealAllowedTime = now + backoffMs;
+            PlaybackStateStore.setPlayErrorBackoff(
+                monitorState,
+                count,
+                now + backoffMs,
+                now
+            );
 
             Logger.add(LogEvents.tagged('PLAY_BACKOFF', 'Play failed'), RecoveryLogDetails.playBackoff({
                 videoId,

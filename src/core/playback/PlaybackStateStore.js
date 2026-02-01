@@ -46,6 +46,43 @@ const PlaybackStateStore = (() => {
         return true;
     };
 
+    const setNoHealPointCount = (state, count) => {
+        if (!state) return false;
+        state.noHealPointCount = count;
+        return true;
+    };
+
+    const setNoHealPointBackoff = (state, count, nextAllowedTime) => {
+        if (!state) return false;
+        state.noHealPointCount = count;
+        state.nextHealAllowedTime = nextAllowedTime;
+        return true;
+    };
+
+    const setNoHealPointRefreshUntil = (state, until) => {
+        if (!state) return false;
+        state.noHealPointRefreshUntil = until;
+        return true;
+    };
+
+    const markRefresh = (state, now) => {
+        if (!state) return false;
+        state.lastRefreshAt = now;
+        return true;
+    };
+
+    const markEmergencySwitch = (state, now) => {
+        if (!state) return false;
+        state.lastEmergencySwitchAt = now;
+        return true;
+    };
+
+    const markBackoffLog = (state, now) => {
+        if (!state) return false;
+        state.lastBackoffLogTime = now;
+        return true;
+    };
+
     const resetPlayErrorState = (state) => {
         if (!state) return false;
         state.playErrorCount = 0;
@@ -57,11 +94,58 @@ const PlaybackStateStore = (() => {
         return true;
     };
 
+    const setPlayErrorBackoff = (state, count, nextAllowedTime, now) => {
+        if (!state) return false;
+        state.playErrorCount = count;
+        state.lastPlayErrorTime = now;
+        state.nextPlayHealAllowedTime = nextAllowedTime;
+        return true;
+    };
+
+    const markPlayBackoffLog = (state, now) => {
+        if (!state) return false;
+        state.lastPlayBackoffLogTime = now;
+        return true;
+    };
+
+    const markHealAttempt = (state, now) => {
+        if (!state) return false;
+        state.lastHealAttemptTime = now;
+        return true;
+    };
+
+    const updateHealPointRepeat = (state, point, succeeded) => {
+        if (!state) return 0;
+        if (succeeded || !point) {
+            state.lastHealPointKey = null;
+            state.healPointRepeatCount = 0;
+            return 0;
+        }
+        const key = `${point.start.toFixed(2)}-${point.end.toFixed(2)}`;
+        if (state.lastHealPointKey === key) {
+            state.healPointRepeatCount = (state.healPointRepeatCount || 0) + 1;
+        } else {
+            state.lastHealPointKey = key;
+            state.healPointRepeatCount = 1;
+        }
+        return state.healPointRepeatCount;
+    };
+
     return {
         create,
         applyAliases,
         setState,
         resetNoHealPointState,
-        resetPlayErrorState
+        setNoHealPointCount,
+        setNoHealPointBackoff,
+        setNoHealPointRefreshUntil,
+        markRefresh,
+        markEmergencySwitch,
+        markBackoffLog,
+        resetPlayErrorState,
+        setPlayErrorBackoff,
+        markPlayBackoffLog,
+        markHealAttempt,
+        updateHealPointRepeat
     };
 })();

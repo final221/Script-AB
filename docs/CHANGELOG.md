@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.4.48 - 2026-02-01T13:54:43.371Z
+Previous: 4.4.47
+Commit: 601a8d9
+Changes:
+- refactor: split no-heal-point decision and effects
+
 ## 4.4.47 - 2026-02-01T13:49:49.562Z
 Previous: 4.4.46
 Commit: 79ed3e6

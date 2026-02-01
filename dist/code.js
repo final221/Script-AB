@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.4.47
+// @version       4.4.48
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -162,7 +162,7 @@ const CONFIG = (() => {
  * Build metadata helpers (version injected at build time).
  */
 const BuildInfo = (() => {
-    const VERSION = '4.4.47';
+    const VERSION = '4.4.48';
 
     const getVersion = () => {
         const gmVersion = (typeof GM_info !== 'undefined' && GM_info?.script?.version)
@@ -173,7 +173,7 @@ const BuildInfo = (() => {
             ? unsafeWindow.GM_info.script.version
             : null;
         if (unsafeVersion) return unsafeVersion;
-        if (VERSION && VERSION !== '4.4.47') return VERSION;
+        if (VERSION && VERSION !== '4.4.48') return VERSION;
         return null;
     };
 
@@ -3710,6 +3710,43 @@ const PlaybackStateStore = (() => {
         return true;
     };
 
+    const setNoHealPointCount = (state, count) => {
+        if (!state) return false;
+        state.noHealPointCount = count;
+        return true;
+    };
+
+    const setNoHealPointBackoff = (state, count, nextAllowedTime) => {
+        if (!state) return false;
+        state.noHealPointCount = count;
+        state.nextHealAllowedTime = nextAllowedTime;
+        return true;
+    };
+
+    const setNoHealPointRefreshUntil = (state, until) => {
+        if (!state) return false;
+        state.noHealPointRefreshUntil = until;
+        return true;
+    };
+
+    const markRefresh = (state, now) => {
+        if (!state) return false;
+        state.lastRefreshAt = now;
+        return true;
+    };
+
+    const markEmergencySwitch = (state, now) => {
+        if (!state) return false;
+        state.lastEmergencySwitchAt = now;
+        return true;
+    };
+
+    const markBackoffLog = (state, now) => {
+        if (!state) return false;
+        state.lastBackoffLogTime = now;
+        return true;
+    };
+
     const resetPlayErrorState = (state) => {
         if (!state) return false;
         state.playErrorCount = 0;
@@ -3721,12 +3758,59 @@ const PlaybackStateStore = (() => {
         return true;
     };
 
+    const setPlayErrorBackoff = (state, count, nextAllowedTime, now) => {
+        if (!state) return false;
+        state.playErrorCount = count;
+        state.lastPlayErrorTime = now;
+        state.nextPlayHealAllowedTime = nextAllowedTime;
+        return true;
+    };
+
+    const markPlayBackoffLog = (state, now) => {
+        if (!state) return false;
+        state.lastPlayBackoffLogTime = now;
+        return true;
+    };
+
+    const markHealAttempt = (state, now) => {
+        if (!state) return false;
+        state.lastHealAttemptTime = now;
+        return true;
+    };
+
+    const updateHealPointRepeat = (state, point, succeeded) => {
+        if (!state) return 0;
+        if (succeeded || !point) {
+            state.lastHealPointKey = null;
+            state.healPointRepeatCount = 0;
+            return 0;
+        }
+        const key = `${point.start.toFixed(2)}-${point.end.toFixed(2)}`;
+        if (state.lastHealPointKey === key) {
+            state.healPointRepeatCount = (state.healPointRepeatCount || 0) + 1;
+        } else {
+            state.lastHealPointKey = key;
+            state.healPointRepeatCount = 1;
+        }
+        return state.healPointRepeatCount;
+    };
+
     return {
         create,
         applyAliases,
         setState,
         resetNoHealPointState,
-        resetPlayErrorState
+        setNoHealPointCount,
+        setNoHealPointBackoff,
+        setNoHealPointRefreshUntil,
+        markRefresh,
+        markEmergencySwitch,
+        markBackoffLog,
+        resetPlayErrorState,
+        setPlayErrorBackoff,
+        markPlayBackoffLog,
+        markHealAttempt,
+        updateHealPointRepeat
     };
 })();
 
@@ -6117,8 +6201,11 @@ const BackoffManager = (() => {
             const max = CONFIG.stall.NO_HEAL_POINT_BACKOFF_MAX_MS;
             const backoffMs = Math.min(base * count, max);
 
-            monitorState.noHealPointCount = count;
-            monitorState.nextHealAllowedTime = Date.now() + backoffMs;
+            PlaybackStateStore.setNoHealPointBackoff(
+                monitorState,
+                count,
+                Date.now() + backoffMs
+            );
 
             Logger.add(LogEvents.tagged('BACKOFF', 'No heal point'), {
                 videoId,
@@ -6133,7 +6220,7 @@ const BackoffManager = (() => {
             const now = Date.now();
             if (monitorState?.nextHealAllowedTime && now < monitorState.nextHealAllowedTime) {
                 if (now - (monitorState.lastBackoffLogTime || 0) > CONFIG.logging.BACKOFF_LOG_INTERVAL_MS) {
-                    monitorState.lastBackoffLogTime = now;
+                    PlaybackStateStore.markBackoffLog(monitorState, now);
                     logDebug(LogEvents.tagged('BACKOFF', 'Stall skipped due to backoff'), {
                         videoId,
                         remainingMs: monitorState.nextHealAllowedTime - now,
@@ -6330,7 +6417,7 @@ const NoHealPointPolicy = (() => {
             }
             const switched = candidateSelector.selectEmergencyCandidate(reason, options);
             if (switched) {
-                monitorState.lastEmergencySwitchAt = now;
+                PlaybackStateStore.markEmergencySwitch(monitorState, now);
                 return true;
             }
             return false;
@@ -6338,8 +6425,8 @@ const NoHealPointPolicy = (() => {
 
         const applyRefresh = (videoId, monitorState, reason, now) => {
             if (!monitorState) return false;
-            monitorState.lastRefreshAt = now;
-            monitorState.noHealPointRefreshUntil = 0;
+            PlaybackStateStore.markRefresh(monitorState, now);
+            PlaybackStateStore.setNoHealPointRefreshUntil(monitorState, 0);
             logDebug(
                 LogEvents.tagged('REFRESH', 'Refreshing video after repeated no-heal points'),
                 RecoveryLogDetails.refresh({
@@ -6348,7 +6435,7 @@ const NoHealPointPolicy = (() => {
                     noHealPointCount: monitorState.noHealPointCount
                 })
             );
-            monitorState.noHealPointCount = 0;
+            PlaybackStateStore.setNoHealPointCount(monitorState, 0);
             onPersistentFailure(videoId, {
                 reason,
                 detail: 'no_heal_point'
@@ -6409,7 +6496,7 @@ const NoHealPointPolicy = (() => {
             backoffManager.applyBackoff(videoId, monitorState, reason);
 
             if (decision.shouldSetRefreshWindow && monitorState) {
-                monitorState.noHealPointRefreshUntil = decision.refreshUntil;
+                PlaybackStateStore.setNoHealPointRefreshUntil(monitorState, decision.refreshUntil);
             }
 
             if (decision.shouldRescanNoBuffer) {
@@ -6523,9 +6610,12 @@ const PlayErrorPolicy = (() => {
                 : CONFIG.stall.PLAY_ERROR_BACKOFF_MAX_MS;
             const backoffMs = Math.min(base * count, max);
 
-            monitorState.playErrorCount = count;
-            monitorState.lastPlayErrorTime = now;
-            monitorState.nextPlayHealAllowedTime = now + backoffMs;
+            PlaybackStateStore.setPlayErrorBackoff(
+                monitorState,
+                count,
+                now + backoffMs,
+                now
+            );
 
             Logger.add(LogEvents.tagged('PLAY_BACKOFF', 'Play failed'), RecoveryLogDetails.playBackoff({
                 videoId,
@@ -6623,7 +6713,7 @@ const StallSkipPolicy = (() => {
             }
             if (monitorState?.nextPlayHealAllowedTime && now < monitorState.nextPlayHealAllowedTime) {
                 if (now - (monitorState.lastPlayBackoffLogTime || 0) > CONFIG.logging.BACKOFF_LOG_INTERVAL_MS) {
-                    monitorState.lastPlayBackoffLogTime = now;
+                    PlaybackStateStore.markPlayBackoffLog(monitorState, now);
                     logDebug(LogEvents.tagged('PLAY_BACKOFF', 'Stall skipped due to play backoff'), {
                         videoId,
                         remainingMs: monitorState.nextPlayHealAllowedTime - now,
@@ -7388,22 +7478,9 @@ const HealAttemptUtils = (() => {
         || result?.errorName === 'PLAY_STUCK'
     );
 
-    const updateHealPointRepeat = (monitorStateRef, point, succeeded) => {
-        if (!monitorStateRef) return 0;
-        if (succeeded || !point) {
-            monitorStateRef.lastHealPointKey = null;
-            monitorStateRef.healPointRepeatCount = 0;
-            return 0;
-        }
-        const key = `${point.start.toFixed(2)}-${point.end.toFixed(2)}`;
-        if (monitorStateRef.lastHealPointKey === key) {
-            monitorStateRef.healPointRepeatCount = (monitorStateRef.healPointRepeatCount || 0) + 1;
-        } else {
-            monitorStateRef.lastHealPointKey = key;
-            monitorStateRef.healPointRepeatCount = 1;
-        }
-        return monitorStateRef.healPointRepeatCount;
-    };
+    const updateHealPointRepeat = (monitorStateRef, point, succeeded) => (
+        PlaybackStateStore.updateHealPointRepeat(monitorStateRef, point, succeeded)
+    );
 
     return {
         getBufferEndDelta,
@@ -7947,7 +8024,7 @@ const HealPipeline = (() => {
             if (monitorState) {
                 const transitions = buildTransitions(monitorState);
                 transitions.toHealing('heal_start');
-                monitorState.lastHealAttemptTime = Date.now();
+                PlaybackStateStore.markHealAttempt(monitorState, Date.now());
             }
 
             attemptLogger.logStart({
@@ -8342,7 +8419,7 @@ const StallHandler = (() => {
 
         const markHealAttempt = (context, now) => {
             if (context.monitorState) {
-                context.monitorState.lastHealAttemptTime = now;
+                PlaybackStateStore.markHealAttempt(context.monitorState, now);
             }
         };
 

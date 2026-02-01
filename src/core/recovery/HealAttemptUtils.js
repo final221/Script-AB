@@ -20,22 +20,9 @@ const HealAttemptUtils = (() => {
         || result?.errorName === 'PLAY_STUCK'
     );
 
-    const updateHealPointRepeat = (monitorStateRef, point, succeeded) => {
-        if (!monitorStateRef) return 0;
-        if (succeeded || !point) {
-            monitorStateRef.lastHealPointKey = null;
-            monitorStateRef.healPointRepeatCount = 0;
-            return 0;
-        }
-        const key = `${point.start.toFixed(2)}-${point.end.toFixed(2)}`;
-        if (monitorStateRef.lastHealPointKey === key) {
-            monitorStateRef.healPointRepeatCount = (monitorStateRef.healPointRepeatCount || 0) + 1;
-        } else {
-            monitorStateRef.lastHealPointKey = key;
-            monitorStateRef.healPointRepeatCount = 1;
-        }
-        return monitorStateRef.healPointRepeatCount;
-    };
+    const updateHealPointRepeat = (monitorStateRef, point, succeeded) => (
+        PlaybackStateStore.updateHealPointRepeat(monitorStateRef, point, succeeded)
+    );
 
     return {
         getBufferEndDelta,

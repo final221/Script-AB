@@ -53,7 +53,7 @@ const StallHandler = (() => {
 
         const markHealAttempt = (context, now) => {
             if (context.monitorState) {
-                context.monitorState.lastHealAttemptTime = now;
+                PlaybackStateStore.markHealAttempt(context.monitorState, now);
             }
         };
 

@@ -220,7 +220,7 @@ const HealPipeline = (() => {
             if (monitorState) {
                 const transitions = buildTransitions(monitorState);
                 transitions.toHealing('heal_start');
-                monitorState.lastHealAttemptTime = Date.now();
+                PlaybackStateStore.markHealAttempt(monitorState, Date.now());
             }
 
             attemptLogger.logStart({

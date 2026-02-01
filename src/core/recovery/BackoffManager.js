@@ -29,8 +29,11 @@ const BackoffManager = (() => {
             const max = CONFIG.stall.NO_HEAL_POINT_BACKOFF_MAX_MS;
             const backoffMs = Math.min(base * count, max);
 
-            monitorState.noHealPointCount = count;
-            monitorState.nextHealAllowedTime = Date.now() + backoffMs;
+            PlaybackStateStore.setNoHealPointBackoff(
+                monitorState,
+                count,
+                Date.now() + backoffMs
+            );
 
             Logger.add(LogEvents.tagged('BACKOFF', 'No heal point'), {
                 videoId,
@@ -45,7 +48,7 @@ const BackoffManager = (() => {
             const now = Date.now();
             if (monitorState?.nextHealAllowedTime && now < monitorState.nextHealAllowedTime) {
                 if (now - (monitorState.lastBackoffLogTime || 0) > CONFIG.logging.BACKOFF_LOG_INTERVAL_MS) {
-                    monitorState.lastBackoffLogTime = now;
+                    PlaybackStateStore.markBackoffLog(monitorState, now);
                     logDebug(LogEvents.tagged('BACKOFF', 'Stall skipped due to backoff'), {
                         videoId,
                         remainingMs: monitorState.nextHealAllowedTime - now,

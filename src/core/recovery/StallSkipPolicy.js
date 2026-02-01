@@ -32,7 +32,7 @@ const StallSkipPolicy = (() => {
             }
             if (monitorState?.nextPlayHealAllowedTime && now < monitorState.nextPlayHealAllowedTime) {
                 if (now - (monitorState.lastPlayBackoffLogTime || 0) > CONFIG.logging.BACKOFF_LOG_INTERVAL_MS) {
-                    monitorState.lastPlayBackoffLogTime = now;
+                    PlaybackStateStore.markPlayBackoffLog(monitorState, now);
                     logDebug(LogEvents.tagged('PLAY_BACKOFF', 'Stall skipped due to play backoff'), {
                         videoId,
                         remainingMs: monitorState.nextPlayHealAllowedTime - now,
