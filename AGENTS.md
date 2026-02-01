@@ -18,6 +18,14 @@
 - When the user is brainstorming or asking questions, do not change files or run builds.
 - Provide a full opinion and push back when needed; wait for explicit confirmation before edits.
 
+## Role registry (opt-in)
+- Roles are invoked by `Role: <name>` or `Use role: <name>` in the user request.
+
+### Adversarial QA
+- Changes: tests only (no prod code).
+- Outputs: top-5 risk list with file refs + one test per risk.
+- Constraints: deterministic; no network; use existing test stack.
+
 ## Start
 - docs/AI_CONTEXT.md
 - docs/ARCHITECTURE.md

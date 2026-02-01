@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.5.1 - 2026-02-01T22:36:21.936Z
+Previous: 4.5.0
+Commit: 23ebbc1
+Changes:
+- Release 4.5.0
+
 ## 4.5.0 - 2026-02-01T22:18:59.149Z
 Previous: 4.4.61
 Commit: 2e5882d
