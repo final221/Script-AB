@@ -56,4 +56,25 @@ describe('LiveEdgeSeeker', () => {
         const result = LiveEdgeSeeker.validateSeekTarget(video, 50); // Before buffer start
         expect(result.valid).toBe(false);
     });
+
+    it('reports buffer read failure when TimeRanges throws', () => {
+        const LiveEdgeSeeker = window.LiveEdgeSeeker;
+        const brokenVideo = document.createElement('video');
+        Object.defineProperty(brokenVideo, 'buffered', {
+            value: {
+                length: 1,
+                start: () => {
+                    throw new Error('boom');
+                },
+                end: () => {
+                    throw new Error('boom');
+                }
+            },
+            configurable: true
+        });
+
+        const result = LiveEdgeSeeker.validateSeekTarget(brokenVideo, 100);
+        expect(result.valid).toBe(false);
+        expect(result.reason).toBe('Buffer read failed');
+    });
 });

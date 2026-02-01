@@ -26,6 +26,11 @@
 - Outputs: top-5 risk list with file refs + one test per risk.
 - Constraints: deterministic; no network; use existing test stack.
 
+### Logic Refactorer
+- Changes: prod code only (no tests).
+- Outputs: prioritized logic-refactor list with risks; flag behavior changes.
+- Constraints: keep behavior stable; may fix code to satisfy existing tests; if tests need updates, stop and hand off.
+
 ## Start
 - docs/AI_CONTEXT.md
 - docs/ARCHITECTURE.md

@@ -1,5 +1,17 @@
 # Changelog
 
+## 4.5.3 - 2026-02-01T22:57:28.281Z
+Previous: 4.5.2
+Commit: 7e579e2
+Changes:
+- No commits detected since last build
+
+## 4.5.2 - 2026-02-01T22:48:42.303Z
+Previous: 4.5.1
+Commit: 7e579e2
+Changes:
+- Add role registry
+
 ## 4.5.1 - 2026-02-01T22:36:21.936Z
 Previous: 4.5.0
 Commit: 23ebbc1

@@ -72,6 +72,19 @@ describe('BufferGapFinder', () => {
         expect(result.end).toBe(5.5);
     });
 
+    it('prefers in-range emergency heal point over out-of-range', () => {
+        const BufferGapFinder = window.BufferGapFinder;
+        setBufferedRanges(video, [[9, 10], [12, 13]]);
+        video.currentTime = 9.5;
+
+        const result = BufferGapFinder.findHealPoint(video, { silent: true });
+        expect(result).not.toBeNull();
+        expect(result.inRange).toBe(true);
+        expect(result.rangeIndex).toBe(0);
+        expect(result.start).toBeGreaterThanOrEqual(9);
+        expect(result.end).toBe(10);
+    });
+
     it('prefers contiguous nudge over distant gap', () => {
         const BufferGapFinder = window.BufferGapFinder;
         // Mock: [0-10] (contiguous), [30-35] (gap)
