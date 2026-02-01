@@ -29,7 +29,7 @@
 ### Logic Refactorer
 - Changes: prod code only (no tests).
 - Outputs: prioritized logic-refactor list with risks; flag behavior changes.
-- Constraints: keep behavior stable; may fix code to satisfy existing tests; if tests need updates, stop and hand off.
+- Constraints: keep behavior stable; may fix code to satisfy existing tests; if tests need updates, stop and hand off; when scope is not specified, pick the highest-impact logic area and proceed without asking.
 
 ## Start
 - docs/AI_CONTEXT.md

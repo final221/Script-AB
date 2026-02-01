@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.5.7 - 2026-02-01T23:07:31.067Z
+Previous: 4.5.6
+Commit: d37efc6
+Changes:
+- Remove maintainer role
+
 ## 4.5.6 - 2026-02-01T23:04:42.337Z
 Previous: 4.5.5
 Commit: fc16173
