@@ -13,6 +13,10 @@
 - Do not ask the user to choose when a single best path exists; choose and proceed.
 - Avoid "if you want" or optional suggestion phrasing; give a direct opinion on whether anything else should be done, or say explicitly that nothing else is needed.
 
+## Discussion-first (no edits by default)
+- When the user is brainstorming or asking questions, do not change files or run builds.
+- Provide a full opinion and push back when needed; wait for explicit "go ahead" before edits.
+
 ## Start
 - docs/AI_CONTEXT.md
 - docs/ARCHITECTURE.md

@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.4.43 - 2026-02-01T13:34:30.427Z
+Previous: 4.4.42
+Commit: 62d4881
+Changes:
+- refactor: centralize playback state transitions
+
 ## 4.4.42 - 2026-02-01T13:32:16.229Z
 Previous: 4.4.41
 Commit: e9ef8e7
