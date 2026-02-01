@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.4.54 - 2026-02-01T15:52:44.806Z
+Previous: 4.4.53
+Commit: 5fd5f9f
+Changes:
+- log: surface fallback candidate suppression
+
 ## 4.4.53 - 2026-02-01T15:08:07.408Z
 Previous: 4.4.52
 Commit: 896a8e9

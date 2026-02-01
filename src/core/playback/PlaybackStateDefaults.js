@@ -32,6 +32,7 @@ const PlaybackStateDefaults = (() => {
         heal: {
             noHealPointCount: 0,
             noHealPointRefreshUntil: 0,
+            noHealPointQuietUntil: 0,
             nextHealAllowedTime: 0,
             playErrorCount: 0,
             nextPlayHealAllowedTime: 0,
@@ -122,6 +123,7 @@ const PlaybackStateDefaults = (() => {
         initLogEmitted: ['progress', 'initLogEmitted'],
         noHealPointCount: ['heal', 'noHealPointCount'],
         noHealPointRefreshUntil: ['heal', 'noHealPointRefreshUntil'],
+        noHealPointQuietUntil: ['heal', 'noHealPointQuietUntil'],
         nextHealAllowedTime: ['heal', 'nextHealAllowedTime'],
         playErrorCount: ['heal', 'playErrorCount'],
         nextPlayHealAllowedTime: ['heal', 'nextPlayHealAllowedTime'],

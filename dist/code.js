@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.4.53
+// @version       4.4.54
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -54,6 +54,8 @@ const CONFIG = (() => {
             HEAL_TIMEOUT_S: 15,             // Give up after this many seconds
             NO_HEAL_POINT_BACKOFF_BASE_MS: 5000, // Base backoff after no heal point
             NO_HEAL_POINT_BACKOFF_MAX_MS: 60000, // Max backoff after repeated no heal points
+            NO_HEAL_POINT_QUIET_AFTER: 4, // Pause recovery after this many consecutive no-heal points
+            NO_HEAL_POINT_QUIET_MS: 180000, // Quiet window for repeated no-heal points
             PLAY_ERROR_BACKOFF_BASE_MS: 2000, // Base backoff after play failures (Abort/PLAY_STUCK)
             PLAY_ERROR_BACKOFF_MAX_MS: 20000, // Max backoff after repeated play failures
             PLAY_ABORT_BACKOFF_BASE_MS: 8000, // Base backoff after AbortError failures
@@ -162,7 +164,7 @@ const CONFIG = (() => {
  * Build metadata helpers (version injected at build time).
  */
 const BuildInfo = (() => {
-    const VERSION = '4.4.53';
+    const VERSION = '4.4.54';
 
     const getVersion = () => {
         const gmVersion = (typeof GM_info !== 'undefined' && GM_info?.script?.version)
@@ -173,7 +175,7 @@ const BuildInfo = (() => {
             ? unsafeWindow.GM_info.script.version
             : null;
         if (unsafeVersion) return unsafeVersion;
-        if (VERSION && VERSION !== '4.4.53') return VERSION;
+        if (VERSION && VERSION !== '4.4.54') return VERSION;
         return null;
     };
 
@@ -3364,6 +3366,7 @@ const PlaybackStateDefaults = (() => {
         heal: {
             noHealPointCount: 0,
             noHealPointRefreshUntil: 0,
+            noHealPointQuietUntil: 0,
             nextHealAllowedTime: 0,
             playErrorCount: 0,
             nextPlayHealAllowedTime: 0,
@@ -3454,6 +3457,7 @@ const PlaybackStateDefaults = (() => {
         initLogEmitted: ['progress', 'initLogEmitted'],
         noHealPointCount: ['heal', 'noHealPointCount'],
         noHealPointRefreshUntil: ['heal', 'noHealPointRefreshUntil'],
+        noHealPointQuietUntil: ['heal', 'noHealPointQuietUntil'],
         nextHealAllowedTime: ['heal', 'nextHealAllowedTime'],
         playErrorCount: ['heal', 'playErrorCount'],
         nextPlayHealAllowedTime: ['heal', 'nextPlayHealAllowedTime'],
@@ -3707,12 +3711,16 @@ const PlaybackStateStore = (() => {
         state.noHealPointCount = 0;
         state.nextHealAllowedTime = 0;
         state.noHealPointRefreshUntil = 0;
+        state.noHealPointQuietUntil = 0;
         return true;
     };
 
     const setNoHealPointCount = (state, count) => {
         if (!state) return false;
         state.noHealPointCount = count;
+        if (count === 0) {
+            state.noHealPointQuietUntil = 0;
+        }
         return true;
     };
 
@@ -3726,6 +3734,15 @@ const PlaybackStateStore = (() => {
     const setNoHealPointRefreshUntil = (state, until) => {
         if (!state) return false;
         state.noHealPointRefreshUntil = until;
+        return true;
+    };
+
+    const setNoHealPointQuiet = (state, until) => {
+        if (!state) return false;
+        state.noHealPointQuietUntil = until;
+        if (until && (!state.nextHealAllowedTime || state.nextHealAllowedTime < until)) {
+            state.nextHealAllowedTime = until;
+        }
         return true;
     };
 
@@ -3803,6 +3820,7 @@ const PlaybackStateStore = (() => {
         setNoHealPointCount,
         setNoHealPointBackoff,
         setNoHealPointRefreshUntil,
+        setNoHealPointQuiet,
         markRefresh,
         markEmergencySwitch,
         markBackoffLog,
@@ -6517,6 +6535,27 @@ const NoHealPointPolicy = (() => {
             return now >= nextAllowed;
         };
 
+        const canEnterQuiet = (monitorState, decisionContext, nextNoHealPointCount) => {
+            if (!monitorState) return false;
+            if (nextNoHealPointCount < CONFIG.stall.NO_HEAL_POINT_QUIET_AFTER) {
+                return false;
+            }
+            if (monitorState.noHealPointQuietUntil && decisionContext.now < monitorState.noHealPointQuietUntil) {
+                return false;
+            }
+            if (monitorsById && monitorsById.size > 1) {
+                return false;
+            }
+            if (!monitorState.bufferStarved) {
+                return false;
+            }
+            const stalledForMs = decisionContext.stalledForMs;
+            if (stalledForMs !== null && stalledForMs < CONFIG.stall.FAILOVER_AFTER_STALL_MS) {
+                return false;
+            }
+            return true;
+        };
+
         const applyEmergencySwitch = (monitorState, reason, now, options = {}) => {
             if (!monitorState || !candidateSelector || typeof candidateSelector.selectEmergencyCandidate !== 'function') {
                 return false;
@@ -6572,6 +6611,8 @@ const NoHealPointPolicy = (() => {
                 && (nextNoHealPointCount >= CONFIG.stall.FAILOVER_AFTER_NO_HEAL_POINTS
                     || (decisionContext.stalledForMs !== null
                         && decisionContext.stalledForMs >= CONFIG.stall.FAILOVER_AFTER_STALL_MS));
+            const quietEligible = canEnterQuiet(monitorState, decisionContext, nextNoHealPointCount);
+            const quietUntil = quietEligible ? now + CONFIG.stall.NO_HEAL_POINT_QUIET_MS : 0;
 
             return {
                 videoId,
@@ -6583,6 +6624,10 @@ const NoHealPointPolicy = (() => {
                 shouldSetRefreshWindow,
                 refreshUntil,
                 shouldRescanNoBuffer: ranges.length === 0,
+                quietEligible,
+                quietUntil,
+                stalledForMs: decisionContext.stalledForMs,
+                bufferStarved: monitorState?.bufferStarved || false,
                 probationEligible: Boolean(probationPolicy?.maybeTriggerProbation)
                     && monitorState
                     && nextNoHealPointCount >= CONFIG.stall.PROBATION_AFTER_NO_HEAL_POINTS,
@@ -6600,6 +6645,23 @@ const NoHealPointPolicy = (() => {
             const now = decision.now;
 
             backoffManager.applyBackoff(videoId, monitorState, reason);
+
+            if (decision.quietEligible && monitorState) {
+                PlaybackStateStore.setNoHealPointQuiet(monitorState, decision.quietUntil);
+                Logger.add(LogEvents.tagged('BACKOFF', 'Recovery quieted after repeated no-heal points'), {
+                    videoId,
+                    noHealPointCount: monitorState.noHealPointCount,
+                    quietMs: CONFIG.stall.NO_HEAL_POINT_QUIET_MS,
+                    stalledForMs: decision.stalledForMs,
+                    bufferStarved: decision.bufferStarved
+                });
+                return {
+                    shouldFailover: false,
+                    refreshed: false,
+                    probationTriggered: false,
+                    emergencySwitched: false
+                };
+            }
 
             if (decision.shouldSetRefreshWindow && monitorState) {
                 PlaybackStateStore.setNoHealPointRefreshUntil(monitorState, decision.refreshUntil);
@@ -6801,6 +6863,9 @@ const StallSkipPolicy = (() => {
             const videoId = decisionContext.videoId;
             const monitorState = context.monitorState;
             const now = decisionContext.now;
+            if (monitorState?.noHealPointQuietUntil && now < monitorState.noHealPointQuietUntil) {
+                return true;
+            }
             if (backoffManager.shouldSkip(videoId, monitorState)) {
                 return true;
             }

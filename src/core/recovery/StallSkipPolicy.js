@@ -14,6 +14,9 @@ const StallSkipPolicy = (() => {
             const videoId = decisionContext.videoId;
             const monitorState = context.monitorState;
             const now = decisionContext.now;
+            if (monitorState?.noHealPointQuietUntil && now < monitorState.noHealPointQuietUntil) {
+                return true;
+            }
             if (backoffManager.shouldSkip(videoId, monitorState)) {
                 return true;
             }

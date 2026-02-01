@@ -40,6 +40,8 @@ const CONFIG = (() => {
             HEAL_TIMEOUT_S: 15,             // Give up after this many seconds
             NO_HEAL_POINT_BACKOFF_BASE_MS: 5000, // Base backoff after no heal point
             NO_HEAL_POINT_BACKOFF_MAX_MS: 60000, // Max backoff after repeated no heal points
+            NO_HEAL_POINT_QUIET_AFTER: 4, // Pause recovery after this many consecutive no-heal points
+            NO_HEAL_POINT_QUIET_MS: 180000, // Quiet window for repeated no-heal points
             PLAY_ERROR_BACKOFF_BASE_MS: 2000, // Base backoff after play failures (Abort/PLAY_STUCK)
             PLAY_ERROR_BACKOFF_MAX_MS: 20000, // Max backoff after repeated play failures
             PLAY_ABORT_BACKOFF_BASE_MS: 8000, // Base backoff after AbortError failures

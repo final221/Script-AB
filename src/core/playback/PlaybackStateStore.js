@@ -43,12 +43,16 @@ const PlaybackStateStore = (() => {
         state.noHealPointCount = 0;
         state.nextHealAllowedTime = 0;
         state.noHealPointRefreshUntil = 0;
+        state.noHealPointQuietUntil = 0;
         return true;
     };
 
     const setNoHealPointCount = (state, count) => {
         if (!state) return false;
         state.noHealPointCount = count;
+        if (count === 0) {
+            state.noHealPointQuietUntil = 0;
+        }
         return true;
     };
 
@@ -62,6 +66,15 @@ const PlaybackStateStore = (() => {
     const setNoHealPointRefreshUntil = (state, until) => {
         if (!state) return false;
         state.noHealPointRefreshUntil = until;
+        return true;
+    };
+
+    const setNoHealPointQuiet = (state, until) => {
+        if (!state) return false;
+        state.noHealPointQuietUntil = until;
+        if (until && (!state.nextHealAllowedTime || state.nextHealAllowedTime < until)) {
+            state.nextHealAllowedTime = until;
+        }
         return true;
     };
 
@@ -139,6 +152,7 @@ const PlaybackStateStore = (() => {
         setNoHealPointCount,
         setNoHealPointBackoff,
         setNoHealPointRefreshUntil,
+        setNoHealPointQuiet,
         markRefresh,
         markEmergencySwitch,
         markBackoffLog,

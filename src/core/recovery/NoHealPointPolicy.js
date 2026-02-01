@@ -59,6 +59,27 @@ const NoHealPointPolicy = (() => {
             return now >= nextAllowed;
         };
 
+        const canEnterQuiet = (monitorState, decisionContext, nextNoHealPointCount) => {
+            if (!monitorState) return false;
+            if (nextNoHealPointCount < CONFIG.stall.NO_HEAL_POINT_QUIET_AFTER) {
+                return false;
+            }
+            if (monitorState.noHealPointQuietUntil && decisionContext.now < monitorState.noHealPointQuietUntil) {
+                return false;
+            }
+            if (monitorsById && monitorsById.size > 1) {
+                return false;
+            }
+            if (!monitorState.bufferStarved) {
+                return false;
+            }
+            const stalledForMs = decisionContext.stalledForMs;
+            if (stalledForMs !== null && stalledForMs < CONFIG.stall.FAILOVER_AFTER_STALL_MS) {
+                return false;
+            }
+            return true;
+        };
+
         const applyEmergencySwitch = (monitorState, reason, now, options = {}) => {
             if (!monitorState || !candidateSelector || typeof candidateSelector.selectEmergencyCandidate !== 'function') {
                 return false;
@@ -114,6 +135,8 @@ const NoHealPointPolicy = (() => {
                 && (nextNoHealPointCount >= CONFIG.stall.FAILOVER_AFTER_NO_HEAL_POINTS
                     || (decisionContext.stalledForMs !== null
                         && decisionContext.stalledForMs >= CONFIG.stall.FAILOVER_AFTER_STALL_MS));
+            const quietEligible = canEnterQuiet(monitorState, decisionContext, nextNoHealPointCount);
+            const quietUntil = quietEligible ? now + CONFIG.stall.NO_HEAL_POINT_QUIET_MS : 0;
 
             return {
                 videoId,
@@ -125,6 +148,10 @@ const NoHealPointPolicy = (() => {
                 shouldSetRefreshWindow,
                 refreshUntil,
                 shouldRescanNoBuffer: ranges.length === 0,
+                quietEligible,
+                quietUntil,
+                stalledForMs: decisionContext.stalledForMs,
+                bufferStarved: monitorState?.bufferStarved || false,
                 probationEligible: Boolean(probationPolicy?.maybeTriggerProbation)
                     && monitorState
                     && nextNoHealPointCount >= CONFIG.stall.PROBATION_AFTER_NO_HEAL_POINTS,
@@ -142,6 +169,23 @@ const NoHealPointPolicy = (() => {
             const now = decision.now;
 
             backoffManager.applyBackoff(videoId, monitorState, reason);
+
+            if (decision.quietEligible && monitorState) {
+                PlaybackStateStore.setNoHealPointQuiet(monitorState, decision.quietUntil);
+                Logger.add(LogEvents.tagged('BACKOFF', 'Recovery quieted after repeated no-heal points'), {
+                    videoId,
+                    noHealPointCount: monitorState.noHealPointCount,
+                    quietMs: CONFIG.stall.NO_HEAL_POINT_QUIET_MS,
+                    stalledForMs: decision.stalledForMs,
+                    bufferStarved: decision.bufferStarved
+                });
+                return {
+                    shouldFailover: false,
+                    refreshed: false,
+                    probationTriggered: false,
+                    emergencySwitched: false
+                };
+            }
 
             if (decision.shouldSetRefreshWindow && monitorState) {
                 PlaybackStateStore.setNoHealPointRefreshUntil(monitorState, decision.refreshUntil);
