@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.4.39
+// @version       4.4.40
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -162,7 +162,7 @@ const CONFIG = (() => {
  * Build metadata helpers (version injected at build time).
  */
 const BuildInfo = (() => {
-    const VERSION = '4.4.39';
+    const VERSION = '4.4.40';
 
     const getVersion = () => {
         const gmVersion = (typeof GM_info !== 'undefined' && GM_info?.script?.version)
@@ -173,7 +173,7 @@ const BuildInfo = (() => {
             ? unsafeWindow.GM_info.script.version
             : null;
         if (unsafeVersion) return unsafeVersion;
-        if (VERSION && VERSION !== '4.4.39') return VERSION;
+        if (VERSION && VERSION !== '4.4.40') return VERSION;
         return null;
     };
 
@@ -8854,18 +8854,6 @@ const StreamHealer = (() => {
 
     const callDefault = (method) => (...args) => getDefault()[method](...args);
 
-    const exportLogs = () => {
-        try {
-            const healer = getDefault();
-            const healerStats = healer?.getStats ? healer.getStats() : {};
-            const metricsSummary = Metrics?.getSummary ? Metrics.getSummary() : {};
-            const mergedLogs = Logger?.getMergedTimeline ? Logger.getMergedTimeline() : [];
-            ReportGenerator?.exportReport?.(metricsSummary, mergedLogs, healerStats);
-        } catch (error) {
-            Logger?.add?.('[HEALER] export logs failed', { error: error?.message });
-        }
-    };
-
     return {
         create,
         getDefault,
@@ -8876,35 +8864,9 @@ const StreamHealer = (() => {
         attemptHeal: callDefault('attemptHeal'),
         handleExternalSignal: callDefault('handleExternalSignal'),
         scanForVideos: callDefault('scanForVideos'),
-        getStats: callDefault('getStats'),
-        exportLogs
+        getStats: callDefault('getStats')
     };
 })();
-
-// Expose StreamHealer in global scope for direct console access.
-try {
-    if (typeof globalThis !== 'undefined') {
-        globalThis.StreamHealer = StreamHealer;
-        globalThis.exportStreamHealerLogs = () => StreamHealer.exportLogs();
-    }
-    if (typeof window !== 'undefined') {
-        window.StreamHealer = StreamHealer;
-        window.exportStreamHealerLogs = () => StreamHealer.exportLogs();
-    }
-    if (typeof unsafeWindow !== 'undefined') {
-        unsafeWindow.StreamHealer = StreamHealer;
-        unsafeWindow.exportStreamHealerLogs = () => StreamHealer.exportLogs();
-    }
-    if (typeof exportFunction === 'function' && typeof window !== 'undefined' && window.wrappedJSObject) {
-        exportFunction(StreamHealer, window.wrappedJSObject, { defineAs: 'StreamHealer' });
-        exportFunction(() => StreamHealer.exportLogs(), window.wrappedJSObject, { defineAs: 'exportStreamHealerLogs' });
-    } else if (typeof window !== 'undefined' && window.wrappedJSObject) {
-        window.wrappedJSObject.StreamHealer = StreamHealer;
-        window.wrappedJSObject.exportStreamHealerLogs = () => StreamHealer.exportLogs();
-    }
-} catch (error) {
-    Logger?.add?.('[HEALER] Failed to expose StreamHealer', { error: error?.message });
-}
 
 // ============================================================================
 // 6. CORE ORCHESTRATOR (Stream Healer Edition)
@@ -8915,8 +8877,6 @@ try {
  */
 const CoreOrchestrator = (() => {
     let streamHealer = null;
-    const EXPORT_MESSAGE_TYPE = 'TSH_EXPORT_LOGS';
-
     const exposeGlobal = (name, fn) => {
         const targets = [];
 
@@ -9002,77 +8962,14 @@ const CoreOrchestrator = (() => {
         Logger?.add?.('[CORE] exportTwitchAdLogs not available in top window');
     };
 
-    const installExportBridge = () => {
-        const handler = (event) => {
-            if (!event || event.source !== window) return;
-            const data = event.data;
-            if (!data || data.type !== EXPORT_MESSAGE_TYPE || data.source !== 'tsh') return;
-            exportLogs();
-        };
-
-        window.addEventListener('message', handler);
-
-        const inject = () => {
-            const root = document.documentElement || document.head || document.body;
-            if (!root) return false;
-            try {
-                const script = document.createElement('script');
-                script.textContent = `(() => {
-                    try {
-                        const msg = { source: 'tsh', type: '${EXPORT_MESSAGE_TYPE}' };
-                        const exportFn = () => window.postMessage(msg, '*');
-                        window.exportStreamHealerLogs = window.exportStreamHealerLogs || exportFn;
-                        window.exportTwitchAdLogs = window.exportTwitchAdLogs || exportFn;
-                        window.exporttwitchadlogs = window.exporttwitchadlogs || exportFn;
-                        window.StreamHealer = window.StreamHealer || { exportLogs: exportFn };
-                    } catch (e) {}
-                })();`;
-                root.appendChild(script);
-                root.removeChild(script);
-                return true;
-            } catch (error) {
-                Logger?.add?.('[CORE] Failed to inject export bridge', { error: error?.message });
-                return false;
-            }
-        };
-
-        if (!inject()) {
-            document.addEventListener('DOMContentLoaded', inject, { once: true });
-        }
-    };
-
-    const logConsoleReady = (isTopWindow) => {
-        try {
-            const version = (BuildInfo?.getVersion?.() || BuildInfo?.VERSION || 'unknown');
-            const hasExportLogs = typeof window.exportTwitchAdLogs === 'function';
-            const hasExportHealer = typeof window.exportStreamHealerLogs === 'function';
-            const hasHealer = typeof window.StreamHealer !== 'undefined';
-            console.info('[StreamHealer] ready', {
-                version,
-                topWindow: Boolean(isTopWindow),
-                exportTwitchAdLogs: hasExportLogs,
-                exportStreamHealerLogs: hasExportHealer,
-                streamHealer: hasHealer
-            });
-        } catch (error) {
-            // Console visibility is best-effort only.
-        }
-    };
-
     return {
         init: () => {
             Logger.add('[CORE] Initializing Stream Healer');
-
-            installExportBridge();
 
             const isTopWindow = window.self === window.top;
             const exportFn = isTopWindow ? exportLogs : exportLogsProxy;
             exposeGlobal('exportTwitchAdLogs', exportFn);
             exposeGlobal('exporttwitchadlogs', exportFn);
-            exposeGlobal('StreamHealer', StreamHealer);
-            exposeGlobal('exportStreamHealerLogs', () => StreamHealer.exportLogs());
-            exposeGlobal('exportstreamhealerlogs', () => StreamHealer.exportLogs());
-            logConsoleReady(isTopWindow);
 
             if (!isTopWindow) {
                 return;

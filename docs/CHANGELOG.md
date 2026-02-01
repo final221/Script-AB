@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.4.40 - 2026-02-01T13:06:34.649Z
+Previous: 4.4.39
+Commit: 1806e7a
+Changes:
+- Guard log tag load order
+
 ## 4.4.39 - 2026-02-01T13:04:37.210Z
 Previous: 4.4.38
 Commit: 0352f76

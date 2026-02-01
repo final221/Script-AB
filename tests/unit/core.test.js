@@ -63,31 +63,6 @@ describe('Core Modules', () => {
             expect(typeof healerStats).toBe('object');
         });
 
-        it('exposes StreamHealer.exportLogs and forwards to ReportGenerator', () => {
-            const StreamHealer = window.StreamHealer;
-            expect(StreamHealer).toBeDefined();
-            expect(typeof StreamHealer.exportLogs).toBe('function');
-
-            const ReportGenerator = window.ReportGenerator;
-            expect(ReportGenerator).toBeDefined();
-            expect(typeof ReportGenerator.exportReport).toBe('function');
-
-            const originalExport = ReportGenerator.exportReport;
-            const spy = vi.fn();
-            ReportGenerator.exportReport = spy;
-
-            try {
-                StreamHealer.exportLogs();
-            } finally {
-                ReportGenerator.exportReport = originalExport;
-            }
-
-            expect(spy).toHaveBeenCalledTimes(1);
-            const [metricsSummary, mergedLogs, healerStats] = spy.mock.calls[0] || [];
-            expect(typeof metricsSummary).toBe('object');
-            expect(Array.isArray(mergedLogs)).toBe(true);
-            expect(typeof healerStats).toBe('object');
-        });
     });
 
 });

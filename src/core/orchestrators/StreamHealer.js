@@ -61,18 +61,6 @@ const StreamHealer = (() => {
 
     const callDefault = (method) => (...args) => getDefault()[method](...args);
 
-    const exportLogs = () => {
-        try {
-            const healer = getDefault();
-            const healerStats = healer?.getStats ? healer.getStats() : {};
-            const metricsSummary = Metrics?.getSummary ? Metrics.getSummary() : {};
-            const mergedLogs = Logger?.getMergedTimeline ? Logger.getMergedTimeline() : [];
-            ReportGenerator?.exportReport?.(metricsSummary, mergedLogs, healerStats);
-        } catch (error) {
-            Logger?.add?.('[HEALER] export logs failed', { error: error?.message });
-        }
-    };
-
     return {
         create,
         getDefault,
@@ -83,32 +71,6 @@ const StreamHealer = (() => {
         attemptHeal: callDefault('attemptHeal'),
         handleExternalSignal: callDefault('handleExternalSignal'),
         scanForVideos: callDefault('scanForVideos'),
-        getStats: callDefault('getStats'),
-        exportLogs
+        getStats: callDefault('getStats')
     };
 })();
-
-// Expose StreamHealer in global scope for direct console access.
-try {
-    if (typeof globalThis !== 'undefined') {
-        globalThis.StreamHealer = StreamHealer;
-        globalThis.exportStreamHealerLogs = () => StreamHealer.exportLogs();
-    }
-    if (typeof window !== 'undefined') {
-        window.StreamHealer = StreamHealer;
-        window.exportStreamHealerLogs = () => StreamHealer.exportLogs();
-    }
-    if (typeof unsafeWindow !== 'undefined') {
-        unsafeWindow.StreamHealer = StreamHealer;
-        unsafeWindow.exportStreamHealerLogs = () => StreamHealer.exportLogs();
-    }
-    if (typeof exportFunction === 'function' && typeof window !== 'undefined' && window.wrappedJSObject) {
-        exportFunction(StreamHealer, window.wrappedJSObject, { defineAs: 'StreamHealer' });
-        exportFunction(() => StreamHealer.exportLogs(), window.wrappedJSObject, { defineAs: 'exportStreamHealerLogs' });
-    } else if (typeof window !== 'undefined' && window.wrappedJSObject) {
-        window.wrappedJSObject.StreamHealer = StreamHealer;
-        window.wrappedJSObject.exportStreamHealerLogs = () => StreamHealer.exportLogs();
-    }
-} catch (error) {
-    Logger?.add?.('[HEALER] Failed to expose StreamHealer', { error: error?.message });
-}
