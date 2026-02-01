@@ -13,7 +13,7 @@ const PlaybackWatchdog = (() => {
         const logDebug = options.logDebug;
         const tracker = options.tracker;
         const state = options.state;
-        const transitions = options.transitions;
+        const stallMachine = options.stallMachine;
         const isHealing = options.isHealing;
         const isActive = options.isActive || (() => true);
         const onRemoved = options.onRemoved || (() => {});
@@ -50,17 +50,10 @@ const PlaybackWatchdog = (() => {
             const bufferExhausted = MediaState.isBufferExhausted(video);
             const pausedAfterStall = state.lastStallEventTime > 0
                 && (now - state.lastStallEventTime) < CONFIG.stall.PAUSED_STALL_GRACE_MS;
-            let pauseFromStall = state.pauseFromStall || pausedAfterStall;
-            if (video.paused && bufferExhausted && !pauseFromStall) {
-                tracker.markStallEvent('watchdog_pause_buffer_exhausted');
-                pauseFromStall = true;
-            }
-            if (video.paused && !pauseFromStall) {
-                transitions.toPaused('watchdog_paused');
+            const pauseDecision = stallMachine.handleWatchdogPause(bufferExhausted, pausedAfterStall);
+            const pauseFromStall = pauseDecision.pauseFromStall;
+            if (pauseDecision.shouldReturn) {
                 return;
-            }
-            if (video.paused && pauseFromStall && state.state !== MonitorStates.STALLED) {
-                transitions.toStalled(bufferExhausted ? 'paused_buffer_exhausted' : 'paused_after_stall');
             }
 
             if (tracker.shouldSkipUntilProgress()) {
@@ -88,9 +81,7 @@ const PlaybackWatchdog = (() => {
                 return;
             }
 
-            if (state.state !== MonitorStates.STALLED) {
-                transitions.toStalled('watchdog_no_progress');
-            }
+            stallMachine.handleWatchdogNoProgress();
 
             const logIntervalMs = Tuning.logIntervalMs(isActive());
             if (now - state.lastWatchdogLogTime > logIntervalMs) {

@@ -47,6 +47,7 @@
     "core/playback/MediaState.js",
     "core/playback/PlaybackStateStore.js",
     "core/playback/PlaybackStateTransitions.js",
+    "core/playback/PlaybackStallStateMachine.js",
     "core/playback/PlaybackResetLogic.js",
     "core/playback/PlaybackProgressReset.js",
     "core/playback/PlaybackProgressLogic.js",

@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.4.49
+// @version       4.4.50
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -162,7 +162,7 @@ const CONFIG = (() => {
  * Build metadata helpers (version injected at build time).
  */
 const BuildInfo = (() => {
-    const VERSION = '4.4.49';
+    const VERSION = '4.4.50';
 
     const getVersion = () => {
         const gmVersion = (typeof GM_info !== 'undefined' && GM_info?.script?.version)
@@ -173,7 +173,7 @@ const BuildInfo = (() => {
             ? unsafeWindow.GM_info.script.version
             : null;
         if (unsafeVersion) return unsafeVersion;
-        if (VERSION && VERSION !== '4.4.49') return VERSION;
+        if (VERSION && VERSION !== '4.4.50') return VERSION;
         return null;
     };
 
@@ -3856,6 +3856,70 @@ const PlaybackStateTransitions = (() => {
     return { create };
 })();
 
+// --- PlaybackStallStateMachine ---
+/**
+ * Centralizes stall-related state transitions.
+ */
+const PlaybackStallStateMachine = (() => {
+    const create = (options = {}) => {
+        const state = options.state;
+        const video = options.video;
+        const tracker = options.tracker;
+        const transitions = options.transitions;
+
+        const handleMediaEvent = (eventType, detail = {}) => {
+            if (!state || !transitions || !tracker) return;
+            if (eventType === 'pause') {
+                if (detail.bufferExhausted && !detail.ended) {
+                    tracker.markStallEvent('pause_buffer_exhausted');
+                    transitions.toStalled('pause_buffer_exhausted');
+                    return;
+                }
+                transitions.toPaused('pause', { allowDuringHealing: true });
+                return;
+            }
+            tracker.markStallEvent(eventType);
+            if (!detail.paused) {
+                transitions.toStalled(eventType);
+            }
+        };
+
+        const handleWatchdogPause = (bufferExhausted, pausedAfterStall) => {
+            if (!state || !transitions || !tracker || !video) {
+                return { pauseFromStall: false, shouldReturn: false };
+            }
+            let pauseFromStall = state.pauseFromStall || pausedAfterStall;
+            if (video.paused && bufferExhausted && !pauseFromStall) {
+                tracker.markStallEvent('watchdog_pause_buffer_exhausted');
+                pauseFromStall = true;
+            }
+            if (video.paused && !pauseFromStall) {
+                transitions.toPaused('watchdog_paused');
+                return { pauseFromStall, shouldReturn: true };
+            }
+            if (video.paused && pauseFromStall && state.state !== MonitorStates.STALLED) {
+                transitions.toStalled(bufferExhausted ? 'paused_buffer_exhausted' : 'paused_after_stall');
+            }
+            return { pauseFromStall, shouldReturn: false };
+        };
+
+        const handleWatchdogNoProgress = () => {
+            if (!state || !transitions) return;
+            if (state.state !== MonitorStates.STALLED) {
+                transitions.toStalled('watchdog_no_progress');
+            }
+        };
+
+        return {
+            handleMediaEvent,
+            handleWatchdogPause,
+            handleWatchdogNoProgress
+        };
+    };
+
+    return { create };
+})();
+
 // --- PlaybackResetLogic ---
 /**
  * Reset evaluation + pending reset handling for playback state.
@@ -4644,29 +4708,22 @@ const PlaybackEventHandlersReady = (() => {
 const PlaybackEventHandlersStall = (() => {
     const create = (options = {}) => {
         const video = options.video;
-        const tracker = options.tracker;
         const state = options.state;
-        const transitions = options.transitions;
+        const stallMachine = options.stallMachine;
         const logEvent = options.logEvent;
 
         return {
             waiting: () => {
-                tracker.markStallEvent('waiting');
                 logEvent('waiting', () => ({
                     state: state.state
                 }));
-                if (!video.paused) {
-                    transitions.toStalled('waiting');
-                }
+                stallMachine.handleMediaEvent('waiting', { paused: video.paused });
             },
             stalled: () => {
-                tracker.markStallEvent('stalled');
                 logEvent('stalled', () => ({
                     state: state.state
                 }));
-                if (!video.paused) {
-                    transitions.toStalled('stalled');
-                }
+                stallMachine.handleMediaEvent('stalled', { paused: video.paused });
             },
             pause: () => {
                 const bufferExhausted = MediaState.isBufferExhausted(video);
@@ -4674,12 +4731,10 @@ const PlaybackEventHandlersStall = (() => {
                     state: state.state,
                     bufferExhausted
                 }));
-                if (bufferExhausted && !video.ended) {
-                    tracker.markStallEvent('pause_buffer_exhausted');
-                    transitions.toStalled('pause_buffer_exhausted');
-                    return;
-                }
-                transitions.toPaused('pause', { allowDuringHealing: true });
+                stallMachine.handleMediaEvent('pause', {
+                    bufferExhausted,
+                    ended: video.ended
+                });
             }
         };
     };
@@ -4760,6 +4815,7 @@ const PlaybackEventHandlers = (() => {
         const tracker = options.tracker;
         const state = options.state;
         const transitions = options.transitions;
+        const stallMachine = options.stallMachine;
         const onReset = options.onReset || (() => {});
         const isActive = options.isActive || (() => true);
         const eventLogger = PlaybackEventLogger.create({
@@ -4775,6 +4831,7 @@ const PlaybackEventHandlers = (() => {
             tracker,
             state,
             transitions,
+            stallMachine,
             onReset,
             logEvent
         };
@@ -4822,7 +4879,7 @@ const PlaybackWatchdog = (() => {
         const logDebug = options.logDebug;
         const tracker = options.tracker;
         const state = options.state;
-        const transitions = options.transitions;
+        const stallMachine = options.stallMachine;
         const isHealing = options.isHealing;
         const isActive = options.isActive || (() => true);
         const onRemoved = options.onRemoved || (() => {});
@@ -4859,17 +4916,10 @@ const PlaybackWatchdog = (() => {
             const bufferExhausted = MediaState.isBufferExhausted(video);
             const pausedAfterStall = state.lastStallEventTime > 0
                 && (now - state.lastStallEventTime) < CONFIG.stall.PAUSED_STALL_GRACE_MS;
-            let pauseFromStall = state.pauseFromStall || pausedAfterStall;
-            if (video.paused && bufferExhausted && !pauseFromStall) {
-                tracker.markStallEvent('watchdog_pause_buffer_exhausted');
-                pauseFromStall = true;
-            }
-            if (video.paused && !pauseFromStall) {
-                transitions.toPaused('watchdog_paused');
+            const pauseDecision = stallMachine.handleWatchdogPause(bufferExhausted, pausedAfterStall);
+            const pauseFromStall = pauseDecision.pauseFromStall;
+            if (pauseDecision.shouldReturn) {
                 return;
-            }
-            if (video.paused && pauseFromStall && state.state !== MonitorStates.STALLED) {
-                transitions.toStalled(bufferExhausted ? 'paused_buffer_exhausted' : 'paused_after_stall');
             }
 
             if (tracker.shouldSkipUntilProgress()) {
@@ -4897,9 +4947,7 @@ const PlaybackWatchdog = (() => {
                 return;
             }
 
-            if (state.state !== MonitorStates.STALLED) {
-                transitions.toStalled('watchdog_no_progress');
-            }
+            stallMachine.handleWatchdogNoProgress();
 
             const logIntervalMs = Tuning.logIntervalMs(isActive());
             if (now - state.lastWatchdogLogTime > logIntervalMs) {
@@ -4968,6 +5016,12 @@ const PlaybackMonitor = (() => {
         });
 
         const transitions = PlaybackStateTransitions.create({ state, setState });
+        const stallMachine = PlaybackStallStateMachine.create({
+            state,
+            video,
+            tracker,
+            transitions
+        });
 
         const eventHandlers = PlaybackEventHandlers.create({
             video,
@@ -4976,6 +5030,7 @@ const PlaybackMonitor = (() => {
             tracker,
             state,
             transitions,
+            stallMachine,
             onReset,
             isActive
         });
@@ -4987,6 +5042,7 @@ const PlaybackMonitor = (() => {
             tracker,
             state,
             transitions,
+            stallMachine,
             isHealing,
             isActive,
             onRemoved,

@@ -10,6 +10,7 @@ const PlaybackEventHandlers = (() => {
         const tracker = options.tracker;
         const state = options.state;
         const transitions = options.transitions;
+        const stallMachine = options.stallMachine;
         const onReset = options.onReset || (() => {});
         const isActive = options.isActive || (() => true);
         const eventLogger = PlaybackEventLogger.create({
@@ -25,6 +26,7 @@ const PlaybackEventHandlers = (() => {
             tracker,
             state,
             transitions,
+            stallMachine,
             onReset,
             logEvent
         };

@@ -5,29 +5,22 @@
 const PlaybackEventHandlersStall = (() => {
     const create = (options = {}) => {
         const video = options.video;
-        const tracker = options.tracker;
         const state = options.state;
-        const transitions = options.transitions;
+        const stallMachine = options.stallMachine;
         const logEvent = options.logEvent;
 
         return {
             waiting: () => {
-                tracker.markStallEvent('waiting');
                 logEvent('waiting', () => ({
                     state: state.state
                 }));
-                if (!video.paused) {
-                    transitions.toStalled('waiting');
-                }
+                stallMachine.handleMediaEvent('waiting', { paused: video.paused });
             },
             stalled: () => {
-                tracker.markStallEvent('stalled');
                 logEvent('stalled', () => ({
                     state: state.state
                 }));
-                if (!video.paused) {
-                    transitions.toStalled('stalled');
-                }
+                stallMachine.handleMediaEvent('stalled', { paused: video.paused });
             },
             pause: () => {
                 const bufferExhausted = MediaState.isBufferExhausted(video);
@@ -35,12 +28,10 @@ const PlaybackEventHandlersStall = (() => {
                     state: state.state,
                     bufferExhausted
                 }));
-                if (bufferExhausted && !video.ended) {
-                    tracker.markStallEvent('pause_buffer_exhausted');
-                    transitions.toStalled('pause_buffer_exhausted');
-                    return;
-                }
-                transitions.toPaused('pause', { allowDuringHealing: true });
+                stallMachine.handleMediaEvent('pause', {
+                    bufferExhausted,
+                    ended: video.ended
+                });
             }
         };
     };

@@ -33,6 +33,12 @@ const PlaybackMonitor = (() => {
         });
 
         const transitions = PlaybackStateTransitions.create({ state, setState });
+        const stallMachine = PlaybackStallStateMachine.create({
+            state,
+            video,
+            tracker,
+            transitions
+        });
 
         const eventHandlers = PlaybackEventHandlers.create({
             video,
@@ -41,6 +47,7 @@ const PlaybackMonitor = (() => {
             tracker,
             state,
             transitions,
+            stallMachine,
             onReset,
             isActive
         });
@@ -52,6 +59,7 @@ const PlaybackMonitor = (() => {
             tracker,
             state,
             transitions,
+            stallMachine,
             isHealing,
             isActive,
             onRemoved,

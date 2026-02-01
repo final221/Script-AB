@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.4.50 - 2026-02-01T14:05:39.626Z
+Previous: 4.4.49
+Commit: 40f6214
+Changes:
+- refactor: lock heals per active video
+
 ## 4.4.49 - 2026-02-01T14:01:49.325Z
 Previous: 4.4.48
 Commit: 4a17b51
