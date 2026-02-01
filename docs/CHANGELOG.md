@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.4.51 - 2026-02-01T14:52:35.803Z
+Previous: 4.4.50
+Commit: 069683c
+Changes:
+- refactor: add stall state machine
+
 ## 4.4.50 - 2026-02-01T14:05:39.626Z
 Previous: 4.4.49
 Commit: 40f6214
