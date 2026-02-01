@@ -32,6 +32,7 @@ const Instrumentation = (() => {
 
             Logger.add('[INSTRUMENT:ERROR] Global error caught', {
                 message: event.message,
+                fullMessage: event.message,
                 filename: event.filename?.split('/').pop(),
                 lineno: event.lineno,
                 severity: classification.severity,
@@ -54,6 +55,7 @@ const Instrumentation = (() => {
             ]);
             Logger.add('[INSTRUMENT:REJECTION] Unhandled promise rejection', {
                 reason,
+                fullReason: event.reason ? String(event.reason) : null,
                 severity: 'MEDIUM',
                 videoState: getVideoState()
             });
@@ -149,6 +151,7 @@ const Instrumentation = (() => {
 
             Logger.add('[INSTRUMENT:CONSOLE_ERROR] Console error intercepted', {
                 message: truncateMessage(msg, CONFIG.logging.LOG_MESSAGE_MAX_LEN),
+                fullMessage: msg,
                 severity: classification.severity,
                 action: classification.action
             });

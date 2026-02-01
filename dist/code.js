@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.4.56
+// @version       4.4.57
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -167,7 +167,7 @@ const CONFIG = (() => {
  * Build metadata helpers (version injected at build time).
  */
 const BuildInfo = (() => {
-    const VERSION = '4.4.56';
+    const VERSION = '4.4.57';
 
     const getVersion = () => {
         const gmVersion = (typeof GM_info !== 'undefined' && GM_info?.script?.version)
@@ -178,7 +178,7 @@ const BuildInfo = (() => {
             ? unsafeWindow.GM_info.script.version
             : null;
         if (unsafeVersion) return unsafeVersion;
-        if (VERSION && VERSION !== '4.4.56') return VERSION;
+        if (VERSION && VERSION !== '4.4.57') return VERSION;
         return null;
     };
 
@@ -1525,7 +1525,8 @@ const LogNormalizer = (() => {
                 message: `(${match[1]})`,
                 detail: {
                     message: match[2] || '',
-                    level
+                    level,
+                    fullMessage: level === 'error' ? (match[2] || '') : undefined
                 }
             };
         }
@@ -1533,7 +1534,8 @@ const LogNormalizer = (() => {
             message: 'Console',
             detail: {
                 message: stripped,
-                level
+                level,
+                fullMessage: level === 'error' ? stripped : undefined
             }
         };
     };
@@ -2543,6 +2545,7 @@ const Instrumentation = (() => {
 
             Logger.add('[INSTRUMENT:ERROR] Global error caught', {
                 message: event.message,
+                fullMessage: event.message,
                 filename: event.filename?.split('/').pop(),
                 lineno: event.lineno,
                 severity: classification.severity,
@@ -2565,6 +2568,7 @@ const Instrumentation = (() => {
             ]);
             Logger.add('[INSTRUMENT:REJECTION] Unhandled promise rejection', {
                 reason,
+                fullReason: event.reason ? String(event.reason) : null,
                 severity: 'MEDIUM',
                 videoState: getVideoState()
             });
@@ -2660,6 +2664,7 @@ const Instrumentation = (() => {
 
             Logger.add('[INSTRUMENT:CONSOLE_ERROR] Console error intercepted', {
                 message: truncateMessage(msg, CONFIG.logging.LOG_MESSAGE_MAX_LEN),
+                fullMessage: msg,
                 severity: classification.severity,
                 action: classification.action
             });

@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.4.57 - 2026-02-01T20:53:00.599Z
+Previous: 4.4.56
+Commit: 65e7271
+Changes:
+- Add auto page refresh with log export
+
 ## 4.4.56 - 2026-02-01T20:44:52.184Z
 Previous: 4.4.55
 Commit: 1c33c14

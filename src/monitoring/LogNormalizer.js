@@ -27,7 +27,8 @@ const LogNormalizer = (() => {
                 message: `(${match[1]})`,
                 detail: {
                     message: match[2] || '',
-                    level
+                    level,
+                    fullMessage: level === 'error' ? (match[2] || '') : undefined
                 }
             };
         }
@@ -35,7 +36,8 @@ const LogNormalizer = (() => {
             message: 'Console',
             detail: {
                 message: stripped,
-                level
+                level,
+                fullMessage: level === 'error' ? stripped : undefined
             }
         };
     };
