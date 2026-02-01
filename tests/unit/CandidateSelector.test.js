@@ -194,4 +194,49 @@ describe('CandidateSelector', () => {
 
         expect(selector.getActiveId()).toBe('video-2');
     });
+
+    it('skips fallback sources for emergency selection', () => {
+        const CandidateSelector = window.CandidateSelector;
+        const monitorsById = new Map();
+        const selector = CandidateSelector.create({
+            monitorsById,
+            logDebug: () => {},
+            maxMonitors: 3,
+            minProgressMs: 5000,
+            switchDelta: 2,
+            isFallbackSource: (src) => src.includes('fallback')
+        });
+
+        const now = Date.now();
+        const activeVideo = makeVideo({
+            paused: true,
+            readyState: 2,
+            currentTime: 10,
+            currentSrc: 'blob:live'
+        });
+        const fallbackVideo = makeVideo({
+            paused: false,
+            readyState: 4,
+            currentTime: 42,
+            currentSrc: 'blob:fallback'
+        });
+
+        monitorsById.set('video-1', {
+            video: activeVideo,
+            monitor: { state: { state: 'STALLED', hasProgress: true, lastProgressTime: now, progressStreakMs: 8000, progressEligible: true } }
+        });
+        monitorsById.set('video-2', {
+            video: fallbackVideo,
+            monitor: { state: { state: 'PLAYING', hasProgress: true, lastProgressTime: now, progressStreakMs: 8000, progressEligible: true } }
+        });
+
+        selector.setActiveId('video-1');
+        selector.selectEmergencyCandidate('no_heal_point', {
+            minReadyState: 0,
+            requireSrc: false,
+            allowDead: true
+        });
+
+        expect(selector.getActiveId()).toBe('video-1');
+    });
 });

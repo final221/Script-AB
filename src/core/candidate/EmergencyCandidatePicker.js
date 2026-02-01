@@ -8,6 +8,15 @@ const EmergencyCandidatePicker = (() => {
         const scoreVideo = options.scoreVideo;
         const getActiveId = options.getActiveId;
         const setActiveId = options.setActiveId;
+        const isFallbackSource = options.isFallbackSource || (() => false);
+        const logDebug = options.logDebug || (() => {});
+
+        const isFallbackCandidate = (result) => {
+            if (!result) return false;
+            if (result.reasons?.includes('fallback_src')) return true;
+            const src = result.vs?.currentSrc || result.vs?.src || '';
+            return Boolean(src) && isFallbackSource(src);
+        };
 
         const selectEmergencyCandidate = (reason, optionsOverride = {}) => {
             const minReadyState = Number.isFinite(optionsOverride.minReadyState)
@@ -27,6 +36,15 @@ const EmergencyCandidatePicker = (() => {
             for (const [videoId, entry] of monitorsById.entries()) {
                 if (videoId === activeCandidateId) continue;
                 const result = scoreVideo(entry.video, entry.monitor, videoId);
+                if (isFallbackCandidate(result)) {
+                    logDebug(LogEvents.tagged('CANDIDATE', 'Emergency candidate skipped (fallback source)'), {
+                        videoId,
+                        reason,
+                        currentSrc: result.vs?.currentSrc || '',
+                        score: result.score
+                    });
+                    continue;
+                }
                 if (result.deadCandidate && !allowDead) continue;
                 const readyState = result.vs.readyState;
                 const hasSrc = Boolean(result.vs.currentSrc || result.vs.src);

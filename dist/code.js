@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.4.51
+// @version       4.4.52
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -162,7 +162,7 @@ const CONFIG = (() => {
  * Build metadata helpers (version injected at build time).
  */
 const BuildInfo = (() => {
-    const VERSION = '4.4.51';
+    const VERSION = '4.4.52';
 
     const getVersion = () => {
         const gmVersion = (typeof GM_info !== 'undefined' && GM_info?.script?.version)
@@ -173,7 +173,7 @@ const BuildInfo = (() => {
             ? unsafeWindow.GM_info.script.version
             : null;
         if (unsafeVersion) return unsafeVersion;
-        if (VERSION && VERSION !== '4.4.51') return VERSION;
+        if (VERSION && VERSION !== '4.4.52') return VERSION;
         return null;
     };
 
@@ -5785,6 +5785,13 @@ const CandidateSelector = (() => {
             };
         };
 
+        const isFallbackCandidate = (candidate) => {
+            if (!candidate) return false;
+            if (candidate.reasons?.includes('fallback_src')) return true;
+            const src = candidate.vs?.currentSrc || candidate.vs?.src || '';
+            return Boolean(src) && isFallbackSource(src);
+        };
+
         const forceSwitch = (best, options = {}) => {
             const context = getActiveContext();
             const reason = options.reason || 'forced';
@@ -5794,6 +5801,22 @@ const CandidateSelector = (() => {
                     ...context,
                     switched: false,
                     suppressed: false
+                };
+            }
+
+            if (isFallbackCandidate(best)) {
+                logDebug(LogEvents.tagged('CANDIDATE', options.suppressionLabel || 'Forced switch suppressed'), {
+                    from: context.activeId,
+                    to: best.id,
+                    reason,
+                    suppression: 'fallback_src',
+                    currentSrc: best.vs?.currentSrc || '',
+                    bestScore: best.score
+                });
+                return {
+                    ...context,
+                    switched: false,
+                    suppressed: true
                 };
             }
 
@@ -5870,7 +5893,9 @@ const CandidateSelector = (() => {
             monitorsById,
             scoreVideo,
             getActiveId: getActiveIdRaw,
-            setActiveId
+            setActiveId,
+            isFallbackSource,
+            logDebug
         });
 
         return {
@@ -6091,6 +6116,15 @@ const EmergencyCandidatePicker = (() => {
         const scoreVideo = options.scoreVideo;
         const getActiveId = options.getActiveId;
         const setActiveId = options.setActiveId;
+        const isFallbackSource = options.isFallbackSource || (() => false);
+        const logDebug = options.logDebug || (() => {});
+
+        const isFallbackCandidate = (result) => {
+            if (!result) return false;
+            if (result.reasons?.includes('fallback_src')) return true;
+            const src = result.vs?.currentSrc || result.vs?.src || '';
+            return Boolean(src) && isFallbackSource(src);
+        };
 
         const selectEmergencyCandidate = (reason, optionsOverride = {}) => {
             const minReadyState = Number.isFinite(optionsOverride.minReadyState)
@@ -6110,6 +6144,15 @@ const EmergencyCandidatePicker = (() => {
             for (const [videoId, entry] of monitorsById.entries()) {
                 if (videoId === activeCandidateId) continue;
                 const result = scoreVideo(entry.video, entry.monitor, videoId);
+                if (isFallbackCandidate(result)) {
+                    logDebug(LogEvents.tagged('CANDIDATE', 'Emergency candidate skipped (fallback source)'), {
+                        videoId,
+                        reason,
+                        currentSrc: result.vs?.currentSrc || '',
+                        score: result.score
+                    });
+                    continue;
+                }
                 if (result.deadCandidate && !allowDead) continue;
                 const readyState = result.vs.readyState;
                 const hasSrc = Boolean(result.vs.currentSrc || result.vs.src);

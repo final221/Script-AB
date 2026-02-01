@@ -70,6 +70,13 @@ const CandidateSelector = (() => {
             };
         };
 
+        const isFallbackCandidate = (candidate) => {
+            if (!candidate) return false;
+            if (candidate.reasons?.includes('fallback_src')) return true;
+            const src = candidate.vs?.currentSrc || candidate.vs?.src || '';
+            return Boolean(src) && isFallbackSource(src);
+        };
+
         const forceSwitch = (best, options = {}) => {
             const context = getActiveContext();
             const reason = options.reason || 'forced';
@@ -79,6 +86,22 @@ const CandidateSelector = (() => {
                     ...context,
                     switched: false,
                     suppressed: false
+                };
+            }
+
+            if (isFallbackCandidate(best)) {
+                logDebug(LogEvents.tagged('CANDIDATE', options.suppressionLabel || 'Forced switch suppressed'), {
+                    from: context.activeId,
+                    to: best.id,
+                    reason,
+                    suppression: 'fallback_src',
+                    currentSrc: best.vs?.currentSrc || '',
+                    bestScore: best.score
+                });
+                return {
+                    ...context,
+                    switched: false,
+                    suppressed: true
                 };
             }
 
@@ -155,7 +178,9 @@ const CandidateSelector = (() => {
             monitorsById,
             scoreVideo,
             getActiveId: getActiveIdRaw,
-            setActiveId
+            setActiveId,
+            isFallbackSource,
+            logDebug
         });
 
         return {

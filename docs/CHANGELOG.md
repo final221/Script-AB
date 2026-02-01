@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.4.52 - 2026-02-01T15:05:42.811Z
+Previous: 4.4.51
+Commit: 535349a
+Changes:
+- test: cover stall state transitions
+
 ## 4.4.51 - 2026-02-01T14:52:35.803Z
 Previous: 4.4.50
 Commit: 069683c
