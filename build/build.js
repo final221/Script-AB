@@ -156,6 +156,15 @@ const updateChangelog = (oldVersion, newVersion) => {
     const priority = Array.isArray(manifest.priority) ? manifest.priority : [];
     const entry = manifest.entry || 'core/orchestrators/CoreOrchestrator.js';
 
+    const normalizeBump = (value) => {
+        if (!value) return null;
+        const normalized = String(value).trim().toLowerCase();
+        if (['major', 'minor', 'patch'].includes(normalized)) {
+            return normalized;
+        }
+        return null;
+    };
+
     const args = process.argv.slice(2);
     let versionType = 'patch';
 
@@ -163,6 +172,16 @@ const updateChangelog = (oldVersion, newVersion) => {
         versionType = 'major';
     } else if (args.includes('--minor')) {
         versionType = 'minor';
+    }
+
+    const envBumpRaw = process.env.BUMP;
+    if (envBumpRaw) {
+        const envBump = normalizeBump(envBumpRaw);
+        if (envBump) {
+            versionType = envBump;
+        } else {
+            console.log(`[build] Invalid BUMP="${envBumpRaw}", using ${versionType}`);
+        }
     }
 
     const { old, new: version } = updateVersion(versionType);

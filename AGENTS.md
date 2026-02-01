@@ -31,7 +31,7 @@
 
 ## Workflow (always)
 1) Make changes (consider test impact; update or add tests as needed)
-2) Run `npm.cmd run agent:verify` after changes (tests + build + status; build bumps version + generates dist)
+2) Choose bump per policy, set `BUMP=patch|minor|major`, then run `npm.cmd run agent:verify` (tests + build + status; build bumps version + generates dist)
 3) Commit and push if verify succeeds
 
 - If build/test cannot run, stop and report why before making changes.

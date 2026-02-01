@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.4.60 - 2026-02-01T22:11:31.254Z
+Previous: 4.4.59
+Commit: 17e95dc
+Changes:
+- Improve low-headroom recovery and decoder handling
+
 ## 4.4.59 - 2026-02-01T22:03:09.046Z
 Previous: 4.4.58
 Commit: 630d939
