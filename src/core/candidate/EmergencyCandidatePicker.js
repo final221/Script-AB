@@ -9,7 +9,6 @@ const EmergencyCandidatePicker = (() => {
         const getActiveId = options.getActiveId;
         const setActiveId = options.setActiveId;
         const isFallbackSource = options.isFallbackSource || (() => false);
-        const logDebug = options.logDebug || (() => {});
 
         const isFallbackCandidate = (result) => {
             if (!result) return false;
@@ -37,7 +36,7 @@ const EmergencyCandidatePicker = (() => {
                 if (videoId === activeCandidateId) continue;
                 const result = scoreVideo(entry.video, entry.monitor, videoId);
                 if (isFallbackCandidate(result)) {
-                    logDebug(LogEvents.tagged('CANDIDATE', 'Emergency candidate skipped (fallback source)'), {
+                    Logger.add(LogEvents.tagged('CANDIDATE', 'Emergency candidate skipped (fallback source)'), {
                         videoId,
                         reason,
                         currentSrc: result.vs?.currentSrc || '',

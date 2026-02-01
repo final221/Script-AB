@@ -90,6 +90,14 @@ const CandidateSelector = (() => {
             }
 
             if (isFallbackCandidate(best)) {
+                Logger.add(LogEvents.tagged('CANDIDATE', options.suppressionLabel || 'Forced switch suppressed (fallback source)'), {
+                    from: context.activeId,
+                    to: best.id,
+                    reason,
+                    suppression: 'fallback_src',
+                    currentSrc: best.vs?.currentSrc || '',
+                    bestScore: best.score
+                });
                 logDebug(LogEvents.tagged('CANDIDATE', options.suppressionLabel || 'Forced switch suppressed'), {
                     from: context.activeId,
                     to: best.id,

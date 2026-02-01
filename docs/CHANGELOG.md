@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.4.53 - 2026-02-01T15:08:07.408Z
+Previous: 4.4.52
+Commit: 896a8e9
+Changes:
+- fix: block fallback sources in emergency switching
+
 ## 4.4.52 - 2026-02-01T15:05:42.811Z
 Previous: 4.4.51
 Commit: 535349a
