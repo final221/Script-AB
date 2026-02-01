@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.4.36 - 2026-02-01T12:56:32.155Z
+Previous: 4.4.35
+Commit: 85de276
+Changes:
+- Bridge export logs to page context
+
 ## 4.4.35 - 2026-02-01T12:42:15.175Z
 Previous: 4.4.34
 Commit: 3af3ea1

@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.4.35
+// @version       4.4.36
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -162,7 +162,7 @@ const CONFIG = (() => {
  * Build metadata helpers (version injected at build time).
  */
 const BuildInfo = (() => {
-    const VERSION = '4.4.35';
+    const VERSION = '4.4.36';
 
     const getVersion = () => {
         const gmVersion = (typeof GM_info !== 'undefined' && GM_info?.script?.version)
@@ -173,7 +173,7 @@ const BuildInfo = (() => {
             ? unsafeWindow.GM_info.script.version
             : null;
         if (unsafeVersion) return unsafeVersion;
-        if (VERSION && VERSION !== '4.4.35') return VERSION;
+        if (VERSION && VERSION !== '4.4.36') return VERSION;
         return null;
     };
 
@@ -9041,6 +9041,24 @@ const CoreOrchestrator = (() => {
         }
     };
 
+    const logConsoleReady = (isTopWindow) => {
+        try {
+            const version = (BuildInfo?.getVersion?.() || BuildInfo?.VERSION || 'unknown');
+            const hasExportLogs = typeof window.exportTwitchAdLogs === 'function';
+            const hasExportHealer = typeof window.exportStreamHealerLogs === 'function';
+            const hasHealer = typeof window.StreamHealer !== 'undefined';
+            console.info('[StreamHealer] ready', {
+                version,
+                topWindow: Boolean(isTopWindow),
+                exportTwitchAdLogs: hasExportLogs,
+                exportStreamHealerLogs: hasExportHealer,
+                streamHealer: hasHealer
+            });
+        } catch (error) {
+            // Console visibility is best-effort only.
+        }
+    };
+
     return {
         init: () => {
             Logger.add('[CORE] Initializing Stream Healer');
@@ -9054,6 +9072,7 @@ const CoreOrchestrator = (() => {
             exposeGlobal('StreamHealer', StreamHealer);
             exposeGlobal('exportStreamHealerLogs', () => StreamHealer.exportLogs());
             exposeGlobal('exportstreamhealerlogs', () => StreamHealer.exportLogs());
+            logConsoleReady(isTopWindow);
 
             if (!isTopWindow) {
                 return;
