@@ -34,4 +34,18 @@ describe('Manifest', () => {
         expect(eventsIndex).toBeGreaterThan(-1);
         expect(tagIndex).toBeLessThan(eventsIndex);
     });
+
+    it('keeps log tag groups/schema ahead of registry', () => {
+        const manifest = JSON.parse(fs.readFileSync(MANIFEST_PATH, 'utf8'));
+        const priority = manifest.priority || [];
+        const groupsIndex = priority.indexOf('monitoring/LogTagGroups.js');
+        const schemasIndex = priority.indexOf('monitoring/LogTagSchemas.js');
+        const registryIndex = priority.indexOf('monitoring/LogTagRegistry.js');
+
+        expect(groupsIndex).toBeGreaterThan(-1);
+        expect(schemasIndex).toBeGreaterThan(-1);
+        expect(registryIndex).toBeGreaterThan(-1);
+        expect(groupsIndex).toBeLessThan(registryIndex);
+        expect(schemasIndex).toBeLessThan(registryIndex);
+    });
 });

@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.4.39 - 2026-02-01T13:04:37.210Z
+Previous: 4.4.38
+Commit: 0352f76
+Changes:
+- Fix log tag load order
+
 ## 4.4.38 - 2026-02-01T13:02:05.041Z
 Previous: 4.4.37
 Commit: 3913450
