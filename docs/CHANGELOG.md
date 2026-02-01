@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.5.0 - 2026-02-01T22:18:59.149Z
+Previous: 4.4.61
+Commit: 2e5882d
+Changes:
+- Clarify AI context vs workflow
+
 ## 4.4.61 - 2026-02-01T22:16:18.880Z
 Previous: 4.4.60
 Commit: da34060
