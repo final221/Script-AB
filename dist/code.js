@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.4.32
+// @version       4.4.33
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -162,7 +162,7 @@ const CONFIG = (() => {
  * Build metadata helpers (version injected at build time).
  */
 const BuildInfo = (() => {
-    const VERSION = '4.4.32';
+    const VERSION = '4.4.33';
 
     const getVersion = () => {
         const gmVersion = (typeof GM_info !== 'undefined' && GM_info?.script?.version)
@@ -173,7 +173,7 @@ const BuildInfo = (() => {
             ? unsafeWindow.GM_info.script.version
             : null;
         if (unsafeVersion) return unsafeVersion;
-        if (VERSION && VERSION !== '4.4.32') return VERSION;
+        if (VERSION && VERSION !== '4.4.33') return VERSION;
         return null;
     };
 
@@ -8854,6 +8854,18 @@ const StreamHealer = (() => {
 
     const callDefault = (method) => (...args) => getDefault()[method](...args);
 
+    const exportLogs = () => {
+        try {
+            const healer = getDefault();
+            const healerStats = healer?.getStats ? healer.getStats() : {};
+            const metricsSummary = Metrics?.getSummary ? Metrics.getSummary() : {};
+            const mergedLogs = Logger?.getMergedTimeline ? Logger.getMergedTimeline() : [];
+            ReportGenerator?.exportReport?.(metricsSummary, mergedLogs, healerStats);
+        } catch (error) {
+            Logger?.add?.('[HEALER] export logs failed', { error: error?.message });
+        }
+    };
+
     return {
         create,
         getDefault,
@@ -8864,7 +8876,8 @@ const StreamHealer = (() => {
         attemptHeal: callDefault('attemptHeal'),
         handleExternalSignal: callDefault('handleExternalSignal'),
         scanForVideos: callDefault('scanForVideos'),
-        getStats: callDefault('getStats')
+        getStats: callDefault('getStats'),
+        exportLogs
     };
 })();
 
@@ -8971,6 +8984,9 @@ const CoreOrchestrator = (() => {
             const exportFn = isTopWindow ? exportLogs : exportLogsProxy;
             exposeGlobal('exportTwitchAdLogs', exportFn);
             exposeGlobal('exporttwitchadlogs', exportFn);
+            exposeGlobal('StreamHealer', StreamHealer);
+            exposeGlobal('exportStreamHealerLogs', () => StreamHealer.exportLogs());
+            exposeGlobal('exportstreamhealerlogs', () => StreamHealer.exportLogs());
 
             if (!isTopWindow) {
                 return;

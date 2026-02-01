@@ -101,6 +101,9 @@ const CoreOrchestrator = (() => {
             const exportFn = isTopWindow ? exportLogs : exportLogsProxy;
             exposeGlobal('exportTwitchAdLogs', exportFn);
             exposeGlobal('exporttwitchadlogs', exportFn);
+            exposeGlobal('StreamHealer', StreamHealer);
+            exposeGlobal('exportStreamHealerLogs', () => StreamHealer.exportLogs());
+            exposeGlobal('exportstreamhealerlogs', () => StreamHealer.exportLogs());
 
             if (!isTopWindow) {
                 return;

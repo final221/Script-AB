@@ -4,6 +4,7 @@ This guide lists the key log sequences to quickly understand what the healer is 
 
 ## Capture
 - `exportTwitchAdLogs()` to download merged script + console timeline.
+- `StreamHealer.exportLogs()` or `exportStreamHealerLogs()` to download the same report via the StreamHealer entrypoint.
 - Include both the log file and browser console output.
 - Firefox: run the command in the page console with the top frame selected (`www.twitch.tv`), then fully reload after updating the userscript so `unsafeWindow` exposure takes effect.
 

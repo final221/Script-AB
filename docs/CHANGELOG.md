@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.4.33 - 2026-02-01T12:31:22.978Z
+Previous: 4.4.32
+Commit: aa035fb
+Changes:
+- Rebuild dist
+
 ## 4.4.32 - 2026-01-28T22:13:38.893Z
 Previous: 4.4.31
 Commit: 9516181
