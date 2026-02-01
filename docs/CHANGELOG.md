@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.5.5 - 2026-02-01T23:01:59.167Z
+Previous: 4.5.4
+Commit: 6b88301
+Changes:
+- Rename Adversarial QA to Red Team
+
 ## 4.5.4 - 2026-02-01T23:01:01.016Z
 Previous: 4.5.3
 Commit: db73f94

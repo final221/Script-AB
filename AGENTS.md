@@ -31,6 +31,12 @@
 - Outputs: prioritized logic-refactor list with risks; flag behavior changes.
 - Constraints: keep behavior stable; may fix code to satisfy existing tests; if tests need updates, stop and hand off.
 
+### Maintainer
+- Changes: workflow/docs + release metadata; can approve prod changes but does not author them.
+- Outputs: decision log (scope + bump), conflict resolution when roles disagree.
+- Constraints: enforce policy, keep workflow thin, one role per request.
+- Authority: final say on behavior changes, test validity disputes, and release timing.
+
 ## Start
 - docs/AI_CONTEXT.md
 - docs/ARCHITECTURE.md
