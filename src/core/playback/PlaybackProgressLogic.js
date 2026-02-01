@@ -17,6 +17,12 @@ const PlaybackProgressLogic = (() => {
             logDebugLazy,
             getCurrentTime
         });
+        const progressTracker = PlaybackProgressTracker.create({
+            state,
+            logDebugLazy,
+            getCurrentTime,
+            minProgressMs: CONFIG.monitoring.CANDIDATE_MIN_PROGRESS_MS
+        });
 
         const updateProgress = (reason) => {
             const now = Date.now();
@@ -42,46 +48,9 @@ const PlaybackProgressLogic = (() => {
                 logDebugLazy(() => logHelper.buildStallDuration(reason, stallDurationMs, state.lastBufferAhead));
             }
 
-            if (!state.progressStartTime
-                || (progressGapMs !== null && progressGapMs > CONFIG.monitoring.PROGRESS_STREAK_RESET_MS)) {
-                if (state.progressStartTime) {
-                    logDebugLazy(LogEvents.tagged('PROGRESS', 'Progress streak reset'), () => ({
-                        reason,
-                        progressGapMs,
-                        previousStreakMs: state.progressStreakMs,
-                        currentTime: getCurrentTime()
-                    }));
-                }
-                state.progressStartTime = now;
-                state.progressStreakMs = 0;
-                state.progressEligible = false;
-            } else {
-                state.progressStreakMs = now - state.progressStartTime;
-            }
-
-            state.lastProgressTime = now;
-            state.pauseFromStall = false;
+            progressTracker.updateProgressStreak(reason, now, progressGapMs);
             if (state.resetPendingAt) {
                 clearResetPending('progress');
-            }
-
-            if (!state.progressEligible
-                && state.progressStreakMs >= CONFIG.monitoring.CANDIDATE_MIN_PROGRESS_MS) {
-                state.progressEligible = true;
-                logDebugLazy(LogEvents.tagged('PROGRESS', 'Candidate eligibility reached'), () => ({
-                    reason,
-                    progressStreakMs: state.progressStreakMs,
-                    minProgressMs: CONFIG.monitoring.CANDIDATE_MIN_PROGRESS_MS,
-                    currentTime: getCurrentTime()
-                }));
-            }
-
-            if (!state.hasProgress) {
-                state.hasProgress = true;
-                logDebugLazy(LogEvents.tagged('PROGRESS', 'Initial progress observed'), () => ({
-                    reason,
-                    currentTime: getCurrentTime()
-                }));
             }
 
             progressReset.clearBackoffOnProgress(reason, now);

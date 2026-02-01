@@ -46,6 +46,27 @@ const RecoveryManager = (() => {
         const handlePlayFailure = (videoOrContext, monitorStateOverride, detail = {}) => {
             const context = RecoveryContext.from(videoOrContext, monitorStateOverride, getVideoId, detail);
             const result = policy.handlePlayFailure(context, detail);
+            if (detail?.errorName === 'PLAY_STUCK'
+                && context.monitorState
+                && (monitorsById?.size || 0) <= 1) {
+                const bufferInfo = MediaState.bufferAhead(context.video);
+                const bufferAhead = bufferInfo?.bufferAhead ?? 0;
+                const hasBuffer = bufferInfo?.hasBuffer ?? false;
+                const readyState = context.video?.readyState ?? null;
+                const refreshReady = hasBuffer
+                    && bufferAhead >= CONFIG.recovery.MIN_HEAL_HEADROOM_S
+                    && (readyState === null || readyState >= 3);
+                if (refreshReady && context.monitorState.playErrorCount >= CONFIG.stall.PLAY_STUCK_REFRESH_AFTER) {
+                    const refreshed = requestRefresh(context.videoId, context.monitorState, {
+                        reason: 'play_stuck',
+                        trigger: detail.reason || 'play_error',
+                        detail: detail.error || 'play_stuck'
+                    });
+                    if (refreshed) {
+                        return;
+                    }
+                }
+            }
             const shouldConsider = result.probationTriggered || result.repeatStuck || result.shouldFailover;
             if (!shouldConsider) {
                 return;
@@ -56,6 +77,32 @@ const RecoveryManager = (() => {
             if (result.shouldFailover && afterActive === beforeActive) {
                 failoverManager.attemptFailover(context.videoId, detail.reason || 'play_error', context.monitorState);
             }
+        };
+
+        const requestRefresh = (videoOrContext, monitorStateOverride, detail = {}) => {
+            const context = RecoveryContext.from(videoOrContext, monitorStateOverride, getVideoId, detail);
+            const monitorState = context.monitorState;
+            if (!monitorState) return false;
+            const now = Number.isFinite(detail.now) ? detail.now : Date.now();
+            const lastRefreshAt = monitorState.lastRefreshAt || 0;
+            if (now - lastRefreshAt < CONFIG.stall.REFRESH_COOLDOWN_MS) {
+                return false;
+            }
+            PlaybackStateStore.markRefresh(monitorState, now);
+            Logger.add(LogEvents.tagged('REFRESH', 'Refreshing video after source loss'), {
+                ...RecoveryLogDetails.refresh({
+                    videoId: context.videoId,
+                    reason: detail.reason || 'source_loss',
+                    noHealPointCount: monitorState.noHealPointCount || 0
+                }),
+                trigger: detail.trigger || null,
+                resetType: detail.resetType || null
+            });
+            onPersistentFailure(context.videoId, {
+                reason: detail.reason || 'source_loss',
+                detail: detail.detail || 'source_loss'
+            });
+            return true;
         };
 
         const shouldSkipStall = (videoId, monitorState) => {
@@ -78,6 +125,7 @@ const RecoveryManager = (() => {
             resetPlayError,
             handleNoHealPoint,
             handlePlayFailure,
+            requestRefresh,
             shouldSkipStall,
             probeCandidate,
             onMonitorRemoved: failoverManager.onMonitorRemoved

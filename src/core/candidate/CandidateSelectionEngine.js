@@ -5,15 +5,11 @@
 const CandidateSelectionEngine = (() => {
     const create = (options) => {
         const monitorsById = options.monitorsById;
-        const logDebug = options.logDebug;
         const scoreVideo = options.scoreVideo;
         const decisionEngine = options.decisionEngine;
         const probation = options.probation;
-        const logOutcome = options.logOutcome;
         const getActiveId = options.getActiveId;
-        const setActiveId = options.setActiveId;
         const getLastGoodId = options.getLastGoodId;
-        const setLastGoodId = options.setLastGoodId;
         const getLockChecker = options.getLockChecker;
 
         const evaluateCandidates = (reason) => {
@@ -23,17 +19,25 @@ const CandidateSelectionEngine = (() => {
             let lastGoodCandidateId = getLastGoodId();
 
             if (lockChecker && lockChecker()) {
-                logDebug(LogEvents.tagged('CANDIDATE', 'Failover lock active'), {
+                return {
+                    status: 'locked',
                     reason,
-                    activeVideoId: activeCandidateId
-                });
-                return activeCandidateId ? { id: activeCandidateId } : null;
+                    activeCandidateId,
+                    lastGoodCandidateId
+                };
             }
 
             if (monitorsById.size === 0) {
-                setActiveId(null);
-                setLastGoodId(null);
-                return null;
+                return {
+                    status: 'empty',
+                    reason,
+                    activeCandidateId,
+                    lastGoodCandidateId,
+                    nextActiveId: null,
+                    nextLastGoodId: null,
+                    preferred: null,
+                    scores: []
+                };
             }
 
             const evaluation = CandidateEvaluation.evaluate({
@@ -50,82 +54,54 @@ const CandidateSelectionEngine = (() => {
 
             if (bestTrusted) {
                 lastGoodCandidateId = bestTrusted.id;
-                setLastGoodId(lastGoodCandidateId);
             } else if (lastGoodCandidateId && !monitorsById.has(lastGoodCandidateId)) {
                 lastGoodCandidateId = null;
-                setLastGoodId(null);
             }
 
             const preferred = bestTrustedNonDead || bestNonDead || bestTrusted || best;
+            let activation = null;
 
             if (!activeCandidateId || !monitorsById.has(activeCandidateId)) {
                 const fallbackId = (lastGoodCandidateId && monitorsById.has(lastGoodCandidateId))
                     ? lastGoodCandidateId
                     : preferred?.id;
                 if (fallbackId) {
-                    Logger.add(LogEvents.tagged('CANDIDATE', 'Active video set'), {
-                        to: fallbackId,
-                        reason: 'no_active',
-                        scores
-                    });
                     activeCandidateId = fallbackId;
-                    setActiveId(activeCandidateId);
+                    activation = {
+                        action: 'set_active',
+                        toId: activeCandidateId,
+                        reason: 'no_active'
+                    };
                 }
             }
 
+            let decision = null;
             if (preferred && preferred.id !== activeCandidateId) {
-                const probationActive = probation.isActive();
-                const decision = decisionEngine.decide({
+                decision = decisionEngine.decide({
                     now,
                     current,
                     preferred,
                     activeCandidateId,
-                    probationActive,
+                    probationActive: probation.isActive(),
                     scores,
                     reason
                 });
-
-                if (decision.action === 'fast_switch') {
-                    const fromId = decision.fromId;
-                    Logger.add(LogEvents.tagged('CANDIDATE', 'Fast switch from healing dead-end'), {
-                        from: fromId,
-                        to: decision.toId,
-                        reason: decision.reason,
-                        activeState: decision.activeState,
-                        noHealPointCount: decision.activeNoHealPoints,
-                        stalledForMs: decision.activeStalledForMs,
-                        preferredScore: decision.preferred.score,
-                        preferredProgressStreakMs: decision.preferred.progressStreakMs,
-                        preferredTrusted: decision.preferred.trusted
-                    });
-                    activeCandidateId = decision.toId;
-                    setActiveId(activeCandidateId);
-                    logOutcome(decision);
-                    return preferred;
-                }
-
-                if (decision.action === 'switch') {
-                    const fromId = decision.fromId;
-                    Logger.add(LogEvents.tagged('CANDIDATE', 'Active video switched'), {
-                        from: fromId,
-                        to: decision.toId,
-                        reason: decision.reason,
-                        delta: decision.policyDecision.delta,
-                        currentScore: decision.policyDecision.currentScore,
-                        bestScore: decision.preferred.score,
-                        bestProgressStreakMs: decision.preferred.progressStreakMs,
-                        bestProgressEligible: decision.preferred.progressEligible,
-                        probationActive,
-                        scores
-                    });
-                    activeCandidateId = decision.toId;
-                    setActiveId(activeCandidateId);
-                }
-
-                logOutcome(decision);
             }
 
-            return preferred;
+            return {
+                status: 'evaluated',
+                reason,
+                now,
+                scores,
+                current,
+                preferred,
+                decision,
+                activation,
+                activeCandidateId,
+                lastGoodCandidateId,
+                nextActiveId: activeCandidateId,
+                nextLastGoodId: lastGoodCandidateId
+            };
         };
 
         return { evaluateCandidates };

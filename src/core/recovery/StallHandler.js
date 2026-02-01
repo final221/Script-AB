@@ -35,6 +35,23 @@ const StallHandler = (() => {
             }
         };
 
+        const shouldRefreshMissingSource = (context) => {
+            const snapshot = context.getLiteLogSnapshot
+                ? context.getLiteLogSnapshot()
+                : context.getLogSnapshot();
+            const hasSrc = Boolean(
+                snapshot?.currentSrc
+                || snapshot?.src
+                || context.video?.currentSrc
+                || context.video?.getAttribute?.('src')
+            );
+            const readyState = snapshot?.readyState ?? context.video?.readyState ?? null;
+            const networkState = snapshot?.networkState ?? context.video?.networkState ?? null;
+            const buffered = snapshot?.buffered ?? null;
+            const noBuffer = buffered === 'none' || buffered === null;
+            return !hasSrc && readyState === 0 && networkState === 0 && noBuffer;
+        };
+
         const shouldDebounceAfterProgress = (context, now) => {
             const state = context.monitorState;
             if (!state) return false;
@@ -117,6 +134,29 @@ const StallHandler = (() => {
             Logger.add(summary, detail);
         };
 
+        const evaluateStallGate = (context, details, now) => {
+            if (shouldRefreshMissingSource(context)) {
+                const refreshed = recoveryManager.requestRefresh(context.videoId, context.monitorState, {
+                    reason: 'no_source',
+                    trigger: details.trigger || 'stall',
+                    detail: 'no_source'
+                });
+                if (refreshed) {
+                    return { action: 'refresh' };
+                }
+            }
+
+            if (recoveryManager.shouldSkipStall(context.videoId, context.monitorState)) {
+                return { action: 'skip', reason: 'policy_skip' };
+            }
+
+            if (shouldDebounceAfterProgress(context, now)) {
+                return { action: 'skip', reason: 'debounce' };
+            }
+
+            return { action: 'continue' };
+        };
+
         const onStallDetected = (video, details = {}, state = null) => {
             const now = Date.now();
             const context = RecoveryContext.create(video, state, getVideoId, {
@@ -128,11 +168,8 @@ const StallHandler = (() => {
 
             maybeLogResourceWindow(context, details, now);
 
-            if (recoveryManager.shouldSkipStall(context.videoId, context.monitorState)) {
-                return;
-            }
-
-            if (shouldDebounceAfterProgress(context, now)) {
+            const gate = evaluateStallGate(context, details, now);
+            if (gate.action !== 'continue') {
                 return;
             }
             markHealAttempt(context, now);

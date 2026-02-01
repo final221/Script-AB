@@ -44,15 +44,27 @@ const BackoffManager = (() => {
             });
         };
 
+        const getBackoffStatus = (monitorState, now = Date.now()) => {
+            if (monitorState?.nextHealAllowedTime && now < monitorState.nextHealAllowedTime) {
+                return {
+                    shouldSkip: true,
+                    remainingMs: monitorState.nextHealAllowedTime - now,
+                    noHealPointCount: monitorState.noHealPointCount || 0
+                };
+            }
+            return { shouldSkip: false };
+        };
+
         const shouldSkip = (videoId, monitorState) => {
             const now = Date.now();
-            if (monitorState?.nextHealAllowedTime && now < monitorState.nextHealAllowedTime) {
+            const status = getBackoffStatus(monitorState, now);
+            if (status.shouldSkip) {
                 if (now - (monitorState.lastBackoffLogTime || 0) > CONFIG.logging.BACKOFF_LOG_INTERVAL_MS) {
                     PlaybackStateStore.markBackoffLog(monitorState, now);
                     logDebug(LogEvents.tagged('BACKOFF', 'Stall skipped due to backoff'), {
                         videoId,
-                        remainingMs: monitorState.nextHealAllowedTime - now,
-                        noHealPointCount: monitorState.noHealPointCount
+                        remainingMs: status.remainingMs,
+                        noHealPointCount: status.noHealPointCount
                     });
                 }
                 return true;
@@ -63,6 +75,7 @@ const BackoffManager = (() => {
         return {
             resetBackoff,
             applyBackoff,
+            getBackoffStatus,
             shouldSkip
         };
     };

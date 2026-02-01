@@ -15,6 +15,9 @@ const RecoveryContext = (() => {
         const headroom = (bufferEnd !== null && currentTime !== null)
             ? Math.max(0, bufferEnd - currentTime)
             : null;
+        const bufferInfo = video ? MediaState.bufferAhead(video) : null;
+        const bufferAhead = bufferInfo?.bufferAhead ?? null;
+        const hasBuffer = bufferInfo?.hasBuffer ?? ranges.length > 0;
         const hasSrc = Boolean(video?.currentSrc || video?.getAttribute?.('src'));
 
         return {
@@ -23,8 +26,12 @@ const RecoveryContext = (() => {
             ranges,
             bufferEnd,
             headroom,
+            bufferAhead,
+            hasBuffer,
             hasSrc,
             currentTime,
+            paused: video?.paused ?? null,
+            playbackRate: video?.playbackRate ?? null,
             readyState: video?.readyState ?? null,
             networkState: video?.networkState ?? null,
             stalledForMs: monitorState?.lastProgressTime

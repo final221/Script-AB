@@ -31,6 +31,14 @@ const PlaybackEventHandlersLifecycle = (() => {
                 logEvent('error', () => ({
                     state: state.state
                 }));
+                const mediaError = video?.error;
+                Logger.add(LogEvents.tagged('ERROR', 'Video error event'), {
+                    videoId,
+                    errorCode: mediaError?.code ?? null,
+                    message: mediaError?.message ?? null,
+                    readyState: video?.readyState ?? null,
+                    networkState: video?.networkState ?? null
+                });
                 transitions.toError('error');
             },
             abort: () => {

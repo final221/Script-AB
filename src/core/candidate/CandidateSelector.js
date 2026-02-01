@@ -161,17 +161,87 @@ const CandidateSelector = (() => {
 
         const selectionEngine = CandidateSelectionEngine.create({
             monitorsById,
-            logDebug,
             scoreVideo,
             decisionEngine,
             probation,
-            logOutcome,
             getActiveId: getActiveIdRaw,
-            setActiveId,
             getLastGoodId,
-            setLastGoodId,
             getLockChecker: () => lockChecker
         });
+
+        const evaluateCandidates = (reason) => {
+            const result = selectionEngine.evaluateCandidates(reason);
+            if (!result) return null;
+
+            if (result.status === 'locked') {
+                logDebug(LogEvents.tagged('CANDIDATE', 'Failover lock active'), {
+                    reason,
+                    activeVideoId: result.activeCandidateId
+                });
+                return result.activeCandidateId ? { id: result.activeCandidateId } : null;
+            }
+
+            if (result.status === 'empty') {
+                setActiveId(null);
+                setLastGoodId(null);
+                return null;
+            }
+
+            if (result.nextLastGoodId !== getLastGoodId()) {
+                setLastGoodId(result.nextLastGoodId);
+            }
+
+            if (result.activation) {
+                Logger.add(LogEvents.tagged('CANDIDATE', 'Active video set'), {
+                    to: result.activation.toId,
+                    reason: result.activation.reason,
+                    scores: result.scores
+                });
+                setActiveId(result.activation.toId);
+            }
+
+            const decision = result.decision;
+            if (decision) {
+                if (decision.action === 'fast_switch') {
+                    const fromId = decision.fromId;
+                    Logger.add(LogEvents.tagged('CANDIDATE', 'Fast switch from healing dead-end'), {
+                        from: fromId,
+                        to: decision.toId,
+                        reason: decision.reason,
+                        activeState: decision.activeState,
+                        noHealPointCount: decision.activeNoHealPoints,
+                        stalledForMs: decision.activeStalledForMs,
+                        preferredScore: decision.preferred.score,
+                        preferredProgressStreakMs: decision.preferred.progressStreakMs,
+                        preferredTrusted: decision.preferred.trusted
+                    });
+                    setActiveId(decision.toId);
+                    logOutcome(decision);
+                    return result.preferred;
+                }
+
+                if (decision.action === 'switch') {
+                    const fromId = decision.fromId;
+                    Logger.add(LogEvents.tagged('CANDIDATE', 'Active video switched'), {
+                        from: fromId,
+                        to: decision.toId,
+                        reason: decision.reason,
+                        delta: decision.policyDecision.delta,
+                        currentScore: decision.policyDecision.currentScore,
+                        bestScore: decision.preferred.score,
+                        bestProgressStreakMs: decision.preferred.progressStreakMs,
+                        bestProgressEligible: decision.preferred.progressEligible,
+                        probationActive: decision.probationActive,
+                        scores: result.scores
+                    });
+                    setActiveId(decision.toId);
+                }
+
+                logOutcome(decision);
+            }
+
+            return result.preferred;
+        };
 
         const pruner = CandidatePruner.create({
             monitorsById,
@@ -192,7 +262,7 @@ const CandidateSelector = (() => {
         });
 
         return {
-            evaluateCandidates: selectionEngine.evaluateCandidates,
+            evaluateCandidates,
             pruneMonitors: pruner.pruneMonitors,
             scoreVideo,
             getActiveId,

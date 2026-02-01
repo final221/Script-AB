@@ -47,6 +47,7 @@ const CONFIG = (() => {
             PLAY_ABORT_BACKOFF_BASE_MS: 8000, // Base backoff after AbortError failures
             PLAY_ABORT_BACKOFF_MAX_MS: 30000, // Max backoff after repeated AbortError failures
             PLAY_ERROR_DECAY_MS: 15000,    // Reset play-error count after this idle window
+            PLAY_STUCK_REFRESH_AFTER: 2,   // Refresh after this many PLAY_STUCK failures
             FAILOVER_AFTER_NO_HEAL_POINTS: 3, // Failover after this many consecutive no-heal points
             FAILOVER_AFTER_PLAY_ERRORS: 3, // Failover after this many consecutive play failures
             FAILOVER_AFTER_STALL_MS: 30000,  // Failover after this long stuck without progress

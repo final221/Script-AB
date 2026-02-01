@@ -5,9 +5,8 @@
 const StallSkipPolicy = (() => {
     const create = (options = {}) => {
         const backoffManager = options.backoffManager;
-        const logDebug = options.logDebug || (() => {});
 
-        const shouldSkipStall = (context) => {
+        const decide = (context) => {
             const decisionContext = context.getDecisionContext
                 ? context.getDecisionContext()
                 : RecoveryContext.buildDecisionContext(context);
@@ -15,34 +14,44 @@ const StallSkipPolicy = (() => {
             const monitorState = context.monitorState;
             const now = decisionContext.now;
             if (monitorState?.noHealPointQuietUntil && now < monitorState.noHealPointQuietUntil) {
-                return true;
+                return { shouldSkip: true, reason: 'quiet', videoId, monitorState, now };
             }
-            if (backoffManager.shouldSkip(videoId, monitorState)) {
-                return true;
+            const backoffStatus = backoffManager.getBackoffStatus(monitorState, now);
+            if (backoffStatus.shouldSkip) {
+                return {
+                    shouldSkip: true,
+                    reason: 'backoff',
+                    videoId,
+                    monitorState,
+                    now,
+                    backoff: backoffStatus
+                };
             }
             if (monitorState?.bufferStarveUntil && now < monitorState.bufferStarveUntil) {
-                if (now - (monitorState.lastBufferStarveSkipLogTime || 0) > CONFIG.logging.STARVE_LOG_MS) {
-                    monitorState.lastBufferStarveSkipLogTime = now;
-                    logDebug(LogEvents.tagged('STARVE_SKIP', 'Stall skipped due to buffer starvation'), {
-                        videoId,
+                return {
+                    shouldSkip: true,
+                    reason: 'buffer_starve',
+                    videoId,
+                    monitorState,
+                    now,
+                    bufferStarve: {
                         remainingMs: monitorState.bufferStarveUntil - now,
-                        bufferAhead: monitorState.lastBufferAhead !== null
-                            ? monitorState.lastBufferAhead.toFixed(3)
-                            : null
-                    });
-                }
-                return true;
+                        bufferAhead: monitorState.lastBufferAhead
+                    }
+                };
             }
             if (monitorState?.nextPlayHealAllowedTime && now < monitorState.nextPlayHealAllowedTime) {
-                if (now - (monitorState.lastPlayBackoffLogTime || 0) > CONFIG.logging.BACKOFF_LOG_INTERVAL_MS) {
-                    PlaybackStateStore.markPlayBackoffLog(monitorState, now);
-                    logDebug(LogEvents.tagged('PLAY_BACKOFF', 'Stall skipped due to play backoff'), {
-                        videoId,
+                return {
+                    shouldSkip: true,
+                    reason: 'play_backoff',
+                    videoId,
+                    monitorState,
+                    now,
+                    playBackoff: {
                         remainingMs: monitorState.nextPlayHealAllowedTime - now,
                         playErrorCount: monitorState.playErrorCount
-                    });
-                }
-                return true;
+                    }
+                };
             }
 
             if (monitorState) {
@@ -90,27 +99,29 @@ const StallSkipPolicy = (() => {
 
                     if (signals.length > 0) {
                         const graceMs = strongSignals.length > 0 ? extendedGraceMs : baseGraceMs;
-                        if (now - (monitorState.lastSelfRecoverSkipLogTime || 0) > CONFIG.logging.BACKOFF_LOG_INTERVAL_MS) {
-                            monitorState.lastSelfRecoverSkipLogTime = now;
-                            logDebug(LogEvents.tagged('SELF_RECOVER_SKIP', 'Stall skipped for self-recovery window'), {
-                                videoId,
+                        return {
+                            shouldSkip: true,
+                            reason: 'self_recover',
+                            videoId,
+                            monitorState,
+                            now,
+                            selfRecover: {
                                 stalledForMs,
                                 graceMs,
                                 extraGraceMs: strongSignals.length > 0 ? extraGraceMs : 0,
                                 signals,
                                 bufferAhead: monitorState.lastBufferAhead,
                                 bufferStarved: monitorState.bufferStarved || false
-                            });
-                        }
-                        return true;
+                            }
+                        };
                     }
                 }
             }
 
-            return false;
+            return { shouldSkip: false, reason: 'none', videoId, monitorState, now };
         };
 
-        return { shouldSkipStall };
+        return { decide };
     };
 
     return { create };

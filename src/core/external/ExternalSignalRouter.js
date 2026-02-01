@@ -36,7 +36,12 @@ const ExternalSignalRouter = (() => {
                 logDebug,
                 onRescan
             }),
-            adblock_block: ExternalSignalHandlerAdblock.create()
+            adblock_block: ExternalSignalHandlerAdblock.create(),
+            decoder_error: ExternalSignalHandlerDecoder.create({
+                monitorsById,
+                candidateSelector,
+                recoveryManager
+            })
         };
         const fallbackHandler = ExternalSignalHandlerFallback.create();
 

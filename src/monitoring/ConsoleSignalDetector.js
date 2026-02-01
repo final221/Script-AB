@@ -7,6 +7,7 @@ const ConsoleSignalDetector = (() => {
         PLAYHEAD_STALL: /playhead stalling at/i,
         PROCESSING_ASSET: /404_processing_640x360\.png/i,
         ADBLOCK_BLOCK: /(ERR_BLOCKED_BY_CLIENT|blocked by client|net::ERR_BLOCKED_BY_CLIENT|uBlock|uBO|ublock|adblock)/i,
+        DECODER_ERROR: /(amazon-ivs-wasmworker|runtimeerror:\s*index out of bounds)/i,
     };
 
     const parsePlayheadStall = (message) => {
@@ -26,12 +27,22 @@ const ConsoleSignalDetector = (() => {
         return match[0];
     };
 
+    const parseDecoderError = (message) => {
+        const match = message.match(/(amazon-ivs-wasmworker[^\s:]*\.wasm)(?::(\d+))?/i);
+        if (!match) return null;
+        return {
+            filename: match[1],
+            lineno: match[2] ? Number.parseInt(match[2], 10) : null
+        };
+    };
+
     const create = (options = {}) => {
         const emitSignal = options.emitSignal || (() => {});
         const lastSignalTimes = {
             playhead_stall: 0,
             processing_asset: 0,
-            adblock_block: 0
+            adblock_block: 0,
+            decoder_error: 0
         };
 
         const maybeEmit = (type, message, level, detail = null) => {
@@ -67,6 +78,10 @@ const ConsoleSignalDetector = (() => {
             if (SIGNAL_PATTERNS.ADBLOCK_BLOCK.test(message)) {
                 const url = parseBlockedUrl(message);
                 maybeEmit('adblock_block', message, level, url ? { url } : null);
+            }
+            if (SIGNAL_PATTERNS.DECODER_ERROR.test(message)) {
+                const detail = parseDecoderError(message);
+                maybeEmit('decoder_error', message, level, detail);
             }
         };
 

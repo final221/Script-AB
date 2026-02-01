@@ -70,29 +70,6 @@ const HealPipeline = (() => {
                 ? null
                 : buildOutcome(OutcomeStatus.ABORTED, { phase, reason })
         );
-        const mapPollOutcome = (pollOutcome) => {
-            if (pollOutcome.status === 'found') return null;
-            if (pollOutcome.status === 'recovered') {
-                return buildOutcome(OutcomeStatus.RECOVERED, { phase: 'poll' });
-            }
-            if (pollOutcome.status === 'no_point') {
-                return buildOutcome(OutcomeStatus.NO_POINT, { phase: 'poll' });
-            }
-            if (pollOutcome.status === 'aborted') {
-                return buildOutcome(OutcomeStatus.ABORTED, { phase: 'poll' });
-            }
-            return buildOutcome(OutcomeStatus.FAILED, { phase: 'poll', reason: pollOutcome.status });
-        };
-        const mapRevalidateOutcome = (revalidateOutcome) => {
-            if (revalidateOutcome.status === 'ready') return null;
-            if (revalidateOutcome.status === 'recovered') {
-                return buildOutcome(OutcomeStatus.RECOVERED, { phase: 'revalidate' });
-            }
-            if (revalidateOutcome.status === 'stale_gone') {
-                return buildOutcome(OutcomeStatus.NO_POINT, { phase: 'revalidate', reason: 'stale_gone' });
-            }
-            return buildOutcome(OutcomeStatus.FAILED, { phase: 'revalidate', reason: revalidateOutcome.status });
-        };
         const finalizeMonitorState = (monitorState, video) => {
             if (!monitorState) return;
             const transitions = buildTransitions(monitorState);
@@ -104,95 +81,20 @@ const HealPipeline = (() => {
                 transitions.toStalled('heal_finalize_stalled', { allowDuringHealing: true });
             }
         };
-        const runHealAttempt = async (context, healStartTime) => {
-            const video = context.video;
-            const monitorState = context.monitorState;
-            const videoId = context.videoId;
-            const pollOutcome = await pollHelpers.pollForHealPoint(video, monitorState, videoId, healStartTime);
-            const pollResult = mapPollOutcome(pollOutcome);
-            if (pollResult) return pollResult;
-            const revalidateAttach = requireAttached(
-                video,
-                videoId,
-                'pre_revalidate',
-                'Heal aborted before revalidation',
-                'revalidate'
-            );
-            if (revalidateAttach) return revalidateAttach;
-            const revalidateOutcome = revalidateHelpers.revalidateHealPoint(
-                video,
-                monitorState,
-                videoId,
-                pollOutcome.healPoint,
-                healStartTime
-            );
-            const revalidateResult = mapRevalidateOutcome(revalidateOutcome);
-            if (revalidateResult) return revalidateResult;
-            const seekAttach = requireAttached(
-                video,
-                videoId,
-                'pre_seek',
-                'Heal aborted before seek',
-                'seek'
-            );
-            if (seekAttach) return seekAttach;
-            const seekOutcome = await seekHelpers.attemptSeekWithRetry(video, revalidateOutcome.healPoint);
-            const duration = getDurationMs(healStartTime);
-            if (seekOutcome.result.success) {
-                const bufferEndDelta = HealAttemptUtils.getBufferEndDelta(video);
-                attemptLogger.logHealComplete({
-                    durationMs: duration,
-                    healAttempts: state.healAttempts,
-                    bufferEndDelta,
-                    video,
-                    videoId
-                });
-                Metrics.increment('heals_successful');
-                resetRecovery(monitorState, 'heal_success');
-                catchUpController.scheduleCatchUp(video, monitorState, videoId, 'post_heal');
-                return buildOutcome(OutcomeStatus.FOUND, { phase: 'seek', healPoint: seekOutcome.finalPoint });
-            }
-            const repeatCount = HealAttemptUtils.updateHealPointRepeat(
-                monitorState,
-                seekOutcome.finalPoint,
-                false
-            );
-            if (HealAttemptUtils.isAbortError(seekOutcome.result)) {
-                attemptLogger.logAbortContext({
-                    result: seekOutcome.result,
-                    monitorState,
-                    video
-                });
-            }
-            attemptLogger.logHealFailed({
-                durationMs: duration,
-                result: seekOutcome.result,
-                finalPoint: seekOutcome.finalPoint,
-                video,
-                videoId
-            });
-            Metrics.increment('heals_failed');
-            if (monitorState && recoveryManager.handlePlayFailure
-                && (HealAttemptUtils.isPlayFailure(seekOutcome.result)
-                    || repeatCount >= CONFIG.stall.HEALPOINT_REPEAT_FAILOVER_COUNT)) {
-                recoveryManager.handlePlayFailure(video, monitorState, {
-                    reason: HealAttemptUtils.isPlayFailure(seekOutcome.result)
-                        ? 'play_error'
-                        : 'healpoint_repeat',
-                    error: seekOutcome.result.error,
-                    errorName: seekOutcome.result.errorName,
-                    healRange: seekOutcome.finalPoint
-                        ? `${seekOutcome.finalPoint.start.toFixed(2)}-${seekOutcome.finalPoint.end.toFixed(2)}`
-                        : null,
-                    healPointRepeatCount: repeatCount
-                });
-            }
-
-            const status = HealAttemptUtils.isAbortError(seekOutcome.result)
-                ? OutcomeStatus.ABORTED
-                : OutcomeStatus.FAILED;
-            return buildOutcome(status, { phase: 'seek', result: seekOutcome.result });
-        };
+        const attemptRunner = HealAttemptRunner.create({
+            pollHelpers,
+            revalidateHelpers,
+            seekHelpers,
+            getDurationMs,
+            attemptLogger,
+            catchUpController,
+            resetRecovery,
+            recoveryManager,
+            OutcomeStatus,
+            buildOutcome,
+            requireAttached,
+            state
+        });
 
         const finalizeAttempt = (context, outcome) => {
             state.isHealing = false;
@@ -244,7 +146,7 @@ const HealPipeline = (() => {
 
             let outcome = null;
             try {
-                outcome = await runHealAttempt(context, healStartTime);
+                outcome = await attemptRunner.runHealAttempt(context, healStartTime);
             } catch (e) {
                 Logger.add(LogEvents.tagged('ERROR', 'Unexpected error during heal'), {
                     error: e.name,

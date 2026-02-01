@@ -17,35 +17,40 @@ const RecoveryPolicyFactory = (() => {
             candidateSelector,
             onRescan
         });
-        const noHealPointPolicy = NoHealPointPolicy.create({
+        const decisionApplier = RecoveryDecisionApplier.create({
             backoffManager,
+            candidateSelector,
+            logDebug,
+            onRescan,
+            onPersistentFailure,
+            probationPolicy
+        });
+        const noHealPointPolicy = NoHealPointPolicy.create({
             candidateSelector,
             monitorsById,
             getVideoId,
-            onRescan,
-            onPersistentFailure,
-            logDebug,
             probationPolicy
         });
         const playErrorPolicy = PlayErrorPolicy.create({
-            candidateSelector,
             monitorsById,
             getVideoId,
-            onRescan,
             logDebug,
             probationPolicy
         });
-        const stallSkipPolicy = StallSkipPolicy.create({
-            backoffManager,
-            logDebug
-        });
+        const stallSkipPolicy = StallSkipPolicy.create({ backoffManager });
 
         return {
             resetBackoff: backoffManager.resetBackoff,
             resetPlayError: playErrorPolicy.resetPlayError,
-            handleNoHealPoint: noHealPointPolicy.handleNoHealPoint,
-            handlePlayFailure: playErrorPolicy.handlePlayFailure,
-            shouldSkipStall: stallSkipPolicy.shouldSkipStall,
+            handleNoHealPoint: (context, reason) => (
+                decisionApplier.applyNoHealPointDecision(noHealPointPolicy.decide(context, reason))
+            ),
+            handlePlayFailure: (context, detail) => (
+                decisionApplier.applyPlayFailureDecision(playErrorPolicy.decide(context, detail))
+            ),
+            shouldSkipStall: (context) => (
+                decisionApplier.applyStallSkipDecision(stallSkipPolicy.decide(context))
+            ),
             policies: {
                 probation: probationPolicy,
                 noHealPoint: noHealPointPolicy,

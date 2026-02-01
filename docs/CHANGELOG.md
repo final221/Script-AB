@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.4.55 - 2026-02-01T20:24:45.442Z
+Previous: 4.4.54
+Commit: ced5240
+Changes:
+- fix: quiet recovery after repeated no-heal points
+
 ## 4.4.54 - 2026-02-01T15:52:44.806Z
 Previous: 4.4.53
 Commit: 5fd5f9f

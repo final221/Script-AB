@@ -117,6 +117,7 @@ const buildManifest = () => {
         'PlaybackStallStateMachine.js',
         'PlaybackResetLogic.js',
         'PlaybackProgressReset.js',
+        'PlaybackProgressTracker.js',
         'PlaybackProgressLogic.js',
         'PlaybackSyncLogic.js',
         'PlaybackStarvationLogic.js',
@@ -148,6 +149,7 @@ const buildManifest = () => {
         'BackoffManager.js',
         'ProbationPolicy.js',
         'RecoveryLogDetails.js',
+        'RecoveryDecisionApplier.js',
         'NoHealPointPolicy.js',
         'PlayErrorPolicy.js',
         'StallSkipPolicy.js',
@@ -160,6 +162,7 @@ const buildManifest = () => {
         'CatchUpController.js',
         'HealAttemptUtils.js',
         'HealAttemptLogger.js',
+        'HealAttemptRunner.js',
         'HealPointPoller.js',
         'HealPipeline.js',
         'AdGapSignals.js',
@@ -171,6 +174,7 @@ const buildManifest = () => {
         'ExternalSignalHandlerStall.js',
         'ExternalSignalHandlerAsset.js',
         'ExternalSignalHandlerAdblock.js',
+        'ExternalSignalHandlerDecoder.js',
         'ExternalSignalHandlerFallback.js',
         'ExternalSignalRouter.js'
     ], seen));

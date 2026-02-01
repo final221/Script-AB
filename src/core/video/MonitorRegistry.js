@@ -108,6 +108,18 @@ const MonitorRegistry = (() => {
                         ...details
                     });
                     candidateSelector.evaluateCandidates('reset');
+                    if (recoveryManager?.requestRefresh) {
+                        const hasSrc = Boolean(details?.videoState?.currentSrc || details?.videoState?.src);
+                        if (details?.resetType === 'hard' && !hasSrc) {
+                            const entry = monitorsById.get(videoId);
+                            const monitorState = entry?.monitor?.state || null;
+                            recoveryManager.requestRefresh(videoId, monitorState, {
+                                reason: 'hard_reset',
+                                trigger: details?.reason || 'reset',
+                                resetType: details?.resetType || null
+                            });
+                        }
+                    }
                 },
                 videoId
             });
