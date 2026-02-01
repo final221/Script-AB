@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.4.45 - 2026-02-01T13:43:38.253Z
+Previous: 4.4.44
+Commit: 39c217a
+Changes:
+- refactor: streamline heal pipeline flow
+
 ## 4.4.44 - 2026-02-01T13:41:01.195Z
 Previous: 4.4.43
 Commit: b4b026e

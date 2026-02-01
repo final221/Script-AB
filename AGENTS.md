@@ -15,7 +15,7 @@
 
 ## Discussion-first (no edits by default)
 - When the user is brainstorming or asking questions, do not change files or run builds.
-- Provide a full opinion and push back when needed; wait for explicit "go ahead" before edits.
+- Provide a full opinion and push back when needed; wait for explicit confirmation before edits.
 
 ## Start
 - docs/AI_CONTEXT.md
@@ -30,7 +30,7 @@
 - Logging: `src/monitoring/Logger.js`, `src/monitoring/LogEvents.js`
 
 ## Workflow (always)
-1) Make changes
+1) Make changes (consider test impact; update or add tests as needed)
 2) Run `npm.cmd run agent:verify` after changes (tests + build + status; build bumps version + generates dist)
 3) Commit and push if verify succeeds
 
