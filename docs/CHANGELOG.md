@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.5.6 - 2026-02-01T23:04:42.337Z
+Previous: 4.5.5
+Commit: fc16173
+Changes:
+- Add maintainer role
+
 ## 4.5.5 - 2026-02-01T23:01:59.167Z
 Previous: 4.5.4
 Commit: 6b88301
