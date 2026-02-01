@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.4.34
+// @version       4.4.35
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -162,7 +162,7 @@ const CONFIG = (() => {
  * Build metadata helpers (version injected at build time).
  */
 const BuildInfo = (() => {
-    const VERSION = '4.4.34';
+    const VERSION = '4.4.35';
 
     const getVersion = () => {
         const gmVersion = (typeof GM_info !== 'undefined' && GM_info?.script?.version)
@@ -173,7 +173,7 @@ const BuildInfo = (() => {
             ? unsafeWindow.GM_info.script.version
             : null;
         if (unsafeVersion) return unsafeVersion;
-        if (VERSION && VERSION !== '4.4.34') return VERSION;
+        if (VERSION && VERSION !== '4.4.35') return VERSION;
         return null;
     };
 
@@ -8915,6 +8915,7 @@ try {
  */
 const CoreOrchestrator = (() => {
     let streamHealer = null;
+    const EXPORT_MESSAGE_TYPE = 'TSH_EXPORT_LOGS';
 
     const exposeGlobal = (name, fn) => {
         const targets = [];
@@ -9001,9 +9002,50 @@ const CoreOrchestrator = (() => {
         Logger?.add?.('[CORE] exportTwitchAdLogs not available in top window');
     };
 
+    const installExportBridge = () => {
+        const handler = (event) => {
+            if (!event || event.source !== window) return;
+            const data = event.data;
+            if (!data || data.type !== EXPORT_MESSAGE_TYPE || data.source !== 'tsh') return;
+            exportLogs();
+        };
+
+        window.addEventListener('message', handler);
+
+        const inject = () => {
+            const root = document.documentElement || document.head || document.body;
+            if (!root) return false;
+            try {
+                const script = document.createElement('script');
+                script.textContent = `(() => {
+                    try {
+                        const msg = { source: 'tsh', type: '${EXPORT_MESSAGE_TYPE}' };
+                        const exportFn = () => window.postMessage(msg, '*');
+                        window.exportStreamHealerLogs = window.exportStreamHealerLogs || exportFn;
+                        window.exportTwitchAdLogs = window.exportTwitchAdLogs || exportFn;
+                        window.exporttwitchadlogs = window.exporttwitchadlogs || exportFn;
+                        window.StreamHealer = window.StreamHealer || { exportLogs: exportFn };
+                    } catch (e) {}
+                })();`;
+                root.appendChild(script);
+                root.removeChild(script);
+                return true;
+            } catch (error) {
+                Logger?.add?.('[CORE] Failed to inject export bridge', { error: error?.message });
+                return false;
+            }
+        };
+
+        if (!inject()) {
+            document.addEventListener('DOMContentLoaded', inject, { once: true });
+        }
+    };
+
     return {
         init: () => {
             Logger.add('[CORE] Initializing Stream Healer');
+
+            installExportBridge();
 
             const isTopWindow = window.self === window.top;
             const exportFn = isTopWindow ? exportLogs : exportLogsProxy;

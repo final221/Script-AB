@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.4.35 - 2026-02-01T12:42:15.175Z
+Previous: 4.4.34
+Commit: 3af3ea1
+Changes:
+- Expose StreamHealer globally
+
 ## 4.4.34 - 2026-02-01T12:33:29.596Z
 Previous: 4.4.33
 Commit: f378d07
