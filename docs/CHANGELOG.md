@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.4.44 - 2026-02-01T13:41:01.195Z
+Previous: 4.4.43
+Commit: b4b026e
+Changes:
+- jgh
+
 ## 4.4.43 - 2026-02-01T13:34:30.427Z
 Previous: 4.4.42
 Commit: 62d4881
