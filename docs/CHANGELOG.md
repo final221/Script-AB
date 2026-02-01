@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.4.56 - 2026-02-01T20:44:52.184Z
+Previous: 4.4.55
+Commit: 1c33c14
+Changes:
+- Refactor recovery flow and refresh on decoder faults
+
 ## 4.4.55 - 2026-02-01T20:24:45.442Z
 Previous: 4.4.54
 Commit: ced5240

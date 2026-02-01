@@ -61,6 +61,8 @@ const CONFIG = (() => {
             PROBATION_RESCAN_COOLDOWN_MS: 15000, // Min time between probation rescans
             REFRESH_AFTER_NO_HEAL_POINTS: 3, // Force refresh after repeated no-heal cycles
             REFRESH_COOLDOWN_MS: 120000,     // Minimum time between forced refreshes
+            AUTO_PAGE_REFRESH: false,        // Reload page after persistent failures (downloads logs first)
+            AUTO_PAGE_REFRESH_DELAY_MS: 1500, // Delay before reload to allow log download to start
             NO_HEAL_POINT_REFRESH_DELAY_MS: 15000, // Delay refresh when headroom is low but src/readyState look valid
             NO_HEAL_POINT_REFRESH_MIN_READY_STATE: 2, // ReadyState threshold to allow refresh delay
             NO_HEAL_POINT_EMERGENCY_AFTER: 2, // Emergency switch after this many no-heal points
