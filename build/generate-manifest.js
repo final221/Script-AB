@@ -76,6 +76,8 @@ const buildManifest = () => {
     priority.push(...buildSection('monitoring', [
         'ErrorClassifier.js',
         'LogTags.js',
+        'LogTagGroups.js',
+        'LogTagSchemas.js',
         'LogTagRegistry.js',
         'LogSchemas.js',
         'LogSanitizer.js',

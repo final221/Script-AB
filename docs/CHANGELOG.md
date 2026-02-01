@@ -1,5 +1,17 @@
 # Changelog
 
+## 4.4.38 - 2026-02-01T13:02:05.041Z
+Previous: 4.4.37
+Commit: 3913450
+Changes:
+- No commits detected since last build
+
+## 4.4.37 - 2026-02-01T13:01:33.777Z
+Previous: 4.4.36
+Commit: 3913450
+Changes:
+- Add console ready banner
+
 ## 4.4.36 - 2026-02-01T12:56:32.155Z
 Previous: 4.4.35
 Commit: 85de276
