@@ -17,6 +17,7 @@ const HealPipeline = (() => {
         const catchUpController = CatchUpController.create();
         const attemptLogger = HealAttemptLogger.create();
         const state = { isHealing: false, healAttempts: 0 };
+        const healingVideoIds = new Set();
         const OutcomeStatus = { FOUND: 'found', RECOVERED: 'recovered', NO_POINT: 'no_point', ABORTED: 'aborted', FAILED: 'failed' };
         const getDurationMs = (startTime) => Number((performance.now() - startTime).toFixed(0));
         const resetRecovery = (monitorState, reason) => {
@@ -205,16 +206,27 @@ const HealPipeline = (() => {
             const monitorState = context.monitorState;
             const videoId = context.videoId;
 
-            if (state.isHealing) {
-                Logger.add(LogEvents.tagged('BLOCKED', 'Already healing'));
-                return;
+            const isActive = options.isActive || (() => true);
+            if (!isActive(videoId, video)) {
+                Logger.add(LogEvents.tagged('BLOCKED', 'Heal skipped for non-active video'), {
+                    videoId
+                });
+                return buildOutcome(OutcomeStatus.ABORTED, { phase: 'active_check', reason: 'non_active' });
+            }
+
+            if (healingVideoIds.has(videoId)) {
+                Logger.add(LogEvents.tagged('BLOCKED', 'Already healing video'), {
+                    videoId
+                });
+                return buildOutcome(OutcomeStatus.ABORTED, { phase: 'lock', reason: 'already_healing' });
             }
 
             if (!ensureAttached(video, videoId, 'pre_heal', 'Heal skipped, video not in DOM')) {
-                return;
+                return buildOutcome(OutcomeStatus.ABORTED, { phase: 'pre_heal', reason: 'detached' });
             }
 
-            state.isHealing = true;
+            healingVideoIds.add(videoId);
+            state.isHealing = healingVideoIds.size > 0;
             state.healAttempts++;
             const healStartTime = performance.now();
             if (monitorState) {
@@ -242,6 +254,8 @@ const HealPipeline = (() => {
                 Metrics.increment('heals_failed');
                 outcome = buildOutcome(OutcomeStatus.FAILED, { phase: 'error', error: e.name });
             } finally {
+                healingVideoIds.delete(videoId);
+                state.isHealing = healingVideoIds.size > 0;
                 finalizeAttempt(context, outcome);
             }
             return outcome;
@@ -249,7 +263,9 @@ const HealPipeline = (() => {
 
         return {
             attemptHeal,
-            isHealing: () => state.isHealing,
+            isHealing: (videoId) => (
+                videoId ? healingVideoIds.has(videoId) : state.isHealing
+            ),
             getAttempts: () => state.healAttempts
         };
     };

@@ -43,7 +43,7 @@ const PlaybackWatchdog = (() => {
                 return;
             }
 
-            if (isHealing()) {
+            if (isHealing(videoId)) {
                 return;
             }
 

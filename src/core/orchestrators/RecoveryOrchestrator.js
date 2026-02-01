@@ -20,6 +20,7 @@ const RecoveryOrchestrator = (() => {
             logWithState,
             logDebug,
             recoveryManager,
+            isActive: (videoId) => candidateSelector.getActiveId() === videoId,
             onDetached: (video, reason) => {
                 monitoring.scanForVideos('detached', {
                     reason,
@@ -53,7 +54,7 @@ const RecoveryOrchestrator = (() => {
             onStallDetected,
             attemptHeal: (video, state) => healPipeline.attemptHeal(video, state),
             handleExternalSignal: (signal = {}) => externalSignalRouter.handleSignal(signal),
-            isHealing: () => healPipeline.isHealing(),
+            isHealing: (videoId) => healPipeline.isHealing(videoId),
             getAttempts: () => healPipeline.getAttempts()
         };
     };

@@ -18,7 +18,7 @@ const StreamHealer = (() => {
 
         const monitoring = MonitoringOrchestrator.create({
             logDebug,
-            isHealing: () => recovery.isHealing(),
+            isHealing: (videoId) => recovery.isHealing(videoId),
             isFallbackSource
         });
 

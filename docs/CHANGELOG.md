@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.4.49 - 2026-02-01T14:01:49.325Z
+Previous: 4.4.48
+Commit: 4a17b51
+Changes:
+- refactor: centralize recovery state mutations
+
 ## 4.4.48 - 2026-02-01T13:54:43.371Z
 Previous: 4.4.47
 Commit: 601a8d9
