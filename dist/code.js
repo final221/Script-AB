@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.4.45
+// @version       4.4.46
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -162,7 +162,7 @@ const CONFIG = (() => {
  * Build metadata helpers (version injected at build time).
  */
 const BuildInfo = (() => {
-    const VERSION = '4.4.45';
+    const VERSION = '4.4.46';
 
     const getVersion = () => {
         const gmVersion = (typeof GM_info !== 'undefined' && GM_info?.script?.version)
@@ -173,7 +173,7 @@ const BuildInfo = (() => {
             ? unsafeWindow.GM_info.script.version
             : null;
         if (unsafeVersion) return unsafeVersion;
-        if (VERSION && VERSION !== '4.4.45') return VERSION;
+        if (VERSION && VERSION !== '4.4.46') return VERSION;
         return null;
     };
 
@@ -5074,6 +5074,11 @@ const CandidateSwitchPolicy = (() => {
         const minProgressMs = options.minProgressMs;
         const logDebug = options.logDebug || (() => {});
 
+        const buildDecision = (action, detail) => ({
+            action,
+            ...detail
+        });
+
         const shouldSwitch = (current, best, scores, reason) => {
             if (!current) {
                 return { allow: true };
@@ -5120,20 +5125,6 @@ const CandidateSwitchPolicy = (() => {
             };
         };
 
-        return { shouldSwitch };
-    };
-
-    return { create };
-})();
-
-// --- CandidateDecision ---
-/**
- * Builds candidate switch decisions from scoring + policy inputs.
- */
-const CandidateDecision = (() => {
-    const create = (options = {}) => {
-        const switchPolicy = options.switchPolicy;
-
         const decide = ({
             now,
             current,
@@ -5144,14 +5135,13 @@ const CandidateDecision = (() => {
             reason
         }) => {
             if (!preferred || preferred.id === activeCandidateId) {
-                return {
-                    action: 'none',
+                return buildDecision('none', {
                     reason,
                     fromId: activeCandidateId,
                     toId: preferred?.id || null,
                     preferred,
                     scores
-                };
+                });
             }
 
             const activeState = current ? current.state : null;
@@ -5197,66 +5187,84 @@ const CandidateDecision = (() => {
             };
 
             if (fastSwitchAllowed) {
-                return {
-                    action: 'fast_switch',
-                    ...baseDecision
-                };
+                return buildDecision('fast_switch', baseDecision);
             }
 
             if (!preferred.progressEligible && !probationReady) {
-                return {
-                    action: 'stay',
+                return buildDecision('stay', {
                     suppression: 'preferred_not_progress_eligible',
                     ...baseDecision
-                };
+                });
             }
 
             if (!activeIsStalled) {
-                return {
-                    action: 'stay',
+                return buildDecision('stay', {
                     suppression: 'active_not_stalled',
                     ...baseDecision
-                };
+                });
             }
 
             if (baseDecision.currentTrusted && !preferred.trusted) {
-                return {
-                    action: 'stay',
+                return buildDecision('stay', {
                     suppression: 'trusted_active_blocks_untrusted',
                     ...baseDecision
-                };
+                });
             }
 
             if (!preferred.trusted && !probationActive) {
-                return {
-                    action: 'stay',
+                return buildDecision('stay', {
                     suppression: 'untrusted_outside_probation',
                     ...baseDecision
-                };
+                });
             }
 
             const preferredForPolicy = probationReady
                 ? { ...preferred, progressEligible: true }
                 : preferred;
-            const policyDecision = switchPolicy.shouldSwitch(current, preferredForPolicy, scores, reason);
+            const policyDecision = shouldSwitch(current, preferredForPolicy, scores, reason);
 
             if (policyDecision.allow) {
-                return {
-                    action: 'switch',
+                return buildDecision('switch', {
                     policyDecision,
                     preferredForPolicy,
                     ...baseDecision
-                };
+                });
             }
 
-            return {
-                action: 'stay',
+            return buildDecision('stay', {
                 suppression: policyDecision.suppression || 'score_delta',
                 policyDecision,
                 preferredForPolicy,
                 ...baseDecision
-            };
+            });
         };
+
+        return { shouldSwitch, decide };
+    };
+
+    return { create };
+})();
+
+// --- CandidateDecision ---
+/**
+ * Builds candidate switch decisions from scoring + policy inputs.
+ */
+const CandidateDecision = (() => {
+    const create = (options = {}) => {
+        const switchPolicy = options.switchPolicy;
+
+        const decide = (context = {}) => (
+            switchPolicy?.decide
+                ? switchPolicy.decide(context)
+                : {
+                    action: 'none',
+                    reason: context.reason,
+                    fromId: context.activeCandidateId || null,
+                    toId: context.preferred?.id || null,
+                    preferred: context.preferred || null,
+                    scores: context.scores || []
+                }
+        );
 
         return { decide };
     };

@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.4.46 - 2026-02-01T13:45:57.957Z
+Previous: 4.4.45
+Commit: 8dffdaf
+Changes:
+- Update workflow test guidance
+
 ## 4.4.45 - 2026-02-01T13:43:38.253Z
 Previous: 4.4.44
 Commit: 39c217a
