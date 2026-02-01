@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.4.33
+// @version       4.4.34
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -162,7 +162,7 @@ const CONFIG = (() => {
  * Build metadata helpers (version injected at build time).
  */
 const BuildInfo = (() => {
-    const VERSION = '4.4.33';
+    const VERSION = '4.4.34';
 
     const getVersion = () => {
         const gmVersion = (typeof GM_info !== 'undefined' && GM_info?.script?.version)
@@ -173,7 +173,7 @@ const BuildInfo = (() => {
             ? unsafeWindow.GM_info.script.version
             : null;
         if (unsafeVersion) return unsafeVersion;
-        if (VERSION && VERSION !== '4.4.33') return VERSION;
+        if (VERSION && VERSION !== '4.4.34') return VERSION;
         return null;
     };
 
@@ -8880,6 +8880,31 @@ const StreamHealer = (() => {
         exportLogs
     };
 })();
+
+// Expose StreamHealer in global scope for direct console access.
+try {
+    if (typeof globalThis !== 'undefined') {
+        globalThis.StreamHealer = StreamHealer;
+        globalThis.exportStreamHealerLogs = () => StreamHealer.exportLogs();
+    }
+    if (typeof window !== 'undefined') {
+        window.StreamHealer = StreamHealer;
+        window.exportStreamHealerLogs = () => StreamHealer.exportLogs();
+    }
+    if (typeof unsafeWindow !== 'undefined') {
+        unsafeWindow.StreamHealer = StreamHealer;
+        unsafeWindow.exportStreamHealerLogs = () => StreamHealer.exportLogs();
+    }
+    if (typeof exportFunction === 'function' && typeof window !== 'undefined' && window.wrappedJSObject) {
+        exportFunction(StreamHealer, window.wrappedJSObject, { defineAs: 'StreamHealer' });
+        exportFunction(() => StreamHealer.exportLogs(), window.wrappedJSObject, { defineAs: 'exportStreamHealerLogs' });
+    } else if (typeof window !== 'undefined' && window.wrappedJSObject) {
+        window.wrappedJSObject.StreamHealer = StreamHealer;
+        window.wrappedJSObject.exportStreamHealerLogs = () => StreamHealer.exportLogs();
+    }
+} catch (error) {
+    Logger?.add?.('[HEALER] Failed to expose StreamHealer', { error: error?.message });
+}
 
 // ============================================================================
 // 6. CORE ORCHESTRATOR (Stream Healer Edition)

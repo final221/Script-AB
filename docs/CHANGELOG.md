@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.4.34 - 2026-02-01T12:33:29.596Z
+Previous: 4.4.33
+Commit: f378d07
+Changes:
+- Add StreamHealer exportLogs entrypoint
+
 ## 4.4.33 - 2026-02-01T12:31:22.978Z
 Previous: 4.4.32
 Commit: aa035fb
