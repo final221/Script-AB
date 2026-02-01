@@ -23,15 +23,17 @@ const HealAttemptRunner = (() => {
         const requireAttached = options.requireAttached;
         const state = options.state;
 
-        const runHealAttempt = async (context, healStartTime) => {
+        const finalizeOutcome = (status, phase, detail = {}) => ({
+            outcome: buildOutcome(status, { phase, ...detail })
+        });
+
+        const buildPhaseHandlers = ({ context, healStartTime }) => {
             const video = context.video;
             const monitorState = context.monitorState;
             const videoId = context.videoId;
-            let phase = Phase.POLL;
-            let healPoint = null;
 
-            while (phase) {
-                if (phase === Phase.POLL) {
+            return {
+                [Phase.POLL]: async () => {
                     const pollOutcome = await pollHelpers.pollForHealPoint(
                         video,
                         monitorState,
@@ -39,23 +41,25 @@ const HealAttemptRunner = (() => {
                         healStartTime
                     );
                     if (pollOutcome.status === 'found') {
-                        healPoint = pollOutcome.healPoint;
-                        phase = Phase.REVALIDATE;
-                        continue;
+                        return {
+                            nextPhase: Phase.REVALIDATE,
+                            healPoint: pollOutcome.healPoint
+                        };
                     }
                     if (pollOutcome.status === 'recovered') {
-                        return buildOutcome(OutcomeStatus.RECOVERED, { phase });
+                        return finalizeOutcome(OutcomeStatus.RECOVERED, Phase.POLL);
                     }
                     if (pollOutcome.status === 'no_point') {
-                        return buildOutcome(OutcomeStatus.NO_POINT, { phase });
+                        return finalizeOutcome(OutcomeStatus.NO_POINT, Phase.POLL);
                     }
                     if (pollOutcome.status === 'aborted') {
-                        return buildOutcome(OutcomeStatus.ABORTED, { phase });
+                        return finalizeOutcome(OutcomeStatus.ABORTED, Phase.POLL);
                     }
-                    return buildOutcome(OutcomeStatus.FAILED, { phase, reason: pollOutcome.status });
-                }
-
-                if (phase === Phase.REVALIDATE) {
+                    return finalizeOutcome(OutcomeStatus.FAILED, Phase.POLL, {
+                        reason: pollOutcome.status
+                    });
+                },
+                [Phase.REVALIDATE]: (currentHealPoint) => {
                     const revalidateAttach = requireAttached(
                         video,
                         videoId,
@@ -63,29 +67,33 @@ const HealAttemptRunner = (() => {
                         'Heal aborted before revalidation',
                         Phase.REVALIDATE
                     );
-                    if (revalidateAttach) return revalidateAttach;
+                    if (revalidateAttach) return { outcome: revalidateAttach };
                     const revalidateOutcome = revalidateHelpers.revalidateHealPoint(
                         video,
                         monitorState,
                         videoId,
-                        healPoint,
+                        currentHealPoint,
                         healStartTime
                     );
                     if (revalidateOutcome.status === 'ready') {
-                        healPoint = revalidateOutcome.healPoint;
-                        phase = Phase.SEEK;
-                        continue;
+                        return {
+                            nextPhase: Phase.SEEK,
+                            healPoint: revalidateOutcome.healPoint
+                        };
                     }
                     if (revalidateOutcome.status === 'recovered') {
-                        return buildOutcome(OutcomeStatus.RECOVERED, { phase });
+                        return finalizeOutcome(OutcomeStatus.RECOVERED, Phase.REVALIDATE);
                     }
                     if (revalidateOutcome.status === 'stale_gone') {
-                        return buildOutcome(OutcomeStatus.NO_POINT, { phase, reason: 'stale_gone' });
+                        return finalizeOutcome(OutcomeStatus.NO_POINT, Phase.REVALIDATE, {
+                            reason: 'stale_gone'
+                        });
                     }
-                    return buildOutcome(OutcomeStatus.FAILED, { phase, reason: revalidateOutcome.status });
-                }
-
-                if (phase === Phase.SEEK) {
+                    return finalizeOutcome(OutcomeStatus.FAILED, Phase.REVALIDATE, {
+                        reason: revalidateOutcome.status
+                    });
+                },
+                [Phase.SEEK]: async (currentHealPoint) => {
                     const seekAttach = requireAttached(
                         video,
                         videoId,
@@ -93,8 +101,8 @@ const HealAttemptRunner = (() => {
                         'Heal aborted before seek',
                         Phase.SEEK
                     );
-                    if (seekAttach) return seekAttach;
-                    const seekOutcome = await seekHelpers.attemptSeekWithRetry(video, healPoint);
+                    if (seekAttach) return { outcome: seekAttach };
+                    const seekOutcome = await seekHelpers.attemptSeekWithRetry(video, currentHealPoint);
                     const duration = getDurationMs(healStartTime);
                     if (seekOutcome.result.success) {
                         const bufferEndDelta = HealAttemptUtils.getBufferEndDelta(video);
@@ -108,8 +116,7 @@ const HealAttemptRunner = (() => {
                         Metrics.increment('heals_successful');
                         resetRecovery(monitorState, 'heal_success');
                         catchUpController.scheduleCatchUp(video, monitorState, videoId, 'post_heal');
-                        return buildOutcome(OutcomeStatus.FOUND, {
-                            phase,
+                        return finalizeOutcome(OutcomeStatus.FOUND, Phase.SEEK, {
                             healPoint: seekOutcome.finalPoint
                         });
                     }
@@ -152,13 +159,36 @@ const HealAttemptRunner = (() => {
                     const status = HealAttemptUtils.isAbortError(seekOutcome.result)
                         ? OutcomeStatus.ABORTED
                         : OutcomeStatus.FAILED;
-                    return buildOutcome(status, { phase, result: seekOutcome.result });
+                    return finalizeOutcome(status, Phase.SEEK, {
+                        result: seekOutcome.result
+                    });
                 }
+            };
+        };
 
-                phase = null;
+        const runHealAttempt = async (context, healStartTime) => {
+            const handlers = buildPhaseHandlers({ context, healStartTime });
+            let phase = Phase.POLL;
+            let healPoint = null;
+
+            while (phase) {
+                const handler = handlers[phase];
+                if (!handler) {
+                    break;
+                }
+                const result = await handler(healPoint);
+                if (result?.outcome) {
+                    return result.outcome;
+                }
+                if (result?.nextPhase) {
+                    phase = result.nextPhase;
+                    healPoint = result.healPoint ?? healPoint;
+                    continue;
+                }
+                break;
             }
 
-            return buildOutcome(OutcomeStatus.FAILED, { phase: 'unknown' });
+            return buildOutcome(OutcomeStatus.FAILED, { phase: phase || 'unknown' });
         };
 
         return { runHealAttempt };

@@ -20,6 +20,22 @@ const HealPipeline = (() => {
         const healingVideoIds = new Set();
         const OutcomeStatus = { FOUND: 'found', RECOVERED: 'recovered', NO_POINT: 'no_point', ABORTED: 'aborted', FAILED: 'failed' };
         const getDurationMs = (startTime) => Number((performance.now() - startTime).toFixed(0));
+        const updateHealingState = () => {
+            state.isHealing = healingVideoIds.size > 0;
+        };
+        const withHealingLock = async (videoId, fn) => {
+            if (healingVideoIds.has(videoId)) {
+                return { locked: true, outcome: null };
+            }
+            healingVideoIds.add(videoId);
+            updateHealingState();
+            try {
+                return { locked: false, outcome: await fn() };
+            } finally {
+                healingVideoIds.delete(videoId);
+                updateHealingState();
+            }
+        };
         const resetRecovery = (monitorState, reason) => {
             recoveryManager.resetBackoff(monitorState, reason);
             if (recoveryManager.resetPlayError) {
@@ -97,7 +113,6 @@ const HealPipeline = (() => {
         });
 
         const finalizeAttempt = (context, outcome) => {
-            state.isHealing = false;
             finalizeMonitorState(context.monitorState, context.video);
             return outcome;
         };
@@ -116,51 +131,51 @@ const HealPipeline = (() => {
                 return buildOutcome(OutcomeStatus.ABORTED, { phase: 'active_check', reason: 'non_active' });
             }
 
-            if (healingVideoIds.has(videoId)) {
+            if (!ensureAttached(video, videoId, 'pre_heal', 'Heal skipped, video not in DOM')) {
+                return buildOutcome(OutcomeStatus.ABORTED, { phase: 'pre_heal', reason: 'detached' });
+            }
+
+            const lockResult = await withHealingLock(videoId, async () => {
+                state.healAttempts++;
+                const healStartTime = performance.now();
+                if (monitorState) {
+                    const transitions = buildTransitions(monitorState);
+                    transitions.toHealing('heal_start');
+                    PlaybackStateStore.markHealAttempt(monitorState, Date.now());
+                }
+
+                attemptLogger.logStart({
+                    attempt: state.healAttempts,
+                    monitorState,
+                    video,
+                    videoId
+                });
+
+                let outcome = null;
+                try {
+                    outcome = await attemptRunner.runHealAttempt(context, healStartTime);
+                } catch (e) {
+                    Logger.add(LogEvents.tagged('ERROR', 'Unexpected error during heal'), {
+                        error: e.name,
+                        message: e.message,
+                        stack: e.stack?.split('\n')[0]
+                    });
+                    Metrics.increment('heals_failed');
+                    outcome = buildOutcome(OutcomeStatus.FAILED, { phase: 'error', error: e.name });
+                } finally {
+                    finalizeAttempt(context, outcome);
+                }
+                return outcome;
+            });
+
+            if (lockResult.locked) {
                 Logger.add(LogEvents.tagged('BLOCKED', 'Already healing video'), {
                     videoId
                 });
                 return buildOutcome(OutcomeStatus.ABORTED, { phase: 'lock', reason: 'already_healing' });
             }
 
-            if (!ensureAttached(video, videoId, 'pre_heal', 'Heal skipped, video not in DOM')) {
-                return buildOutcome(OutcomeStatus.ABORTED, { phase: 'pre_heal', reason: 'detached' });
-            }
-
-            healingVideoIds.add(videoId);
-            state.isHealing = healingVideoIds.size > 0;
-            state.healAttempts++;
-            const healStartTime = performance.now();
-            if (monitorState) {
-                const transitions = buildTransitions(monitorState);
-                transitions.toHealing('heal_start');
-                PlaybackStateStore.markHealAttempt(monitorState, Date.now());
-            }
-
-            attemptLogger.logStart({
-                attempt: state.healAttempts,
-                monitorState,
-                video,
-                videoId
-            });
-
-            let outcome = null;
-            try {
-                outcome = await attemptRunner.runHealAttempt(context, healStartTime);
-            } catch (e) {
-                Logger.add(LogEvents.tagged('ERROR', 'Unexpected error during heal'), {
-                    error: e.name,
-                    message: e.message,
-                    stack: e.stack?.split('\n')[0]
-                });
-                Metrics.increment('heals_failed');
-                outcome = buildOutcome(OutcomeStatus.FAILED, { phase: 'error', error: e.name });
-            } finally {
-                healingVideoIds.delete(videoId);
-                state.isHealing = healingVideoIds.size > 0;
-                finalizeAttempt(context, outcome);
-            }
-            return outcome;
+            return lockResult.outcome;
         };
 
         return {

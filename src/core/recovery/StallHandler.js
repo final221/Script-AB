@@ -35,23 +35,6 @@ const StallHandler = (() => {
             }
         };
 
-        const shouldRefreshMissingSource = (context) => {
-            const snapshot = context.getLiteLogSnapshot
-                ? context.getLiteLogSnapshot()
-                : context.getLogSnapshot();
-            const hasSrc = Boolean(
-                snapshot?.currentSrc
-                || snapshot?.src
-                || context.video?.currentSrc
-                || context.video?.getAttribute?.('src')
-            );
-            const readyState = snapshot?.readyState ?? context.video?.readyState ?? null;
-            const networkState = snapshot?.networkState ?? context.video?.networkState ?? null;
-            const buffered = snapshot?.buffered ?? null;
-            const noBuffer = buffered === 'none' || buffered === null;
-            return !hasSrc && readyState === 0 && networkState === 0 && noBuffer;
-        };
-
         const shouldDebounceAfterProgress = (context, now) => {
             const state = context.monitorState;
             if (!state) return false;
@@ -134,28 +117,86 @@ const StallHandler = (() => {
             Logger.add(summary, detail);
         };
 
-        const evaluateStallGate = (context, details, now) => {
-            if (shouldRefreshMissingSource(context)) {
-                const refreshed = recoveryManager.requestRefresh(context.videoId, context.monitorState, {
-                    reason: 'no_source',
-                    trigger: details.trigger || 'stall',
-                    detail: 'no_source'
-                });
-                if (refreshed) {
-                    return { action: 'refresh' };
+        const gateRefreshMissingSource = (context, details) => {
+            const eligibility = recoveryManager.canRequestRefresh(context, null, {
+                reason: 'no_source',
+                trigger: details.trigger || 'stall',
+                detail: 'no_source'
+            });
+            if (!eligibility.allow) return null;
+            const refreshed = recoveryManager.requestRefresh(context.videoId, context.monitorState, {
+                reason: 'no_source',
+                trigger: details.trigger || 'stall',
+                detail: 'no_source',
+                eligibility
+            });
+            return refreshed ? { action: 'refresh', reason: 'no_source' } : null;
+        };
+
+        const gatePolicySkip = (context) => (
+            recoveryManager.shouldSkipStall(context.videoId, context.monitorState)
+                ? { action: 'skip', reason: 'policy_skip' }
+                : null
+        );
+
+        const gateDebounceAfterProgress = (context, now) => (
+            shouldDebounceAfterProgress(context, now)
+                ? { action: 'skip', reason: 'debounce' }
+                : null
+        );
+
+        const runStallPipeline = (steps, context, details, now) => {
+            for (const step of steps) {
+                const result = step(context, details, now);
+                if (result && result.action && result.action !== 'continue') {
+                    return result;
                 }
             }
-
-            if (recoveryManager.shouldSkipStall(context.videoId, context.monitorState)) {
-                return { action: 'skip', reason: 'policy_skip' };
-            }
-
-            if (shouldDebounceAfterProgress(context, now)) {
-                return { action: 'skip', reason: 'debounce' };
-            }
-
             return { action: 'continue' };
         };
+
+        const stallPipeline = [
+            (ctx, ctxDetails) => gateRefreshMissingSource(ctx, ctxDetails),
+            (ctx) => gatePolicySkip(ctx),
+            (ctx, ctxDetails, ctxNow) => gateDebounceAfterProgress(ctx, ctxNow),
+            (ctx, ctxDetails, ctxNow) => {
+                markHealAttempt(ctx, ctxNow);
+                return null;
+            },
+            (ctx, ctxDetails, ctxNow) => {
+                maybeRescanBufferStarved(ctx, ctxNow);
+                return null;
+            },
+            (ctx, ctxDetails, ctxNow) => {
+                AdGapSignals.maybeLog({
+                    video: ctx.video,
+                    videoId: ctx.videoId,
+                    playheadSeconds: ctx.video?.currentTime,
+                    monitorState: ctx.monitorState,
+                    now: ctxNow,
+                    reason: ctxDetails.trigger || 'stall'
+                });
+                return null;
+            },
+            (ctx) => {
+                candidateSelector.evaluateCandidates('stall');
+                return null;
+            },
+            (ctx, ctxDetails, ctxNow) => (
+                shouldSkipNonActive(ctx, ctxDetails, ctxNow)
+                    ? { action: 'skip', reason: 'non_active' }
+                    : null
+            ),
+            (ctx, ctxDetails, ctxNow) => {
+                logStallDetected(ctx, ctxDetails, ctxNow);
+                return null;
+            },
+            (ctx) => {
+                Metrics.increment('stalls_detected');
+                healPipeline.attemptHeal(ctx);
+                return { action: 'handled' };
+            }
+        ];
 
         const onStallDetected = (video, details = {}, state = null) => {
             const now = Date.now();
@@ -168,31 +209,7 @@ const StallHandler = (() => {
 
             maybeLogResourceWindow(context, details, now);
 
-            const gate = evaluateStallGate(context, details, now);
-            if (gate.action !== 'continue') {
-                return;
-            }
-            markHealAttempt(context, now);
-            maybeRescanBufferStarved(context, now);
-
-            AdGapSignals.maybeLog({
-                video: context.video,
-                videoId: context.videoId,
-                playheadSeconds: context.video?.currentTime,
-                monitorState: context.monitorState,
-                now,
-                reason: details.trigger || 'stall'
-            });
-
-            candidateSelector.evaluateCandidates('stall');
-            if (shouldSkipNonActive(context, details, now)) {
-                return;
-            }
-
-            logStallDetected(context, details, now);
-
-            Metrics.increment('stalls_detected');
-            healPipeline.attemptHeal(context);
+            runStallPipeline(stallPipeline, context, details, now);
         };
 
         return {

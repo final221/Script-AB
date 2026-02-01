@@ -43,13 +43,13 @@ const RecoveryPolicyFactory = (() => {
             resetBackoff: backoffManager.resetBackoff,
             resetPlayError: playErrorPolicy.resetPlayError,
             handleNoHealPoint: (context, reason) => (
-                decisionApplier.applyNoHealPointDecision(noHealPointPolicy.decide(context, reason))
+                decisionApplier.applyDecision(noHealPointPolicy.decide(context, reason))
             ),
             handlePlayFailure: (context, detail) => (
-                decisionApplier.applyPlayFailureDecision(playErrorPolicy.decide(context, detail))
+                decisionApplier.applyDecision(playErrorPolicy.decide(context, detail))
             ),
             shouldSkipStall: (context) => (
-                decisionApplier.applyStallSkipDecision(stallSkipPolicy.decide(context))
+                decisionApplier.applyDecision(stallSkipPolicy.decide(context))
             ),
             policies: {
                 probation: probationPolicy,

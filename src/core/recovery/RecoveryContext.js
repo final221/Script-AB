@@ -40,6 +40,35 @@ const RecoveryContext = (() => {
         };
     };
 
+    const buildPolicyContext = (context, overrides = {}) => {
+        const baseContext = context?.getDecisionContext
+            ? context.getDecisionContext()
+            : buildDecisionContext(context);
+        return {
+            video: context?.video || null,
+            monitorState: context?.monitorState || null,
+            videoId: baseContext.videoId || 'unknown',
+            now: baseContext.now,
+            trigger: overrides.trigger || context?.trigger || null,
+            reason: overrides.reason || context?.reason || null,
+            decisionContext: baseContext,
+            detail: overrides.detail || context?.detail || {}
+        };
+    };
+
+    const isPolicyContext = (value) => Boolean(value && value.decisionContext && value.videoId);
+
+    const buildDecision = (type, contextOrPolicy, data = {}) => {
+        const policyContext = isPolicyContext(contextOrPolicy)
+            ? contextOrPolicy
+            : buildPolicyContext(contextOrPolicy);
+        return {
+            type,
+            context: policyContext,
+            data
+        };
+    };
+
     const create = (video, monitorState, getVideoId, detail = {}) => {
         const videoId = detail.videoId || (typeof getVideoId === 'function'
             ? getVideoId(video)
@@ -79,6 +108,8 @@ const RecoveryContext = (() => {
     return {
         create,
         from,
-        buildDecisionContext
+        buildDecisionContext,
+        buildPolicyContext,
+        buildDecision
     };
 })();

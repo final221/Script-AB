@@ -13,6 +13,29 @@ const CandidateSwitchPolicy = (() => {
             ...detail
         });
 
+        const evaluateEligibility = ({
+            preferred,
+            probationActive,
+            probationReady,
+            activeIsStalled,
+            currentTrusted,
+            reason
+        }) => {
+            if (!preferred.progressEligible && !probationReady) {
+                return { allow: false, suppression: 'preferred_not_progress_eligible', reason };
+            }
+            if (!activeIsStalled) {
+                return { allow: false, suppression: 'active_not_stalled', reason };
+            }
+            if (currentTrusted && !preferred.trusted) {
+                return { allow: false, suppression: 'trusted_active_blocks_untrusted', reason };
+            }
+            if (!preferred.trusted && !probationActive) {
+                return { allow: false, suppression: 'untrusted_outside_probation', reason };
+            }
+            return { allow: true };
+        };
+
         const shouldSwitch = (current, best, scores, reason) => {
             if (!current) {
                 return { allow: true };
@@ -28,10 +51,7 @@ const CandidateSwitchPolicy = (() => {
             let suppression = null;
             let allow = true;
 
-            if (!best.progressEligible && !currentBad) {
-                allow = false;
-                suppression = 'insufficient_progress';
-            } else if (!currentBad && delta < switchDelta) {
+            if (!currentBad && delta < switchDelta) {
                 allow = false;
                 suppression = 'score_delta';
             }
@@ -124,30 +144,17 @@ const CandidateSwitchPolicy = (() => {
                 return buildDecision('fast_switch', baseDecision);
             }
 
-            if (!preferred.progressEligible && !probationReady) {
+            const eligibility = evaluateEligibility({
+                preferred,
+                probationActive,
+                probationReady,
+                activeIsStalled,
+                currentTrusted: baseDecision.currentTrusted,
+                reason
+            });
+            if (!eligibility.allow) {
                 return buildDecision('stay', {
-                    suppression: 'preferred_not_progress_eligible',
-                    ...baseDecision
-                });
-            }
-
-            if (!activeIsStalled) {
-                return buildDecision('stay', {
-                    suppression: 'active_not_stalled',
-                    ...baseDecision
-                });
-            }
-
-            if (baseDecision.currentTrusted && !preferred.trusted) {
-                return buildDecision('stay', {
-                    suppression: 'trusted_active_blocks_untrusted',
-                    ...baseDecision
-                });
-            }
-
-            if (!preferred.trusted && !probationActive) {
-                return buildDecision('stay', {
-                    suppression: 'untrusted_outside_probation',
+                    suppression: eligibility.suppression,
                     ...baseDecision
                 });
             }

@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.4.58 - 2026-02-01T21:09:04.783Z
+Previous: 4.4.57
+Commit: c3e9e4e
+Changes:
+- Include full error messages in logs
+
 ## 4.4.57 - 2026-02-01T20:53:00.599Z
 Previous: 4.4.56
 Commit: 65e7271

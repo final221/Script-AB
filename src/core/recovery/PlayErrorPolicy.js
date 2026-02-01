@@ -5,7 +5,6 @@
 const PlayErrorPolicy = (() => {
     const create = (options = {}) => {
         const monitorsById = options.monitorsById;
-        const getVideoId = options.getVideoId;
         const logDebug = options.logDebug || (() => {});
         const probationPolicy = options.probationPolicy;
 
@@ -25,17 +24,16 @@ const PlayErrorPolicy = (() => {
         };
 
         const decide = (context, detail = {}) => {
-            const video = context.video;
-            const monitorState = context.monitorState;
+            const policyContext = RecoveryContext.buildPolicyContext(context, { detail });
+            const monitorState = policyContext.monitorState;
             if (!monitorState) {
-                return {
+                return RecoveryContext.buildDecision('play_error', policyContext, {
                     shouldFailover: false,
                     probationEligible: false,
                     repeatStuck: false,
                     repeatCount: 0
-                };
+                });
             }
-            const videoId = context.videoId || (getVideoId ? getVideoId(video) : 'unknown');
             const now = Date.now();
             const lastErrorTime = monitorState.lastPlayErrorTime || 0;
             const baseCount = (lastErrorTime > 0 && (now - lastErrorTime) > CONFIG.stall.PLAY_ERROR_DECAY_MS)
@@ -58,9 +56,7 @@ const PlayErrorPolicy = (() => {
             const shouldFailover = monitorsById && monitorsById.size > 1
                 && (count >= CONFIG.stall.FAILOVER_AFTER_PLAY_ERRORS || repeatStuck);
 
-            return {
-                videoId,
-                monitorState,
+            return RecoveryContext.buildDecision('play_error', policyContext, {
                 reason: detail.reason || 'play_error',
                 error: detail.error,
                 errorName: detail.errorName,
@@ -73,7 +69,7 @@ const PlayErrorPolicy = (() => {
                 shouldFailover,
                 probationEligible: Boolean(probationPolicy?.maybeTriggerProbation),
                 repeatStuck
-            };
+            });
         };
 
         return {

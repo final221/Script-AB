@@ -43,24 +43,72 @@ const RecoveryManager = (() => {
 
         const resetPlayError = policy.resetPlayError;
 
+        const isMissingSource = (context) => {
+            const snapshot = context.getLiteLogSnapshot
+                ? context.getLiteLogSnapshot()
+                : context.getLogSnapshot?.();
+            const hasSrc = Boolean(
+                snapshot?.currentSrc
+                || snapshot?.src
+                || context.video?.currentSrc
+                || context.video?.getAttribute?.('src')
+            );
+            const readyState = snapshot?.readyState ?? context.video?.readyState ?? null;
+            const networkState = snapshot?.networkState ?? context.video?.networkState ?? null;
+            const buffered = snapshot?.buffered ?? null;
+            const noBuffer = buffered === 'none' || buffered === null;
+            return !hasSrc && readyState === 0 && networkState === 0 && noBuffer;
+        };
+
+        const isPlayStuckRefreshReady = (context) => {
+            const bufferInfo = MediaState.bufferAhead(context.video);
+            const bufferAhead = bufferInfo?.bufferAhead ?? 0;
+            const hasBuffer = bufferInfo?.hasBuffer ?? false;
+            const readyState = context.video?.readyState ?? null;
+            return hasBuffer
+                && bufferAhead >= CONFIG.recovery.MIN_HEAL_HEADROOM_S
+                && (readyState === null || readyState >= 3);
+        };
+
+        const evaluateRefreshEligibility = (context, detail = {}) => {
+            const monitorState = context.monitorState;
+            if (!monitorState) {
+                return { allow: false, reason: 'no_state' };
+            }
+            const now = Number.isFinite(detail.now) ? detail.now : Date.now();
+            const lastRefreshAt = monitorState.lastRefreshAt || 0;
+            if (now - lastRefreshAt < CONFIG.stall.REFRESH_COOLDOWN_MS) {
+                return {
+                    allow: false,
+                    reason: 'cooldown',
+                    remainingMs: CONFIG.stall.REFRESH_COOLDOWN_MS - (now - lastRefreshAt)
+                };
+            }
+            const reason = detail.reason || context.reason || 'unknown';
+            if (reason === 'no_source' && !isMissingSource(context)) {
+                return { allow: false, reason: 'no_source_not_ready' };
+            }
+            if (reason === 'play_stuck' && !isPlayStuckRefreshReady(context)) {
+                return { allow: false, reason: 'play_stuck_not_ready' };
+            }
+            return { allow: true, reason, now };
+        };
+
         const handlePlayFailure = (videoOrContext, monitorStateOverride, detail = {}) => {
             const context = RecoveryContext.from(videoOrContext, monitorStateOverride, getVideoId, detail);
             const result = policy.handlePlayFailure(context, detail);
             if (detail?.errorName === 'PLAY_STUCK'
                 && context.monitorState
                 && (monitorsById?.size || 0) <= 1) {
-                const bufferInfo = MediaState.bufferAhead(context.video);
-                const bufferAhead = bufferInfo?.bufferAhead ?? 0;
-                const hasBuffer = bufferInfo?.hasBuffer ?? false;
-                const readyState = context.video?.readyState ?? null;
-                const refreshReady = hasBuffer
-                    && bufferAhead >= CONFIG.recovery.MIN_HEAL_HEADROOM_S
-                    && (readyState === null || readyState >= 3);
-                if (refreshReady && context.monitorState.playErrorCount >= CONFIG.stall.PLAY_STUCK_REFRESH_AFTER) {
-                    const refreshed = requestRefresh(context.videoId, context.monitorState, {
+                if (context.monitorState.playErrorCount >= CONFIG.stall.PLAY_STUCK_REFRESH_AFTER) {
+                    const eligibility = evaluateRefreshEligibility(context, {
+                        reason: 'play_stuck'
+                    });
+                    const refreshed = eligibility.allow && requestRefresh(context.videoId, context.monitorState, {
                         reason: 'play_stuck',
                         trigger: detail.reason || 'play_error',
-                        detail: detail.error || 'play_stuck'
+                        detail: detail.error || 'play_stuck',
+                        eligibility
                     });
                     if (refreshed) {
                         return;
@@ -83,12 +131,11 @@ const RecoveryManager = (() => {
             const context = RecoveryContext.from(videoOrContext, monitorStateOverride, getVideoId, detail);
             const monitorState = context.monitorState;
             if (!monitorState) return false;
-            const now = Number.isFinite(detail.now) ? detail.now : Date.now();
-            const lastRefreshAt = monitorState.lastRefreshAt || 0;
-            if (now - lastRefreshAt < CONFIG.stall.REFRESH_COOLDOWN_MS) {
+            const eligibility = detail.eligibility || evaluateRefreshEligibility(context, detail);
+            if (!eligibility.allow) {
                 return false;
             }
-            PlaybackStateStore.markRefresh(monitorState, now);
+            PlaybackStateStore.markRefresh(monitorState, eligibility.now);
             Logger.add(LogEvents.tagged('REFRESH', 'Refreshing video after source loss'), {
                 ...RecoveryLogDetails.refresh({
                     videoId: context.videoId,
@@ -103,6 +150,11 @@ const RecoveryManager = (() => {
                 detail: detail.detail || 'source_loss'
             });
             return true;
+        };
+
+        const canRequestRefresh = (videoOrContext, monitorStateOverride, detail = {}) => {
+            const context = RecoveryContext.from(videoOrContext, monitorStateOverride, getVideoId, detail);
+            return evaluateRefreshEligibility(context, detail);
         };
 
         const shouldSkipStall = (videoId, monitorState) => {
@@ -126,6 +178,7 @@ const RecoveryManager = (() => {
             handleNoHealPoint,
             handlePlayFailure,
             requestRefresh,
+            canRequestRefresh,
             shouldSkipStall,
             probeCandidate,
             onMonitorRemoved: failoverManager.onMonitorRemoved

@@ -6,7 +6,6 @@ const NoHealPointPolicy = (() => {
     const create = (options = {}) => {
         const candidateSelector = options.candidateSelector;
         const monitorsById = options.monitorsById;
-        const getVideoId = options.getVideoId;
         const probationPolicy = options.probationPolicy;
 
         const canEmergencySwitch = (monitorState, nextNoHealPointCount, now) => {
@@ -77,12 +76,9 @@ const NoHealPointPolicy = (() => {
         };
 
         const buildDecision = (context, reason) => {
-            const video = context.video;
-            const monitorState = context.monitorState;
-            const videoId = context.videoId || (getVideoId ? getVideoId(video) : 'unknown');
-            const decisionContext = context.getDecisionContext
-                ? context.getDecisionContext()
-                : RecoveryContext.buildDecisionContext(context);
+            const policyContext = RecoveryContext.buildPolicyContext(context, { reason });
+            const monitorState = policyContext.monitorState;
+            const decisionContext = policyContext.decisionContext;
             const now = decisionContext.now;
             const ranges = decisionContext.ranges;
             const nextNoHealPointCount = monitorState ? (monitorState.noHealPointCount || 0) + 1 : 0;
@@ -102,12 +98,7 @@ const NoHealPointPolicy = (() => {
             const quietEligible = canEnterQuiet(monitorState, decisionContext, nextNoHealPointCount);
             const quietUntil = quietEligible ? now + CONFIG.stall.NO_HEAL_POINT_QUIET_MS : 0;
 
-            return {
-                videoId,
-                monitorState,
-                reason,
-                now,
-                ranges,
+            return RecoveryContext.buildDecision('no_heal_point', policyContext, {
                 nextNoHealPointCount,
                 shouldSetRefreshWindow,
                 refreshUntil,
@@ -123,7 +114,7 @@ const NoHealPointPolicy = (() => {
                 emergencyEligible: canEmergencySwitch(monitorState, nextNoHealPointCount, now),
                 lastResortEligible: canLastResortSwitch(monitorState, nextNoHealPointCount, now),
                 refreshEligible: canRefresh(monitorState, nextNoHealPointCount, now, refreshUntil)
-            };
+            });
         };
 
         return {
