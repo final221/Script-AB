@@ -3,6 +3,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 describe('HealPointPoller', () => {
     let findSpy;
     let analyzeSpy;
+    let addSpy;
 
     afterEach(() => {
         if (findSpy) {
@@ -12,6 +13,10 @@ describe('HealPointPoller', () => {
         if (analyzeSpy) {
             analyzeSpy.mockRestore();
             analyzeSpy = null;
+        }
+        if (addSpy) {
+            addSpy.mockRestore();
+            addSpy = null;
         }
         vi.useRealTimers();
     });
@@ -58,5 +63,40 @@ describe('HealPointPoller', () => {
         expect(result.reason).toBe('defer_limit');
         expect(findSpy).toHaveBeenCalled();
         expect(monitorState.healDeferSince).toBe(0);
+    });
+
+    it('allows low-headroom heals when buffer is exhausted via gap override', async () => {
+        const video = document.createElement('video');
+        const monitorState = {
+            lastProgressTime: Date.now() - CONFIG.stall.RECOVERY_WINDOW_MS - 1000
+        };
+        const healPoint = {
+            start: 10,
+            end: 10.6,
+            gapSize: 0.4,
+            isNudge: false,
+            rangeIndex: 1
+        };
+
+        findSpy = vi.spyOn(window.BufferGapFinder, 'findHealPoint').mockReturnValue(healPoint);
+        analyzeSpy = vi.spyOn(window.BufferGapFinder, 'analyze').mockReturnValue({
+            bufferExhausted: true,
+            formattedRanges: '[0.00-10.60]'
+        });
+        addSpy = vi.spyOn(Logger, 'add').mockImplementation(() => {});
+
+        const poller = window.HealPointPoller.create({
+            getVideoId: () => 'video-1',
+            logWithState: vi.fn(),
+            logDebug: vi.fn()
+        });
+
+        const result = await poller.pollForHealPoint(video, monitorState, 2000);
+
+        expect(result.healPoint).toEqual(healPoint);
+        const gapOverrideLogs = addSpy.mock.calls.filter(
+            (call) => call[0]?.message === LogTags.TAG.GAP_OVERRIDE
+        );
+        expect(gapOverrideLogs.length).toBe(1);
     });
 });
