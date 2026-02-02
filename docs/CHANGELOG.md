@@ -1,5 +1,12 @@
 # Changelog
 
+## 4.5.28 - 2026-02-02T22:48:29.865Z
+Previous: 4.5.27
+Commit: 251cf5d
+Changes:
+- Refine Red Team role focus
+- Add stable element ids to monitor logs
+
 ## 4.5.27 - 2026-02-02T22:13:20.668Z
 Previous: 4.5.26
 Commit: 6957302
