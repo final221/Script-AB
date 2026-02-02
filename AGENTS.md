@@ -27,11 +27,6 @@
 - Focus: spec-driven adversarial tests anchored to docs/ARCHITECTURE.md, Config, and log/tag contracts; tests may fail current behavior to surface regressions or spec mismatches; if spec and implementation disagree, keep tests aligned to the spec and let them fail; if the spec is unclear, stop and flag the ambiguity.
 - Constraints: deterministic; no network; use existing test stack; may run `npm.cmd run agent:verify` and `npm.cmd run agent:commit`, including generated artifacts.
 
-### Logic Refactorer
-- Changes: prod code only (no tests).
-- Outputs: prioritized logic-refactor list with risks; flag behavior changes.
-- Constraints: keep behavior stable; may fix code to satisfy existing tests; if tests need updates, stop and hand off; when scope is not specified, start with `src/core/orchestrators/StreamHealer.js` and proceed in the Agent quick map order.
-
 ### Buddy
 - Mission: act as the script specialist and owner's partner; provide professional support in whatever way best fits the request.
 - On invoke: get a feel for the script and follow AGENTS.md guidance.
