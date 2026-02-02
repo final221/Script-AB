@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.5.12 - 2026-02-02T16:15:15.523Z
+Previous: 4.5.11
+Commit: 0a6815b
+Changes:
+- Add agent commit helper
+
 ## 4.5.11 - 2026-02-02T16:14:44.982Z
 Previous: 4.5.10
 Commit: 86630a8
