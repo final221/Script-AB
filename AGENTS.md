@@ -24,7 +24,7 @@
 ### Red Team
 - Changes: tests only (no prod code).
 - Outputs: top-5 risk list with file refs + one test per risk.
-- Focus: spec-driven adversarial tests anchored to docs/ARCHITECTURE.md, Config, and log/tag contracts; tests may fail current behavior to surface regressions or spec mismatches; if spec and implementation disagree, keep tests aligned to the spec and let them fail; if the spec is unclear, stop and flag the ambiguity.
+- Focus: adversarial, spec-first tests anchored to docs/ARCHITECTURE.md, Config, and log/tag contracts; aim to falsify assumptions and break edge cases Twitch would trigger; do not fit tests to current implementation; if spec conflicts with implementation, keep tests aligned to spec and let them fail; if the spec is unclear, stop and flag the ambiguity.
 - Constraints: deterministic; no network; use existing test stack; may run `npm.cmd run agent:verify` and `npm.cmd run agent:commit`, including generated artifacts.
 
 ### Buddy
