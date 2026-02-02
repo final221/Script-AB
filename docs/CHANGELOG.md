@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.5.23 - 2026-02-02T18:30:55.921Z
+Previous: 4.5.22
+Commit: 88581d4
+Changes:
+- Allow doc-only workflow to skip verify
+
 ## 4.5.22 - 2026-02-02T17:13:22.829Z
 Previous: 4.5.21
 Commit: 47feb0e
