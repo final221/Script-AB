@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.5.14 - 2026-02-02T16:26:51.389Z
+Previous: 4.5.13
+Commit: b283ddf
+Changes:
+- Add recovery policy and heal pipeline tests
+
 ## 4.5.13 - 2026-02-02T16:20:39.758Z
 Previous: 4.5.12
 Commit: 2243e3c
