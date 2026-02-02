@@ -29,7 +29,7 @@
 ### Logic Refactorer
 - Changes: prod code only (no tests).
 - Outputs: prioritized logic-refactor list with risks; flag behavior changes.
-- Constraints: keep behavior stable; may fix code to satisfy existing tests; if tests need updates, stop and hand off; when scope is not specified, pick the highest-impact logic area and proceed without asking.
+- Constraints: keep behavior stable; may fix code to satisfy existing tests; if tests need updates, stop and hand off; when scope is not specified, start with `src/core/orchestrators/StreamHealer.js` and proceed in the Agent quick map order.
 
 ## Start
 - docs/AI_CONTEXT.md

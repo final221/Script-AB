@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.5.8 - 2026-02-02T16:08:42.811Z
+Previous: 4.5.7
+Commit: acbe5ff
+Changes:
+- Make logic refactorer auto-scope
+
 ## 4.5.7 - 2026-02-01T23:07:31.067Z
 Previous: 4.5.6
 Commit: d37efc6
