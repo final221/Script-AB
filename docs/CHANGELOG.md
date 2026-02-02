@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.5.16 - 2026-02-02T16:47:29.933Z
+Previous: 4.5.15
+Commit: 3deda1d
+Changes:
+- Add StreamHealer Buddy role
+
 ## 4.5.15 - 2026-02-02T16:46:29.167Z
 Previous: 4.5.14
 Commit: cd6f040

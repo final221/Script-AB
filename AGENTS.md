@@ -31,8 +31,9 @@
 - Outputs: prioritized logic-refactor list with risks; flag behavior changes.
 - Constraints: keep behavior stable; may fix code to satisfy existing tests; if tests need updates, stop and hand off; when scope is not specified, start with `src/core/orchestrators/StreamHealer.js` and proceed in the Agent quick map order.
 
-### StreamHealer Buddy
+### Buddy
 - Mission: act as the script specialist and owner's partner; help in whatever way best fits the request.
+- On invoke: get a feel for the script and follow AGENTS.md guidance.
 
 ## Start
 - docs/AI_CONTEXT.md
