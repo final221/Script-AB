@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.5.23
+// @version       4.5.24
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -168,7 +168,7 @@ const CONFIG = (() => {
  * Build metadata helpers (version injected at build time).
  */
 const BuildInfo = (() => {
-    const VERSION = '4.5.23';
+    const VERSION = '4.5.24';
 
     const getVersion = () => {
         const gmVersion = (typeof GM_info !== 'undefined' && GM_info?.script?.version)
@@ -179,7 +179,7 @@ const BuildInfo = (() => {
             ? unsafeWindow.GM_info.script.version
             : null;
         if (unsafeVersion) return unsafeVersion;
-        if (VERSION && VERSION !== '4.5.23') return VERSION;
+        if (VERSION && VERSION !== '4.5.24') return VERSION;
         return null;
     };
 
@@ -7870,8 +7870,29 @@ const RecoveryManager = (() => {
             resetBackoff: policy.resetBackoff
         });
         const probeCandidate = failoverManager.probeCandidate;
+        const normalizeVideoInput = (videoOrContext, monitorStateOverride, detail = {}) => {
+            if (videoOrContext && typeof videoOrContext === 'object' && videoOrContext.video) {
+                return { videoOrContext, monitorStateOverride, detail };
+            }
+            if (typeof videoOrContext === 'string') {
+                const entry = monitorsById?.get(videoOrContext);
+                const nextDetail = { ...detail, videoId: videoOrContext };
+                return {
+                    videoOrContext: entry?.video || null,
+                    monitorStateOverride: monitorStateOverride || entry?.monitor?.state || null,
+                    detail: nextDetail
+                };
+            }
+            return { videoOrContext, monitorStateOverride, detail };
+        };
         const handleNoHealPoint = (videoOrContext, monitorStateOverride, reason) => {
-            const context = RecoveryContext.from(videoOrContext, monitorStateOverride, getVideoId, { reason });
+            const normalized = normalizeVideoInput(videoOrContext, monitorStateOverride, { reason });
+            const context = RecoveryContext.from(
+                normalized.videoOrContext,
+                normalized.monitorStateOverride,
+                getVideoId,
+                normalized.detail
+            );
             const result = policy.handleNoHealPoint(context, reason);
             if (result.emergencySwitched) {
                 return;
@@ -7938,7 +7959,13 @@ const RecoveryManager = (() => {
         };
 
         const handlePlayFailure = (videoOrContext, monitorStateOverride, detail = {}) => {
-            const context = RecoveryContext.from(videoOrContext, monitorStateOverride, getVideoId, detail);
+            const normalized = normalizeVideoInput(videoOrContext, monitorStateOverride, detail);
+            const context = RecoveryContext.from(
+                normalized.videoOrContext,
+                normalized.monitorStateOverride,
+                getVideoId,
+                normalized.detail
+            );
             const result = policy.handlePlayFailure(context, detail);
             if (detail?.errorName === 'PLAY_STUCK'
                 && context.monitorState
@@ -7971,7 +7998,13 @@ const RecoveryManager = (() => {
         };
 
         const requestRefresh = (videoOrContext, monitorStateOverride, detail = {}) => {
-            const context = RecoveryContext.from(videoOrContext, monitorStateOverride, getVideoId, detail);
+            const normalized = normalizeVideoInput(videoOrContext, monitorStateOverride, detail);
+            const context = RecoveryContext.from(
+                normalized.videoOrContext,
+                normalized.monitorStateOverride,
+                getVideoId,
+                normalized.detail
+            );
             const monitorState = context.monitorState;
             if (!monitorState) return false;
             const eligibility = detail.eligibility || evaluateRefreshEligibility(context, detail);
@@ -7996,7 +8029,13 @@ const RecoveryManager = (() => {
         };
 
         const canRequestRefresh = (videoOrContext, monitorStateOverride, detail = {}) => {
-            const context = RecoveryContext.from(videoOrContext, monitorStateOverride, getVideoId, detail);
+            const normalized = normalizeVideoInput(videoOrContext, monitorStateOverride, detail);
+            const context = RecoveryContext.from(
+                normalized.videoOrContext,
+                normalized.monitorStateOverride,
+                getVideoId,
+                normalized.detail
+            );
             return evaluateRefreshEligibility(context, detail);
         };
 

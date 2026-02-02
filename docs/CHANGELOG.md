@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.5.24 - 2026-02-02T19:00:16.424Z
+Previous: 4.5.23
+Commit: a2c5282
+Changes:
+- Add red-team recovery safeguards tests
+
 ## 4.5.23 - 2026-02-02T18:30:55.921Z
 Previous: 4.5.22
 Commit: 88581d4
