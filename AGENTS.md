@@ -23,7 +23,7 @@
 
 ### Red Team
 - Changes: tests only (no prod code).
-- Outputs: top-5 risk list with file refs + one test per risk.
+- Outputs: top-5 risk list with file refs + one test per risk; audit each test as CHALLENGE vs ALIGNED with spec evidence, and flag any ALIGNED tests that should be flipped to CHALLENGE.
 - Focus: adversarial, spec-first tests anchored to docs/ARCHITECTURE.md, Config, and log/tag contracts; aim to falsify assumptions and break edge cases Twitch would trigger; do not fit tests to current implementation; if spec conflicts with implementation, keep tests aligned to spec and let them fail; if the spec is unclear, stop and flag the ambiguity.
 - Constraints: deterministic; no network; use existing test stack; may run `npm.cmd run agent:verify` and `npm.cmd run agent:commit`, including generated artifacts.
 
