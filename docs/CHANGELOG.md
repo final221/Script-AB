@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.5.21 - 2026-02-02T17:05:15.726Z
+Previous: 4.5.20
+Commit: e24f433
+Changes:
+- Tighten Red Team focus wording
+
 ## 4.5.20 - 2026-02-02T16:58:41.157Z
 Previous: 4.5.19
 Commit: e07e578
