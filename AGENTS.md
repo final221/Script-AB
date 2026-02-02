@@ -56,6 +56,7 @@
 
 - If build/test cannot run, stop and report why before making changes.
 - Use `npm.cmd` on Windows to avoid PowerShell script policy blocks.
+- Doc-only changes: skip `npm.cmd run agent:verify` (no version bump/build). Commit and push directly; do not touch generated files.
 
 ## Bump policy
 - Patch: refactors, docs, tests, internal tooling

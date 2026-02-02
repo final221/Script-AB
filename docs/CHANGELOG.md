@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.5.22 - 2026-02-02T17:13:22.829Z
+Previous: 4.5.21
+Commit: 47feb0e
+Changes:
+- Add Buddy focus on precision and targeted slack
+
 ## 4.5.21 - 2026-02-02T17:05:15.726Z
 Previous: 4.5.20
 Commit: e24f433
