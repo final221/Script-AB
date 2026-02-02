@@ -46,4 +46,36 @@ describe('RecoveryManager refresh gating', () => {
         expect(result.allow).toBe(false);
         expect(result.reason).toBe('no_source_not_ready');
     });
+
+    it('accepts videoId strings without calling getVideoId', () => {
+        const monitorsById = new Map();
+        const candidateSelector = {
+            getActiveId: () => 'video-1',
+            evaluateCandidates: vi.fn()
+        };
+        const getVideoId = () => {
+            throw new Error('getVideoId should not be called');
+        };
+        const onPersistentFailure = vi.fn();
+        const manager = window.RecoveryManager.create({
+            monitorsById,
+            candidateSelector,
+            getVideoId,
+            logDebug: () => {},
+            onRescan: () => {},
+            onPersistentFailure
+        });
+
+        const video = createVideo();
+        const now = 300000;
+        const monitorState = {
+            lastRefreshAt: now - CONFIG.stall.REFRESH_COOLDOWN_MS - 1
+        };
+        monitorsById.set('video-1', { video, monitor: { state: monitorState } });
+
+        const result = manager.requestRefresh('video-1', null, { now, reason: 'manual' });
+
+        expect(result).toBe(true);
+        expect(onPersistentFailure).toHaveBeenCalledTimes(1);
+    });
 });
