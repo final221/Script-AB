@@ -1,5 +1,17 @@
 # Changelog
 
+## 4.5.11 - 2026-02-02T16:14:44.982Z
+Previous: 4.5.10
+Commit: 86630a8
+Changes:
+- No commits detected since last build
+
+## 4.5.10 - 2026-02-02T16:14:23.987Z
+Previous: 4.5.9
+Commit: 86630a8
+Changes:
+- Allow red team verify artifacts
+
 ## 4.5.9 - 2026-02-02T16:11:18.583Z
 Previous: 4.5.8
 Commit: f83fb42
