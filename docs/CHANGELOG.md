@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.5.26 - 2026-02-02T22:03:38.964Z
+Previous: 4.5.25
+Commit: f4a458e
+Changes:
+- Add red-team monitor and signal tests
+
 ## 4.5.25 - 2026-02-02T19:12:46.776Z
 Previous: 4.5.24
 Commit: 86e137d
