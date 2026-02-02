@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.5.18 - 2026-02-02T16:55:31.296Z
+Previous: 4.5.17
+Commit: abdc740
+Changes:
+- Refine Buddy role wording
+
 ## 4.5.17 - 2026-02-02T16:49:08.756Z
 Previous: 4.5.16
 Commit: 786b5f6

@@ -24,6 +24,7 @@
 ### Red Team
 - Changes: tests only (no prod code).
 - Outputs: top-5 risk list with file refs + one test per risk.
+- Focus: spec-driven adversarial tests anchored to docs/ARCHITECTURE.md, Config, and log/tag contracts; tests may fail current behavior to surface regressions or spec mismatches.
 - Constraints: deterministic; no network; use existing test stack; may run `npm.cmd run agent:verify` and `npm.cmd run agent:commit`, including generated artifacts.
 
 ### Logic Refactorer
