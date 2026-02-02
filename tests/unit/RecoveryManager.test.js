@@ -78,4 +78,29 @@ describe('RecoveryManager refresh gating', () => {
         expect(result).toBe(true);
         expect(onPersistentFailure).toHaveBeenCalledTimes(1);
     });
+
+    it('does not throw when requestRefresh is passed a videoId string from the registry', () => {
+        const registry = window.MonitorRegistry.create();
+        const monitorsById = new Map();
+        const candidateSelector = {
+            getActiveId: () => null,
+            evaluateCandidates: vi.fn()
+        };
+        const onPersistentFailure = vi.fn();
+        const manager = window.RecoveryManager.create({
+            monitorsById,
+            candidateSelector,
+            getVideoId: registry.getVideoId,
+            logDebug: () => {},
+            onRescan: () => {},
+            onPersistentFailure
+        });
+
+        const video = createVideo();
+        const monitorState = { lastRefreshAt: 0 };
+        monitorsById.set('video-1', { video, monitor: { state: monitorState } });
+
+        expect(() => manager.requestRefresh('video-1', monitorState, { now: 100000, reason: 'manual' }))
+            .not.toThrow();
+    });
 });

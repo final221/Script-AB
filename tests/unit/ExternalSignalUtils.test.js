@@ -14,3 +14,15 @@ describe('ExternalSignalUtils.getActiveEntry', () => {
         expect(result.entry).toBe(monitorsById.get('video-1'));
     });
 });
+
+describe('ExternalSignalUtils.truncateMessage', () => {
+    it('caps messages to the configured max length', () => {
+        const maxLen = CONFIG.logging.LOG_MESSAGE_MAX_LEN;
+        const message = 'a'.repeat(maxLen + 10);
+
+        const result = ExternalSignalUtils.truncateMessage(message);
+
+        expect(result.length).toBe(maxLen);
+        expect(result).toBe(message.slice(0, maxLen));
+    });
+});

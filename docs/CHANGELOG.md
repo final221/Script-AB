@@ -1,5 +1,13 @@
 # Changelog
 
+## 4.5.25 - 2026-02-02T19:12:46.776Z
+Previous: 4.5.24
+Commit: 86e137d
+Changes:
+- deprecated logic refactorrer role
+- Normalize RecoveryManager inputs to avoid WeakMap errors
+- Fix requestRefresh handling of videoId strings
+
 ## 4.5.24 - 2026-02-02T19:00:16.424Z
 Previous: 4.5.23
 Commit: a2c5282
