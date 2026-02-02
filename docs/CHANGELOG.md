@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.5.13 - 2026-02-02T16:20:39.758Z
+Previous: 4.5.12
+Commit: 2243e3c
+Changes:
+- Allow red team to run agent commit
+
 ## 4.5.12 - 2026-02-02T16:15:15.523Z
 Previous: 4.5.11
 Commit: 0a6815b
