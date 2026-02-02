@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.5.17 - 2026-02-02T16:49:08.756Z
+Previous: 4.5.16
+Commit: 786b5f6
+Changes:
+- Rename Buddy role
+
 ## 4.5.16 - 2026-02-02T16:47:29.933Z
 Previous: 4.5.15
 Commit: 3deda1d

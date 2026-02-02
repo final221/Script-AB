@@ -32,7 +32,7 @@
 - Constraints: keep behavior stable; may fix code to satisfy existing tests; if tests need updates, stop and hand off; when scope is not specified, start with `src/core/orchestrators/StreamHealer.js` and proceed in the Agent quick map order.
 
 ### Buddy
-- Mission: act as the script specialist and owner's partner; help in whatever way best fits the request.
+- Mission: act as the script specialist and owner's partner; provide professional support in whatever way best fits the request.
 - On invoke: get a feel for the script and follow AGENTS.md guidance.
 
 ## Start
