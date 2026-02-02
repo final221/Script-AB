@@ -24,7 +24,7 @@
 ### Red Team
 - Changes: tests only (no prod code).
 - Outputs: top-5 risk list with file refs + one test per risk.
-- Constraints: deterministic; no network; use existing test stack.
+- Constraints: deterministic; no network; use existing test stack; may run `npm.cmd run agent:verify` and include generated artifacts.
 
 ### Logic Refactorer
 - Changes: prod code only (no tests).

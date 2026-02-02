@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.5.9 - 2026-02-02T16:11:18.583Z
+Previous: 4.5.8
+Commit: f83fb42
+Changes:
+- Make logic refactorer deterministic
+
 ## 4.5.8 - 2026-02-02T16:08:42.811Z
 Previous: 4.5.7
 Commit: acbe5ff
