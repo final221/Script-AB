@@ -11,7 +11,9 @@ const MonitorRegistry = (() => {
         const monitoredVideos = new WeakMap();
         const monitorsById = new Map();
         const videoIds = new WeakMap();
+        const elementIds = new WeakMap();
         let nextVideoId = 1;
+        let nextElementId = 1;
         let monitoredCount = 0;
         let candidateIntervalId = null;
         let candidateSelector = null;
@@ -27,6 +29,15 @@ const MonitorRegistry = (() => {
             if (!id) {
                 id = `video-${nextVideoId++}`;
                 videoIds.set(video, id);
+            }
+            return id;
+        };
+
+        const getElementId = (video) => {
+            let id = elementIds.get(video);
+            if (!id) {
+                id = nextElementId++;
+                elementIds.set(video, id);
             }
             return id;
         };
@@ -55,6 +66,7 @@ const MonitorRegistry = (() => {
             monitor.stop();
             monitoredVideos.delete(video);
             const videoId = getVideoId(video);
+            const elementId = getElementId(video);
             monitorsById.delete(videoId);
             monitoredCount--;
             if (recoveryManager) {
@@ -69,7 +81,8 @@ const MonitorRegistry = (() => {
             stopCandidateEvaluationIfIdle();
             Logger.add(LogEvents.tagged('STOP', 'Stopped monitoring video'), {
                 remainingMonitors: monitoredCount,
-                videoId
+                videoId,
+                elementId
             });
         };
 
@@ -92,8 +105,10 @@ const MonitorRegistry = (() => {
             }
 
             const videoId = getVideoId(video);
+            const elementId = getElementId(video);
             Logger.add(LogEvents.tagged('VIDEO', 'Video registered'), {
                 videoId,
+                elementId,
                 videoState: VideoStateSnapshot.forLog(video, videoId)
             });
 
@@ -135,6 +150,7 @@ const MonitorRegistry = (() => {
 
             Logger.add(LogEvents.tagged('MONITOR', 'Started monitoring video'), {
                 videoId,
+                elementId,
                 debug: CONFIG.debug,
                 checkInterval: CONFIG.stall.WATCHDOG_INTERVAL_MS + 'ms',
                 totalMonitors: monitoredCount
@@ -146,6 +162,7 @@ const MonitorRegistry = (() => {
             stopMonitoring,
             resetVideoId,
             getVideoId,
+            getElementId,
             bind,
             monitorsById,
             getMonitoredCount: () => monitoredCount

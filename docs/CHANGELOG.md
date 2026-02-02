@@ -1,5 +1,12 @@
 # Changelog
 
+## 4.5.27 - 2026-02-02T22:13:20.668Z
+Previous: 4.5.26
+Commit: 6957302
+Changes:
+- Add placeholder log suppression source and test
+- Suppress placeholder refresh log spam
+
 ## 4.5.26 - 2026-02-02T22:03:38.964Z
 Previous: 4.5.25
 Commit: f4a458e

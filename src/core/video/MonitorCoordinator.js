@@ -111,12 +111,16 @@ const MonitorCoordinator = (() => {
             const entry = monitorsById.get(videoId);
             if (!entry) return false;
             const { video } = entry;
+            const elementId = typeof monitorRegistry.getElementId === 'function'
+                ? monitorRegistry.getElementId(video)
+                : null;
             const now = Date.now();
             const autoRefresh = canAutoRefresh(now);
             if (autoRefresh.ok) {
                 const exportResult = attemptLogExport();
                 Logger.add(LogEvents.tagged('REFRESH', 'Auto page refresh scheduled'), {
                     videoId,
+                    elementId,
                     detail,
                     exportOk: exportResult.ok,
                     exportReason: exportResult.reason || null,
@@ -131,12 +135,14 @@ const MonitorCoordinator = (() => {
             if (autoRefresh.reason === 'cooldown') {
                 logDebug(LogEvents.tagged('REFRESH', 'Auto page refresh suppressed (cooldown)'), {
                     videoId,
+                    elementId,
                     remainingMs: autoRefresh.remainingMs,
                     detail
                 });
             }
             Logger.add(LogEvents.tagged('REFRESH', 'Refreshing video to escape stale state'), {
                 videoId,
+                elementId,
                 detail
             });
             monitorRegistry.stopMonitoring(video);

@@ -10,7 +10,8 @@ const Logger = (() => {
     const placeholderSuppression = {
         count: 0,
         windowStartAt: 0,
-        sampleIds: new Set()
+        sampleIds: new Set(),
+        sampleElements: new Set()
     };
     const PLACEHOLDER_SUPPRESSION_THRESHOLD = 20;
     const PLACEHOLDER_SAMPLE_MAX = 5;
@@ -35,9 +36,21 @@ const Logger = (() => {
         return value;
     };
 
+    const normalizeElementId = (value) => {
+        if (value === null || value === undefined) return null;
+        if (typeof value === 'number' && Number.isFinite(value)) return String(value);
+        if (typeof value === 'string' && value.length) return value;
+        return null;
+    };
+
     const extractVideoId = (detail) => {
         if (!detail || typeof detail !== 'object') return null;
         return normalizeVideoId(detail.videoId ?? detail.video ?? detail.videoState?.id);
+    };
+
+    const extractElementId = (detail) => {
+        if (!detail || typeof detail !== 'object') return null;
+        return normalizeElementId(detail.elementId ?? detail.videoState?.elementId);
     };
 
     const extractStateSnapshot = (detail) => {
@@ -70,11 +83,12 @@ const Logger = (() => {
         return raw;
     };
 
-    const buildSuppressionSummary = (windowMs, sampleIds, count) => {
+    const buildSuppressionSummary = (windowMs, sampleIds, sampleElements, count) => {
         const summaryTag = (typeof LogTags !== 'undefined' && LogTags?.TAG?.SUPPRESSION)
             ? LogTags.TAG.SUPPRESSION
             : '[HEALER:SUPPRESSION_SUMMARY]';
         const samples = Array.from(sampleIds || []);
+        const elements = Array.from(sampleElements || []);
         return {
             message: summaryTag,
             detail: {
@@ -82,6 +96,7 @@ const Logger = (() => {
                 reason: 'no_source',
                 count,
                 sampleVideos: samples,
+                sampleElements: elements,
                 windowMs
             }
         };
@@ -89,12 +104,16 @@ const Logger = (() => {
 
     const maybeSuppressPlaceholder = (message, detail) => {
         const videoId = extractVideoId(detail);
+        const elementId = extractElementId(detail);
         const state = extractStateSnapshot(detail);
         const now = Date.now();
 
         if (videoId && state) {
             if (isPlaceholderState(state)) {
-                placeholderVideos.set(videoId, now);
+                placeholderVideos.set(videoId, {
+                    lastSeenAt: now,
+                    elementId
+                });
             } else if (placeholderVideos.has(videoId)) {
                 placeholderVideos.delete(videoId);
             }
@@ -116,14 +135,23 @@ const Logger = (() => {
         if (placeholderSuppression.sampleIds.size < PLACEHOLDER_SAMPLE_MAX) {
             placeholderSuppression.sampleIds.add(videoId);
         }
+        if (elementId && placeholderSuppression.sampleElements.size < PLACEHOLDER_SAMPLE_MAX) {
+            placeholderSuppression.sampleElements.add(elementId);
+        }
 
         const windowMs = now - placeholderSuppression.windowStartAt;
         const intervalMs = CONFIG?.logging?.SUPPRESSION_LOG_MS || 300000;
         if (placeholderSuppression.count >= PLACEHOLDER_SUPPRESSION_THRESHOLD || windowMs >= intervalMs) {
-            const summary = buildSuppressionSummary(windowMs, placeholderSuppression.sampleIds, placeholderSuppression.count);
+            const summary = buildSuppressionSummary(
+                windowMs,
+                placeholderSuppression.sampleIds,
+                placeholderSuppression.sampleElements,
+                placeholderSuppression.count
+            );
             placeholderSuppression.count = 0;
             placeholderSuppression.windowStartAt = 0;
             placeholderSuppression.sampleIds.clear();
+            placeholderSuppression.sampleElements.clear();
             return { suppress: true, emit: summary };
         }
 
