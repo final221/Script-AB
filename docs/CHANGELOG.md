@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.5.20 - 2026-02-02T16:58:41.157Z
+Previous: 4.5.19
+Commit: e07e578
+Changes:
+- Clarify Red Team spec precedence
+
 ## 4.5.19 - 2026-02-02T16:57:02.927Z
 Previous: 4.5.18
 Commit: 56042cb
