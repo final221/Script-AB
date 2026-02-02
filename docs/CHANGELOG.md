@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.5.15 - 2026-02-02T16:46:29.167Z
+Previous: 4.5.14
+Commit: cd6f040
+Changes:
+- Add external signal and catch-up tests
+
 ## 4.5.14 - 2026-02-02T16:26:51.389Z
 Previous: 4.5.13
 Commit: b283ddf
