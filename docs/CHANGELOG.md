@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.5.19 - 2026-02-02T16:57:02.927Z
+Previous: 4.5.18
+Commit: 56042cb
+Changes:
+- Clarify Red Team spec-driven tests
+
 ## 4.5.18 - 2026-02-02T16:55:31.296Z
 Previous: 4.5.17
 Commit: abdc740
