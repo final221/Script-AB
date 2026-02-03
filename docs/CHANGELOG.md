@@ -1,5 +1,17 @@
 # Changelog
 
+## 4.5.33 - 2026-02-03T20:57:57.398Z
+Previous: 4.5.32
+Commit: d876f52
+Changes:
+- Trim Red Team findings to active challenges
+- Reclassify codified challenge tests as aligned
+- Annotate why some gaps stay challenge
+- Document progress, playhead, and seek invariants
+- docs: update red-team findings map
+- test: add red-team loops 1-5
+- test: expand red-team coverage
+
 ## 4.5.32 - 2026-02-03T19:35:38.195Z
 Previous: 4.5.31
 Commit: ca956c7
