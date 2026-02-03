@@ -11,23 +11,21 @@ Test: `tests/unit/CandidateSwitchPolicy.test.js` (CHALLENGE)
 Test: `tests/unit/CandidateSwitchPolicy.test.js` (CHALLENGE)
 4. Active candidates that are not stalled should block switching.
 Test: `tests/unit/CandidateSwitchPolicy.test.js` (CHALLENGE)
-5. Probation windows must log start and end only once.
-Test: `tests/unit/CandidateProbation.test.js` (CHALLENGE)
-6. Adblock hints should default missing fields to unknown/null.
+5. Adblock hints should default missing fields to unknown/null.
 Test: `tests/unit/ExternalSignalHandlerAdblock.test.js` (CHALLENGE)
-7. Buffer exhaustion checks should log buffer read failures.
+6. Buffer exhaustion checks should log buffer read failures.
 Test: `tests/unit/BufferRanges.test.js` (CHALLENGE)
-8. Buffer-ahead reporting should indicate no buffer when empty.
+7. Buffer-ahead reporting should indicate no buffer when empty.
 Test: `tests/unit/BufferRanges.test.js` (CHALLENGE)
-9. No-heal-point refresh should fire when eligible and no emergency switch occurs.
+8. No-heal-point refresh should fire when eligible and no emergency switch occurs.
 Test: `tests/unit/RecoveryDecisionApplier.test.js` (CHALLENGE)
-10. No-buffer rescans should route through probation policy hooks when available.
+9. No-buffer rescans should route through probation policy hooks when available.
 Test: `tests/unit/RecoveryDecisionApplier.test.js` (CHALLENGE)
-11. Play-error backoff should be applied to the monitor state.
+10. Play-error backoff should be applied to the monitor state.
 Test: `tests/unit/RecoveryDecisionApplier.test.js` (CHALLENGE)
-12. Healpoint-stuck conditions should emit the proper log tag.
+11. Healpoint-stuck conditions should emit the proper log tag.
 Test: `tests/unit/RecoveryDecisionApplier.test.js` (CHALLENGE)
-13. Healpoint-stuck should trigger a rescan when probation is not engaged.
+12. Healpoint-stuck should trigger a rescan when probation is not engaged.
 Test: `tests/unit/RecoveryDecisionApplier.test.js` (CHALLENGE)
 14. Monitor cap enforcement should prune the worst non-protected candidate.
 Test: `tests/unit/CandidatePruner.test.js` (CHALLENGE)

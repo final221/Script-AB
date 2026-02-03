@@ -1,5 +1,12 @@
 # Changelog
 
+## 4.5.39 - 2026-02-03T22:30:08.906Z
+Previous: 4.5.38
+Commit: bb349cd
+Changes:
+- test: add red-team loops 6-10
+- test: expand red-team coverage (loop 6-10)
+
 ## 4.5.38 - 2026-02-03T22:19:49.151Z
 Previous: 4.5.37
 Commit: 12cc0e3

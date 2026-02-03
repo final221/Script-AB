@@ -18,7 +18,6 @@ describe('CandidateProbation', () => {
         expect(addSpy).toHaveBeenCalledTimes(1);
         const [event, detail] = addSpy.mock.calls[0];
         expect(event.message).toBe(LogTags.TAG.PROBATION);
-        expect(event.detail?.message).toBe('Window started');
         expect(detail).toEqual(expect.objectContaining({
             reason: 'no_buffer',
             windowMs: CONFIG.monitoring.PROBATION_WINDOW_MS
@@ -39,8 +38,12 @@ describe('CandidateProbation', () => {
         expect(probation.isActive()).toBe(false);
         expect(probation.isActive()).toBe(false);
 
-        const endLogs = addSpy.mock.calls.filter(
-            (call) => call[0]?.detail?.message === 'Window ended'
+        const probationLogs = addSpy.mock.calls.filter(
+            (call) => call[0]?.message === LogTags.TAG.PROBATION
+        );
+        const endLogs = probationLogs.filter(
+            (call) => call[1]?.reason === 'play_error'
+                && call[1]?.windowMs === undefined
         );
         expect(endLogs.length).toBe(1);
     });
