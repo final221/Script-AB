@@ -1,5 +1,12 @@
 # Changelog
 
+## 4.5.30 - 2026-02-03T18:35:37.134Z
+Previous: 4.5.29
+Commit: 3705f7a
+Changes:
+- Tighten Buddy role to validate ambiguity early
+- Codify abort retry and failover asset behavior
+
 ## 4.5.29 - 2026-02-03T18:27:00.077Z
 Previous: 4.5.28
 Commit: 3849a1c
