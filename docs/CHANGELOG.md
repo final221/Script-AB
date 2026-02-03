@@ -1,5 +1,13 @@
 # Changelog
 
+## 4.5.32 - 2026-02-03T19:35:38.195Z
+Previous: 4.5.31
+Commit: ca956c7
+Changes:
+- Add Red Team findings reference to AI context
+- test: add red-team failover policy checks
+- test: add red-team recovery coverage
+
 ## 4.5.31 - 2026-02-03T18:58:17.034Z
 Previous: 4.5.30
 Commit: 634aaa9
