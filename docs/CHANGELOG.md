@@ -1,5 +1,14 @@
 # Changelog
 
+## 4.5.29 - 2026-02-03T18:27:00.077Z
+Previous: 4.5.28
+Commit: 3849a1c
+Changes:
+- Strengthen Red Team alignment guardrail
+- Add Red Team test alignment audit output
+- test: add recovery edge-case coverage
+- test: add red-team recovery edge coverage
+
 ## 4.5.28 - 2026-02-02T22:48:29.865Z
 Previous: 4.5.27
 Commit: 251cf5d

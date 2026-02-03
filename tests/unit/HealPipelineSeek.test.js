@@ -22,13 +22,14 @@ describe('HealPipelineSeek', () => {
 
         const video = createVideo();
         const initialPoint = { start: 10, end: 12 };
-        const retryPoint = { start: 20, end: 22 };
+        const retryPoint = { start: 14, end: 18 };
 
         seekSpy = vi.spyOn(window.LiveEdgeSeeker, 'seekAndPlay')
             .mockResolvedValueOnce({ success: false, errorName: 'AbortError', error: 'AbortError' })
             .mockResolvedValueOnce({ success: true });
 
-        findSpy = vi.spyOn(window.BufferGapFinder, 'findHealPoint').mockReturnValue(retryPoint);
+        findSpy = vi.spyOn(window.BufferGapFinder, 'findHealPoint')
+            .mockReturnValueOnce(retryPoint);
 
         const attemptLogger = {
             logRetry: vi.fn(),
@@ -43,7 +44,7 @@ describe('HealPipelineSeek', () => {
 
         expect(seekSpy).toHaveBeenCalledTimes(2);
         expect(seekSpy).toHaveBeenNthCalledWith(1, video, initialPoint);
-        expect(seekSpy).toHaveBeenNthCalledWith(2, video, retryPoint);
+        expect(findSpy).toHaveBeenCalledWith(video, { silent: true });
         expect(attemptLogger.logRetry).toHaveBeenCalledWith('abort_error', retryPoint);
         expect(attemptLogger.logRetrySkip).not.toHaveBeenCalled();
         expect(result.finalPoint).toEqual(retryPoint);

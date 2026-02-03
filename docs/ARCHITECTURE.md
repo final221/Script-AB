@@ -291,6 +291,7 @@ Script Logger.add() -> Logger.getMergedTimeline()
 - **HealAttemptLogger.js** - Heal attempt logging helpers
 - **HealPointPoller.js** - Polls for heal points
 - **HealPipeline.js** - Polls for heal points and executes seeks
+- **HealPipelineSeek.js** - Abort errors trigger a single delayed retry with a fresh heal point
 - **AdGapSignals.js** - Ad gap signature detection
 - **PlayheadAttribution.js** - Playhead attribution helpers
 
@@ -298,7 +299,7 @@ Script Logger.add() -> Logger.getMergedTimeline()
 - **ExternalSignalRouter.js** - Handles console signal hints
 - **ExternalSignalUtils.js** - Shared helpers for console signal handling
 - **ExternalSignalHandlerStall.js** - Playhead stall signal logic
-- **ExternalSignalHandlerAsset.js** - Processing/offline asset signal logic
+- **ExternalSignalHandlerAsset.js** - Processing/offline asset signal logic; skip forced switching while failover is active
 - **ExternalSignalHandlerAdblock.js** - Ad-block signal logic
 - **ExternalSignalHandlerFallback.js** - Default external signal logging
 

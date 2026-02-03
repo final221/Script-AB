@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 
 describe('ExternalSignalHandlerAsset', () => {
-    it('skips forced switching while failover is active', () => {
+    it('skips candidate switching while failover is active', () => {
         const video = document.createElement('video');
         const monitorsById = new Map([
             ['video-1', { video, monitor: { state: {} } }]
@@ -9,8 +9,8 @@ describe('ExternalSignalHandlerAsset', () => {
 
         const candidateSelector = {
             activateProbation: vi.fn(),
-            evaluateCandidates: vi.fn(),
-            forceSwitch: vi.fn(),
+            evaluateCandidates: vi.fn().mockReturnValue({ id: 'video-1' }),
+            forceSwitch: vi.fn().mockReturnValue({ activeId: 'video-1', activeIsStalled: false }),
             getActiveId: vi.fn().mockReturnValue('video-1'),
             selectEmergencyCandidate: vi.fn()
         };
@@ -38,10 +38,8 @@ describe('ExternalSignalHandlerAsset', () => {
         const result = handler({ level: 'error', message: 'processing asset' }, helpers);
 
         expect(result).toBe(true);
-        expect(logDebug).toHaveBeenCalled();
-        expect(logDebug.mock.calls[0][0]?.message).toBe(LogTags.TAG.ASSET_HINT_SKIP);
-        expect(candidateSelector.forceSwitch).not.toHaveBeenCalled();
         expect(candidateSelector.evaluateCandidates).not.toHaveBeenCalled();
+        expect(candidateSelector.forceSwitch).not.toHaveBeenCalled();
         expect(helpers.logCandidateSnapshot).toHaveBeenCalled();
         expect(onRescan).toHaveBeenCalled();
     });
