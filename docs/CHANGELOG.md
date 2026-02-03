@@ -1,5 +1,15 @@
 # Changelog
 
+## 4.5.31 - 2026-02-03T18:58:17.034Z
+Previous: 4.5.30
+Commit: 634aaa9
+Changes:
+- Make Red Team challenge-only
+- Require Red Team spec-gap audit and challenge tests
+- Loosen Buddy question guidance
+- test: add red team spec coverage
+- test: add red team recovery edge cases
+
 ## 4.5.30 - 2026-02-03T18:35:37.134Z
 Previous: 4.5.29
 Commit: 3705f7a
