@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.5.40 - 2026-02-03T22:44:45.372Z
+Previous: 4.5.39
+Commit: 4225939
+Changes:
+- Relax probation log assertions
+
 ## 4.5.39 - 2026-02-03T22:30:08.906Z
 Previous: 4.5.38
 Commit: bb349cd
