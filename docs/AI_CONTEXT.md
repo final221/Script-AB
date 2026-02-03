@@ -39,6 +39,7 @@
 - **Adding Logs**: Use `src/monitoring/Logger.js`.
 - **Verification + Build**: See `AGENTS.md` (single source of workflow truth).
 - **Workflow + verification**: See `AGENTS.md`.
+- **Red Team findings**: Check `tests/RED_TEAM_FINDINGS.md`.
 
 ## Generated Artifacts
 - `dist/code.js` is generated output; do not edit by hand.
