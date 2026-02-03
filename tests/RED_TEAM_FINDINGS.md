@@ -3,63 +3,31 @@
 Purpose: quick map of adversarial findings and where they are covered in tests.
 
 ## Findings Covered By Tests
-1. Failover cooldown must prevent rapid re-attempts.
-Test: `tests/unit/FailoverManager.test.js`
-2. Failover should prefer trusted candidates over higher-score untrusted ones.
+1. Failover should prefer trusted candidates over higher-score untrusted ones.
 Test: `tests/unit/FailoverCandidatePicker.test.js` (CHALLENGE)
-3. No-heal-point last-resort switching must require buffer starvation when configured.
-Test: `tests/unit/NoHealPointPolicy.test.js`
-4. Play-error failover should trigger at `FAILOVER_AFTER_PLAY_ERRORS` with multiple monitors.
-Test: `tests/unit/PlayErrorPolicy.test.js`
-5. Unhandled external signals must log with correct tag and message truncation.
-Test: `tests/unit/ExternalSignalHandlerFallback.test.js`
-6. Fast-switch should activate when healing stalls exceed configured thresholds.
+2. Fast-switch should activate when healing stalls exceed configured thresholds.
 Test: `tests/unit/CandidateSwitchPolicy.test.js` (CHALLENGE)
-7. Untrusted preferred candidates must not switch outside probation.
+3. Untrusted preferred candidates must not switch outside probation.
 Test: `tests/unit/CandidateSwitchPolicy.test.js` (CHALLENGE)
-8. Active candidates that are not stalled should block switching.
+4. Active candidates that are not stalled should block switching.
 Test: `tests/unit/CandidateSwitchPolicy.test.js` (CHALLENGE)
-9. Probation windows must log start and end only once.
+5. Probation windows must log start and end only once.
 Test: `tests/unit/CandidateProbation.test.js` (CHALLENGE)
-10. Progress streaks must reset after long gaps.
-Test: `tests/unit/PlaybackProgressTracker.test.js`
-11. Candidates must become eligible after minimum progress duration.
-Test: `tests/unit/PlaybackProgressTracker.test.js`
-12. Initial progress grace window should skip stall handling.
-Test: `tests/unit/PlaybackProgressLogic.test.js`
-13. Stall handling should resume after grace window expires.
-Test: `tests/unit/PlaybackProgressLogic.test.js`
-14. Progress should clear heal/play backoff counters.
-Test: `tests/unit/PlaybackProgressReset.test.js`
-15. Adblock hints should default missing fields to unknown/null.
+6. Adblock hints should default missing fields to unknown/null.
 Test: `tests/unit/ExternalSignalHandlerAdblock.test.js` (CHALLENGE)
-16. Playhead attribution should fall back to active candidate on invalid playhead.
-Test: `tests/unit/PlayheadAttribution.test.js`
-17. Playhead attribution should select the closest candidate within the match window.
-Test: `tests/unit/PlayheadAttribution.test.js`
-18. Ad-gap detection should only trigger near buffered edges.
-Test: `tests/unit/AdGapSignals.test.js`
-19. Ad-gap logging should throttle within the backoff interval.
-Test: `tests/unit/AdGapSignals.test.js`
-20. Seek targets must respect edge guards on small buffers.
-Test: `tests/unit/SeekTargetCalculator.test.js`
-21. Seek targets should preserve at least 1s of headroom when available.
-Test: `tests/unit/SeekTargetCalculator.test.js`
-22. Seek target validation must return the correct buffer range.
-Test: `tests/unit/SeekTargetCalculator.test.js`
-23. Buffer exhaustion checks should log buffer read failures.
+7. Buffer exhaustion checks should log buffer read failures.
 Test: `tests/unit/BufferRanges.test.js` (CHALLENGE)
-24. Buffer-ahead reporting should indicate no buffer when empty.
+8. Buffer-ahead reporting should indicate no buffer when empty.
 Test: `tests/unit/BufferRanges.test.js` (CHALLENGE)
-25. No-heal-point refresh should fire when eligible and no emergency switch occurs.
+9. No-heal-point refresh should fire when eligible and no emergency switch occurs.
 Test: `tests/unit/RecoveryDecisionApplier.test.js` (CHALLENGE)
-26. No-buffer rescans should route through probation policy hooks when available.
+10. No-buffer rescans should route through probation policy hooks when available.
 Test: `tests/unit/RecoveryDecisionApplier.test.js` (CHALLENGE)
-27. Play-error backoff should be applied to the monitor state.
+11. Play-error backoff should be applied to the monitor state.
 Test: `tests/unit/RecoveryDecisionApplier.test.js` (CHALLENGE)
-28. Healpoint-stuck conditions should emit the proper log tag.
+12. Healpoint-stuck conditions should emit the proper log tag.
 Test: `tests/unit/RecoveryDecisionApplier.test.js` (CHALLENGE)
-29. Healpoint-stuck should trigger a rescan when probation is not engaged.
+13. Healpoint-stuck should trigger a rescan when probation is not engaged.
 Test: `tests/unit/RecoveryDecisionApplier.test.js` (CHALLENGE)
 
 ## Spec Gaps Requiring Review
