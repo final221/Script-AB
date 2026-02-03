@@ -1,5 +1,12 @@
 # Changelog
 
+## 4.5.41 - 2026-02-03T23:05:11.215Z
+Previous: 4.5.40
+Commit: 0f6b130
+Changes:
+- Tighten Red Team scope
+- Add logging pipeline and trigger tests
+
 ## 4.5.40 - 2026-02-03T22:44:45.372Z
 Previous: 4.5.39
 Commit: 4225939
