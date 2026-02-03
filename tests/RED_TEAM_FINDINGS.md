@@ -65,6 +65,7 @@ Test: `tests/unit/RecoveryDecisionApplier.test.js` (CHALLENGE)
 ## Spec Gaps Requiring Review
 1. Failover candidate selection: the spec does not state whether trusted candidates must be preferred over higher-score untrusted ones.
 Action: confirm intended behavior in `docs/ARCHITECTURE.md` or Config docs, then keep or adjust the CHALLENGE test.
+Decision: keep CHALLENGE for now to avoid locking in an unproven preference policy.
 2. Candidate switching and probation gating rules (fast switch, untrusted suppression, active-not-stalled blocking) are not defined in the architecture docs.
 Action: document expected behavior and keep or adjust `tests/unit/CandidateSwitchPolicy.test.js` and `tests/unit/CandidateProbation.test.js`.
 3. Progress tracking semantics (grace window, streak reset, eligibility) are not specified beyond config thresholds.
@@ -75,3 +76,4 @@ Action: document expected behavior and keep or adjust `tests/unit/PlayheadAttrib
 Action: document expected behavior and keep or adjust `tests/unit/SeekTargetCalculator.test.js`.
 6. Recovery decision side effects (refresh vs probation vs rescan ordering, healpoint-stuck handling) are not specified.
 Action: document expected behavior and keep or adjust `tests/unit/RecoveryDecisionApplier.test.js`.
+Decision: keep CHALLENGE until we have more real-world evidence to justify sequencing.
