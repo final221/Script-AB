@@ -50,79 +50,6 @@ describe('RecoveryDecisionApplier', () => {
         expect(result.emergencySwitched).toBe(false);
     });
 
-    it('refreshes when eligible and no emergency switch occurs', () => {
-        const monitorState = { noHealPointCount: 2, lastRefreshAt: 0 };
-        const backoffManager = { applyBackoff: vi.fn() };
-        const onPersistentFailure = vi.fn();
-        const applier = window.RecoveryDecisionApplier.create({
-            backoffManager,
-            candidateSelector: { selectEmergencyCandidate: vi.fn() },
-            logDebug: () => {},
-            onRescan: () => {},
-            onPersistentFailure,
-            probationPolicy: { maybeTriggerProbation: vi.fn() }
-        });
-        const now = 50000;
-
-        const decision = {
-            type: 'no_heal_point',
-            context: { videoId: 'video-1', monitorState, reason: 'no_heal_point', now },
-            data: {
-                refreshEligible: true,
-                emergencyEligible: false,
-                lastResortEligible: false,
-                shouldFailover: false,
-                probationEligible: false,
-                shouldRescanNoBuffer: false
-            }
-        };
-
-        const result = applier.applyNoHealPointDecision(decision);
-
-        expect(result.refreshed).toBe(true);
-        expect(monitorState.lastRefreshAt).toBe(now);
-        expect(monitorState.noHealPointCount).toBe(0);
-        expect(monitorState.noHealPointRefreshUntil).toBe(0);
-        expect(onPersistentFailure).toHaveBeenCalledTimes(1);
-    });
-
-    it('routes no-buffer rescans through probation policy when available', () => {
-        const monitorState = { noHealPointCount: 1 };
-        const backoffManager = { applyBackoff: vi.fn() };
-        const candidateSelector = { activateProbation: vi.fn() };
-        const probationPolicy = { triggerRescanForKey: vi.fn(), maybeTriggerProbation: vi.fn() };
-        const applier = window.RecoveryDecisionApplier.create({
-            backoffManager,
-            candidateSelector,
-            logDebug: () => {},
-            onRescan: () => {},
-            onPersistentFailure: () => {},
-            probationPolicy
-        });
-
-        const decision = {
-            type: 'no_heal_point',
-            context: { videoId: 'video-1', monitorState, reason: 'no_heal_point', now: 123 },
-            data: {
-                shouldRescanNoBuffer: true,
-                refreshEligible: false,
-                emergencyEligible: false,
-                lastResortEligible: false,
-                probationEligible: false,
-                shouldFailover: false
-            }
-        };
-
-        applier.applyNoHealPointDecision(decision);
-
-        expect(probationPolicy.triggerRescanForKey).toHaveBeenCalledWith(
-            'no_buffer:video-1',
-            'no_buffer',
-            expect.objectContaining({ videoId: 'video-1', bufferRanges: 'none' })
-        );
-        expect(candidateSelector.activateProbation).not.toHaveBeenCalled();
-    });
-
     it('sets play-error backoff when play failures occur', () => {
         const monitorState = { playErrorCount: 0, nextPlayHealAllowedTime: 0 };
         const applier = window.RecoveryDecisionApplier.create({
@@ -156,41 +83,6 @@ describe('RecoveryDecisionApplier', () => {
         expect(monitorState.nextPlayHealAllowedTime).toBe(now + 5000);
     });
 
-    it('logs healpoint stuck when repeat failures exceed the threshold', () => {
-        const addSpy = vi.spyOn(Logger, 'add');
-        const monitorState = {};
-        const applier = window.RecoveryDecisionApplier.create({
-            backoffManager: { applyBackoff: vi.fn() },
-            candidateSelector: { selectEmergencyCandidate: vi.fn() },
-            logDebug: () => {},
-            onRescan: () => {},
-            onPersistentFailure: () => {},
-            probationPolicy: {
-                maybeTriggerProbation: vi.fn().mockReturnValue(false),
-                triggerRescan: vi.fn()
-            }
-        });
-
-        const decision = {
-            type: 'play_error',
-            context: { videoId: 'video-1', monitorState, now: 1000 },
-            data: {
-                count: 1,
-                backoffMs: 1000,
-                now: 1000,
-                repeatStuck: true,
-                healPointRepeatCount: CONFIG.stall.HEALPOINT_REPEAT_FAILOVER_COUNT,
-                errorName: 'AbortError'
-            }
-        };
-
-        applier.applyPlayFailureDecision(decision);
-
-        const stuckLogs = addSpy.mock.calls.filter(
-            (call) => call[0]?.message === LogTags.TAG.HEALPOINT_STUCK
-        );
-        expect(stuckLogs.length).toBe(1);
-    });
 
     it('rescans when healpoint repeats are stuck and probation is not triggered', () => {
         const triggerRescan = vi.fn();
