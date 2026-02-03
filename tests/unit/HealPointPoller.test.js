@@ -99,4 +99,31 @@ describe('HealPointPoller', () => {
         );
         expect(gapOverrideLogs.length).toBe(1);
     });
+
+    it('skips healing when recent progress indicates self-recovery', async () => {
+        vi.useFakeTimers();
+        vi.setSystemTime(10000);
+
+        const video = document.createElement('video');
+        const monitorState = {
+            lastProgressTime: Date.now() - (CONFIG.stall.RECOVERY_WINDOW_MS - 100)
+        };
+
+        findSpy = vi.spyOn(window.BufferGapFinder, 'findHealPoint').mockReturnValue({
+            start: 10,
+            end: 12
+        });
+
+        const poller = window.HealPointPoller.create({
+            getVideoId: () => 'video-1',
+            logWithState: vi.fn(),
+            logDebug: vi.fn()
+        });
+
+        const result = await poller.pollForHealPoint(video, monitorState, 2000);
+
+        expect(result.healPoint).toBeNull();
+        expect(result.aborted).toBe(false);
+        expect(findSpy).not.toHaveBeenCalled();
+    });
 });

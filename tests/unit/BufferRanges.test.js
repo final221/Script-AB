@@ -38,4 +38,13 @@ describe('BufferRanges', () => {
         expect(result.rangeStart).toBeNull();
         expect(result.rangeEnd).toBeNull();
     });
+
+    it('treats gaps as buffer exhaustion for stall detection', () => {
+        const video = document.createElement('video');
+        setBufferedRanges(video, [[0, 10], [20, 30]]);
+        video.currentTime = 15;
+
+        const exhausted = BufferGapFinder.isBufferExhausted(video);
+        expect(exhausted).toBe(true);
+    });
 });

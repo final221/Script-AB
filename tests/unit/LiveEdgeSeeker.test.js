@@ -101,6 +101,33 @@ describe('LiveEdgeSeeker', () => {
         expect(invalidVideo.play).not.toHaveBeenCalled();
     });
 
+    it('returns PLAY_STUCK when play resolves but playback never starts', async () => {
+        vi.useFakeTimers();
+        const LiveEdgeSeeker = window.LiveEdgeSeeker;
+        const stuckVideo = document.createElement('video');
+        Object.defineProperty(stuckVideo, 'currentTime', { value: 0, configurable: true, writable: true });
+        Object.defineProperty(stuckVideo, 'paused', { value: true, configurable: true, writable: true });
+        Object.defineProperty(stuckVideo, 'readyState', { value: 2, configurable: true });
+        Object.defineProperty(stuckVideo, 'buffered', {
+            value: {
+                length: 1,
+                start: () => 0,
+                end: () => 10
+            },
+            configurable: true
+        });
+        stuckVideo.play = vi.fn().mockResolvedValue(undefined);
+
+        const promise = LiveEdgeSeeker.seekAndPlay(stuckVideo, { start: 0, end: 10 });
+        await vi.advanceTimersByTimeAsync(CONFIG.recovery.SEEK_SETTLE_MS + CONFIG.recovery.PLAYBACK_VERIFY_MS);
+        const result = await promise;
+
+        expect(result.success).toBe(false);
+        expect(result.errorName).toBe('PLAY_STUCK');
+        expect(stuckVideo.play).toHaveBeenCalledTimes(1);
+        vi.useRealTimers();
+    });
+
     it('treats already-playing video as success without calling play', async () => {
         const LiveEdgeSeeker = window.LiveEdgeSeeker;
         Object.defineProperty(video, 'currentTime', { value: 95, configurable: true, writable: true });
