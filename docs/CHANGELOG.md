@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.5.37 - 2026-02-03T22:01:32.352Z
+Previous: 4.5.36
+Commit: 35fd5b4
+Changes:
+- Add stream integration coverage
+
 ## 4.5.36 - 2026-02-03T21:40:07.840Z
 Previous: 4.5.35
 Commit: bb11b5b
