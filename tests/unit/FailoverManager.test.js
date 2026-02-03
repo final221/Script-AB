@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { createVideo } from '../helpers/video.js';
 
 const defineProp = (obj, prop, value) => {
     Object.defineProperty(obj, prop, { value, configurable: true });
@@ -69,5 +70,72 @@ describe('FailoverManager probeCandidate', () => {
         nowSpy.mockReturnValue(8000);
         expect(manager.probeCandidate('video-1', 'test')).toBe(true);
         expect(video.play).toHaveBeenCalledTimes(2);
+    });
+});
+
+describe('FailoverManager attemptFailover', () => {
+    afterEach(() => {
+        vi.useRealTimers();
+        vi.restoreAllMocks();
+    });
+
+    it('respects FAILOVER_COOLDOWN_MS after a completed attempt', () => {
+        vi.useFakeTimers();
+        const nowSpy = vi.spyOn(Date, 'now');
+
+        const fromVideo = createVideo({
+            currentTime: 0,
+            readyState: 2,
+            currentSrc: 'blob:from'
+        }, [[0, 10]]);
+        fromVideo.play = vi.fn().mockResolvedValue();
+        const toVideo = createVideo({
+            currentTime: 0,
+            readyState: 2,
+            currentSrc: 'blob:to'
+        }, [[0, 10]]);
+        toVideo.play = vi.fn().mockResolvedValue();
+
+        const monitorsById = new Map([
+            ['video-1', { video: fromVideo, monitor: { state: { hasProgress: false, lastProgressTime: 0 } } }],
+            ['video-2', { video: toVideo, monitor: { state: { hasProgress: false, lastProgressTime: 0 } } }]
+        ]);
+
+        const candidateSelector = {
+            setActiveId: vi.fn(),
+            scoreVideo: vi.fn().mockReturnValue({
+                score: 10,
+                progressEligible: true,
+                reasons: [],
+                vs: {},
+                progressStreakMs: 0,
+                progressAgoMs: 0
+            })
+        };
+
+        const manager = window.FailoverManager.create({
+            monitorsById,
+            candidateSelector,
+            getVideoId: () => 'video-1',
+            logDebug: () => {}
+        });
+
+        const startTime = CONFIG.stall.FAILOVER_COOLDOWN_MS + 1000;
+        nowSpy.mockReturnValue(startTime);
+        const first = manager.attemptFailover('video-1', 'test', monitorsById.get('video-1').monitor.state);
+        expect(first).toBe(true);
+        expect(candidateSelector.setActiveId).toHaveBeenCalledTimes(1);
+
+        manager.resetFailover('test_reset');
+
+        nowSpy.mockReturnValue(startTime + CONFIG.stall.FAILOVER_COOLDOWN_MS - 1);
+        const second = manager.attemptFailover('video-1', 'test', monitorsById.get('video-1').monitor.state);
+        expect(second).toBe(false);
+        expect(candidateSelector.setActiveId).toHaveBeenCalledTimes(1);
+
+        nowSpy.mockReturnValue(startTime + CONFIG.stall.FAILOVER_COOLDOWN_MS + 1);
+        const third = manager.attemptFailover('video-1', 'test', monitorsById.get('video-1').monitor.state);
+        expect(third).toBe(true);
+        expect(candidateSelector.setActiveId).toHaveBeenCalledTimes(2);
     });
 });
