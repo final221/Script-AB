@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.5.35 - 2026-02-03T21:29:48.361Z
+Previous: 4.5.34
+Commit: 4f8f626
+Changes:
+- Refine suppression and refresh tests
+
 ## 4.5.34 - 2026-02-03T21:20:41.142Z
 Previous: 4.5.33
 Commit: fc5e6ed
