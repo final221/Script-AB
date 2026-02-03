@@ -39,7 +39,10 @@ describe('MonitorCoordinator', () => {
         expect(monitorRegistry.stopMonitoring).toHaveBeenCalledWith(video);
         expect(monitorRegistry.resetVideoId).toHaveBeenCalledWith(video);
 
-        vi.advanceTimersByTime(100);
+        expect(monitorRegistry.monitor).not.toHaveBeenCalled();
+        expect(candidateSelector.evaluateCandidates).not.toHaveBeenCalled();
+
+        vi.runOnlyPendingTimers();
 
         expect(monitorRegistry.monitor).toHaveBeenCalled();
         expect(candidateSelector.evaluateCandidates).toHaveBeenCalledWith('scan_refresh');

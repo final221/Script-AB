@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.5.34 - 2026-02-03T21:20:41.142Z
+Previous: 4.5.33
+Commit: fc5e6ed
+Changes:
+- Add aligned unit tests for missing core modules
+
 ## 4.5.33 - 2026-02-03T20:57:57.398Z
 Previous: 4.5.32
 Commit: d876f52
