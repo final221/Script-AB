@@ -247,8 +247,9 @@ Script Logger.add() -> Logger.getMergedTimeline()
 - **PlaybackStateDefaults.js** - Playback state defaults + alias map
 - **PlaybackStateStore.js** - Playback state construction and alias mapping
 - **PlaybackResetLogic.js** - Reset evaluation and pending reset handling
-- **PlaybackProgressReset.js** - Backoff/flag clearing on progress
-- **PlaybackProgressLogic.js** - Progress/ready/stall tracking helpers
+- **PlaybackProgressReset.js** - Clears heal/play backoff and starvation flags on progress
+- **PlaybackProgressLogic.js** - Progress/ready/stall tracking; initial progress grace window defers stall handling until `stall.INIT_PROGRESS_GRACE_MS`
+- **PlaybackProgressTracker.js** - Progress streak resets after `monitoring.PROGRESS_STREAK_RESET_MS`; eligibility after `monitoring.CANDIDATE_MIN_PROGRESS_MS`
 - **PlaybackSyncLogic.js** - Playback drift sampling
 - **PlaybackStarvationLogic.js** - Buffer starvation tracking
 - **PlaybackEventLogger.js** - Event log aggregation + summary logic
@@ -292,8 +293,8 @@ Script Logger.add() -> Logger.getMergedTimeline()
 - **HealPointPoller.js** - Polls for heal points
 - **HealPipeline.js** - Polls for heal points and executes seeks
 - **HealPipelineSeek.js** - Abort errors trigger a single delayed retry with a fresh heal point
-- **AdGapSignals.js** - Ad gap signature detection
-- **PlayheadAttribution.js** - Playhead attribution helpers
+- **AdGapSignals.js** - Ad gap signature detection near buffered edges (uses `recovery.HEAL_EDGE_GUARD_S`); throttled by `logging.BACKOFF_LOG_INTERVAL_MS`
+- **PlayheadAttribution.js** - Match playhead hints to closest candidate within a configurable match window (default 2s); fall back to active on invalid hints
 
 #### External signals (src/core/external)
 - **ExternalSignalRouter.js** - Handles console signal hints
@@ -312,8 +313,8 @@ Script Logger.add() -> Logger.getMergedTimeline()
   - `findHealPoint()` - Finds buffer range starting after currentTime
 - **BufferGapFinder.js** - Buffer analysis facade
 - **SeekTargetCalculator.js** - Validates and calculates seek targets
-  - `validateSeekTarget()` - Ensures seek is safe (within buffer)
-  - `calculateSafeTarget()` - Calculates optimal seek position
+  - `validateSeekTarget()` - Ensures seek is safe (within buffer) and returns headroom
+  - `calculateSafeTarget()` - Calculates safe target inside buffer, preserving edge guard/headroom when available
 - **LiveEdgeSeeker.js** - Executes seek and play operations
   - `seekAndPlay()` - Seeks to heal point, starts playback
 
