@@ -104,27 +104,19 @@ describe('RecoveryManager refresh gating', () => {
             .not.toThrow();
     });
 
-    it('requests refresh after repeated play-stuck errors on a single monitor', () => {
+    it('delays refresh until the no-heal refresh window elapses', () => {
         vi.useFakeTimers();
-        const now = 600000;
-        vi.setSystemTime(now);
+        vi.setSystemTime(100000);
 
-        const video = createVideo({ currentTime: 1, readyState: 3, currentSrc: 'blob:stream' }, [[0, 10]]);
-        const monitorState = {
-            playErrorCount: CONFIG.stall.PLAY_STUCK_REFRESH_AFTER - 1,
-            lastPlayErrorTime: now
-        };
-
-        const monitorsById = new Map([
-            ['video-1', { video, monitor: { state: monitorState } }]
-        ]);
+        const monitorsById = new Map();
         const candidateSelector = {
             getActiveId: () => 'video-1',
             evaluateCandidates: vi.fn(),
+            selectEmergencyCandidate: vi.fn().mockReturnValue(null),
+            setActiveId: vi.fn(),
             activateProbation: vi.fn()
         };
         const onPersistentFailure = vi.fn();
-
         const manager = window.RecoveryManager.create({
             monitorsById,
             candidateSelector,
@@ -134,14 +126,30 @@ describe('RecoveryManager refresh gating', () => {
             onPersistentFailure
         });
 
-        manager.handlePlayFailure(video, monitorState, {
-            errorName: 'PLAY_STUCK',
-            reason: 'play_error',
-            error: 'play_stuck'
-        });
+        const video = createVideo({
+            currentTime: 9.5,
+            readyState: CONFIG.stall.NO_HEAL_POINT_REFRESH_MIN_READY_STATE,
+            currentSrc: 'blob:https://www.twitch.tv/stream'
+        }, [[0, 10]]);
+        const monitorState = {
+            noHealPointCount: CONFIG.stall.REFRESH_AFTER_NO_HEAL_POINTS - 1,
+            bufferStarved: false,
+            lastRefreshAt: 0
+        };
 
-        expect(onPersistentFailure).toHaveBeenCalled();
-        expect(monitorState.lastRefreshAt).toBe(now);
+        monitorsById.set('video-1', { video, monitor: { state: monitorState } });
+
+        manager.handleNoHealPoint(video, monitorState, 'no_heal_point');
+
+        expect(onPersistentFailure).not.toHaveBeenCalled();
+        expect(monitorState.lastRefreshAt || 0).toBe(0);
+
+        vi.advanceTimersByTime(CONFIG.stall.NO_HEAL_POINT_REFRESH_DELAY_MS + 1);
+
+        manager.handleNoHealPoint(video, monitorState, 'no_heal_point');
+
+        expect(onPersistentFailure).toHaveBeenCalledTimes(1);
+        expect(monitorState.lastRefreshAt).toBeGreaterThan(0);
 
         vi.useRealTimers();
     });

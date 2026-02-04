@@ -100,6 +100,54 @@ describe('HealPointPoller', () => {
         expect(gapOverrideLogs.length).toBe(1);
     });
 
+    it('rejects low-headroom heals when gap override thresholds are not met', async () => {
+        vi.useFakeTimers();
+        vi.setSystemTime(0);
+
+        const originalDeferAbort = CONFIG.recovery.HEAL_DEFER_ABORT_MS;
+        CONFIG.recovery.HEAL_DEFER_ABORT_MS = 1;
+
+        const video = document.createElement('video');
+        const monitorState = {
+            lastProgressTime: -CONFIG.stall.RECOVERY_WINDOW_MS - 1000
+        };
+        const healPoint = {
+            start: 10,
+            end: 10.5,
+            gapSize: 0.1,
+            isNudge: false,
+            rangeIndex: 1
+        };
+
+        findSpy = vi.spyOn(window.BufferGapFinder, 'findHealPoint').mockReturnValue(healPoint);
+        analyzeSpy = vi.spyOn(window.BufferGapFinder, 'analyze').mockReturnValue({
+            bufferExhausted: false,
+            formattedRanges: 'none'
+        });
+
+        const poller = window.HealPointPoller.create({
+            getVideoId: () => 'video-1',
+            logWithState: vi.fn(),
+            logDebug: vi.fn()
+        });
+
+        try {
+            const promise = poller.pollForHealPoint(video, monitorState, 2000);
+
+            await vi.advanceTimersByTimeAsync(
+                CONFIG.recovery.HEAL_DEFER_ABORT_MS + (CONFIG.stall.HEAL_POLL_INTERVAL_MS * 2)
+            );
+
+            const result = await promise;
+
+            expect(result.healPoint).toBeNull();
+            expect(result.aborted).toBe(false);
+            expect(findSpy).toHaveBeenCalled();
+        } finally {
+            CONFIG.recovery.HEAL_DEFER_ABORT_MS = originalDeferAbort;
+        }
+    });
+
     it('skips healing when recent progress indicates self-recovery', async () => {
         vi.useFakeTimers();
         vi.setSystemTime(10000);

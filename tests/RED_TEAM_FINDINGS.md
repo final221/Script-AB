@@ -3,34 +3,24 @@
 Purpose: quick map of adversarial findings and where they are covered in tests.
 
 ## Findings Covered By Tests
-1. GAP ONLY: Failover should prefer trusted candidates over higher-score untrusted ones.
-Test: `tests/unit/FailoverCandidatePicker.test.js`
-2. GAP ONLY: Fast-switch should activate when healing stalls exceed configured thresholds.
-Test: `tests/unit/CandidateSwitchPolicy.test.js`
-3. GAP ONLY: Untrusted preferred candidates must not switch outside probation.
-Test: `tests/unit/CandidateSwitchPolicy.test.js`
-4. GAP ONLY: Active candidates that are not stalled should block switching.
-Test: `tests/unit/CandidateSwitchPolicy.test.js`
-5. CHALLENGE: Heal polling must honor HEAL_TIMEOUT_S and escalate no-heal-point handling.
-Test: `tests/unit/HealPipelinePoller.test.js`
-6. CHALLENGE: Stall handling must debounce heal attempts within RETRY_COOLDOWN_MS after progress.
-Test: `tests/unit/StallHandler.test.js`
-7. CHALLENGE: Failover must trigger after FAILOVER_AFTER_STALL_MS even before no-heal-point thresholds.
-Test: `tests/unit/NoHealPointPolicy.test.js`
-8. CHALLENGE: Monitor caps must prune the lowest-score non-protected candidate when MAX_VIDEO_MONITORS is exceeded.
-Test: `tests/unit/CandidatePruner.test.js`
-9. CHALLENGE: Failover must revert to the original candidate if no progress occurs within FAILOVER_PROGRESS_TIMEOUT_MS.
+1. CHALLENGE: Failover should revert to the previous candidate when the failover target makes no progress.
 Test: `tests/unit/FailoverManager.test.js`
-10. CHALLENGE: Emergency switching must respect NO_HEAL_POINT_EMERGENCY_COOLDOWN_MS.
+2. CHALLENGE: Prolonged stalls should trigger failover even before no-heal thresholds.
 Test: `tests/unit/NoHealPointPolicy.test.js`
-11. CHALLENGE: Refresh eligibility must open after NO_HEAL_POINT_REFRESH_DELAY_MS elapses.
-Test: `tests/unit/NoHealPointPolicy.test.js`
-12. CHALLENGE: Catch-up retries must stop after CATCH_UP_MAX_ATTEMPTS when playback stays unstable.
-Test: `tests/unit/CatchUpController.test.js`
-13. CHALLENGE: Buffer-starved rescans must be throttled by BUFFER_STARVE_RESCAN_COOLDOWN_MS.
-Test: `tests/unit/StallHandler.test.js`
-14. CHALLENGE: Play-stuck refresh must trigger after PLAY_STUCK_REFRESH_AFTER on a single monitor.
+3. CHALLENGE: Emergency switching should reject unready or missing-src candidates.
+Test: `tests/unit/EmergencyCandidatePicker.test.js`
+4. CHALLENGE: Low-headroom heal points should be rejected unless gap-override criteria are met.
+Test: `tests/unit/HealPointPoller.test.js`
+5. CHALLENGE: No-heal refresh delay windows should block refresh until the delay elapses.
 Test: `tests/unit/RecoveryManager.test.js`
+6. GAP ONLY: Failover should prefer trusted candidates over higher-score untrusted ones.
+Test: `tests/unit/FailoverCandidatePicker.test.js`
+7. GAP ONLY: Fast-switch should activate when healing stalls exceed configured thresholds.
+Test: `tests/unit/CandidateSwitchPolicy.test.js`
+8. GAP ONLY: Untrusted preferred candidates must not switch outside probation.
+Test: `tests/unit/CandidateSwitchPolicy.test.js`
+9. GAP ONLY: Active candidates that are not stalled should block switching.
+Test: `tests/unit/CandidateSwitchPolicy.test.js`
 
 ## Spec Gaps Requiring Review
 1. Failover candidate selection: the spec does not state whether trusted candidates must be preferred over higher-score untrusted ones.

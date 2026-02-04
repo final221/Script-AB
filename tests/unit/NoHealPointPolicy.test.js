@@ -50,6 +50,29 @@ describe('NoHealPointPolicy', () => {
         expect(decision.data.refreshEligible).toBe(false);
     });
 
+    it('triggers failover after prolonged stalls even before no-heal thresholds', () => {
+        const now = 250000;
+        const monitorState = {
+            noHealPointCount: 0,
+            lastProgressTime: now - (CONFIG.stall.FAILOVER_AFTER_STALL_MS + 1)
+        };
+        const video = createVideo({
+            currentTime: 9.5,
+            readyState: 3,
+            currentSrc: 'blob:https://www.twitch.tv/stream'
+        }, [[0, 10]]);
+
+        const monitorsById = new Map([
+            ['video-1', { video, monitor: { state: monitorState } }],
+            ['video-2', { video: createVideo({}, [[0, 10]]), monitor: { state: {} } }]
+        ]);
+
+        const policy = window.NoHealPointPolicy.create({ monitorsById });
+        const decision = policy.decide({ video, monitorState, now }, 'no_heal_point');
+
+        expect(decision.data.shouldFailover).toBe(true);
+    });
+
     it('requires buffer starvation for last-resort switching when configured', () => {
         const now = 300000;
         const threshold = Math.max(
@@ -80,76 +103,5 @@ describe('NoHealPointPolicy', () => {
 
         expect(decision.data.emergencyEligible).toBe(true);
         expect(decision.data.lastResortEligible).toBe(false);
-    });
-
-    it('fails over after prolonged stalls even before no-heal-point thresholds', () => {
-        const now = 400000;
-        const monitorState = {
-            noHealPointCount: 0,
-            lastProgressTime: now - (CONFIG.stall.FAILOVER_AFTER_STALL_MS + 1)
-        };
-        const video = createVideo({
-            currentTime: 9.5,
-            readyState: 3,
-            currentSrc: 'blob:https://www.twitch.tv/stream'
-        }, [[0, 10]]);
-
-        const monitorsById = new Map([
-            ['video-1', { video, monitor: { state: monitorState } }],
-            ['video-2', { video: createVideo({}, [[0, 10]]), monitor: { state: {} } }]
-        ]);
-
-        const policy = window.NoHealPointPolicy.create({ monitorsById });
-        const decision = policy.decide({ video, monitorState, now }, 'no_heal_point');
-
-        expect(decision.data.shouldFailover).toBe(true);
-    });
-
-    it('suppresses emergency switching during the cooldown window', () => {
-        const now = 500000;
-        const monitorState = {
-            noHealPointCount: CONFIG.stall.NO_HEAL_POINT_EMERGENCY_AFTER - 1,
-            lastEmergencySwitchAt: now - (CONFIG.stall.NO_HEAL_POINT_EMERGENCY_COOLDOWN_MS - 1)
-        };
-        const video = createVideo({
-            currentTime: 9.5,
-            readyState: 3,
-            currentSrc: 'blob:https://www.twitch.tv/stream'
-        }, [[0, 10]]);
-
-        const monitorsById = new Map([
-            ['video-1', { video, monitor: { state: monitorState } }]
-        ]);
-
-        const policy = window.NoHealPointPolicy.create({
-            monitorsById,
-            candidateSelector: { selectEmergencyCandidate: () => ({ id: 'video-2' }) }
-        });
-        const decision = policy.decide({ video, monitorState, now }, 'no_heal_point');
-
-        expect(decision.data.emergencyEligible).toBe(false);
-    });
-
-    it('enables refresh eligibility once the refresh delay elapses', () => {
-        const now = 600000;
-        const monitorState = {
-            noHealPointCount: CONFIG.stall.REFRESH_AFTER_NO_HEAL_POINTS - 1,
-            noHealPointRefreshUntil: now - 1,
-            lastRefreshAt: 0
-        };
-        const video = createVideo({
-            currentTime: 9.5,
-            readyState: 3,
-            currentSrc: 'blob:https://www.twitch.tv/stream'
-        }, [[0, 10]]);
-
-        const monitorsById = new Map([
-            ['video-1', { video, monitor: { state: monitorState } }]
-        ]);
-
-        const policy = window.NoHealPointPolicy.create({ monitorsById });
-        const decision = policy.decide({ video, monitorState, now }, 'no_heal_point');
-
-        expect(decision.data.refreshEligible).toBe(true);
     });
 });

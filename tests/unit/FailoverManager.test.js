@@ -139,9 +139,9 @@ describe('FailoverManager attemptFailover', () => {
         expect(candidateSelector.setActiveId).toHaveBeenCalledTimes(2);
     });
 
-    it('reverts to the original candidate when failover makes no progress', () => {
+    it('reverts to the previous candidate when the failover candidate never progresses', () => {
         vi.useFakeTimers();
-        vi.setSystemTime(CONFIG.stall.FAILOVER_COOLDOWN_MS + 1);
+        vi.setSystemTime(100000);
 
         const fromVideo = createVideo({
             currentTime: 0,
@@ -168,12 +168,13 @@ describe('FailoverManager attemptFailover', () => {
                 score: 10,
                 progressEligible: true,
                 reasons: [],
-                vs: { currentSrc: 'blob:to', readyState: 2 },
-                progressStreakMs: CONFIG.monitoring.CANDIDATE_MIN_PROGRESS_MS + 1,
-                progressAgoMs: 0,
-                deadCandidate: false
+                vs: {},
+                progressStreakMs: 0,
+                progressAgoMs: 0
             })
         };
+
+        Logger.getLogs().length = 0;
 
         const manager = window.FailoverManager.create({
             monitorsById,
@@ -188,6 +189,12 @@ describe('FailoverManager attemptFailover', () => {
 
         vi.advanceTimersByTime(CONFIG.stall.FAILOVER_PROGRESS_TIMEOUT_MS + 1);
 
-        expect(candidateSelector.setActiveId).toHaveBeenCalledWith('video-1');
+        expect(candidateSelector.setActiveId).toHaveBeenLastCalledWith('video-1');
+        expect(candidateSelector.setActiveId).toHaveBeenCalledTimes(2);
+        expect(manager.isActive()).toBe(false);
+
+        const logs = Logger.getLogs();
+        const revertLogged = logs.some((entry) => entry.message === LogTags.TAG.FAILOVER_REVERT);
+        expect(revertLogged).toBe(true);
     });
 });
