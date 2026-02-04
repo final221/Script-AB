@@ -103,4 +103,46 @@ describe('RecoveryManager refresh gating', () => {
         expect(() => manager.requestRefresh('video-1', monitorState, { now: 100000, reason: 'manual' }))
             .not.toThrow();
     });
+
+    it('requests refresh after repeated play-stuck errors on a single monitor', () => {
+        vi.useFakeTimers();
+        const now = 600000;
+        vi.setSystemTime(now);
+
+        const video = createVideo({ currentTime: 1, readyState: 3, currentSrc: 'blob:stream' }, [[0, 10]]);
+        const monitorState = {
+            playErrorCount: CONFIG.stall.PLAY_STUCK_REFRESH_AFTER - 1,
+            lastPlayErrorTime: now
+        };
+
+        const monitorsById = new Map([
+            ['video-1', { video, monitor: { state: monitorState } }]
+        ]);
+        const candidateSelector = {
+            getActiveId: () => 'video-1',
+            evaluateCandidates: vi.fn(),
+            activateProbation: vi.fn()
+        };
+        const onPersistentFailure = vi.fn();
+
+        const manager = window.RecoveryManager.create({
+            monitorsById,
+            candidateSelector,
+            getVideoId: () => 'video-1',
+            logDebug: () => {},
+            onRescan: () => {},
+            onPersistentFailure
+        });
+
+        manager.handlePlayFailure(video, monitorState, {
+            errorName: 'PLAY_STUCK',
+            reason: 'play_error',
+            error: 'play_stuck'
+        });
+
+        expect(onPersistentFailure).toHaveBeenCalled();
+        expect(monitorState.lastRefreshAt).toBe(now);
+
+        vi.useRealTimers();
+    });
 });

@@ -138,4 +138,56 @@ describe('FailoverManager attemptFailover', () => {
         expect(third).toBe(true);
         expect(candidateSelector.setActiveId).toHaveBeenCalledTimes(2);
     });
+
+    it('reverts to the original candidate when failover makes no progress', () => {
+        vi.useFakeTimers();
+        vi.setSystemTime(CONFIG.stall.FAILOVER_COOLDOWN_MS + 1);
+
+        const fromVideo = createVideo({
+            currentTime: 0,
+            readyState: 2,
+            currentSrc: 'blob:from'
+        }, [[0, 10]]);
+        fromVideo.play = vi.fn().mockResolvedValue();
+
+        const toVideo = createVideo({
+            currentTime: 0,
+            readyState: 2,
+            currentSrc: 'blob:to'
+        }, [[0, 10]]);
+        toVideo.play = vi.fn().mockResolvedValue();
+
+        const monitorsById = new Map([
+            ['video-1', { video: fromVideo, monitor: { state: { hasProgress: false, lastProgressTime: 0 } } }],
+            ['video-2', { video: toVideo, monitor: { state: { hasProgress: false, lastProgressTime: 0 } } }]
+        ]);
+
+        const candidateSelector = {
+            setActiveId: vi.fn(),
+            scoreVideo: vi.fn().mockReturnValue({
+                score: 10,
+                progressEligible: true,
+                reasons: [],
+                vs: { currentSrc: 'blob:to', readyState: 2 },
+                progressStreakMs: CONFIG.monitoring.CANDIDATE_MIN_PROGRESS_MS + 1,
+                progressAgoMs: 0,
+                deadCandidate: false
+            })
+        };
+
+        const manager = window.FailoverManager.create({
+            monitorsById,
+            candidateSelector,
+            getVideoId: () => 'video-1',
+            logDebug: () => {}
+        });
+
+        const attempted = manager.attemptFailover('video-1', 'test', monitorsById.get('video-1').monitor.state);
+        expect(attempted).toBe(true);
+        expect(candidateSelector.setActiveId).toHaveBeenCalledWith('video-2');
+
+        vi.advanceTimersByTime(CONFIG.stall.FAILOVER_PROGRESS_TIMEOUT_MS + 1);
+
+        expect(candidateSelector.setActiveId).toHaveBeenCalledWith('video-1');
+    });
 });
