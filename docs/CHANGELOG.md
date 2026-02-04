@@ -1,5 +1,19 @@
 # Changelog
 
+## 4.5.44 - 2026-02-04T22:05:18.472Z
+Previous: 4.5.43
+Commit: 36251a4
+Changes:
+- No commits detected since last build
+
+## 4.5.43 - 2026-02-04T21:07:10.228Z
+Previous: 4.5.42
+Commit: 36251a4
+Changes:
+- Refine Red Team scope guardrails
+- test(red-team): add challenge coverage tests
+- test(red-team): add recovery and stall guard coverage
+
 ## 4.5.42 - 2026-02-04T20:24:45.993Z
 Previous: 4.5.41
 Commit: f6d7e41
