@@ -1,5 +1,13 @@
 # Changelog
 
+## 4.5.42 - 2026-02-04T20:24:45.993Z
+Previous: 4.5.41
+Commit: f6d7e41
+Changes:
+- docs: align red-team findings with scope
+- test: drop out-of-scope red-team cases
+- test: remove out-of-scope red-team tests
+
 ## 4.5.41 - 2026-02-03T23:05:11.215Z
 Previous: 4.5.40
 Commit: 0f6b130
