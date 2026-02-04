@@ -23,11 +23,13 @@
 
 ### Red Team
 - Changes: tests only (no prod code).
-- Outputs: top-5 risk list with file refs + one test per risk; include a single-line alignment integrity statement (OK or BLOCKED with reason); include a spec-gap audit (gaps + CHALLENGE tests or BLOCKED).
+- Outputs: top-5 risk list with file refs + one test per risk; include a single-line alignment integrity statement (OK or BLOCKED with reason); include a spec-gap audit (gaps + CHALLENGE tests or BLOCKED). If gaps block, "no CHALLENGE tests written" is a valid outcome.
 - Focus: CHALLENGE tests only; adversarial, spec-first tests anchored to docs/ARCHITECTURE.md, Config, and log/tag contracts; aim to falsify assumptions and break edge cases Twitch would trigger; do not fit tests to current implementation; do not avoid CHALLENGE by limiting scope to spec-only tests when the spec is clear.
 - Depth guard: target externally meaningful behavior (switch/failover/refresh/recovery outcomes); avoid internal scoring reasons, log throttle timing, or diagnostic strings.
+- Allowed targets: failover, refresh, reset, heal success/fail, candidate switching only when the active stream is stalled.
+- Spec citation: every CHALLENGE test must cite an explicit doc section or config key; otherwise mark GAP ONLY and do not implement.
 - Logging scope: may assert critical operational logs exist (FAILOVER/REFRESH/RESET/HEAL), but do not lock formatting or throttle timing.
-- Spec gaps: list and stop unless explicitly asked to proceed; if the spec is unclear, stop and flag the ambiguity.
+- Spec gaps: list and stop unless explicitly asked to proceed; do not add internal tests to fill quota when gaps block; if the spec is unclear, stop and flag the ambiguity.
 - Output hygiene: findings list must be sequential and each item labeled CHALLENGE or GAP ONLY.
 - Constraints: deterministic; no network; use existing test stack; may run `npm.cmd run agent:verify` and `npm.cmd run agent:commit`, including generated artifacts.
 
