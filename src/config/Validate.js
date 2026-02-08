@@ -48,6 +48,26 @@ const ConfigValidator = (() => {
                 value: config.monitoring?.PROGRESS_MIN_DELTA_S
             });
         }
+        if ((config.monitoring?.STREAM_IDENTITY_WINDOW_MS || 0) <= 0) {
+            warn('STREAM_IDENTITY_WINDOW_MS must be positive', {
+                value: config.monitoring?.STREAM_IDENTITY_WINDOW_MS
+            });
+        }
+        if ((config.monitoring?.STREAM_IDENTITY_MATCH_BONUS || 0) < 0) {
+            warn('STREAM_IDENTITY_MATCH_BONUS must be non-negative', {
+                value: config.monitoring?.STREAM_IDENTITY_MATCH_BONUS
+            });
+        }
+        if ((config.monitoring?.STREAM_IDENTITY_RECENT_ACTIVE_BONUS || 0) < 0) {
+            warn('STREAM_IDENTITY_RECENT_ACTIVE_BONUS must be non-negative', {
+                value: config.monitoring?.STREAM_IDENTITY_RECENT_ACTIVE_BONUS
+            });
+        }
+        if ((config.monitoring?.STREAM_IDENTITY_ORIGIN_ID_BONUS || 0) < 0) {
+            warn('STREAM_IDENTITY_ORIGIN_ID_BONUS must be non-negative', {
+                value: config.monitoring?.STREAM_IDENTITY_ORIGIN_ID_BONUS
+            });
+        }
 
         return warnings;
     };

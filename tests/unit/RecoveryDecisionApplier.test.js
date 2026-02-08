@@ -46,7 +46,8 @@ describe('RecoveryDecisionApplier', () => {
         expect(candidateSelector.selectEmergencyCandidate).not.toHaveBeenCalled();
         expect(probationPolicy.maybeTriggerProbation).not.toHaveBeenCalled();
         expect(result.shouldFailover).toBe(false);
-        expect(result.refreshed).toBe(false);
+        expect(result.refreshEligible).toBe(false);
+        expect(result.primaryAction).toBe('none');
         expect(result.emergencySwitched).toBe(false);
     });
 
@@ -81,6 +82,44 @@ describe('RecoveryDecisionApplier', () => {
 
         expect(monitorState.playErrorCount).toBe(2);
         expect(monitorState.nextPlayHealAllowedTime).toBe(now + 5000);
+    });
+
+    it('returns no-heal action fields for manager-side arbitration', () => {
+        const monitorState = { noHealPointCount: 2 };
+        const applier = window.RecoveryDecisionApplier.create({
+            backoffManager: { applyBackoff: vi.fn() },
+            candidateSelector: { selectEmergencyCandidate: vi.fn().mockReturnValue(false) },
+            logDebug: () => {},
+            onRescan: () => {},
+            onPersistentFailure: vi.fn(),
+            probationPolicy: {
+                maybeTriggerProbation: vi.fn().mockReturnValue(false),
+                triggerRescanForKey: vi.fn()
+            }
+        });
+
+        const result = applier.applyNoHealPointDecision({
+            type: 'no_heal_point',
+            context: {
+                videoId: 'video-1',
+                monitorState,
+                reason: 'no_heal_point',
+                now: 1000
+            },
+            data: {
+                shouldFailover: true,
+                failoverEligible: true,
+                refreshEligible: true,
+                primaryAction: 'failover',
+                emergencyEligible: false,
+                lastResortEligible: false
+            }
+        });
+
+        expect(result.shouldFailover).toBe(true);
+        expect(result.failoverEligible).toBe(true);
+        expect(result.refreshEligible).toBe(true);
+        expect(result.primaryAction).toBe('failover');
     });
 
 

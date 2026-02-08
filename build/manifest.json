@@ -77,6 +77,7 @@
     "core/candidate/CandidateSelectionEngine.js",
     "core/candidate/EmergencyCandidatePicker.js",
     "core/candidate/FormerStreamTracker.js",
+    "core/candidate/StreamIdentityModel.js",
     "core/recovery/RecoveryContext.js",
     "core/recovery/BackoffManager.js",
     "core/recovery/ProbationPolicy.js",

@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.9.0
+// @version       4.10.0
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -102,6 +102,10 @@ const CONFIG = (() => {
             PROBATION_WINDOW_MS: 10000,     // Window to allow untrusted candidate switching
             PROBATION_READY_STATE: 2,       // Minimum readyState to allow probation override
             PROBATION_MIN_PROGRESS_MS: 500, // Require brief progress before probation takeover
+            STREAM_IDENTITY_WINDOW_MS: 120000, // Time window for former-stream continuity hints
+            STREAM_IDENTITY_MATCH_BONUS: 3, // Score bonus when candidate src matches stream origin
+            STREAM_IDENTITY_RECENT_ACTIVE_BONUS: 2, // Score bonus for recently active stream candidates
+            STREAM_IDENTITY_ORIGIN_ID_BONUS: 1, // Score bonus when candidate matches current stream-origin id
             PROGRESS_STREAK_RESET_MS: 2500, // Reset progress streak after this long without progress
             PROGRESS_MIN_DELTA_S: 0.05,     // Minimum forward playhead delta considered real progress
             PROGRESS_RECENT_MS: 2000,       // "Recent progress" threshold for scoring
@@ -170,7 +174,7 @@ const CONFIG = (() => {
  * Build metadata helpers (version injected at build time).
  */
 const BuildInfo = (() => {
-    const VERSION = '4.9.0';
+    const VERSION = '4.10.0';
 
     const getVersion = () => {
         const gmVersion = (typeof GM_info !== 'undefined' && GM_info?.script?.version)
@@ -181,7 +185,7 @@ const BuildInfo = (() => {
             ? unsafeWindow.GM_info.script.version
             : null;
         if (unsafeVersion) return unsafeVersion;
-        if (VERSION && VERSION !== '4.9.0') return VERSION;
+        if (VERSION && VERSION !== '4.10.0') return VERSION;
         return null;
     };
 
@@ -266,6 +270,26 @@ const ConfigValidator = (() => {
         if ((config.monitoring?.PROGRESS_MIN_DELTA_S || 0) <= 0) {
             warn('PROGRESS_MIN_DELTA_S must be positive', {
                 value: config.monitoring?.PROGRESS_MIN_DELTA_S
+            });
+        }
+        if ((config.monitoring?.STREAM_IDENTITY_WINDOW_MS || 0) <= 0) {
+            warn('STREAM_IDENTITY_WINDOW_MS must be positive', {
+                value: config.monitoring?.STREAM_IDENTITY_WINDOW_MS
+            });
+        }
+        if ((config.monitoring?.STREAM_IDENTITY_MATCH_BONUS || 0) < 0) {
+            warn('STREAM_IDENTITY_MATCH_BONUS must be non-negative', {
+                value: config.monitoring?.STREAM_IDENTITY_MATCH_BONUS
+            });
+        }
+        if ((config.monitoring?.STREAM_IDENTITY_RECENT_ACTIVE_BONUS || 0) < 0) {
+            warn('STREAM_IDENTITY_RECENT_ACTIVE_BONUS must be non-negative', {
+                value: config.monitoring?.STREAM_IDENTITY_RECENT_ACTIVE_BONUS
+            });
+        }
+        if ((config.monitoring?.STREAM_IDENTITY_ORIGIN_ID_BONUS || 0) < 0) {
+            warn('STREAM_IDENTITY_ORIGIN_ID_BONUS must be non-negative', {
+                value: config.monitoring?.STREAM_IDENTITY_ORIGIN_ID_BONUS
             });
         }
 
@@ -5711,6 +5735,7 @@ const CandidateScorer = (() => {
     const create = (options) => {
         const minProgressMs = options.minProgressMs;
         const isFallbackSource = options.isFallbackSource;
+        const scoreIdentity = options.scoreIdentity || null;
 
         const score = (video, monitor, videoId) => {
             const vs = VideoState.getLite(video, videoId);
@@ -5815,6 +5840,16 @@ const CandidateScorer = (() => {
                 reasons.push('time_nonzero');
             }
 
+            const identity = typeof scoreIdentity === 'function'
+                ? scoreIdentity(videoId, vs, state)
+                : null;
+            if (Number.isFinite(identity?.identityScore) && identity.identityScore !== 0) {
+                score += identity.identityScore;
+            }
+            if (Array.isArray(identity?.identityReasons) && identity.identityReasons.length) {
+                reasons.push(...identity.identityReasons);
+            }
+
             return {
                 score,
                 reasons,
@@ -5822,7 +5857,8 @@ const CandidateScorer = (() => {
                 progressAgoMs,
                 progressStreakMs,
                 progressEligible,
-                deadCandidate
+                deadCandidate,
+                identityScore: Number.isFinite(identity?.identityScore) ? identity.identityScore : 0
             };
         };
 
@@ -6094,6 +6130,7 @@ const CandidateScoreRecord = (() => {
         readyState: result.vs.readyState,
         hasSrc: Boolean(result.vs.currentSrc),
         deadCandidate: result.deadCandidate,
+        identityScore: result.identityScore || 0,
         state: entry.monitor.state.state,
         reasons: result.reasons,
         trusted: trustInfo.trusted,
@@ -6386,8 +6423,18 @@ const CandidateSelector = (() => {
             lastGoodCandidateId: null
         };
         let lockChecker = null;
+        const streamIdentity = StreamIdentityModel.create({
+            monitorsById,
+            isFallbackSource
+        });
 
-        const scorer = CandidateScorer.create({ minProgressMs, isFallbackSource });
+        const scorer = CandidateScorer.create({
+            minProgressMs,
+            isFallbackSource,
+            scoreIdentity: (videoId, videoState, monitorState) => (
+                streamIdentity.scoreCandidate(videoId, videoState, monitorState, getActiveIdRaw())
+            )
+        });
         const switchPolicy = CandidateSwitchPolicy.create({
             switchDelta,
             minProgressMs,
@@ -6423,6 +6470,7 @@ const CandidateSelector = (() => {
             }
             state.activeCandidateId = id;
             formerStreamTracker.onActive(id);
+            streamIdentity.observeActive(id, reason);
         };
         const getLastGoodId = () => state.lastGoodCandidateId;
         const setLastGoodId = (id) => {
@@ -6560,6 +6608,7 @@ const CandidateSelector = (() => {
         });
 
         const evaluateCandidates = (reason) => {
+            streamIdentity.observeActive(getActiveIdRaw(), `pre_eval:${reason}`);
             const result = selectionEngine.evaluateCandidates(reason);
             if (!result) {
                 observeFormerStreams(reason);
@@ -6590,6 +6639,7 @@ const CandidateSelector = (() => {
                 Logger.add(LogEvents.tagged('CANDIDATE', 'Active video set'), {
                     to: result.activation.toId,
                     reason: result.activation.reason,
+                    streamOriginVideoId: streamIdentity.getSnapshot().originVideoId,
                     scores: result.scores
                 });
                 setActiveId(result.activation.toId, `activation:${result.activation.reason}`);
@@ -6607,8 +6657,10 @@ const CandidateSelector = (() => {
                         noHealPointCount: decision.activeNoHealPoints,
                         stalledForMs: decision.activeStalledForMs,
                         preferredScore: decision.preferred.score,
+                        preferredIdentityScore: decision.preferred.identityScore || 0,
                         preferredProgressStreakMs: decision.preferred.progressStreakMs,
-                        preferredTrusted: decision.preferred.trusted
+                        preferredTrusted: decision.preferred.trusted,
+                        streamOriginVideoId: streamIdentity.getSnapshot().originVideoId
                     });
                     setActiveId(decision.toId, `fast_switch:${decision.reason}`);
                     logOutcome(decision);
@@ -6625,9 +6677,11 @@ const CandidateSelector = (() => {
                         delta: decision.policyDecision.delta,
                         currentScore: decision.policyDecision.currentScore,
                         bestScore: decision.preferred.score,
+                        bestIdentityScore: decision.preferred.identityScore || 0,
                         bestProgressStreakMs: decision.preferred.progressStreakMs,
                         bestProgressEligible: decision.preferred.progressEligible,
                         probationActive: decision.probationActive,
+                        streamOriginVideoId: streamIdentity.getSnapshot().originVideoId,
                         scores: result.scores
                     });
                     setActiveId(decision.toId, `switch:${decision.reason}`);
@@ -7106,6 +7160,149 @@ const FormerStreamTracker = (() => {
     return { create };
 })();
 
+// --- StreamIdentityModel ---
+/**
+ * Tracks stream-origin continuity signals so candidate scoring can favor
+ * candidates that look like the same stream lineage.
+ */
+const StreamIdentityModel = (() => {
+    const create = (options = {}) => {
+        const monitorsById = options.monitorsById;
+        const isFallbackSource = options.isFallbackSource || (() => false);
+        const windowMs = CONFIG.monitoring.STREAM_IDENTITY_WINDOW_MS;
+        const matchBonus = CONFIG.monitoring.STREAM_IDENTITY_MATCH_BONUS;
+        const recentActiveBonus = CONFIG.monitoring.STREAM_IDENTITY_RECENT_ACTIVE_BONUS;
+        const originIdBonus = CONFIG.monitoring.STREAM_IDENTITY_ORIGIN_ID_BONUS;
+        const recentProgressMaxMs = CONFIG.monitoring.PROGRESS_STALE_MS;
+
+        const state = {
+            originVideoId: null,
+            originSignature: null,
+            originUpdatedAt: 0,
+            recentActives: new Map()
+        };
+
+        const normalizeSignature = (src) => {
+            if (!src || typeof src !== 'string') return null;
+            const trimmed = src.trim();
+            if (!trimmed || trimmed.startsWith('blob:')) return null;
+            try {
+                const parsed = new URL(trimmed, window.location?.href || undefined);
+                return `${parsed.origin}${parsed.pathname}`.toLowerCase();
+            } catch (error) {
+                return trimmed.split('?')[0].toLowerCase();
+            }
+        };
+
+        const prune = (now, activeId = null) => {
+            for (const [videoId, record] of state.recentActives.entries()) {
+                if (videoId === activeId) continue;
+                if ((now - record.updatedAt) > windowMs) {
+                    state.recentActives.delete(videoId);
+                }
+            }
+            if (state.originUpdatedAt && (now - state.originUpdatedAt) > windowMs) {
+                state.originVideoId = null;
+                state.originSignature = null;
+                state.originUpdatedAt = 0;
+            }
+        };
+
+        const readActiveEntry = (videoId) => {
+            if (!videoId) return null;
+            const entry = monitorsById?.get(videoId);
+            if (!entry?.video || !entry?.monitor?.state) return null;
+            const videoState = VideoState.getLite(entry.video, videoId);
+            const monitorState = entry.monitor.state;
+            return { videoState, monitorState };
+        };
+
+        const observeActive = (activeId, reason = 'observe') => {
+            const now = Date.now();
+            prune(now, activeId);
+            const active = readActiveEntry(activeId);
+            if (!active) return;
+
+            const src = active.videoState.currentSrc || active.videoState.src || '';
+            const signature = normalizeSignature(src);
+            const hasRecentProgress = Boolean(
+                active.monitorState.hasProgress
+                && active.monitorState.lastProgressTime
+                && (now - active.monitorState.lastProgressTime) <= recentProgressMaxMs
+            );
+            state.recentActives.set(activeId, {
+                updatedAt: now,
+                signature,
+                reason,
+                hadRecentProgress: hasRecentProgress
+            });
+
+            if (!hasRecentProgress || isFallbackSource(src)) {
+                return;
+            }
+            state.originVideoId = activeId;
+            state.originUpdatedAt = now;
+            if (signature) {
+                state.originSignature = signature;
+            }
+        };
+
+        const scoreCandidate = (videoId, videoState, monitorState, activeId = null) => {
+            const now = Date.now();
+            prune(now);
+            if (activeId && videoId === activeId) {
+                return {
+                    identityScore: 0,
+                    identityReasons: []
+                };
+            }
+            const src = videoState?.currentSrc || videoState?.src || '';
+            const signature = normalizeSignature(src);
+            const identityReasons = [];
+            let identityScore = 0;
+
+            if (state.originVideoId && state.originVideoId === videoId) {
+                identityScore += originIdBonus;
+                identityReasons.push('identity_origin_video');
+            }
+            if (state.originSignature && signature && state.originSignature === signature) {
+                identityScore += matchBonus;
+                identityReasons.push('identity_origin_src_match');
+            }
+            const recentRecord = state.recentActives.get(videoId);
+            const hasRecentRecord = Boolean(recentRecord && (now - recentRecord.updatedAt) <= windowMs);
+            const hasRecentProgress = Boolean(
+                monitorState?.hasProgress
+                && monitorState?.lastProgressTime
+                && (now - monitorState.lastProgressTime) <= recentProgressMaxMs
+            );
+            if (hasRecentRecord && (hasRecentProgress || recentRecord.hadRecentProgress)) {
+                identityScore += recentActiveBonus;
+                identityReasons.push('identity_recent_active');
+            }
+
+            return {
+                identityScore,
+                identityReasons
+            };
+        };
+
+        const getSnapshot = () => ({
+            originVideoId: state.originVideoId,
+            originSignature: state.originSignature,
+            originUpdatedAt: state.originUpdatedAt
+        });
+
+        return {
+            observeActive,
+            scoreCandidate,
+            getSnapshot
+        };
+    };
+
+    return { create };
+})();
+
 // --- RecoveryContext ---
 /**
  * Shared context wrapper for recovery flows.
@@ -7451,7 +7648,6 @@ const RecoveryDecisionApplier = (() => {
         const candidateSelector = options.candidateSelector;
         const logDebug = options.logDebug || (() => {});
         const onRescan = options.onRescan || (() => {});
-        const onPersistentFailure = options.onPersistentFailure || (() => {});
         const probationPolicy = options.probationPolicy;
         const shouldLogBackoffSkip = (monitorState, backoff, now) => {
             if (!monitorState || !backoff) return false;
@@ -7484,30 +7680,13 @@ const RecoveryDecisionApplier = (() => {
             }
             return false;
         };
-        const applyRefresh = (videoId, monitorState, reason, now) => {
-            if (!monitorState) return false;
-            PlaybackStateStore.markRefresh(monitorState, now);
-            PlaybackStateStore.setNoHealPointRefreshUntil(monitorState, 0);
-            logDebug(
-                LogEvents.tagged('REFRESH', 'Refreshing video after repeated no-heal points'),
-                RecoveryLogDetails.refresh({
-                    videoId,
-                    reason,
-                    noHealPointCount: monitorState.noHealPointCount
-                })
-            );
-            PlaybackStateStore.setNoHealPointCount(monitorState, 0);
-            onPersistentFailure(videoId, {
-                reason,
-                detail: 'no_heal_point'
-            });
-            return true;
-        };
         const applyNoHealPointDecision = (decision) => {
             if (!decision || decision.type !== 'no_heal_point') {
                 return {
                     shouldFailover: false,
-                    refreshed: false,
+                    failoverEligible: false,
+                    refreshEligible: false,
+                    primaryAction: 'none',
                     probationTriggered: false,
                     emergencySwitched: false
                 };
@@ -7530,7 +7709,9 @@ const RecoveryDecisionApplier = (() => {
                 });
                 return {
                     shouldFailover: false,
-                    refreshed: false,
+                    failoverEligible: false,
+                    refreshEligible: false,
+                    primaryAction: 'none',
                     probationTriggered: false,
                     emergencySwitched: false
                 };
@@ -7573,13 +7754,16 @@ const RecoveryDecisionApplier = (() => {
                     allowDead: CONFIG.stall.NO_HEAL_POINT_LAST_RESORT_ALLOW_DEAD
                 })
                 : false;
-            const refreshed = !emergencySwitched && !lastResortSwitched && data.refreshEligible
-                ? applyRefresh(videoId, monitorState, reason, now)
-                : false;
+            const failoverEligible = Boolean(data.failoverEligible ?? data.shouldFailover);
+            const refreshEligible = Boolean(data.refreshEligible);
+            const primaryAction = data.primaryAction
+                || (failoverEligible ? 'failover' : (refreshEligible ? 'refresh' : 'none'));
 
             return {
-                shouldFailover: data.shouldFailover,
-                refreshed,
+                shouldFailover: failoverEligible,
+                failoverEligible,
+                refreshEligible,
+                primaryAction,
                 probationTriggered,
                 emergencySwitched: emergencySwitched || lastResortSwitched
             };
@@ -7841,6 +8025,12 @@ const NoHealPointPolicy = (() => {
             const quietEligible = !hardFailureMode
                 && canEnterQuiet(monitorState, decisionContext, nextNoHealPointCount);
             const quietUntil = quietEligible ? now + CONFIG.stall.NO_HEAL_POINT_QUIET_MS : 0;
+            const refreshEligible = hardFailureMode
+                ? true
+                : canRefresh(monitorState, nextNoHealPointCount, now, refreshUntil);
+            const primaryAction = shouldFailover
+                ? 'failover'
+                : (refreshEligible ? 'refresh' : 'none');
 
             return RecoveryContext.buildDecision('no_heal_point', policyContext, {
                 nextNoHealPointCount,
@@ -7856,13 +8046,13 @@ const NoHealPointPolicy = (() => {
                     && monitorState
                     && nextNoHealPointCount >= CONFIG.stall.PROBATION_AFTER_NO_HEAL_POINTS,
                 shouldFailover,
+                failoverEligible: shouldFailover,
                 emergencyEligible: !hardFailureMode
                     && canEmergencySwitch(monitorState, nextNoHealPointCount, now),
                 lastResortEligible: !hardFailureMode
                     && canLastResortSwitch(monitorState, nextNoHealPointCount, now),
-                refreshEligible: hardFailureMode
-                    ? true
-                    : canRefresh(monitorState, nextNoHealPointCount, now, refreshUntil),
+                refreshEligible,
+                primaryAction,
                 hardFailureMode
             });
         };
@@ -8649,11 +8839,53 @@ const RecoveryManager = (() => {
                 normalized.detail
             );
             const result = policy.handleNoHealPoint(context, policyReason);
-            if (result.shouldFailover) {
-                failoverManager.attemptFailover(context.videoId, policyReason, context.monitorState);
-            }
-            if (result.refreshed) {
+            const failoverEligible = Boolean(result?.failoverEligible ?? result?.shouldFailover);
+            const refreshEligible = Boolean(result?.refreshEligible);
+            const primaryAction = result?.primaryAction
+                || (failoverEligible ? 'failover' : (refreshEligible ? 'refresh' : 'none'));
+            Logger.add(LogEvents.tagged('BACKOFF', 'No-heal action selected'), {
+                videoId: context.videoId,
+                reason: policyReason,
+                trigger: reason,
+                primaryAction,
+                failoverEligible,
+                refreshEligible
+            });
+
+            const tryRefreshFallback = () => {
+                if (!refreshEligible) return false;
+                const refreshed = requestRefresh(context.videoId, context.monitorState, {
+                    reason: 'no_heal_point',
+                    trigger: policyReason,
+                    detail: 'no_heal_point'
+                });
+                Logger.add(LogEvents.tagged('REFRESH', 'No-heal refresh applied'), {
+                    videoId: context.videoId,
+                    reason: policyReason,
+                    trigger: reason,
+                    refreshed
+                });
+                return refreshed;
+            };
+
+            if (primaryAction === 'failover' && failoverEligible) {
+                const failoverStarted = failoverManager.attemptFailover(context.videoId, policyReason, context.monitorState);
+                if (failoverStarted) {
+                    return;
+                }
+                if (refreshEligible) {
+                    Logger.add(LogEvents.tagged('REFRESH', 'No-heal fallback: refresh after failover unavailable'), {
+                        videoId: context.videoId,
+                        reason: policyReason,
+                        trigger: reason
+                    });
+                }
+                tryRefreshFallback();
                 return;
+            }
+
+            if (primaryAction === 'refresh' || refreshEligible) {
+                tryRefreshFallback();
             }
         };
 

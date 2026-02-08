@@ -25,6 +25,7 @@ describe('NoHealPointPolicy', () => {
 
         expect(decision.data.quietEligible).toBe(false);
         expect(decision.data.shouldFailover).toBe(true);
+        expect(decision.data.primaryAction).toBe('failover');
     });
 
     it('opens a refresh window when headroom is low and readyState is sufficient', () => {
@@ -48,6 +49,7 @@ describe('NoHealPointPolicy', () => {
         expect(decision.data.shouldSetRefreshWindow).toBe(true);
         expect(decision.data.refreshUntil).toBeGreaterThan(now);
         expect(decision.data.refreshEligible).toBe(false);
+        expect(decision.data.primaryAction).toBe('none');
     });
 
     it('triggers failover after prolonged stalls even before no-heal thresholds', () => {
@@ -71,6 +73,7 @@ describe('NoHealPointPolicy', () => {
         const decision = policy.decide({ video, monitorState, now }, 'no_heal_point');
 
         expect(decision.data.shouldFailover).toBe(true);
+        expect(decision.data.primaryAction).toBe('failover');
     });
 
     it('requires buffer starvation for last-resort switching when configured', () => {
@@ -135,5 +138,6 @@ describe('NoHealPointPolicy', () => {
         expect(decision.data.emergencyEligible).toBe(false);
         expect(decision.data.lastResortEligible).toBe(false);
         expect(decision.data.refreshEligible).toBe(true);
+        expect(decision.data.primaryAction).toBe('failover');
     });
 });

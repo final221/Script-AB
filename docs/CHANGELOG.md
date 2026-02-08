@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.10.0 - 2026-02-08T16:55:25.444Z
+Previous: 4.9.0
+Commit: e9ca74a
+Changes:
+- feat: centralize canonical progress model for recovery actions
+
 ## 4.9.0 - 2026-02-08T16:21:58.016Z
 Previous: 4.8.2
 Commit: 8f99887

@@ -6,6 +6,7 @@ const CandidateScorer = (() => {
     const create = (options) => {
         const minProgressMs = options.minProgressMs;
         const isFallbackSource = options.isFallbackSource;
+        const scoreIdentity = options.scoreIdentity || null;
 
         const score = (video, monitor, videoId) => {
             const vs = VideoState.getLite(video, videoId);
@@ -110,6 +111,16 @@ const CandidateScorer = (() => {
                 reasons.push('time_nonzero');
             }
 
+            const identity = typeof scoreIdentity === 'function'
+                ? scoreIdentity(videoId, vs, state)
+                : null;
+            if (Number.isFinite(identity?.identityScore) && identity.identityScore !== 0) {
+                score += identity.identityScore;
+            }
+            if (Array.isArray(identity?.identityReasons) && identity.identityReasons.length) {
+                reasons.push(...identity.identityReasons);
+            }
+
             return {
                 score,
                 reasons,
@@ -117,7 +128,8 @@ const CandidateScorer = (() => {
                 progressAgoMs,
                 progressStreakMs,
                 progressEligible,
-                deadCandidate
+                deadCandidate,
+                identityScore: Number.isFinite(identity?.identityScore) ? identity.identityScore : 0
             };
         };
 

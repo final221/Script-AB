@@ -17,7 +17,6 @@ const RecoveryDecisionApplier = (() => {
         const candidateSelector = options.candidateSelector;
         const logDebug = options.logDebug || (() => {});
         const onRescan = options.onRescan || (() => {});
-        const onPersistentFailure = options.onPersistentFailure || (() => {});
         const probationPolicy = options.probationPolicy;
         const shouldLogBackoffSkip = (monitorState, backoff, now) => {
             if (!monitorState || !backoff) return false;
@@ -50,30 +49,13 @@ const RecoveryDecisionApplier = (() => {
             }
             return false;
         };
-        const applyRefresh = (videoId, monitorState, reason, now) => {
-            if (!monitorState) return false;
-            PlaybackStateStore.markRefresh(monitorState, now);
-            PlaybackStateStore.setNoHealPointRefreshUntil(monitorState, 0);
-            logDebug(
-                LogEvents.tagged('REFRESH', 'Refreshing video after repeated no-heal points'),
-                RecoveryLogDetails.refresh({
-                    videoId,
-                    reason,
-                    noHealPointCount: monitorState.noHealPointCount
-                })
-            );
-            PlaybackStateStore.setNoHealPointCount(monitorState, 0);
-            onPersistentFailure(videoId, {
-                reason,
-                detail: 'no_heal_point'
-            });
-            return true;
-        };
         const applyNoHealPointDecision = (decision) => {
             if (!decision || decision.type !== 'no_heal_point') {
                 return {
                     shouldFailover: false,
-                    refreshed: false,
+                    failoverEligible: false,
+                    refreshEligible: false,
+                    primaryAction: 'none',
                     probationTriggered: false,
                     emergencySwitched: false
                 };
@@ -96,7 +78,9 @@ const RecoveryDecisionApplier = (() => {
                 });
                 return {
                     shouldFailover: false,
-                    refreshed: false,
+                    failoverEligible: false,
+                    refreshEligible: false,
+                    primaryAction: 'none',
                     probationTriggered: false,
                     emergencySwitched: false
                 };
@@ -139,13 +123,16 @@ const RecoveryDecisionApplier = (() => {
                     allowDead: CONFIG.stall.NO_HEAL_POINT_LAST_RESORT_ALLOW_DEAD
                 })
                 : false;
-            const refreshed = !emergencySwitched && !lastResortSwitched && data.refreshEligible
-                ? applyRefresh(videoId, monitorState, reason, now)
-                : false;
+            const failoverEligible = Boolean(data.failoverEligible ?? data.shouldFailover);
+            const refreshEligible = Boolean(data.refreshEligible);
+            const primaryAction = data.primaryAction
+                || (failoverEligible ? 'failover' : (refreshEligible ? 'refresh' : 'none'));
 
             return {
-                shouldFailover: data.shouldFailover,
-                refreshed,
+                shouldFailover: failoverEligible,
+                failoverEligible,
+                refreshEligible,
+                primaryAction,
                 probationTriggered,
                 emergencySwitched: emergencySwitched || lastResortSwitched
             };

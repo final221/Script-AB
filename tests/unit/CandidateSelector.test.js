@@ -293,4 +293,57 @@ describe('CandidateSelector', () => {
         expect(formerLog.detail.switchReason).toBe('switch:former_stream_check');
         expect(typeof formerLog.detail.status).toBe('string');
     });
+
+    it('prefers stream-continuity candidate when src signature matches active stream origin', () => {
+        const CandidateSelector = window.CandidateSelector;
+        const monitorsById = new Map();
+        const selector = CandidateSelector.create({
+            monitorsById,
+            logDebug: () => {},
+            maxMonitors: 4,
+            minProgressMs: 5000,
+            switchDelta: 2,
+            isFallbackSource: () => false
+        });
+
+        const now = Date.now();
+        const activeVideo = makeVideo({
+            paused: true,
+            readyState: 2,
+            currentTime: 150,
+            currentSrc: 'https://usher.ttvnw.net/api/channel/hls/foo.m3u8?token=active'
+        });
+        const sameStreamCandidate = makeVideo({
+            paused: false,
+            readyState: 2,
+            currentTime: 151,
+            currentSrc: 'https://usher.ttvnw.net/api/channel/hls/foo.m3u8?token=alt',
+            buffered: { length: 0, start: () => 0, end: () => 0 }
+        });
+        const differentStreamCandidate = makeVideo({
+            paused: false,
+            readyState: 4,
+            currentTime: 40,
+            currentSrc: 'https://usher.ttvnw.net/api/channel/hls/bar.m3u8?token=other',
+            buffered: { length: 1, start: () => 30, end: () => 50 }
+        });
+
+        monitorsById.set('video-1', {
+            video: activeVideo,
+            monitor: { state: { state: 'STALLED', hasProgress: true, lastProgressTime: now - 500, progressStreakMs: 6000, progressEligible: true } }
+        });
+        monitorsById.set('video-2', {
+            video: sameStreamCandidate,
+            monitor: { state: { state: 'PLAYING', hasProgress: true, lastProgressTime: now, progressStreakMs: 7000, progressEligible: true } }
+        });
+        monitorsById.set('video-3', {
+            video: differentStreamCandidate,
+            monitor: { state: { state: 'PLAYING', hasProgress: true, lastProgressTime: now, progressStreakMs: 7000, progressEligible: true } }
+        });
+
+        selector.setActiveId('video-1', 'test_setup');
+        selector.evaluateCandidates('identity_continuity');
+
+        expect(selector.getActiveId()).toBe('video-2');
+    });
 });

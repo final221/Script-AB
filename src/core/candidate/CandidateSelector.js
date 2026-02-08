@@ -16,8 +16,18 @@ const CandidateSelector = (() => {
             lastGoodCandidateId: null
         };
         let lockChecker = null;
+        const streamIdentity = StreamIdentityModel.create({
+            monitorsById,
+            isFallbackSource
+        });
 
-        const scorer = CandidateScorer.create({ minProgressMs, isFallbackSource });
+        const scorer = CandidateScorer.create({
+            minProgressMs,
+            isFallbackSource,
+            scoreIdentity: (videoId, videoState, monitorState) => (
+                streamIdentity.scoreCandidate(videoId, videoState, monitorState, getActiveIdRaw())
+            )
+        });
         const switchPolicy = CandidateSwitchPolicy.create({
             switchDelta,
             minProgressMs,
@@ -53,6 +63,7 @@ const CandidateSelector = (() => {
             }
             state.activeCandidateId = id;
             formerStreamTracker.onActive(id);
+            streamIdentity.observeActive(id, reason);
         };
         const getLastGoodId = () => state.lastGoodCandidateId;
         const setLastGoodId = (id) => {
@@ -190,6 +201,7 @@ const CandidateSelector = (() => {
         });
 
         const evaluateCandidates = (reason) => {
+            streamIdentity.observeActive(getActiveIdRaw(), `pre_eval:${reason}`);
             const result = selectionEngine.evaluateCandidates(reason);
             if (!result) {
                 observeFormerStreams(reason);
@@ -220,6 +232,7 @@ const CandidateSelector = (() => {
                 Logger.add(LogEvents.tagged('CANDIDATE', 'Active video set'), {
                     to: result.activation.toId,
                     reason: result.activation.reason,
+                    streamOriginVideoId: streamIdentity.getSnapshot().originVideoId,
                     scores: result.scores
                 });
                 setActiveId(result.activation.toId, `activation:${result.activation.reason}`);
@@ -237,8 +250,10 @@ const CandidateSelector = (() => {
                         noHealPointCount: decision.activeNoHealPoints,
                         stalledForMs: decision.activeStalledForMs,
                         preferredScore: decision.preferred.score,
+                        preferredIdentityScore: decision.preferred.identityScore || 0,
                         preferredProgressStreakMs: decision.preferred.progressStreakMs,
-                        preferredTrusted: decision.preferred.trusted
+                        preferredTrusted: decision.preferred.trusted,
+                        streamOriginVideoId: streamIdentity.getSnapshot().originVideoId
                     });
                     setActiveId(decision.toId, `fast_switch:${decision.reason}`);
                     logOutcome(decision);
@@ -255,9 +270,11 @@ const CandidateSelector = (() => {
                         delta: decision.policyDecision.delta,
                         currentScore: decision.policyDecision.currentScore,
                         bestScore: decision.preferred.score,
+                        bestIdentityScore: decision.preferred.identityScore || 0,
                         bestProgressStreakMs: decision.preferred.progressStreakMs,
                         bestProgressEligible: decision.preferred.progressEligible,
                         probationActive: decision.probationActive,
+                        streamOriginVideoId: streamIdentity.getSnapshot().originVideoId,
                         scores: result.scores
                     });
                     setActiveId(decision.toId, `switch:${decision.reason}`);

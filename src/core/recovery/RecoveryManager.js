@@ -86,11 +86,53 @@ const RecoveryManager = (() => {
                 normalized.detail
             );
             const result = policy.handleNoHealPoint(context, policyReason);
-            if (result.shouldFailover) {
-                failoverManager.attemptFailover(context.videoId, policyReason, context.monitorState);
-            }
-            if (result.refreshed) {
+            const failoverEligible = Boolean(result?.failoverEligible ?? result?.shouldFailover);
+            const refreshEligible = Boolean(result?.refreshEligible);
+            const primaryAction = result?.primaryAction
+                || (failoverEligible ? 'failover' : (refreshEligible ? 'refresh' : 'none'));
+            Logger.add(LogEvents.tagged('BACKOFF', 'No-heal action selected'), {
+                videoId: context.videoId,
+                reason: policyReason,
+                trigger: reason,
+                primaryAction,
+                failoverEligible,
+                refreshEligible
+            });
+
+            const tryRefreshFallback = () => {
+                if (!refreshEligible) return false;
+                const refreshed = requestRefresh(context.videoId, context.monitorState, {
+                    reason: 'no_heal_point',
+                    trigger: policyReason,
+                    detail: 'no_heal_point'
+                });
+                Logger.add(LogEvents.tagged('REFRESH', 'No-heal refresh applied'), {
+                    videoId: context.videoId,
+                    reason: policyReason,
+                    trigger: reason,
+                    refreshed
+                });
+                return refreshed;
+            };
+
+            if (primaryAction === 'failover' && failoverEligible) {
+                const failoverStarted = failoverManager.attemptFailover(context.videoId, policyReason, context.monitorState);
+                if (failoverStarted) {
+                    return;
+                }
+                if (refreshEligible) {
+                    Logger.add(LogEvents.tagged('REFRESH', 'No-heal fallback: refresh after failover unavailable'), {
+                        videoId: context.videoId,
+                        reason: policyReason,
+                        trigger: reason
+                    });
+                }
+                tryRefreshFallback();
                 return;
+            }
+
+            if (primaryAction === 'refresh' || refreshEligible) {
+                tryRefreshFallback();
             }
         };
 

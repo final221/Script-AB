@@ -100,6 +100,12 @@ const NoHealPointPolicy = (() => {
             const quietEligible = !hardFailureMode
                 && canEnterQuiet(monitorState, decisionContext, nextNoHealPointCount);
             const quietUntil = quietEligible ? now + CONFIG.stall.NO_HEAL_POINT_QUIET_MS : 0;
+            const refreshEligible = hardFailureMode
+                ? true
+                : canRefresh(monitorState, nextNoHealPointCount, now, refreshUntil);
+            const primaryAction = shouldFailover
+                ? 'failover'
+                : (refreshEligible ? 'refresh' : 'none');
 
             return RecoveryContext.buildDecision('no_heal_point', policyContext, {
                 nextNoHealPointCount,
@@ -115,13 +121,13 @@ const NoHealPointPolicy = (() => {
                     && monitorState
                     && nextNoHealPointCount >= CONFIG.stall.PROBATION_AFTER_NO_HEAL_POINTS,
                 shouldFailover,
+                failoverEligible: shouldFailover,
                 emergencyEligible: !hardFailureMode
                     && canEmergencySwitch(monitorState, nextNoHealPointCount, now),
                 lastResortEligible: !hardFailureMode
                     && canLastResortSwitch(monitorState, nextNoHealPointCount, now),
-                refreshEligible: hardFailureMode
-                    ? true
-                    : canRefresh(monitorState, nextNoHealPointCount, now, refreshUntil),
+                refreshEligible,
+                primaryAction,
                 hardFailureMode
             });
         };

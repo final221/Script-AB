@@ -88,6 +88,10 @@ const CONFIG = (() => {
             PROBATION_WINDOW_MS: 10000,     // Window to allow untrusted candidate switching
             PROBATION_READY_STATE: 2,       // Minimum readyState to allow probation override
             PROBATION_MIN_PROGRESS_MS: 500, // Require brief progress before probation takeover
+            STREAM_IDENTITY_WINDOW_MS: 120000, // Time window for former-stream continuity hints
+            STREAM_IDENTITY_MATCH_BONUS: 3, // Score bonus when candidate src matches stream origin
+            STREAM_IDENTITY_RECENT_ACTIVE_BONUS: 2, // Score bonus for recently active stream candidates
+            STREAM_IDENTITY_ORIGIN_ID_BONUS: 1, // Score bonus when candidate matches current stream-origin id
             PROGRESS_STREAK_RESET_MS: 2500, // Reset progress streak after this long without progress
             PROGRESS_MIN_DELTA_S: 0.05,     // Minimum forward playhead delta considered real progress
             PROGRESS_RECENT_MS: 2000,       // "Recent progress" threshold for scoring
