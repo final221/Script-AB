@@ -1,4 +1,5 @@
 // --- RecoveryRefreshController ---
+// @module RecoveryRefreshController
 /**
  * Handles refresh eligibility checks, refresh execution, and recovery context normalization.
  */

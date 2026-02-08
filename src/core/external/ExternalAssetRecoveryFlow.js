@@ -1,4 +1,5 @@
 // --- ExternalAssetRecoveryFlow ---
+// @module ExternalAssetRecoveryFlow
 const ExternalAssetRecoveryFlow = (() => {
     const create = (options = {}) => {
         const monitorsById = options.monitorsById;
@@ -17,8 +18,7 @@ const ExternalAssetRecoveryFlow = (() => {
         const getActiveId = () => (
             typeof candidateSelector?.getActiveId === 'function' ? candidateSelector.getActiveId() : null
         );
-        const getEntry = (videoId) => (videoId ? monitorsById.get(videoId) : null);
-        const getState = (videoId) => getEntry(videoId)?.monitor?.state || null;
+        const getEntry = (videoId) => (videoId ? monitorsById.get(videoId) : null); const getState = (videoId) => getEntry(videoId)?.monitor?.state || null;
         const captureCandidateBaseline = (videoId, actionStartMs = Date.now()) => {
             const entry = getEntry(videoId);
             if (!entry) return null;

@@ -1,4 +1,5 @@
 // --- RecoveryManager ---
+// @module RecoveryManager
 /**
  * Coordinates backoff and failover recovery strategies.
  */

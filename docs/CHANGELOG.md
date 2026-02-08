@@ -1,5 +1,17 @@
 # Changelog
 
+## 4.14.8 - 2026-02-08T21:02:16.044Z
+Previous: 4.14.7
+Commit: e311720
+Changes:
+- No commits detected since last build
+
+## 4.14.7 - 2026-02-08T21:01:44.366Z
+Previous: 4.14.6
+Commit: e311720
+Changes:
+- refactor large modules into focused helpers and clear size warnings
+
 ## 4.14.6 - 2026-02-08T20:47:04.616Z
 Previous: 4.14.5
 Commit: e3a7a73

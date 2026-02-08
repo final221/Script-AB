@@ -1,4 +1,5 @@
 // --- Logger ---
+// @module Logger
 /**
  * Logging and telemetry collection with console capture for timeline correlation.
  * @exports add, captureConsole, getMergedTimeline, getLogs, getConsoleLogs

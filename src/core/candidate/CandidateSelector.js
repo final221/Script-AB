@@ -1,4 +1,5 @@
 // --- CandidateSelector ---
+// @module CandidateSelector
 /**
  * Scores and selects the best video candidate for healing.
  */

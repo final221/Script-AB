@@ -1,4 +1,5 @@
 // --- ExternalSignalHandlerAsset ---
+// @module ExternalSignalHandlerAsset
 /**
  * Handles processing/offline asset signals.
  */

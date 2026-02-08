@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.14.6
+// @version       4.14.8
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -177,7 +177,7 @@ const CONFIG = (() => {
  * Build metadata helpers (version injected at build time).
  */
 const BuildInfo = (() => {
-    const VERSION = '4.14.6';
+    const VERSION = '4.14.8';
 
     const getVersion = () => {
         const gmVersion = (typeof GM_info !== 'undefined' && GM_info?.script?.version)
@@ -188,7 +188,7 @@ const BuildInfo = (() => {
             ? unsafeWindow.GM_info.script.version
             : null;
         if (unsafeVersion) return unsafeVersion;
-        if (VERSION && VERSION !== '4.14.6') return VERSION;
+        if (VERSION && VERSION !== '4.14.8') return VERSION;
         return null;
     };
 
@@ -1648,6 +1648,7 @@ const LogNormalizer = (() => {
 })();
 
 // --- LoggerPlaceholderSuppression ---
+// @module LoggerPlaceholderSuppression
 /**
  * Suppresses repetitive placeholder/no-source log churn and emits periodic summaries.
  */
@@ -1794,6 +1795,7 @@ const LoggerPlaceholderSuppression = (() => {
 })();
 
 // --- Logger ---
+// @module Logger
 /**
  * Logging and telemetry collection with console capture for timeline correlation.
  * @exports add, captureConsole, getMergedTimeline, getLogs, getConsoleLogs
@@ -6421,6 +6423,7 @@ const CandidateSelectionLogger = (() => {
 })();
 
 // --- CandidateForceSwitch ---
+// @module CandidateForceSwitch
 /**
  * Encapsulates active-candidate context inspection and forced switch logic.
  */
@@ -6536,6 +6539,7 @@ const CandidateForceSwitch = (() => {
 })();
 
 // --- CandidateSelector ---
+// @module CandidateSelector
 /**
  * Scores and selects the best video candidate for healing.
  */
@@ -7658,6 +7662,7 @@ const RecoveryLogDetails = (() => {
 })();
 
 // --- RecoveryStallSkipApplier ---
+// @module RecoveryStallSkipApplier
 /**
  * Applies stall skip decisions and throttled skip logging.
  */
@@ -7764,6 +7769,7 @@ const RecoveryStallSkipApplier = (() => {
 })();
 
 // --- RecoveryDecisionApplier ---
+// @module RecoveryDecisionApplier
 /**
  * Applies recovery policy decisions with centralized side effects.
  */
@@ -8847,6 +8853,7 @@ const FailoverManager = (() => {
 })();
 
 // --- RecoveryRefreshController ---
+// @module RecoveryRefreshController
 /**
  * Handles refresh eligibility checks, refresh execution, and recovery context normalization.
  */
@@ -9009,6 +9016,7 @@ const RecoveryRefreshController = (() => {
 })();
 
 // --- RecoveryManager ---
+// @module RecoveryManager
 /**
  * Coordinates backoff and failover recovery strategies.
  */
@@ -10841,6 +10849,7 @@ const ExternalSignalHandlerStall = (() => {
 })();
 
 // --- ExternalAssetRecoveryFlow ---
+// @module ExternalAssetRecoveryFlow
 const ExternalAssetRecoveryFlow = (() => {
     const create = (options = {}) => {
         const monitorsById = options.monitorsById;
@@ -10859,8 +10868,7 @@ const ExternalAssetRecoveryFlow = (() => {
         const getActiveId = () => (
             typeof candidateSelector?.getActiveId === 'function' ? candidateSelector.getActiveId() : null
         );
-        const getEntry = (videoId) => (videoId ? monitorsById.get(videoId) : null);
-        const getState = (videoId) => getEntry(videoId)?.monitor?.state || null;
+        const getEntry = (videoId) => (videoId ? monitorsById.get(videoId) : null); const getState = (videoId) => getEntry(videoId)?.monitor?.state || null;
         const captureCandidateBaseline = (videoId, actionStartMs = Date.now()) => {
             const entry = getEntry(videoId);
             if (!entry) return null;
@@ -11091,6 +11099,7 @@ const ExternalAssetRecoveryFlow = (() => {
 })();
 
 // --- ExternalSignalHandlerAsset ---
+// @module ExternalSignalHandlerAsset
 /**
  * Handles processing/offline asset signals.
  */

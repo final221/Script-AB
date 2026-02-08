@@ -1,4 +1,5 @@
 // --- RecoveryDecisionApplier ---
+// @module RecoveryDecisionApplier
 /**
  * Applies recovery policy decisions with centralized side effects.
  */

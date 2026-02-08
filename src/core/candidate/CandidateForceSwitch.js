@@ -1,4 +1,5 @@
 // --- CandidateForceSwitch ---
+// @module CandidateForceSwitch
 /**
  * Encapsulates active-candidate context inspection and forced switch logic.
  */
