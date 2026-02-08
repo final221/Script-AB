@@ -91,6 +91,7 @@
 - Userscript output must remain dependency-free (no external runtime deps).
 - Use `LogEvents` + `Logger` for logs; update LogTags when adding new tags.
 - File size cap: keep files ~200 lines (+/-50). Anything above is auto-flagged for refactor.
+- When changing public debug hooks or hot-path flow names/entrypoints, update `docs/AI_CONTEXT.md` in the same change.
 
 ## Quick refs (only if needed)
 - docs/DEBUGGING.md

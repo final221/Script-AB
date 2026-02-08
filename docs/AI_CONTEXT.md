@@ -25,9 +25,9 @@
 - `docs/ARCHITECTURE.md`: **Truth**. Always cross-reference this for module interactions.
 
 ## Hot Paths (read first)
-- Stall detect: `PlaybackWatchdog.tick()` -> `PlaybackStateTracker` -> `StreamHealer.onStall()`
+- Stall detect: `PlaybackWatchdog.tick()` -> `PlaybackStateTracker` -> `RecoveryOrchestrator.onStallDetected()` -> `StallHandler.onStallDetected()`
 - Heal attempt: `StreamHealer.attemptHeal()` -> `HealPipeline.attemptHeal()` -> `HealPointPoller.pollForHealPoint()` -> `LiveEdgeSeeker.seekAndPlay()`
-- No-heal-point: `HealPipeline.attemptHeal()` -> `RecoveryManager.handleNoHealPoint()` -> `NoHealPointPolicy.handleNoHealPoint()`
+- No-heal-point: `HealPointPoller.pollForHealPoint()` -> `RecoveryManager.handleNoHealPoint()` -> `NoHealPointPolicy.decide()`
 - Play error: `HealPipeline.attemptHeal()` -> `RecoveryManager.handlePlayFailure()` -> `PlayErrorPolicy.handlePlayFailure()`
 - Candidate switch: `CandidateSelector.evaluateCandidates()` -> `CandidateDecision.decide()` -> `CandidateSwitchPolicy.shouldSwitch()`
 - Failover: `RecoveryManager.handleNoHealPoint()/handlePlayFailure()` -> `FailoverManager.attemptFailover()`
@@ -38,7 +38,6 @@
 - **Seek Failures**: Check `src/recovery/LiveEdgeSeeker.js`.
 - **Adding Logs**: Use `src/monitoring/Logger.js`.
 - **Verification + Build**: See `AGENTS.md` (single source of workflow truth).
-- **Workflow + verification**: See `AGENTS.md`.
 - **Red Team findings**: Check `tests/RED_TEAM_FINDINGS.md`.
 
 ## Generated Artifacts
@@ -100,6 +99,7 @@ Use this to route changes quickly.
 ## Debugging Tools
 The following global functions are exposed for debugging:
 - `window.exportTwitchAdLogs()`: Downloads report (healer + metrics + merged script/console logs).
+- `window.triggerTwitchAdLastResort(options?)`: Forces last-resort refresh flow (log export + page reload path).
 
 ## Docs Index
 

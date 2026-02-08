@@ -1,5 +1,12 @@
 # Changelog
 
+## 4.14.2 - 2026-02-08T20:22:59.882Z
+Previous: 4.14.1
+Commit: 4e5c72b
+Changes:
+- Delete orphan files and stale AI context note
+- Remove unused debug runner and patterns data
+
 ## 4.14.1 - 2026-02-08T20:12:02.077Z
 Previous: 4.14.0
 Commit: e5ae179

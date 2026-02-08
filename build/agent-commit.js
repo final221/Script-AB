@@ -1,4 +1,6 @@
 const { spawnSync } = require('child_process');
+const fs = require('fs');
+const path = require('path');
 
 const run = (command, args, opts = {}) => {
     const isWin = process.platform === 'win32';
@@ -27,6 +29,23 @@ const filesToAdd = [
     'package.json',
 ];
 
-run('git', ['add', ...filesToAdd]);
+const rootsToAdd = [
+    'src',
+    'tests',
+    'docs',
+    'build',
+    'data'
+];
+
+const existingRoots = rootsToAdd.filter((entry) => (
+    fs.existsSync(path.join(process.cwd(), entry))
+));
+
+// Stage all tracked edits/deletions first so source changes are never skipped.
+run('git', ['add', '-u']);
+
+// Stage generated/release and source roots (includes new files in these roots).
+run('git', ['add', ...filesToAdd, ...existingRoots]);
+
 run('git', ['commit', '-m', commitMessage]);
 run('git', ['push']);
