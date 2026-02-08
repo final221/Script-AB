@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.8.2 - 2026-02-08T15:58:32.000Z
+Previous: 4.8.1
+Commit: aad97ad
+Changes:
+- chore: reduce log churn in scan and stall loops
+
 ## 4.8.1 - 2026-02-08T15:55:27.617Z
 Previous: 4.8.0
 Commit: 2f3cd0a
