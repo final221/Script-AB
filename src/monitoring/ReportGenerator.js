@@ -1,3 +1,4 @@
+// @module ReportGenerator
 // --- ReportGenerator ---
 /**
  * Generates and facilitates the download of a comprehensive report.

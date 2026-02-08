@@ -1,3 +1,4 @@
+// @module PlaybackSyncLogic
 // --- PlaybackSyncLogic ---
 /**
  * Sync drift sampling helper.

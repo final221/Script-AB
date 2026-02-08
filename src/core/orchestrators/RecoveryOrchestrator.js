@@ -1,3 +1,4 @@
+// @module RecoveryOrchestrator
 // --- RecoveryOrchestrator ---
 /**
  * Coordinates stall handling, healing, and external signal recovery.

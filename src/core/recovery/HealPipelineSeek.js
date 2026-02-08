@@ -1,3 +1,4 @@
+// @module HealPipelineSeek
 // --- HealPipelineSeek ---
 /**
  * Seek and retry helpers for heal attempts.

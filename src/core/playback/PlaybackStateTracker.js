@@ -1,3 +1,4 @@
+// @module PlaybackStateTracker
 // --- PlaybackStateTracker ---
 /**
  * Shared playback state tracking for PlaybackMonitor.

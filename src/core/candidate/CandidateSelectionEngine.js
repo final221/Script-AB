@@ -1,3 +1,4 @@
+// @module CandidateSelectionEngine
 // --- CandidateSelectionEngine ---
 /**
  * Evaluation flow for selecting the active candidate.

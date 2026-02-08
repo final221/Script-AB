@@ -1,3 +1,4 @@
+// @module CatchUpController
 // --- CatchUpController ---
 /**
  * Schedules catch-up seeks toward the live edge after healing.

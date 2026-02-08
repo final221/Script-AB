@@ -1,3 +1,4 @@
+// @module LegendRenderer
 // --- LegendRenderer ---
 /**
  * Builds the legend section for report exports.

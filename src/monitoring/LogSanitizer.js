@@ -1,3 +1,4 @@
+// @module LogSanitizer
 // --- LogSanitizer ---
 /**
  * Helpers for normalizing and sanitizing log details.

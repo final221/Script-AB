@@ -1,3 +1,4 @@
+// @module PlaybackEventHandlersReady
 // --- PlaybackEventHandlersReady ---
 /**
  * Ready/playback-start event handlers.

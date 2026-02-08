@@ -1,3 +1,4 @@
+// @module PlaybackStallStateMachine
 // --- PlaybackStallStateMachine ---
 /**
  * Centralizes stall-related state transitions.

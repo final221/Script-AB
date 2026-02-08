@@ -1,3 +1,4 @@
+// @module PlaybackEventHandlersStall
 // --- PlaybackEventHandlersStall ---
 /**
  * Stall-related playback event handlers.

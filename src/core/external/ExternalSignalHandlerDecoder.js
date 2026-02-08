@@ -1,3 +1,4 @@
+// @module ExternalSignalHandlerDecoder
 // --- ExternalSignalHandlerDecoder ---
 /**
  * Handles decoder/runtime error signals (IVS wasm worker failures).

@@ -1,3 +1,4 @@
+// @module LogContext
 // --- LogContext ---
 /**
  * Shared helper for consistent log payloads with video context.

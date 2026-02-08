@@ -1,3 +1,4 @@
+// @module PlaybackEventHandlersProgress
 // --- PlaybackEventHandlersProgress ---
 /**
  * Progress-related playback event handlers.

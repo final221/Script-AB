@@ -1,3 +1,4 @@
+// @module PlaybackMonitor
 // --- PlaybackMonitor ---
 /**
  * Tracks playback progress using media events plus a watchdog interval.

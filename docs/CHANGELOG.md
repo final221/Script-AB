@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.14.11 - 2026-02-08T21:16:51.631Z
+Previous: 4.14.10
+Commit: 9d78f25
+Changes:
+- build: default to graph manifest mode with legacy rollback
+
 ## 4.14.10 - 2026-02-08T21:11:50.415Z
 Previous: 4.14.9
 Commit: d93b452

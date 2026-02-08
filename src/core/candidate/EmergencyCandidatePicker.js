@@ -1,3 +1,4 @@
+// @module EmergencyCandidatePicker
 // --- EmergencyCandidatePicker ---
 /**
  * Emergency candidate selection for no-heal-point scenarios.

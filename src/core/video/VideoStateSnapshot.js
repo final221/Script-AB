@@ -1,3 +1,4 @@
+// @module VideoStateSnapshot
 // --- VideoStateSnapshot ---
 /**
  * Standardized helpers for capturing video state snapshots for logs.

@@ -1,3 +1,4 @@
+// @module TimelineRenderer
 // --- TimelineRenderer ---
 /**
  * Renders the merged log timeline for report exports.

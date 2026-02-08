@@ -1,3 +1,4 @@
+// @module VideoState
 // --- VideoState ---
 /**
  * Shared helper for consistent video state logging.

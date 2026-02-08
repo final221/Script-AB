@@ -1,3 +1,4 @@
+// @module RecoveryPolicyFactory
 // --- RecoveryPolicyFactory ---
 /**
  * Factory that wires recovery policy submodules into a single policy interface.

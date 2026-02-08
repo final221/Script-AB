@@ -1,3 +1,4 @@
+// @module ConsoleSignalDetector
 // --- ConsoleSignalDetector ---
 /**
  * Detects console messages that hint at playback issues.

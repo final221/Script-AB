@@ -152,9 +152,6 @@ const updateChangelog = (oldVersion, newVersion) => {
     if (manifestResult.updated) {
         console.log('[build] Updated build/manifest.json');
     }
-    const manifest = JSON.parse(fs.readFileSync(CONFIG.MANIFEST, 'utf8'));
-    const priority = Array.isArray(manifest.priority) ? manifest.priority : [];
-    const entry = manifest.entry || 'core/orchestrators/CoreOrchestrator.js';
 
     const normalizeBump = (value) => {
         if (!value) return null;
@@ -194,8 +191,7 @@ const updateChangelog = (oldVersion, newVersion) => {
     const srcDir = path.join(CONFIG.BASE, 'src');
     const { priorityFiles, entryFile, otherFiles, mode: manifestMode, graphReport } = getLoadOrder({
         srcDir,
-        manifestPath: CONFIG.MANIFEST,
-        manifest: { priority, entry }
+        manifestPath: CONFIG.MANIFEST
     });
     console.log(`[build] Manifest mode: ${manifestMode}`);
     if (graphReport) {

@@ -1,3 +1,4 @@
+// @module PlaybackStateDefaults
 // --- PlaybackStateDefaults ---
 /**
  * Provides initial playback state structure and alias map.

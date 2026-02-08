@@ -1,3 +1,4 @@
+// @module StallSkipPolicy
 // --- StallSkipPolicy ---
 /**
  * Determines when stall handling should be skipped due to backoff or recovery windows.

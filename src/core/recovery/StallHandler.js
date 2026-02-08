@@ -1,3 +1,4 @@
+// @module StallHandler
 // --- StallHandler ---
 /**
  * Encapsulates stall handling flow (gating, logging, recovery triggers).

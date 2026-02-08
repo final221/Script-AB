@@ -1,3 +1,4 @@
+// @module BufferRanges
 // --- BufferRanges ---
 /**
  * Helpers for working with media buffer ranges.

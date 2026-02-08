@@ -1,3 +1,4 @@
+// @module ResourceWindow
 // --- ResourceWindow ---
 /**
  * Tracks network resource activity for stall-adjacent windows.

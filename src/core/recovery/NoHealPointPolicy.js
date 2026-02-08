@@ -1,3 +1,4 @@
+// @module NoHealPointPolicy
 // --- NoHealPointPolicy ---
 /**
  * Handles no-heal-point scenarios, refreshes, and failover decisions.

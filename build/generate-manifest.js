@@ -2,197 +2,99 @@ const fs = require('fs');
 const path = require('path');
 
 const { listJsFilesRecursive } = require('./file-utils');
+const { collectModuleMetadata, buildDependencyGraph, topoSort } = require('./manifest-graph');
 
 const ROOT = path.join(__dirname, '..');
 const SRC = path.join(ROOT, 'src');
 const MANIFEST_PATH = path.join(__dirname, 'manifest.json');
+const LEGACY_MANIFEST_PATH = path.join(__dirname, 'manifest.legacy.json');
+const DEFAULT_ENTRY = 'core/orchestrators/CoreOrchestrator.js';
 
 const toPosix = (filePath) => filePath.replace(/\\/g, '/');
 
-const listJsFiles = (dir) => listJsFilesRecursive(dir);
-
-const buildSection = (baseDir, orderedFiles, seen, options = {}) => {
-    const section = [];
-    const baseAbs = path.join(SRC, baseDir);
-    const orderedAbs = orderedFiles.map(file => path.join(baseAbs, file));
-    const exclude = new Set(options.exclude || []);
-
-    orderedAbs.forEach((filePath) => {
-        if (!fs.existsSync(filePath)) {
-            throw new Error(`[generate-manifest] Missing file: ${toPosix(path.relative(SRC, filePath))}`);
-        }
-        const rel = toPosix(path.relative(SRC, filePath));
-        if (!seen.has(rel)) {
-            seen.add(rel);
-            section.push(rel);
-        }
-    });
-
-    const allFiles = listJsFiles(baseAbs)
-        .map(filePath => toPosix(path.relative(SRC, filePath)));
-    const remainder = allFiles
-        .filter(rel => !seen.has(rel))
-        .filter(rel => !exclude.has(path.basename(rel)))
-        .sort((a, b) => a.localeCompare(b));
-
-    remainder.forEach((rel) => {
-        if (!seen.has(rel)) {
-            seen.add(rel);
-            section.push(rel);
-        }
-    });
-
-    return section;
+const readManifestSafe = (filePath) => {
+    if (!fs.existsSync(filePath)) return null;
+    try {
+        return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+    } catch (error) {
+        return null;
+    }
 };
 
-const buildCoreSection = (subfolder, orderedFiles, seen, options) => (
-    buildSection(path.join('core', subfolder), orderedFiles, seen, options)
-);
+const buildOrderHint = ({ manifests, pathToModule }) => {
+    const hint = new Map();
+    let cursor = 0;
+    manifests.forEach((manifest) => {
+        if (!manifest) return;
+        const orderedPaths = [
+            ...(Array.isArray(manifest.priority) ? manifest.priority : []),
+            manifest.entry || DEFAULT_ENTRY
+        ];
+        orderedPaths.forEach((relPath) => {
+            const moduleName = pathToModule.get(relPath);
+            if (!moduleName || hint.has(moduleName)) return;
+            hint.set(moduleName, cursor);
+            cursor += 1;
+        });
+    });
+    return hint;
+};
+
+const buildGraphIssues = ({ duplicates, unresolvedDependencies, topo }) => {
+    const issues = [];
+    if (duplicates.length > 0) {
+        issues.push(`duplicate_modules:${duplicates.length}`);
+    }
+    if (unresolvedDependencies.length > 0) {
+        issues.push(`unresolved_dependencies:${unresolvedDependencies.length}`);
+    }
+    if (!topo.ok) {
+        issues.push(`cycles:${topo.cycleNodes.length}`);
+    }
+    return issues;
+};
 
 const buildManifest = () => {
-    const seen = new Set();
-    const priority = [];
+    const allJsFiles = listJsFilesRecursive(SRC)
+        .map(filePath => toPosix(path.relative(SRC, filePath)))
+        .sort((a, b) => a.localeCompare(b));
+    const entry = DEFAULT_ENTRY;
 
-    priority.push(...buildSection('config', [
-        'Config.js',
-        'BuildInfo.js',
-        'Tuning.js',
-        'Validate.js'
-    ], seen));
+    if (!allJsFiles.includes(entry)) {
+        throw new Error(`[generate-manifest] Missing entry file: ${entry}`);
+    }
 
-    priority.push(...buildSection('utils', [
-        'Utils.js',
-        'Adapters.js'
-    ], seen));
+    const metadata = collectModuleMetadata(SRC);
+    const graph = buildDependencyGraph(metadata.moduleToEntry);
+    const currentManifest = readManifestSafe(MANIFEST_PATH);
+    const legacyManifest = readManifestSafe(LEGACY_MANIFEST_PATH);
+    const hint = buildOrderHint({
+        manifests: [legacyManifest, currentManifest],
+        pathToModule: metadata.pathToModule
+    });
+    const topo = topoSort(graph, hint);
+    const issues = buildGraphIssues({
+        duplicates: metadata.duplicates,
+        unresolvedDependencies: graph.unresolvedDependencies,
+        topo
+    });
 
-    priority.push(...buildSection('recovery', [
-        'BufferRanges.js',
-        'HealPointFinder.js',
-        'BufferGapFinder.js',
-        'SeekTargetCalculator.js',
-        'LiveEdgeSeeker.js'
-    ], seen));
+    if (issues.length > 0) {
+        throw new Error(`[generate-manifest] Invalid graph metadata (${issues.join(', ')})`);
+    }
 
-    priority.push(...buildSection('monitoring', [
-        'ErrorClassifier.js',
-        'LogTags.js',
-        'LogTagGroups.js',
-        'LogTagSchemas.js',
-        'LogTagRegistry.js',
-        'LogSchemas.js',
-        'LogSanitizer.js',
-        'LogNormalizer.js',
-        'LoggerPlaceholderSuppression.js',
-        'Logger.js',
-        'LogEvents.js',
-        'TagCategorizer.js',
-        'DetailFormatter.js',
-        'LogFormatter.js',
-        'LegendRenderer.js',
-        'ReportTemplate.js',
-        'ResourceWindow.js',
-        'Metrics.js',
-        'TimelineRenderer.js',
-        'ReportGenerator.js',
-        'ConsoleInterceptor.js',
-        'ConsoleSignalDetector.js',
-        'Instrumentation.js'
-    ], seen));
-
-    priority.push(...buildCoreSection('video', [
-        'VideoState.js',
-        'VideoStateSnapshot.js',
-        'StateSnapshot.js',
-        'MonitorRegistry.js',
-        'MonitorCoordinator.js',
-        'VideoDiscovery.js'
-    ], seen));
-
-    priority.push(...buildCoreSection('playback', [
-        'PlaybackLogHelper.js',
-        'PlaybackStateDefaults.js',
-        'PlaybackMediaWatcher.js',
-        'MediaState.js',
-        'PlaybackStateStore.js',
-        'PlaybackStateTransitions.js',
-        'PlaybackStallStateMachine.js',
-        'PlaybackResetLogic.js',
-        'PlaybackProgressReset.js',
-        'PlaybackProgressTracker.js',
-        'PlaybackProgressLogic.js',
-        'PlaybackSyncLogic.js',
-        'PlaybackStarvationLogic.js',
-        'PlaybackStateTracker.js',
-        'PlaybackEventLogger.js',
-        'PlaybackEventHandlersProgress.js',
-        'PlaybackEventHandlersReady.js',
-        'PlaybackEventHandlersStall.js',
-        'PlaybackEventHandlersLifecycle.js',
-        'PlaybackEventHandlers.js',
-        'PlaybackWatchdog.js',
-        'PlaybackMonitor.js'
-    ], seen));
-
-    priority.push(...buildCoreSection('candidate', [
-        'CandidateScorer.js',
-        'CandidateSwitchPolicy.js',
-        'CandidateDecision.js',
-        'CandidateTrust.js',
-        'CandidateScoreRecord.js',
-        'CandidateProbation.js',
-        'CandidateEvaluation.js',
-        'CandidateSelectionLogger.js',
-        'CandidateForceSwitch.js',
-        'CandidateSelector.js'
-    ], seen));
-
-    priority.push(...buildCoreSection('recovery', [
-        'RecoveryContext.js',
-        'BackoffManager.js',
-        'ProbationPolicy.js',
-        'RecoveryLogDetails.js',
-        'RecoveryStallSkipApplier.js',
-        'RecoveryDecisionApplier.js',
-        'NoHealPointPolicy.js',
-        'PlayErrorPolicy.js',
-        'StallSkipPolicy.js',
-        'RecoveryPolicyFactory.js',
-        'RecoveryPolicy.js',
-        'FailoverCandidatePicker.js',
-        'FailoverProbeController.js',
-        'FailoverManager.js',
-        'RecoveryRefreshController.js',
-        'RecoveryManager.js',
-        'CatchUpController.js',
-        'HealAttemptUtils.js',
-        'HealAttemptLogger.js',
-        'HealAttemptRunner.js',
-        'HealPointPoller.js',
-        'HealPipeline.js',
-        'AdGapSignals.js',
-        'PlayheadAttribution.js'
-    ], seen));
-
-    priority.push(...buildCoreSection('external', [
-        'ExternalSignalUtils.js',
-        'ExternalSignalHandlerStall.js',
-        'ExternalAssetRecoveryFlow.js',
-        'ExternalSignalHandlerAsset.js',
-        'ExternalSignalHandlerAdblock.js',
-        'ExternalSignalHandlerDecoder.js',
-        'ExternalSignalHandlerFallback.js',
-        'ExternalSignalRouter.js'
-    ], seen));
-
-    priority.push(...buildCoreSection('orchestrators', [
-        'MonitoringOrchestrator.js',
-        'RecoveryOrchestrator.js',
-        'StreamHealer.js'
-    ], seen, { exclude: ['CoreOrchestrator.js'] }));
+    const moduleOrdered = topo.ordered
+        .map(moduleName => metadata.moduleToEntry.get(moduleName))
+        .filter(Boolean)
+        .map(entryMeta => entryMeta.relPath);
+    const moduleSet = new Set(moduleOrdered);
+    const missingMetadata = allJsFiles.filter(relPath => !moduleSet.has(relPath));
+    const orderedWithoutEntry = moduleOrdered.filter(relPath => relPath !== entry);
+    const metadataMissingWithoutEntry = missingMetadata.filter(relPath => relPath !== entry);
 
     return {
-        priority,
-        entry: 'core/orchestrators/CoreOrchestrator.js'
+        priority: [...orderedWithoutEntry, ...metadataMissingWithoutEntry],
+        entry
     };
 };
 

@@ -1,3 +1,4 @@
+// @module PlaybackStarvationLogic
 // --- PlaybackStarvationLogic ---
 /**
  * Buffer starvation tracking helper.

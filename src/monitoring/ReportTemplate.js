@@ -1,3 +1,4 @@
+// @module ReportTemplate
 // --- ReportTemplate ---
 /**
  * Shared header/legend template for report exports.

@@ -1,3 +1,4 @@
+// @module PlayheadAttribution
 // --- PlayheadAttribution ---
 /**
  * Resolves console playhead stall hints to a monitored video candidate.

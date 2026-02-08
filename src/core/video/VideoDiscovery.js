@@ -1,3 +1,4 @@
+// @module VideoDiscovery
 // --- VideoDiscovery ---
 /**
  * Scans the DOM for video elements and wires the mutation observer.

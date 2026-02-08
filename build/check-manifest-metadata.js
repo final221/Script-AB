@@ -5,7 +5,7 @@ const { listJsFilesRecursive } = require('./file-utils');
 
 const ROOT = path.join(__dirname, '..');
 const SRC = path.join(ROOT, 'src');
-const POLICY = String(process.env.MODULE_METADATA_POLICY || 'warn').trim().toLowerCase();
+const POLICY = String(process.env.MODULE_METADATA_POLICY || 'error').trim().toLowerCase();
 const VALID_POLICIES = new Set(['warn', 'error', 'off']);
 
 const MODULE_RE = /^\s*\/\/\s*@module\s+([A-Za-z_][A-Za-z0-9_]*)\s*$/m;

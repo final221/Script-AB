@@ -1,3 +1,4 @@
+// @module RecoveryPolicy
 // --- RecoveryPolicy ---
 /**
  * Centralized recovery/backoff policy logic.

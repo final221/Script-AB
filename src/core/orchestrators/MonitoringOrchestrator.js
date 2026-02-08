@@ -1,3 +1,4 @@
+// @module MonitoringOrchestrator
 // --- MonitoringOrchestrator ---
 /**
  * Sets up monitoring, candidate scoring, and recovery helpers.

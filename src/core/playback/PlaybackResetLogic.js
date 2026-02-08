@@ -1,3 +1,4 @@
+// @module PlaybackResetLogic
 // --- PlaybackResetLogic ---
 /**
  * Reset evaluation + pending reset handling for playback state.

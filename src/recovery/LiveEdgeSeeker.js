@@ -1,3 +1,4 @@
+// @module LiveEdgeSeeker
 // --- LiveEdgeSeeker ---
 /**
  * Seeks to a heal point and resumes playback.

@@ -1,3 +1,4 @@
+// @module PlaybackProgressTracker
 // --- PlaybackProgressTracker ---
 /**
  * Tracks progress streaks and candidate eligibility.

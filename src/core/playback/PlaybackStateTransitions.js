@@ -1,3 +1,4 @@
+// @module PlaybackStateTransitions
 // --- PlaybackStateTransitions ---
 /**
  * Centralizes guarded playback state transitions.

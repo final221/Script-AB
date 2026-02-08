@@ -1,3 +1,4 @@
+// @module ExternalSignalHandlerFallback
 // --- ExternalSignalHandlerFallback ---
 /**
  * Logs unhandled external signals.

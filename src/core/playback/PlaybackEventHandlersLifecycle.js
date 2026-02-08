@@ -1,3 +1,4 @@
+// @module PlaybackEventHandlersLifecycle
 // --- PlaybackEventHandlersLifecycle ---
 /**
  * Lifecycle event handlers (ended/error/abort/emptied/suspend).

@@ -1,3 +1,4 @@
+// @module Instrumentation
 // --- Instrumentation ---
 /**
  * Hooks into global events and console methods to monitor application behavior.

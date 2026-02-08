@@ -1,3 +1,4 @@
+// @module HealPipelineRevalidate
 // --- HealPipelineRevalidate ---
 /**
  * Revalidation helpers for heal points.

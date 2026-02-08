@@ -1,3 +1,4 @@
+// @module PlaybackLogHelper
 // --- PlaybackLogHelper ---
 /**
  * Shared logging helpers for playback-related modules.

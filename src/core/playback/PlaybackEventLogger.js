@@ -1,3 +1,4 @@
+// @module PlaybackEventLogger
 // --- PlaybackEventLogger ---
 /**
  * Shared logging for playback event handlers.

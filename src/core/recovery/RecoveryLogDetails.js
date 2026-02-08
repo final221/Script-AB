@@ -1,3 +1,4 @@
+// @module RecoveryLogDetails
 // --- RecoveryLogDetails ---
 /**
  * Shared log detail builders for recovery policies.

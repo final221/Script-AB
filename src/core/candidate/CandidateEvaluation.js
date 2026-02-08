@@ -1,3 +1,4 @@
+// @module CandidateEvaluation
 // --- CandidateEvaluation ---
 /**
  * Aggregates candidate score snapshots for selection decisions.

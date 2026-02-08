@@ -1,3 +1,4 @@
+// @module BuildInfo
 // --- BuildInfo ---
 /**
  * Build metadata helpers (version injected at build time).

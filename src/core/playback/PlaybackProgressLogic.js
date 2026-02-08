@@ -1,3 +1,4 @@
+// @module PlaybackProgressLogic
 // --- PlaybackProgressLogic ---
 /**
  * Progress, ready, and stall-related tracking helpers.

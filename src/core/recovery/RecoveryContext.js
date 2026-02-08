@@ -1,3 +1,4 @@
+// @module RecoveryContext
 // --- RecoveryContext ---
 /**
  * Shared context wrapper for recovery flows.

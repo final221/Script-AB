@@ -1,3 +1,4 @@
+// @module AdGapSignals
 // --- AdGapSignals ---
 /**
  * Detects ad-gap-like buffered range gaps around stalled playheads.

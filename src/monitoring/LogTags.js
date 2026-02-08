@@ -1,3 +1,4 @@
+// @module LogTags
 // --- LogTags ---
 /**
  * Canonical log tag strings for Stream Healer.

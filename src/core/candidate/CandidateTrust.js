@@ -1,3 +1,4 @@
+// @module CandidateTrust
 // --- CandidateTrust ---
 /**
  * Determines whether a candidate is trusted for switching/failover.

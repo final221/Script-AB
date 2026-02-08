@@ -1,3 +1,4 @@
+// @module HealAttemptUtils
 // --- HealAttemptUtils ---
 /**
  * Shared helper functions for heal attempts.

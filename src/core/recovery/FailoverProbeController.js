@@ -1,3 +1,4 @@
+// @module FailoverProbeController
 // --- FailoverProbeController ---
 /**
  * Tracks probe attempts for failover candidates.

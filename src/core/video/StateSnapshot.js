@@ -1,3 +1,4 @@
+// @module StateSnapshot
 // --- StateSnapshot ---
 /**
  * Central helper for consistent video state snapshots.

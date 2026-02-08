@@ -1,3 +1,4 @@
+// @module CandidateSelectionLogger
 // --- CandidateSelectionLogger ---
 /**
  * Logging helpers for candidate selection decisions/suppressions.

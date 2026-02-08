@@ -1,3 +1,4 @@
+// @module BackoffManager
 // --- BackoffManager ---
 /**
  * Tracks stall backoff state for no-heal-point scenarios.

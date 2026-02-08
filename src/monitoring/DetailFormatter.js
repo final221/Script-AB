@@ -1,3 +1,4 @@
+// @module DetailFormatter
 // --- DetailFormatter ---
 /**
  * Formats aligned log lines and detail columns.

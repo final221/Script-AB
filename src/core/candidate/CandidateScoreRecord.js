@@ -1,3 +1,4 @@
+// @module CandidateScoreRecord
 // --- CandidateScoreRecord ---
 /**
  * Standardizes candidate score and trust records.

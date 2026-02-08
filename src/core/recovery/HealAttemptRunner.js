@@ -1,3 +1,4 @@
+// @module HealAttemptRunner
 // --- HealAttemptRunner ---
 /**
  * Executes heal attempts as explicit phases.

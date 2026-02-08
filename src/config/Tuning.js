@@ -1,3 +1,4 @@
+// @module Tuning
 // --- Tuning ---
 /**
  * Derived thresholds and helper accessors for tuning logic.

@@ -1,3 +1,4 @@
+// @module FailoverManager
 // --- FailoverManager ---
 /**
  * Handles candidate failover attempts when healing fails.

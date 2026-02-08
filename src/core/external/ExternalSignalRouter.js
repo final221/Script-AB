@@ -1,3 +1,4 @@
+// @module ExternalSignalRouter
 // --- ExternalSignalRouter ---
 /**
  * Handles console-based external signal hints for recovery actions.

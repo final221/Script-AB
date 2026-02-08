@@ -1,3 +1,4 @@
+// @module MonitorRegistry
 // --- MonitorRegistry ---
 /**
  * Tracks monitored videos and coordinates playback monitoring lifecycle.

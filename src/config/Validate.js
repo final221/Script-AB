@@ -1,3 +1,4 @@
+// @module Validate
 // --- ConfigValidator ---
 /**
  * Lightweight config validation and sanity checks.

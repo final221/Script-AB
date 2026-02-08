@@ -1,3 +1,4 @@
+// @module PlaybackWatchdog
 // --- PlaybackWatchdog ---
 /**
  * Watchdog interval that evaluates stalled playback state.

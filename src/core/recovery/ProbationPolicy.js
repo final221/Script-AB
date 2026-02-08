@@ -1,3 +1,4 @@
+// @module ProbationPolicy
 // --- ProbationPolicy ---
 /**
  * Shared probation/rescan logic for recovery decisions.

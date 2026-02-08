@@ -1,3 +1,4 @@
+// @module SeekTargetCalculator
 // --- SeekTargetCalculator ---
 /**
  * Calculates and validates safe seek targets.

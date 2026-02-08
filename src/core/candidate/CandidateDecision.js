@@ -1,3 +1,4 @@
+// @module CandidateDecision
 // --- CandidateDecision ---
 /**
  * Builds candidate switch decisions from scoring + policy inputs.

@@ -1,3 +1,4 @@
+// @module ConsoleInterceptor
 // --- ConsoleInterceptor ---
 /**
  * Captures console output and forwards to callbacks.

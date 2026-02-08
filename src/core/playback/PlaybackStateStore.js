@@ -1,3 +1,4 @@
+// @module PlaybackStateStore
 // --- PlaybackStateStore ---
 /**
  * Builds playback state objects with alias mapping.

@@ -1,3 +1,4 @@
+// @module CandidateScorer
 // --- CandidateScorer ---
 /**
  * Scores a video candidate based on playback state.

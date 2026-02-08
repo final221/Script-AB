@@ -1,3 +1,4 @@
+// @module HealPipelinePoller
 // --- HealPipelinePoller ---
 /**
  * Polling helpers for heal points.

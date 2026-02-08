@@ -1,3 +1,4 @@
+// @module StreamHealer
 // --- StreamHealer ---
 /**
  * Main orchestrator for stream healing.

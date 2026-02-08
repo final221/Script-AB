@@ -1,3 +1,4 @@
+// @module StreamIdentityModel
 // --- StreamIdentityModel ---
 /**
  * Tracks stream-origin continuity signals so candidate scoring can favor

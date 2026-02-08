@@ -1,3 +1,4 @@
+// @module LogFormatter
 // --- LogFormatter ---
 /**
  * Formats merged script + console logs into aligned report lines.

@@ -1,3 +1,4 @@
+// @module CandidateProbation
 // --- CandidateProbation ---
 /**
  * Handles probation window tracking for candidate switching.

@@ -1,3 +1,4 @@
+// @module PlayErrorPolicy
 // --- PlayErrorPolicy ---
 /**
  * Handles play error backoff and repeat heal-point behavior.

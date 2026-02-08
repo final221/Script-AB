@@ -1,3 +1,4 @@
+// @module Metrics
 // --- Metrics ---
 /**
  * High-level telemetry and metrics tracking for Stream Healer.

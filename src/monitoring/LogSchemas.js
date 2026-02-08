@@ -1,3 +1,4 @@
+// @module LogSchemas
 // --- LogSchemas ---
 /**
  * Optional key ordering hints for log detail payloads.

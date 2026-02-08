@@ -1,3 +1,4 @@
+// @module LogDebug
 // --- LogDebug ---
 /**
  * Shared debug logger helper to avoid repeating CONFIG.debug checks.

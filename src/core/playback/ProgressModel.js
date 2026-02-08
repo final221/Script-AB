@@ -1,3 +1,4 @@
+// @module ProgressModel
 // --- ProgressModel ---
 /**
  * Canonical progress classification helpers shared across recovery flows.

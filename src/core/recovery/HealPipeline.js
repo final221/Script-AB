@@ -1,3 +1,4 @@
+// @module HealPipeline
 // --- HealPipeline ---
 /**
  * Handles heal-point polling and seek recovery.

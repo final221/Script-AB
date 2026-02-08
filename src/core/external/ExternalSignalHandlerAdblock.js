@@ -1,3 +1,4 @@
+// @module ExternalSignalHandlerAdblock
 // --- ExternalSignalHandlerAdblock ---
 /**
  * Handles adblock resource signals.

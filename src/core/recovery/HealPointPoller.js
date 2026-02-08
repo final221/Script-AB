@@ -1,3 +1,4 @@
+// @module HealPointPoller
 // --- HealPointPoller ---
 /**
  * Polls for heal points and detects self-recovery.

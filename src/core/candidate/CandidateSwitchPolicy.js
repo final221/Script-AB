@@ -1,3 +1,4 @@
+// @module CandidateSwitchPolicy
 // --- CandidateSwitchPolicy ---
 /**
  * Determines whether switching candidates should be allowed.

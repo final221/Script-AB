@@ -1,3 +1,4 @@
+// @module MediaState
 // --- MediaState ---
 /**
  * Unified helpers for video state + buffer info.

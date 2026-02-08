@@ -1,3 +1,4 @@
+// @module ErrorClassifier
 // --- Error Classifier ---
 /**
  * Classifies errors based on type, message, and known patterns.
