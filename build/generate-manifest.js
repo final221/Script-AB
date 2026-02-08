@@ -82,6 +82,7 @@ const buildManifest = () => {
         'LogSchemas.js',
         'LogSanitizer.js',
         'LogNormalizer.js',
+        'LoggerPlaceholderSuppression.js',
         'Logger.js',
         'LogEvents.js',
         'TagCategorizer.js',
@@ -141,6 +142,7 @@ const buildManifest = () => {
         'CandidateProbation.js',
         'CandidateEvaluation.js',
         'CandidateSelectionLogger.js',
+        'CandidateForceSwitch.js',
         'CandidateSelector.js'
     ], seen));
 
@@ -149,6 +151,7 @@ const buildManifest = () => {
         'BackoffManager.js',
         'ProbationPolicy.js',
         'RecoveryLogDetails.js',
+        'RecoveryStallSkipApplier.js',
         'RecoveryDecisionApplier.js',
         'NoHealPointPolicy.js',
         'PlayErrorPolicy.js',
@@ -158,6 +161,7 @@ const buildManifest = () => {
         'FailoverCandidatePicker.js',
         'FailoverProbeController.js',
         'FailoverManager.js',
+        'RecoveryRefreshController.js',
         'RecoveryManager.js',
         'CatchUpController.js',
         'HealAttemptUtils.js',
@@ -172,6 +176,7 @@ const buildManifest = () => {
     priority.push(...buildCoreSection('external', [
         'ExternalSignalUtils.js',
         'ExternalSignalHandlerStall.js',
+        'ExternalAssetRecoveryFlow.js',
         'ExternalSignalHandlerAsset.js',
         'ExternalSignalHandlerAdblock.js',
         'ExternalSignalHandlerDecoder.js',

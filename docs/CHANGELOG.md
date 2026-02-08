@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.14.6 - 2026-02-08T20:47:04.616Z
+Previous: 4.14.5
+Commit: e3a7a73
+Changes:
+- add explicit verify warning count output and require reporting in agents
+
 ## 4.14.5 - 2026-02-08T20:37:36.154Z
 Previous: 4.14.4
 Commit: 0e893b4

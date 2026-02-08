@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.14.5
+// @version       4.14.6
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -177,7 +177,7 @@ const CONFIG = (() => {
  * Build metadata helpers (version injected at build time).
  */
 const BuildInfo = (() => {
-    const VERSION = '4.14.5';
+    const VERSION = '4.14.6';
 
     const getVersion = () => {
         const gmVersion = (typeof GM_info !== 'undefined' && GM_info?.script?.version)
@@ -188,7 +188,7 @@ const BuildInfo = (() => {
             ? unsafeWindow.GM_info.script.version
             : null;
         if (unsafeVersion) return unsafeVersion;
-        if (VERSION && VERSION !== '4.14.5') return VERSION;
+        if (VERSION && VERSION !== '4.14.6') return VERSION;
         return null;
     };
 
@@ -1647,21 +1647,11 @@ const LogNormalizer = (() => {
     };
 })();
 
-// --- Logger ---
+// --- LoggerPlaceholderSuppression ---
 /**
- * Logging and telemetry collection with console capture for timeline correlation.
- * @exports add, captureConsole, getMergedTimeline, getLogs, getConsoleLogs
+ * Suppresses repetitive placeholder/no-source log churn and emits periodic summaries.
  */
-const Logger = (() => {
-    const logs = [];
-    const consoleLogs = [];
-    const placeholderVideos = new Map();
-    const placeholderSuppression = {
-        count: 0,
-        windowStartAt: 0,
-        sampleIds: new Set(),
-        sampleElements: new Set()
-    };
+const LoggerPlaceholderSuppression = (() => {
     const PLACEHOLDER_SUPPRESSION_THRESHOLD = 20;
     const PLACEHOLDER_SAMPLE_MAX = 5;
     const PLACEHOLDER_SUPPRESS_TAGS = new Set([
@@ -1681,8 +1671,7 @@ const Logger = (() => {
         if (typeof value === 'number' && Number.isFinite(value)) return String(value);
         if (typeof value !== 'string') return null;
         const match = value.match(/^video-(\d+)$/);
-        if (match) return match[1];
-        return value;
+        return match ? match[1] : value;
     };
 
     const normalizeElementId = (value) => {
@@ -1692,26 +1681,14 @@ const Logger = (() => {
         return null;
     };
 
-    const extractVideoId = (detail) => {
-        if (!detail || typeof detail !== 'object') return null;
-        return normalizeVideoId(detail.videoId ?? detail.video ?? detail.videoState?.id);
-    };
-
-    const extractElementId = (detail) => {
-        if (!detail || typeof detail !== 'object') return null;
-        return normalizeElementId(detail.elementId ?? detail.videoState?.elementId);
-    };
+    const extractVideoId = (detail) => normalizeVideoId(detail?.videoId ?? detail?.video ?? detail?.videoState?.id);
+    const extractElementId = (detail) => normalizeElementId(detail?.elementId ?? detail?.videoState?.elementId);
 
     const extractStateSnapshot = (detail) => {
         if (!detail || typeof detail !== 'object') return null;
-        if (detail.videoState && typeof detail.videoState === 'object') {
-            return detail.videoState;
-        }
+        if (detail.videoState && typeof detail.videoState === 'object') return detail.videoState;
         const keys = ['readyState', 'networkState', 'currentSrc', 'src', 'buffered', 'currentTime', 'paused', 'duration'];
-        if (keys.some(key => Object.prototype.hasOwnProperty.call(detail, key))) {
-            return detail;
-        }
-        return null;
+        return keys.some(key => Object.prototype.hasOwnProperty.call(detail, key)) ? detail : null;
     };
 
     const isPlaceholderState = (state) => {
@@ -1728,84 +1705,106 @@ const Logger = (() => {
         if (typeof LogSanitizer === 'undefined' || !LogSanitizer?.getRawTag) return null;
         const raw = LogSanitizer.getRawTag(message);
         if (!raw) return null;
-        if (raw.startsWith('HEALER:')) return raw.slice(7);
-        return raw;
+        return raw.startsWith('HEALER:') ? raw.slice(7) : raw;
     };
 
-    const buildSuppressionSummary = (windowMs, sampleIds, sampleElements, count) => {
+    const buildSummary = (windowMs, sampleIds, sampleElements, count) => {
         const summaryTag = (typeof LogTags !== 'undefined' && LogTags?.TAG?.SUPPRESSION)
             ? LogTags.TAG.SUPPRESSION
             : '[HEALER:SUPPRESSION_SUMMARY]';
-        const samples = Array.from(sampleIds || []);
-        const elements = Array.from(sampleElements || []);
         return {
             message: summaryTag,
             detail: {
                 message: 'Suppressed placeholder refresh cycles',
                 reason: 'no_source',
                 count,
-                sampleVideos: samples,
-                sampleElements: elements,
+                sampleVideos: Array.from(sampleIds || []),
+                sampleElements: Array.from(sampleElements || []),
                 windowMs
             }
         };
     };
 
-    const maybeSuppressPlaceholder = (message, detail) => {
-        const videoId = extractVideoId(detail);
-        const elementId = extractElementId(detail);
-        const state = extractStateSnapshot(detail);
-        const now = Date.now();
+    const create = () => {
+        const placeholderVideos = new Map();
+        const suppression = {
+            count: 0,
+            windowStartAt: 0,
+            sampleIds: new Set(),
+            sampleElements: new Set()
+        };
 
-        if (videoId && state) {
-            if (isPlaceholderState(state)) {
-                placeholderVideos.set(videoId, {
-                    lastSeenAt: now,
-                    elementId
-                });
-            } else if (placeholderVideos.has(videoId)) {
-                placeholderVideos.delete(videoId);
+        const evaluate = (message, detail) => {
+            const videoId = extractVideoId(detail);
+            const elementId = extractElementId(detail);
+            const state = extractStateSnapshot(detail);
+            const now = Date.now();
+
+            if (videoId && state) {
+                if (isPlaceholderState(state)) {
+                    placeholderVideos.set(videoId, { lastSeenAt: now, elementId });
+                } else {
+                    placeholderVideos.delete(videoId);
+                }
             }
-        }
 
-        if (!videoId || !placeholderVideos.has(videoId)) {
-            return { suppress: false };
-        }
+            if (!videoId || !placeholderVideos.has(videoId)) {
+                return { suppress: false };
+            }
 
-        const tagKey = getTagKey(message);
-        if (!tagKey || !PLACEHOLDER_SUPPRESS_TAGS.has(tagKey)) {
-            return { suppress: false };
-        }
+            const tagKey = getTagKey(message);
+            if (!tagKey || !PLACEHOLDER_SUPPRESS_TAGS.has(tagKey)) {
+                return { suppress: false };
+            }
 
-        if (!placeholderSuppression.windowStartAt) {
-            placeholderSuppression.windowStartAt = now;
-        }
-        placeholderSuppression.count += 1;
-        if (placeholderSuppression.sampleIds.size < PLACEHOLDER_SAMPLE_MAX) {
-            placeholderSuppression.sampleIds.add(videoId);
-        }
-        if (elementId && placeholderSuppression.sampleElements.size < PLACEHOLDER_SAMPLE_MAX) {
-            placeholderSuppression.sampleElements.add(elementId);
-        }
+            if (!suppression.windowStartAt) {
+                suppression.windowStartAt = now;
+            }
+            suppression.count += 1;
+            if (suppression.sampleIds.size < PLACEHOLDER_SAMPLE_MAX) {
+                suppression.sampleIds.add(videoId);
+            }
+            if (elementId && suppression.sampleElements.size < PLACEHOLDER_SAMPLE_MAX) {
+                suppression.sampleElements.add(elementId);
+            }
 
-        const windowMs = now - placeholderSuppression.windowStartAt;
-        const intervalMs = CONFIG?.logging?.SUPPRESSION_LOG_MS || 300000;
-        if (placeholderSuppression.count >= PLACEHOLDER_SUPPRESSION_THRESHOLD || windowMs >= intervalMs) {
-            const summary = buildSuppressionSummary(
-                windowMs,
-                placeholderSuppression.sampleIds,
-                placeholderSuppression.sampleElements,
-                placeholderSuppression.count
-            );
-            placeholderSuppression.count = 0;
-            placeholderSuppression.windowStartAt = 0;
-            placeholderSuppression.sampleIds.clear();
-            placeholderSuppression.sampleElements.clear();
-            return { suppress: true, emit: summary };
-        }
+            const windowMs = now - suppression.windowStartAt;
+            const intervalMs = CONFIG?.logging?.SUPPRESSION_LOG_MS || 300000;
+            if (suppression.count >= PLACEHOLDER_SUPPRESSION_THRESHOLD || windowMs >= intervalMs) {
+                const emit = buildSummary(
+                    windowMs,
+                    suppression.sampleIds,
+                    suppression.sampleElements,
+                    suppression.count
+                );
+                suppression.count = 0;
+                suppression.windowStartAt = 0;
+                suppression.sampleIds.clear();
+                suppression.sampleElements.clear();
+                return { suppress: true, emit };
+            }
 
-        return { suppress: true };
+            return { suppress: true };
+        };
+
+        return { evaluate };
     };
+
+    return { create };
+})();
+
+// --- Logger ---
+/**
+ * Logging and telemetry collection with console capture for timeline correlation.
+ * @exports add, captureConsole, getMergedTimeline, getLogs, getConsoleLogs
+ */
+const Logger = (() => {
+    const logs = [];
+    const consoleLogs = [];
+    const placeholderSuppression = (typeof LoggerPlaceholderSuppression !== 'undefined'
+        && LoggerPlaceholderSuppression?.create)
+        ? LoggerPlaceholderSuppression.create()
+        : { evaluate: () => ({ suppress: false }) };
 
     const normalizeInput = (message, detail) => {
         if (message && typeof message === 'object' && message.message) {
@@ -1847,7 +1846,7 @@ const Logger = (() => {
      */
     const add = (message, detail = null) => {
         const normalized = normalizeInput(message, detail);
-        const suppression = maybeSuppressPlaceholder(normalized.message, normalized.detail);
+        const suppression = placeholderSuppression.evaluate(normalized.message, normalized.detail);
         if (suppression?.emit) {
             pushLog(suppression.emit.message, suppression.emit.detail);
         }
@@ -6421,6 +6420,121 @@ const CandidateSelectionLogger = (() => {
     return { create };
 })();
 
+// --- CandidateForceSwitch ---
+/**
+ * Encapsulates active-candidate context inspection and forced switch logic.
+ */
+const CandidateForceSwitch = (() => {
+    const create = (options) => {
+        const monitorsById = options.monitorsById;
+        const isFallbackSource = options.isFallbackSource;
+        const getActiveId = options.getActiveId;
+        const setActiveId = options.setActiveId;
+        const observeFormerStreams = options.observeFormerStreams;
+        const logDebug = options.logDebug || (() => {});
+
+        const getActiveContext = () => {
+            const activeId = getActiveId();
+            const entry = activeId ? monitorsById.get(activeId) : null;
+            const monitorState = entry ? entry.monitor.state : null;
+            const activeState = monitorState ? monitorState.state : null;
+            const activeIsStalled = !entry || [
+                MonitorStates.STALLED,
+                MonitorStates.RESET,
+                MonitorStates.ERROR
+            ].includes(activeState);
+            const activeIsSevere = activeIsStalled
+                && (activeState === MonitorStates.RESET
+                    || activeState === MonitorStates.ERROR
+                    || monitorState?.bufferStarved);
+            return {
+                activeId,
+                entry,
+                monitorState,
+                activeState,
+                activeIsStalled,
+                activeIsSevere
+            };
+        };
+
+        const isFallbackCandidate = (candidate) => {
+            if (!candidate) return false;
+            if (candidate.reasons?.includes('fallback_src')) return true;
+            const src = candidate.vs?.currentSrc || candidate.vs?.src || '';
+            return Boolean(src) && isFallbackSource(src);
+        };
+
+        const forceSwitch = (best, options = {}) => {
+            const context = getActiveContext();
+            const reason = options.reason || 'forced';
+            const shouldConsider = best && best.id && context.activeId && best.id !== context.activeId;
+            if (!shouldConsider) {
+                return { ...context, switched: false, suppressed: false };
+            }
+
+            if (isFallbackCandidate(best)) {
+                Logger.add(LogEvents.tagged('CANDIDATE', options.suppressionLabel || 'Forced switch suppressed (fallback source)'), {
+                    from: context.activeId,
+                    to: best.id,
+                    reason,
+                    suppression: 'fallback_src',
+                    currentSrc: best.vs?.currentSrc || '',
+                    bestScore: best.score
+                });
+                logDebug(LogEvents.tagged('CANDIDATE', options.suppressionLabel || 'Forced switch suppressed'), {
+                    from: context.activeId,
+                    to: best.id,
+                    reason,
+                    suppression: 'fallback_src',
+                    currentSrc: best.vs?.currentSrc || '',
+                    bestScore: best.score
+                });
+                return { ...context, switched: false, suppressed: true };
+            }
+
+            const requireProgressEligible = options.requireProgressEligible !== false;
+            const requireSevere = options.requireSevere !== false;
+            const progressEligible = !requireProgressEligible || best.progressEligible;
+            const activeOk = requireSevere ? context.activeIsSevere : context.activeIsStalled;
+            const allowSwitch = progressEligible && activeOk;
+            if (!allowSwitch) {
+                logDebug(LogEvents.tagged('CANDIDATE', options.suppressionLabel || 'Forced switch suppressed'), {
+                    from: context.activeId,
+                    to: best.id,
+                    reason,
+                    progressEligible: best.progressEligible,
+                    activeState: context.activeState,
+                    bufferStarved: context.monitorState?.bufferStarved || false,
+                    activeIsSevere: context.activeIsSevere
+                });
+                return { ...context, switched: false, suppressed: true };
+            }
+
+            const fromId = context.activeId;
+            setActiveId(best.id, `force_switch:${reason}`);
+            Logger.add(LogEvents.tagged('CANDIDATE', options.label || 'Forced switch'), {
+                from: fromId,
+                to: best.id,
+                reason,
+                bestScore: best.score,
+                progressStreakMs: best.progressStreakMs,
+                progressEligible: best.progressEligible,
+                activeState: context.activeState,
+                bufferStarved: context.monitorState?.bufferStarved || false
+            });
+            observeFormerStreams(`force_switch:${reason}`);
+            return { ...context, activeId: best.id, switched: true, suppressed: false };
+        };
+
+        return {
+            getActiveContext,
+            forceSwitch
+        };
+    };
+
+    return { create };
+})();
+
 // --- CandidateSelector ---
 /**
  * Scores and selects the best video candidate for healing.
@@ -6499,119 +6613,17 @@ const CandidateSelector = (() => {
             });
         };
 
-        const getActiveContext = () => {
-            const activeId = state.activeCandidateId;
-            const entry = activeId ? monitorsById.get(activeId) : null;
-            const monitorState = entry ? entry.monitor.state : null;
-            const activeState = monitorState ? monitorState.state : null;
-            const activeIsStalled = !entry || [
-                MonitorStates.STALLED,
-                MonitorStates.RESET,
-                MonitorStates.ERROR
-            ].includes(activeState);
-            const activeIsSevere = activeIsStalled
-                && (activeState === MonitorStates.RESET
-                    || activeState === MonitorStates.ERROR
-                    || monitorState?.bufferStarved);
-            return {
-                activeId,
-                entry,
-                monitorState,
-                activeState,
-                activeIsStalled,
-                activeIsSevere
-            };
-        };
-
-        const isFallbackCandidate = (candidate) => {
-            if (!candidate) return false;
-            if (candidate.reasons?.includes('fallback_src')) return true;
-            const src = candidate.vs?.currentSrc || candidate.vs?.src || '';
-            return Boolean(src) && isFallbackSource(src);
-        };
-
-        const forceSwitch = (best, options = {}) => {
-            const context = getActiveContext();
-            const reason = options.reason || 'forced';
-            const shouldConsider = best && best.id && context.activeId && best.id !== context.activeId;
-            if (!shouldConsider) {
-                return {
-                    ...context,
-                    switched: false,
-                    suppressed: false
-                };
-            }
-
-            if (isFallbackCandidate(best)) {
-                Logger.add(LogEvents.tagged('CANDIDATE', options.suppressionLabel || 'Forced switch suppressed (fallback source)'), {
-                    from: context.activeId,
-                    to: best.id,
-                    reason,
-                    suppression: 'fallback_src',
-                    currentSrc: best.vs?.currentSrc || '',
-                    bestScore: best.score
-                });
-                logDebug(LogEvents.tagged('CANDIDATE', options.suppressionLabel || 'Forced switch suppressed'), {
-                    from: context.activeId,
-                    to: best.id,
-                    reason,
-                    suppression: 'fallback_src',
-                    currentSrc: best.vs?.currentSrc || '',
-                    bestScore: best.score
-                });
-                return {
-                    ...context,
-                    switched: false,
-                    suppressed: true
-                };
-            }
-
-            const requireProgressEligible = options.requireProgressEligible !== false;
-            const requireSevere = options.requireSevere !== false;
-            const progressEligible = !requireProgressEligible || best.progressEligible;
-            const activeOk = requireSevere ? context.activeIsSevere : context.activeIsStalled;
-            const allowSwitch = progressEligible && activeOk;
-
-            if (allowSwitch) {
-                const fromId = context.activeId;
-                setActiveId(best.id, `force_switch:${reason}`);
-                Logger.add(LogEvents.tagged('CANDIDATE', options.label || 'Forced switch'), {
-                    from: fromId,
-                    to: best.id,
-                    reason,
-                    bestScore: best.score,
-                    progressStreakMs: best.progressStreakMs,
-                    progressEligible: best.progressEligible,
-                    activeState: context.activeState,
-                    bufferStarved: context.monitorState?.bufferStarved || false
-                });
-                observeFormerStreams(`force_switch:${reason}`);
-                return {
-                    ...context,
-                    activeId: best.id,
-                    switched: true,
-                    suppressed: false
-                };
-            }
-
-            logDebug(LogEvents.tagged('CANDIDATE', options.suppressionLabel || 'Forced switch suppressed'), {
-                from: context.activeId,
-                to: best.id,
-                reason,
-                progressEligible: best.progressEligible,
-                activeState: context.activeState,
-                bufferStarved: context.monitorState?.bufferStarved || false,
-                activeIsSevere: context.activeIsSevere
-            });
-
-            return {
-                ...context,
-                switched: false,
-                suppressed: true
-            };
-        };
-
         const getActiveId = () => state.activeCandidateId;
+        const forceSwitchController = CandidateForceSwitch.create({
+            monitorsById,
+            isFallbackSource,
+            getActiveId,
+            setActiveId,
+            observeFormerStreams,
+            logDebug
+        });
+        const getActiveContext = forceSwitchController.getActiveContext;
+        const forceSwitch = forceSwitchController.forceSwitch;
 
         const selectionEngine = CandidateSelectionEngine.create({
             monitorsById,
@@ -7645,11 +7657,11 @@ const RecoveryLogDetails = (() => {
     };
 })();
 
-// --- RecoveryDecisionApplier ---
+// --- RecoveryStallSkipApplier ---
 /**
- * Applies recovery policy decisions with centralized side effects.
+ * Applies stall skip decisions and throttled skip logging.
  */
-const RecoveryDecisionApplier = (() => {
+const RecoveryStallSkipApplier = (() => {
     const backoffBucket = (remainingMs) => {
         if (!Number.isFinite(remainingMs) || remainingMs <= 0) return 0;
         if (remainingMs <= 5000) return 1;
@@ -7660,11 +7672,8 @@ const RecoveryDecisionApplier = (() => {
     };
 
     const create = (options = {}) => {
-        const backoffManager = options.backoffManager;
-        const candidateSelector = options.candidateSelector;
         const logDebug = options.logDebug || (() => {});
-        const onRescan = options.onRescan || (() => {});
-        const probationPolicy = options.probationPolicy;
+
         const shouldLogBackoffSkip = (monitorState, backoff, now) => {
             if (!monitorState || !backoff) return false;
             const lastLogTime = monitorState.lastBackoffLogTime || 0;
@@ -7674,16 +7683,98 @@ const RecoveryDecisionApplier = (() => {
             const countChanged = count !== (monitorState.lastBackoffNoHealPointCount || 0);
             const heartbeatDue = (now - lastLogTime) >= (CONFIG.logging.BACKOFF_LOG_INTERVAL_MS * 6);
             const shouldLog = bucketChanged || countChanged || heartbeatDue;
-            if (!shouldLog) {
-                return false;
-            }
-            if ((now - lastLogTime) <= CONFIG.logging.BACKOFF_LOG_INTERVAL_MS) {
-                return false;
-            }
+            if (!shouldLog) return false;
+            if ((now - lastLogTime) <= CONFIG.logging.BACKOFF_LOG_INTERVAL_MS) return false;
             monitorState.lastBackoffRemainingBucket = bucket;
             monitorState.lastBackoffNoHealPointCount = count;
             return true;
         };
+
+        const apply = (decision) => {
+            if (!decision || decision.type !== 'stall_skip') return false;
+            const data = decision.data || {};
+            if (!data.shouldSkip) return false;
+            const context = decision.context || {};
+            const videoId = context.videoId;
+            const monitorState = context.monitorState;
+            const now = context.now;
+            if (!monitorState) return true;
+
+            if (data.reason === 'backoff' && data.backoff) {
+                if (shouldLogBackoffSkip(monitorState, data.backoff, now)) {
+                    PlaybackStateStore.markBackoffLog(monitorState, now);
+                    logDebug(LogEvents.tagged('BACKOFF', 'Stall skipped due to backoff'), {
+                        videoId,
+                        remainingMs: data.backoff.remainingMs,
+                        noHealPointCount: data.backoff.noHealPointCount
+                    });
+                }
+                return true;
+            }
+
+            if (data.reason === 'buffer_starve' && data.bufferStarve) {
+                if (now - (monitorState.lastBufferStarveSkipLogTime || 0) > CONFIG.logging.STARVE_LOG_MS) {
+                    monitorState.lastBufferStarveSkipLogTime = now;
+                    logDebug(LogEvents.tagged('STARVE_SKIP', 'Stall skipped due to buffer starvation'), {
+                        videoId,
+                        remainingMs: data.bufferStarve.remainingMs,
+                        bufferAhead: data.bufferStarve.bufferAhead !== null
+                            ? data.bufferStarve.bufferAhead.toFixed(3)
+                            : null
+                    });
+                }
+                return true;
+            }
+
+            if (data.reason === 'play_backoff' && data.playBackoff) {
+                if (now - (monitorState.lastPlayBackoffLogTime || 0) > CONFIG.logging.BACKOFF_LOG_INTERVAL_MS) {
+                    PlaybackStateStore.markPlayBackoffLog(monitorState, now);
+                    logDebug(LogEvents.tagged('PLAY_BACKOFF', 'Stall skipped due to play backoff'), {
+                        videoId,
+                        remainingMs: data.playBackoff.remainingMs,
+                        playErrorCount: data.playBackoff.playErrorCount
+                    });
+                }
+                return true;
+            }
+
+            if (data.reason === 'self_recover' && data.selfRecover) {
+                if (now - (monitorState.lastSelfRecoverSkipLogTime || 0) > CONFIG.logging.BACKOFF_LOG_INTERVAL_MS) {
+                    monitorState.lastSelfRecoverSkipLogTime = now;
+                    logDebug(LogEvents.tagged('SELF_RECOVER_SKIP', 'Stall skipped for self-recovery window'), {
+                        videoId,
+                        stalledForMs: data.selfRecover.stalledForMs,
+                        graceMs: data.selfRecover.graceMs,
+                        extraGraceMs: data.selfRecover.extraGraceMs,
+                        signals: data.selfRecover.signals,
+                        bufferAhead: data.selfRecover.bufferAhead,
+                        bufferStarved: data.selfRecover.bufferStarved
+                    });
+                }
+                return true;
+            }
+
+            return true;
+        };
+
+        return { apply };
+    };
+
+    return { create };
+})();
+
+// --- RecoveryDecisionApplier ---
+/**
+ * Applies recovery policy decisions with centralized side effects.
+ */
+const RecoveryDecisionApplier = (() => {
+    const create = (options = {}) => {
+        const backoffManager = options.backoffManager;
+        const candidateSelector = options.candidateSelector;
+        const logDebug = options.logDebug || (() => {});
+        const onRescan = options.onRescan || (() => {});
+        const probationPolicy = options.probationPolicy;
+        const stallSkipApplier = RecoveryStallSkipApplier.create({ logDebug });
 
         const applyEmergencySwitch = (monitorState, reason, now, switchOptions = {}) => {
             if (!monitorState || !candidateSelector || typeof candidateSelector.selectEmergencyCandidate !== 'function') {
@@ -7852,67 +7943,7 @@ const RecoveryDecisionApplier = (() => {
                 repeatStuck: data.repeatStuck
             };
         };
-        const applyStallSkipDecision = (decision) => {
-            if (!decision || decision.type !== 'stall_skip') return false;
-            const data = decision.data || {};
-            if (!data.shouldSkip) return false;
-            const context = decision.context || {};
-            const videoId = context.videoId;
-            const monitorState = context.monitorState;
-            const now = context.now;
-            if (!monitorState) return true;
-            if (data.reason === 'backoff' && data.backoff) {
-                if (shouldLogBackoffSkip(monitorState, data.backoff, now)) {
-                    PlaybackStateStore.markBackoffLog(monitorState, now);
-                    logDebug(LogEvents.tagged('BACKOFF', 'Stall skipped due to backoff'), {
-                        videoId,
-                        remainingMs: data.backoff.remainingMs,
-                        noHealPointCount: data.backoff.noHealPointCount
-                    });
-                }
-                return true;
-            }
-            if (data.reason === 'buffer_starve' && data.bufferStarve) {
-                if (now - (monitorState.lastBufferStarveSkipLogTime || 0) > CONFIG.logging.STARVE_LOG_MS) {
-                    monitorState.lastBufferStarveSkipLogTime = now;
-                    logDebug(LogEvents.tagged('STARVE_SKIP', 'Stall skipped due to buffer starvation'), {
-                        videoId,
-                        remainingMs: data.bufferStarve.remainingMs,
-                        bufferAhead: data.bufferStarve.bufferAhead !== null
-                            ? data.bufferStarve.bufferAhead.toFixed(3)
-                            : null
-                    });
-                }
-                return true;
-            }
-            if (data.reason === 'play_backoff' && data.playBackoff) {
-                if (now - (monitorState.lastPlayBackoffLogTime || 0) > CONFIG.logging.BACKOFF_LOG_INTERVAL_MS) {
-                    PlaybackStateStore.markPlayBackoffLog(monitorState, now);
-                    logDebug(LogEvents.tagged('PLAY_BACKOFF', 'Stall skipped due to play backoff'), {
-                        videoId,
-                        remainingMs: data.playBackoff.remainingMs,
-                        playErrorCount: data.playBackoff.playErrorCount
-                    });
-                }
-                return true;
-            }
-            if (data.reason === 'self_recover' && data.selfRecover) {
-                if (now - (monitorState.lastSelfRecoverSkipLogTime || 0) > CONFIG.logging.BACKOFF_LOG_INTERVAL_MS) {
-                    monitorState.lastSelfRecoverSkipLogTime = now;
-                    logDebug(LogEvents.tagged('SELF_RECOVER_SKIP', 'Stall skipped for self-recovery window'), {
-                        videoId,
-                        stalledForMs: data.selfRecover.stalledForMs,
-                        graceMs: data.selfRecover.graceMs,
-                        extraGraceMs: data.selfRecover.extraGraceMs,
-                        signals: data.selfRecover.signals,
-                        bufferAhead: data.selfRecover.bufferAhead,
-                        bufferStarved: data.selfRecover.bufferStarved
-                    });
-                }
-                return true;
-            }
-            return true;
-        };
+        const applyStallSkipDecision = (decision) => stallSkipApplier.apply(decision);
 
         const applyDecision = (decision) => {
             if (!decision || !decision.type) return null;
@@ -8815,6 +8846,168 @@ const FailoverManager = (() => {
     return { create };
 })();
 
+// --- RecoveryRefreshController ---
+/**
+ * Handles refresh eligibility checks, refresh execution, and recovery context normalization.
+ */
+const RecoveryRefreshController = (() => {
+    const create = (options = {}) => {
+        const monitorsById = options.monitorsById;
+        const getVideoId = options.getVideoId;
+        const onPersistentFailure = options.onPersistentFailure || (() => {});
+        const onProcessingAssetExhausted = options.onProcessingAssetExhausted || (() => {});
+
+        const normalizeVideoInput = (videoOrContext, monitorStateOverride, detail = {}) => {
+            if (videoOrContext && typeof videoOrContext === 'object' && videoOrContext.video) {
+                return { videoOrContext, monitorStateOverride, detail };
+            }
+            if (typeof videoOrContext === 'string') {
+                const entry = monitorsById?.get(videoOrContext);
+                return {
+                    videoOrContext: entry?.video || null,
+                    monitorStateOverride: monitorStateOverride || entry?.monitor?.state || null,
+                    detail: { ...detail, videoId: videoOrContext }
+                };
+            }
+            return { videoOrContext, monitorStateOverride, detail };
+        };
+
+        const buildContext = (videoOrContext, monitorStateOverride, detail = {}) => {
+            const normalized = normalizeVideoInput(videoOrContext, monitorStateOverride, detail);
+            return RecoveryContext.from(
+                normalized.videoOrContext,
+                normalized.monitorStateOverride,
+                getVideoId,
+                normalized.detail
+            );
+        };
+
+        const isMissingSource = (context) => {
+            const snapshot = context.getLiteLogSnapshot
+                ? context.getLiteLogSnapshot()
+                : context.getLogSnapshot?.();
+            const hasSrc = Boolean(
+                snapshot?.currentSrc
+                || snapshot?.src
+                || context.video?.currentSrc
+                || context.video?.getAttribute?.('src')
+            );
+            const readyState = snapshot?.readyState ?? context.video?.readyState ?? null;
+            const networkState = snapshot?.networkState ?? context.video?.networkState ?? null;
+            const buffered = snapshot?.buffered ?? null;
+            const noBuffer = buffered === 'none' || buffered === null;
+            return !hasSrc && readyState === 0 && networkState === 0 && noBuffer;
+        };
+
+        const isPlayStuckRefreshReady = (context) => {
+            const bufferInfo = MediaState.bufferAhead(context.video);
+            const bufferAhead = bufferInfo?.bufferAhead ?? 0;
+            const hasBuffer = bufferInfo?.hasBuffer ?? false;
+            const readyState = context.video?.readyState ?? null;
+            return hasBuffer
+                && bufferAhead >= CONFIG.recovery.MIN_HEAL_HEADROOM_S
+                && (readyState === null || readyState >= 3);
+        };
+
+        const evaluateRefreshEligibility = (context, detail = {}) => {
+            const monitorState = context.monitorState;
+            if (!monitorState) {
+                return { allow: false, reason: 'no_state' };
+            }
+
+            const now = Number.isFinite(detail.now) ? detail.now : Date.now();
+            const lastRefreshAt = monitorState.lastRefreshAt || 0;
+            const ignoreRefreshCooldown = Boolean(detail.ignoreRefreshCooldown);
+            if (!ignoreRefreshCooldown && now - lastRefreshAt < CONFIG.stall.REFRESH_COOLDOWN_MS) {
+                return {
+                    allow: false,
+                    reason: 'cooldown',
+                    remainingMs: CONFIG.stall.REFRESH_COOLDOWN_MS - (now - lastRefreshAt)
+                };
+            }
+
+            const reason = detail.reason || context.reason || 'unknown';
+            if (reason === 'no_source' && !isMissingSource(context)) {
+                return { allow: false, reason: 'no_source_not_ready' };
+            }
+            if (reason === 'play_stuck' && !isPlayStuckRefreshReady(context)) {
+                return { allow: false, reason: 'play_stuck_not_ready' };
+            }
+            return { allow: true, reason, now };
+        };
+
+        const requestRefresh = (videoOrContext, monitorStateOverride, detail = {}) => {
+            const context = buildContext(videoOrContext, monitorStateOverride, detail);
+            const monitorState = context.monitorState;
+            if (!monitorState) return false;
+
+            const eligibility = detail.eligibility || evaluateRefreshEligibility(context, detail);
+            if (!eligibility.allow) return false;
+
+            PlaybackStateStore.markRefresh(monitorState, eligibility.now);
+            Logger.add(LogEvents.tagged('REFRESH', 'Refreshing video after source loss'), {
+                ...RecoveryLogDetails.refresh({
+                    videoId: context.videoId,
+                    reason: detail.reason || 'source_loss',
+                    noHealPointCount: monitorState.noHealPointCount || 0
+                }),
+                trigger: detail.trigger || null,
+                resetType: detail.resetType || null,
+                forcePageRefresh: Boolean(detail.forcePageRefresh)
+            });
+            onPersistentFailure(context.videoId, {
+                reason: detail.reason || 'source_loss',
+                detail: detail.detail || 'source_loss',
+                forcePageRefresh: Boolean(detail.forcePageRefresh)
+            });
+            if (detail.reason === 'processing_asset_exhausted') {
+                onProcessingAssetExhausted(context.videoId, eligibility.now || Date.now(), detail.reason);
+            }
+            return true;
+        };
+
+        const canRequestRefresh = (videoOrContext, monitorStateOverride, detail = {}) => {
+            const context = buildContext(videoOrContext, monitorStateOverride, detail);
+            return evaluateRefreshEligibility(context, detail);
+        };
+
+        const shouldTriggerLastResortPageRefresh = (
+            context,
+            detail,
+            result,
+            failoverAttempted,
+            failoverStarted,
+            now
+        ) => {
+            if (!context.monitorState) return false;
+            if (detail?.errorName !== 'PLAY_STUCK') return false;
+            if (!result?.shouldFailover) return false;
+            if (!failoverAttempted || failoverStarted) return false;
+
+            const playErrorCount = context.monitorState.playErrorCount || 0;
+            if (playErrorCount < CONFIG.stall.PLAY_STUCK_LAST_RESORT_PAGE_REFRESH_AFTER) {
+                return false;
+            }
+
+            const lastProgressTime = context.monitorState.lastProgressTime || 0;
+            const stalledForMs = lastProgressTime ? (now - lastProgressTime) : null;
+            const minStallMs = CONFIG.stall.PLAY_STUCK_LAST_RESORT_MIN_STALL_MS || 0;
+            if (stalledForMs !== null && stalledForMs < minStallMs) return false;
+            return true;
+        };
+
+        return {
+            buildContext,
+            requestRefresh,
+            canRequestRefresh,
+            evaluateRefreshEligibility,
+            shouldTriggerLastResortPageRefresh
+        };
+    };
+
+    return { create };
+})();
+
 // --- RecoveryManager ---
 /**
  * Coordinates backoff and failover recovery strategies.
@@ -8864,22 +9057,15 @@ const RecoveryManager = (() => {
                 activeUntilMs: processingAssetHardFailureUntil
             });
         };
+        const refreshController = RecoveryRefreshController.create({
+            monitorsById,
+            getVideoId,
+            onPersistentFailure,
+            onProcessingAssetExhausted: (videoId, atMs, reason) => (
+                activateProcessingAssetHardFailureWindow(videoId, reason, atMs)
+            )
+        });
 
-        const normalizeVideoInput = (videoOrContext, monitorStateOverride, detail = {}) => {
-            if (videoOrContext && typeof videoOrContext === 'object' && videoOrContext.video) {
-                return { videoOrContext, monitorStateOverride, detail };
-            }
-            if (typeof videoOrContext === 'string') {
-                const entry = monitorsById?.get(videoOrContext);
-                const nextDetail = { ...detail, videoId: videoOrContext };
-                return {
-                    videoOrContext: entry?.video || null,
-                    monitorStateOverride: monitorStateOverride || entry?.monitor?.state || null,
-                    detail: nextDetail
-                };
-            }
-            return { videoOrContext, monitorStateOverride, detail };
-        };
         const handleNoHealPoint = (videoOrContext, monitorStateOverride, reason) => {
             const now = Date.now();
             const hardFailureMode = isProcessingAssetHardFailureActive(now);
@@ -8892,16 +9078,10 @@ const RecoveryManager = (() => {
                 });
                 lastHardFailureLogTime = now;
             }
-            const normalized = normalizeVideoInput(videoOrContext, monitorStateOverride, {
+            const context = refreshController.buildContext(videoOrContext, monitorStateOverride, {
                 reason: policyReason,
                 trigger: reason
             });
-            const context = RecoveryContext.from(
-                normalized.videoOrContext,
-                normalized.monitorStateOverride,
-                getVideoId,
-                normalized.detail
-            );
             const result = policy.handleNoHealPoint(context, policyReason);
             const failoverEligible = Boolean(result?.failoverEligible ?? result?.shouldFailover);
             const refreshEligible = Boolean(result?.refreshEligible);
@@ -8918,7 +9098,7 @@ const RecoveryManager = (() => {
 
             const tryRefreshFallback = () => {
                 if (!refreshEligible) return false;
-                const refreshed = requestRefresh(context.videoId, context.monitorState, {
+                const refreshed = refreshController.requestRefresh(context.videoId, context.monitorState, {
                     reason: 'no_heal_point',
                     trigger: policyReason,
                     detail: 'no_heal_point'
@@ -8955,105 +9135,19 @@ const RecoveryManager = (() => {
 
         const resetPlayError = policy.resetPlayError;
 
-        const isMissingSource = (context) => {
-            const snapshot = context.getLiteLogSnapshot
-                ? context.getLiteLogSnapshot()
-                : context.getLogSnapshot?.();
-            const hasSrc = Boolean(
-                snapshot?.currentSrc
-                || snapshot?.src
-                || context.video?.currentSrc
-                || context.video?.getAttribute?.('src')
-            );
-            const readyState = snapshot?.readyState ?? context.video?.readyState ?? null;
-            const networkState = snapshot?.networkState ?? context.video?.networkState ?? null;
-            const buffered = snapshot?.buffered ?? null;
-            const noBuffer = buffered === 'none' || buffered === null;
-            return !hasSrc && readyState === 0 && networkState === 0 && noBuffer;
-        };
-
-        const isPlayStuckRefreshReady = (context) => {
-            const bufferInfo = MediaState.bufferAhead(context.video);
-            const bufferAhead = bufferInfo?.bufferAhead ?? 0;
-            const hasBuffer = bufferInfo?.hasBuffer ?? false;
-            const readyState = context.video?.readyState ?? null;
-            return hasBuffer
-                && bufferAhead >= CONFIG.recovery.MIN_HEAL_HEADROOM_S
-                && (readyState === null || readyState >= 3);
-        };
-
-        const evaluateRefreshEligibility = (context, detail = {}) => {
-            const monitorState = context.monitorState;
-            if (!monitorState) {
-                return { allow: false, reason: 'no_state' };
-            }
-            const now = Number.isFinite(detail.now) ? detail.now : Date.now();
-            const lastRefreshAt = monitorState.lastRefreshAt || 0;
-            const ignoreRefreshCooldown = Boolean(detail.ignoreRefreshCooldown);
-            if (!ignoreRefreshCooldown && now - lastRefreshAt < CONFIG.stall.REFRESH_COOLDOWN_MS) {
-                return {
-                    allow: false,
-                    reason: 'cooldown',
-                    remainingMs: CONFIG.stall.REFRESH_COOLDOWN_MS - (now - lastRefreshAt)
-                };
-            }
-            const reason = detail.reason || context.reason || 'unknown';
-            if (reason === 'no_source' && !isMissingSource(context)) {
-                return { allow: false, reason: 'no_source_not_ready' };
-            }
-            if (reason === 'play_stuck' && !isPlayStuckRefreshReady(context)) {
-                return { allow: false, reason: 'play_stuck_not_ready' };
-            }
-            return { allow: true, reason, now };
-        };
-
-        const shouldTriggerLastResortPageRefresh = (
-            context,
-            detail,
-            result,
-            failoverAttempted,
-            failoverStarted,
-            now
-        ) => {
-            if (!context.monitorState) return false;
-            if (detail?.errorName !== 'PLAY_STUCK') return false;
-            if (!result?.shouldFailover) return false;
-            if (!failoverAttempted || failoverStarted) return false;
-
-            const playErrorCount = context.monitorState.playErrorCount || 0;
-            if (playErrorCount < CONFIG.stall.PLAY_STUCK_LAST_RESORT_PAGE_REFRESH_AFTER) {
-                return false;
-            }
-
-            const lastProgressTime = context.monitorState.lastProgressTime || 0;
-            const stalledForMs = lastProgressTime ? (now - lastProgressTime) : null;
-            const minStallMs = CONFIG.stall.PLAY_STUCK_LAST_RESORT_MIN_STALL_MS || 0;
-            if (stalledForMs !== null && stalledForMs < minStallMs) {
-                return false;
-            }
-
-            return true;
-        };
-
         const handlePlayFailure = (videoOrContext, monitorStateOverride, detail = {}) => {
-            const normalized = normalizeVideoInput(videoOrContext, monitorStateOverride, detail);
-            const context = RecoveryContext.from(
-                normalized.videoOrContext,
-                normalized.monitorStateOverride,
-                getVideoId,
-                normalized.detail
-            );
+            const context = refreshController.buildContext(videoOrContext, monitorStateOverride, detail);
             const result = policy.handlePlayFailure(context, detail);
             const now = Date.now();
             if (detail?.errorName === 'PLAY_STUCK'
                 && context.monitorState
                 && (monitorsById?.size || 0) <= 1) {
                 if (context.monitorState.playErrorCount >= CONFIG.stall.PLAY_STUCK_REFRESH_AFTER) {
-                    const eligibility = evaluateRefreshEligibility(context, {
+                    const eligibility = refreshController.evaluateRefreshEligibility(context, {
                         reason: 'play_stuck',
                         now
                     });
-                    const refreshed = eligibility.allow && requestRefresh(context.videoId, context.monitorState, {
+                    const refreshed = eligibility.allow && refreshController.requestRefresh(context.videoId, context.monitorState, {
                         reason: 'play_stuck',
                         trigger: detail.reason || 'play_error',
                         detail: detail.error || 'play_stuck',
@@ -9082,7 +9176,7 @@ const RecoveryManager = (() => {
                 );
             }
 
-            if (!shouldTriggerLastResortPageRefresh(
+            if (!refreshController.shouldTriggerLastResortPageRefresh(
                 context,
                 detail,
                 result,
@@ -9093,13 +9187,13 @@ const RecoveryManager = (() => {
                 return;
             }
 
-            const eligibility = evaluateRefreshEligibility(context, {
+            const eligibility = refreshController.evaluateRefreshEligibility(context, {
                 reason: 'play_stuck_last_resort',
                 trigger: detail.reason || 'play_error',
                 now,
                 ignoreRefreshCooldown: true
             });
-            const refreshed = eligibility.allow && requestRefresh(context.videoId, context.monitorState, {
+            const refreshed = eligibility.allow && refreshController.requestRefresh(context.videoId, context.monitorState, {
                 reason: 'play_stuck_last_resort',
                 trigger: detail.reason || 'play_error',
                 detail: 'persistent_play_stuck_no_failover',
@@ -9119,56 +9213,8 @@ const RecoveryManager = (() => {
             });
         };
 
-        const requestRefresh = (videoOrContext, monitorStateOverride, detail = {}) => {
-            const normalized = normalizeVideoInput(videoOrContext, monitorStateOverride, detail);
-            const context = RecoveryContext.from(
-                normalized.videoOrContext,
-                normalized.monitorStateOverride,
-                getVideoId,
-                normalized.detail
-            );
-            const monitorState = context.monitorState;
-            if (!monitorState) return false;
-            const eligibility = detail.eligibility || evaluateRefreshEligibility(context, detail);
-            if (!eligibility.allow) {
-                return false;
-            }
-            PlaybackStateStore.markRefresh(monitorState, eligibility.now);
-            Logger.add(LogEvents.tagged('REFRESH', 'Refreshing video after source loss'), {
-                ...RecoveryLogDetails.refresh({
-                    videoId: context.videoId,
-                    reason: detail.reason || 'source_loss',
-                    noHealPointCount: monitorState.noHealPointCount || 0
-                }),
-                trigger: detail.trigger || null,
-                resetType: detail.resetType || null,
-                forcePageRefresh: Boolean(detail.forcePageRefresh)
-            });
-            onPersistentFailure(context.videoId, {
-                reason: detail.reason || 'source_loss',
-                detail: detail.detail || 'source_loss',
-                forcePageRefresh: Boolean(detail.forcePageRefresh)
-            });
-            if (detail.reason === 'processing_asset_exhausted') {
-                activateProcessingAssetHardFailureWindow(
-                    context.videoId,
-                    detail.reason,
-                    eligibility.now || Date.now()
-                );
-            }
-            return true;
-        };
-
-        const canRequestRefresh = (videoOrContext, monitorStateOverride, detail = {}) => {
-            const normalized = normalizeVideoInput(videoOrContext, monitorStateOverride, detail);
-            const context = RecoveryContext.from(
-                normalized.videoOrContext,
-                normalized.monitorStateOverride,
-                getVideoId,
-                normalized.detail
-            );
-            return evaluateRefreshEligibility(context, detail);
-        };
+        const requestRefresh = refreshController.requestRefresh;
+        const canRequestRefresh = refreshController.canRequestRefresh;
 
         const shouldSkipStall = (videoId, monitorState) => {
             if (failoverManager.shouldIgnoreStall(videoId)) {
@@ -10794,65 +10840,41 @@ const ExternalSignalHandlerStall = (() => {
     return { create };
 })();
 
-// --- ExternalSignalHandlerAsset ---
-/**
- * Handles processing/offline asset signals.
- */
-const ExternalSignalHandlerAsset = (() => {
+// --- ExternalAssetRecoveryFlow ---
+const ExternalAssetRecoveryFlow = (() => {
     const create = (options = {}) => {
         const monitorsById = options.monitorsById;
         const candidateSelector = options.candidateSelector;
         const recoveryManager = options.recoveryManager;
-        const logDebug = options.logDebug || (() => {});
         const onRescan = options.onRescan || (() => {});
-        let processCounter = 0;
-        let activeProcessId = null;
-
+        const logDebug = options.logDebug || (() => {});
         const getTiming = () => ({
             strictVerifyMs: CONFIG.stall.PROCESSING_ASSET_STRICT_VERIFY_MS || 600,
             probeWindowMs: CONFIG.stall.PROCESSING_ASSET_PROBE_WINDOW_MS || 1200,
             speculativeTimeoutMs: CONFIG.stall.PROCESSING_ASSET_SPECULATIVE_TIMEOUT_MS || 800
         });
-
         const sleep = (ms) => (
-            Fn?.sleep
-                ? Fn.sleep(ms)
-                : new Promise((resolve) => setTimeout(resolve, ms))
+            Fn?.sleep ? Fn.sleep(ms) : new Promise((resolve) => setTimeout(resolve, ms))
         );
-
         const getActiveId = () => (
-            typeof candidateSelector?.getActiveId === 'function'
-                ? candidateSelector.getActiveId()
-                : null
+            typeof candidateSelector?.getActiveId === 'function' ? candidateSelector.getActiveId() : null
         );
-
-        const getEntry = (videoId) => (
-            videoId ? monitorsById.get(videoId) : null
-        );
-
+        const getEntry = (videoId) => (videoId ? monitorsById.get(videoId) : null);
         const getState = (videoId) => getEntry(videoId)?.monitor?.state || null;
-
         const captureCandidateBaseline = (videoId, actionStartMs = Date.now()) => {
             const entry = getEntry(videoId);
             if (!entry) return null;
             return ProgressModel.captureActionBaseline(entry.video, entry.monitor?.state, actionStartMs);
         };
-
         const hasCandidateProgress = (videoId, actionBaseline) => {
             if (!actionBaseline) return false;
             const entry = getEntry(videoId);
             if (!entry) return false;
-            return ProgressModel.hasActionProgress(
-                entry.video,
-                entry.monitor?.state,
-                actionBaseline,
-                {
-                    recentWindowMs: CONFIG.stall.RECOVERY_WINDOW_MS,
-                    sustainedWindowMs: CONFIG.monitoring.CANDIDATE_MIN_PROGRESS_MS
-                }
-            );
+            return ProgressModel.hasActionProgress(entry.video, entry.monitor?.state, actionBaseline, {
+                recentWindowMs: CONFIG.stall.RECOVERY_WINDOW_MS,
+                sustainedWindowMs: CONFIG.monitoring.CANDIDATE_MIN_PROGRESS_MS
+            });
         };
-
         const getCandidateRecords = () => {
             const records = [];
             for (const [videoId, entry] of monitorsById.entries()) {
@@ -10867,27 +10889,17 @@ const ExternalSignalHandlerAsset = (() => {
                     || '';
                 records.push({
                     id: videoId,
-                    entry,
                     score: Number.isFinite(score?.score) ? score.score : Number.NEGATIVE_INFINITY,
-                    deadCandidate: Boolean(score?.deadCandidate),
-                    progressEligible: score?.progressEligible ?? false,
-                    trusted: score?.trusted ?? null,
                     readyState,
                     hasSrc: Boolean(src),
                     strictEligible: Boolean(src) && readyState >= 2 && !score?.deadCandidate
                 });
             }
-            records.sort((a, b) => {
-                if (b.score !== a.score) return b.score - a.score;
-                return b.readyState - a.readyState;
-            });
+            records.sort((a, b) => (b.score !== a.score ? b.score - a.score : b.readyState - a.readyState));
             return records;
         };
-
         const setActiveAndPlay = (processId, videoId, step) => {
-            if (!videoId) {
-                return { switched: false, played: false };
-            }
+            if (!videoId) return { switched: false, played: false };
             const entry = getEntry(videoId);
             if (!entry) {
                 Logger.add(LogEvents.tagged('ASSET_HINT_SKIP', 'Candidate missing during processing asset recovery'), {
@@ -10914,13 +10926,197 @@ const ExternalSignalHandlerAsset = (() => {
                     });
                 });
             }
-            return {
-                switched: fromId !== activeNow,
-                played: Boolean(playPromise),
-                fromId,
-                toId: activeNow
-            };
+            return { switched: fromId !== activeNow, played: Boolean(playPromise), fromId, toId: activeNow };
         };
+        const run = async ({ processId, signalLevel, signalMessage, activeBefore, helpers = {} }) => {
+            const timing = getTiming();
+            Logger.add(LogEvents.tagged('ASSET_HINT', 'Bypassing normal stall patience due to processing asset'), { processId });
+            if (candidateSelector && typeof candidateSelector.activateProbation === 'function') {
+                candidateSelector.activateProbation('processing_asset');
+                Logger.add(LogEvents.tagged('ASSET_HINT', 'Probation activated for processing asset'), {
+                    processId,
+                    reason: 'processing_asset'
+                });
+            }
+            if (typeof helpers.logCandidateSnapshot === 'function') {
+                helpers.logCandidateSnapshot(candidateSelector, monitorsById, 'processing_asset');
+            }
+            Logger.add(LogEvents.tagged('ASSET_HINT', 'Candidate snapshot captured and rescan requested'), {
+                processId,
+                reason: 'processing_asset'
+            });
+            onRescan('processing_asset', { level: signalLevel, message: signalMessage });
+            if (recoveryManager.isFailoverActive()) {
+                Logger.add(LogEvents.tagged('ASSET_HINT_SKIP', 'Processing asset recovery skipped during failover'), {
+                    processId,
+                    reason: 'processing_asset',
+                    activeVideoId: activeBefore
+                });
+                logDebug(LogEvents.tagged('ASSET_HINT_SKIP', 'Failover in progress'), { reason: 'processing_asset', processId });
+                return;
+            }
+            candidateSelector.evaluateCandidates('processing_asset');
+            const candidates = getCandidateRecords();
+            Logger.add(LogEvents.tagged('ASSET_HINT', 'Candidate evaluation complete'), {
+                processId,
+                candidateCount: candidates.length,
+                strictEligibleCount: candidates.filter(c => c.strictEligible).length
+            });
+            const activeAtStrictStart = getActiveId();
+            const strictCandidate = candidates.find((c) => c.strictEligible && c.id !== activeAtStrictStart);
+            if (strictCandidate) {
+                const strictBaseline = captureCandidateBaseline(strictCandidate.id, Date.now());
+                const strictSwitch = setActiveAndPlay(processId, strictCandidate.id, 'strict_pass');
+                Logger.add(LogEvents.tagged('ASSET_HINT', 'Strict candidate pass applied'), {
+                    processId,
+                    from: strictSwitch.fromId || null,
+                    to: strictSwitch.toId || strictCandidate.id,
+                    candidateScore: strictCandidate.score,
+                    candidateReadyState: strictCandidate.readyState,
+                    candidateHasSrc: strictCandidate.hasSrc,
+                    switched: strictSwitch.switched
+                });
+                await sleep(timing.strictVerifyMs);
+                if (hasCandidateProgress(strictCandidate.id, strictBaseline)) {
+                    Logger.add(LogEvents.tagged('ASSET_HINT', 'Strict candidate verified progress, recovery completed'), { processId, videoId: strictCandidate.id });
+                    return;
+                }
+                Logger.add(LogEvents.tagged('ASSET_HINT', 'Strict candidate did not progress within verify window'), {
+                    processId,
+                    videoId: strictCandidate.id,
+                    verifyWindowMs: timing.strictVerifyMs
+                });
+            } else {
+                Logger.add(LogEvents.tagged('ASSET_HINT', 'Strict candidate pass found no viable switch target'), {
+                    processId,
+                    activeVideoId: activeAtStrictStart
+                });
+            }
+            if (recoveryManager.isFailoverActive()) {
+                Logger.add(LogEvents.tagged('ASSET_HINT_SKIP', 'Processing asset recovery aborted after strict pass due to failover'), { processId });
+                return;
+            }
+            const activeAfterStrict = getActiveId();
+            const probeTargets = candidates.filter(c => c.id !== activeAfterStrict);
+            const probeBaselineById = new Map(probeTargets.map((c) => [c.id, captureCandidateBaseline(c.id, Date.now())]));
+            const probeAttempts = probeTargets.map((c) => ({
+                videoId: c.id,
+                attempted: Boolean(recoveryManager.probeCandidate(c.id, 'processing_asset'))
+            }));
+            Logger.add(LogEvents.tagged('ASSET_HINT', 'Fast probe pass started'), {
+                processId,
+                probeWindowMs: timing.probeWindowMs,
+                activeVideoId: activeAfterStrict,
+                attempts: probeAttempts
+            });
+            await sleep(timing.probeWindowMs);
+            const progressedProbeCandidate = probeTargets.find((c) => hasCandidateProgress(c.id, probeBaselineById.get(c.id)));
+            if (progressedProbeCandidate) {
+                const probeSwitch = setActiveAndPlay(processId, progressedProbeCandidate.id, 'probe_pass');
+                Logger.add(LogEvents.tagged('ASSET_HINT', 'Fast probe pass found progressing candidate'), {
+                    processId,
+                    from: probeSwitch.fromId || null,
+                    to: probeSwitch.toId || progressedProbeCandidate.id,
+                    videoId: progressedProbeCandidate.id
+                });
+                return;
+            }
+            Logger.add(LogEvents.tagged('ASSET_HINT', 'Fast probe pass found no progressing candidates'), {
+                processId,
+                probeWindowMs: timing.probeWindowMs
+            });
+            const activeBeforeSpeculative = getActiveId();
+            const speculativeCandidate = candidates.find(c => c.id !== activeBeforeSpeculative);
+            if (speculativeCandidate) {
+                const speculativeBaseline = captureCandidateBaseline(speculativeCandidate.id, Date.now());
+                const speculativeSwitch = setActiveAndPlay(processId, speculativeCandidate.id, 'speculative_fallback');
+                Logger.add(LogEvents.tagged('ASSET_HINT', 'Speculative fallback switch applied'), {
+                    processId,
+                    from: speculativeSwitch.fromId || null,
+                    to: speculativeSwitch.toId || speculativeCandidate.id,
+                    videoId: speculativeCandidate.id,
+                    candidateScore: speculativeCandidate.score,
+                    timeoutMs: timing.speculativeTimeoutMs
+                });
+                await sleep(timing.speculativeTimeoutMs);
+                if (hasCandidateProgress(speculativeCandidate.id, speculativeBaseline)) {
+                    Logger.add(LogEvents.tagged('ASSET_HINT', 'Speculative fallback candidate progressed, recovery completed'), {
+                        processId,
+                        videoId: speculativeCandidate.id
+                    });
+                    return;
+                }
+                Logger.add(LogEvents.tagged('ASSET_HINT', 'Speculative fallback candidate failed to progress, reverting'), {
+                    processId,
+                    videoId: speculativeCandidate.id
+                });
+                if (activeBeforeSpeculative && activeBeforeSpeculative !== speculativeCandidate.id && monitorsById.has(activeBeforeSpeculative)) {
+                    const revert = setActiveAndPlay(processId, activeBeforeSpeculative, 'speculative_revert');
+                    Logger.add(LogEvents.tagged('ASSET_HINT', 'Speculative fallback reverted to previous active candidate'), {
+                        processId,
+                        from: revert.fromId || null,
+                        to: revert.toId || activeBeforeSpeculative
+                    });
+                }
+            } else {
+                Logger.add(LogEvents.tagged('ASSET_HINT', 'Speculative fallback skipped (no alternate candidates)'), { processId });
+            }
+            const refreshId = getActiveId() || activeBefore;
+            if (!refreshId) {
+                Logger.add(LogEvents.tagged('ASSET_HINT_SKIP', 'Processing asset recovery exhausted without refresh target'), { processId });
+                return;
+            }
+            const eligibility = recoveryManager.canRequestRefresh
+                ? recoveryManager.canRequestRefresh(refreshId, getState(refreshId), { reason: 'processing_asset_exhausted' })
+                : { allow: true };
+            const refreshed = eligibility.allow
+                ? recoveryManager.requestRefresh(refreshId, getState(refreshId), {
+                    reason: 'processing_asset_exhausted',
+                    trigger: 'processing_asset',
+                    detail: 'no_candidate_progress',
+                    eligibility
+                })
+                : false;
+            Logger.add(LogEvents.tagged('ASSET_HINT', 'Processing asset recovery exhausted, refresh decision applied'), {
+                processId,
+                videoId: refreshId || null,
+                refreshEligible: eligibility.allow,
+                refreshEligibilityReason: eligibility.reason || null,
+                refreshed
+            });
+        };
+        return { run };
+    };
+    return { create };
+})();
+
+// --- ExternalSignalHandlerAsset ---
+/**
+ * Handles processing/offline asset signals.
+ */
+const ExternalSignalHandlerAsset = (() => {
+    const create = (options = {}) => {
+        const monitorsById = options.monitorsById;
+        const candidateSelector = options.candidateSelector;
+        const recoveryManager = options.recoveryManager;
+        const logDebug = options.logDebug || (() => {});
+        const onRescan = options.onRescan || (() => {});
+
+        const flow = ExternalAssetRecoveryFlow.create({
+            monitorsById,
+            candidateSelector,
+            recoveryManager,
+            onRescan,
+            logDebug
+        });
+
+        let processCounter = 0;
+        let activeProcessId = null;
+        const getActiveId = () => (
+            typeof candidateSelector?.getActiveId === 'function'
+                ? candidateSelector.getActiveId()
+                : null
+        );
 
         return (signal = {}, helpers = {}) => {
             if (activeProcessId) {
@@ -10939,7 +11135,9 @@ const ExternalSignalHandlerAsset = (() => {
             const signalLevel = signal.level || 'unknown';
             const signalMessage = truncateMessage(signal.message || '');
             const activeBefore = getActiveId();
-            const timing = getTiming();
+            const strictVerifyMs = CONFIG.stall.PROCESSING_ASSET_STRICT_VERIFY_MS || 600;
+            const probeWindowMs = CONFIG.stall.PROCESSING_ASSET_PROBE_WINDOW_MS || 1200;
+            const speculativeTimeoutMs = CONFIG.stall.PROCESSING_ASSET_SPECULATIVE_TIMEOUT_MS || 800;
 
             Logger.add(LogEvents.tagged('ASSET_HINT', 'Processing/offline asset recovery initiated'), {
                 processId,
@@ -10947,203 +11145,18 @@ const ExternalSignalHandlerAsset = (() => {
                 message: signalMessage,
                 activeVideoId: activeBefore,
                 monitorCount: monitorsById?.size || 0,
-                strictVerifyMs: timing.strictVerifyMs,
-                probeWindowMs: timing.probeWindowMs,
-                speculativeTimeoutMs: timing.speculativeTimeoutMs
+                strictVerifyMs,
+                probeWindowMs,
+                speculativeTimeoutMs
             });
 
             Promise.resolve().then(async () => {
-                Logger.add(LogEvents.tagged('ASSET_HINT', 'Bypassing normal stall patience due to processing asset'), {
-                    processId
-                });
-
-                if (candidateSelector && typeof candidateSelector.activateProbation === 'function') {
-                    candidateSelector.activateProbation('processing_asset');
-                    Logger.add(LogEvents.tagged('ASSET_HINT', 'Probation activated for processing asset'), {
-                        processId,
-                        reason: 'processing_asset'
-                    });
-                }
-
-                if (typeof helpers.logCandidateSnapshot === 'function') {
-                    helpers.logCandidateSnapshot(candidateSelector, monitorsById, 'processing_asset');
-                }
-                Logger.add(LogEvents.tagged('ASSET_HINT', 'Candidate snapshot captured and rescan requested'), {
+                await flow.run({
                     processId,
-                    reason: 'processing_asset'
-                });
-                onRescan('processing_asset', {
-                    level: signalLevel,
-                    message: signalMessage
-                });
-
-                if (recoveryManager.isFailoverActive()) {
-                    Logger.add(LogEvents.tagged('ASSET_HINT_SKIP', 'Processing asset recovery skipped during failover'), {
-                        processId,
-                        reason: 'processing_asset',
-                        activeVideoId: activeBefore
-                    });
-                    logDebug(LogEvents.tagged('ASSET_HINT_SKIP', 'Failover in progress'), {
-                        reason: 'processing_asset',
-                        processId
-                    });
-                    return;
-                }
-
-                candidateSelector.evaluateCandidates('processing_asset');
-                const candidates = getCandidateRecords();
-                Logger.add(LogEvents.tagged('ASSET_HINT', 'Candidate evaluation complete'), {
-                    processId,
-                    candidateCount: candidates.length,
-                    strictEligibleCount: candidates.filter(c => c.strictEligible).length
-                });
-
-                const activeAtStrictStart = getActiveId();
-                const strictCandidate = candidates.find((candidate) => (
-                    candidate.strictEligible && candidate.id !== activeAtStrictStart
-                ));
-
-                if (strictCandidate) {
-                    const strictBaseline = captureCandidateBaseline(strictCandidate.id, Date.now());
-                    const strictSwitch = setActiveAndPlay(processId, strictCandidate.id, 'strict_pass');
-                    Logger.add(LogEvents.tagged('ASSET_HINT', 'Strict candidate pass applied'), {
-                        processId,
-                        from: strictSwitch.fromId || null,
-                        to: strictSwitch.toId || strictCandidate.id,
-                        candidateScore: strictCandidate.score,
-                        candidateReadyState: strictCandidate.readyState,
-                        candidateHasSrc: strictCandidate.hasSrc,
-                        switched: strictSwitch.switched
-                    });
-                    await sleep(timing.strictVerifyMs);
-                    if (hasCandidateProgress(strictCandidate.id, strictBaseline)) {
-                        Logger.add(LogEvents.tagged('ASSET_HINT', 'Strict candidate verified progress, recovery completed'), {
-                            processId,
-                            videoId: strictCandidate.id
-                        });
-                        return;
-                    }
-                    Logger.add(LogEvents.tagged('ASSET_HINT', 'Strict candidate did not progress within verify window'), {
-                        processId,
-                        videoId: strictCandidate.id,
-                        verifyWindowMs: timing.strictVerifyMs
-                    });
-                } else {
-                    Logger.add(LogEvents.tagged('ASSET_HINT', 'Strict candidate pass found no viable switch target'), {
-                        processId,
-                        activeVideoId: activeAtStrictStart
-                    });
-                }
-
-                if (recoveryManager.isFailoverActive()) {
-                    Logger.add(LogEvents.tagged('ASSET_HINT_SKIP', 'Processing asset recovery aborted after strict pass due to failover'), {
-                        processId
-                    });
-                    return;
-                }
-
-                const activeAfterStrict = getActiveId();
-                const probeTargets = candidates.filter(candidate => candidate.id !== activeAfterStrict);
-                const probeBaselineById = new Map(
-                    probeTargets.map((candidate) => [candidate.id, captureCandidateBaseline(candidate.id, Date.now())])
-                );
-                const probeAttempts = probeTargets.map((candidate) => ({
-                    videoId: candidate.id,
-                    attempted: Boolean(recoveryManager.probeCandidate(candidate.id, 'processing_asset'))
-                }));
-                Logger.add(LogEvents.tagged('ASSET_HINT', 'Fast probe pass started'), {
-                    processId,
-                    probeWindowMs: timing.probeWindowMs,
-                    activeVideoId: activeAfterStrict,
-                    attempts: probeAttempts
-                });
-                await sleep(timing.probeWindowMs);
-                const progressedProbeCandidate = probeTargets.find((candidate) => (
-                    hasCandidateProgress(candidate.id, probeBaselineById.get(candidate.id))
-                ));
-                if (progressedProbeCandidate) {
-                    const probeSwitch = setActiveAndPlay(processId, progressedProbeCandidate.id, 'probe_pass');
-                    Logger.add(LogEvents.tagged('ASSET_HINT', 'Fast probe pass found progressing candidate'), {
-                        processId,
-                        from: probeSwitch.fromId || null,
-                        to: probeSwitch.toId || progressedProbeCandidate.id,
-                        videoId: progressedProbeCandidate.id
-                    });
-                    return;
-                }
-                Logger.add(LogEvents.tagged('ASSET_HINT', 'Fast probe pass found no progressing candidates'), {
-                    processId,
-                    probeWindowMs: timing.probeWindowMs
-                });
-
-                const activeBeforeSpeculative = getActiveId();
-                const speculativeCandidate = candidates.find(candidate => candidate.id !== activeBeforeSpeculative);
-                if (speculativeCandidate) {
-                    const speculativeBaseline = captureCandidateBaseline(speculativeCandidate.id, Date.now());
-                    const speculativeSwitch = setActiveAndPlay(processId, speculativeCandidate.id, 'speculative_fallback');
-                    Logger.add(LogEvents.tagged('ASSET_HINT', 'Speculative fallback switch applied'), {
-                        processId,
-                        from: speculativeSwitch.fromId || null,
-                        to: speculativeSwitch.toId || speculativeCandidate.id,
-                        videoId: speculativeCandidate.id,
-                        candidateScore: speculativeCandidate.score,
-                        timeoutMs: timing.speculativeTimeoutMs
-                    });
-                    await sleep(timing.speculativeTimeoutMs);
-                    if (hasCandidateProgress(speculativeCandidate.id, speculativeBaseline)) {
-                        Logger.add(LogEvents.tagged('ASSET_HINT', 'Speculative fallback candidate progressed, recovery completed'), {
-                            processId,
-                            videoId: speculativeCandidate.id
-                        });
-                        return;
-                    }
-                    Logger.add(LogEvents.tagged('ASSET_HINT', 'Speculative fallback candidate failed to progress, reverting'), {
-                        processId,
-                        videoId: speculativeCandidate.id
-                    });
-                    if (activeBeforeSpeculative
-                        && activeBeforeSpeculative !== speculativeCandidate.id
-                        && monitorsById.has(activeBeforeSpeculative)) {
-                        const revertOutcome = setActiveAndPlay(processId, activeBeforeSpeculative, 'speculative_revert');
-                        Logger.add(LogEvents.tagged('ASSET_HINT', 'Speculative fallback reverted to previous active candidate'), {
-                            processId,
-                            from: revertOutcome.fromId || null,
-                            to: revertOutcome.toId || activeBeforeSpeculative
-                        });
-                    }
-                } else {
-                    Logger.add(LogEvents.tagged('ASSET_HINT', 'Speculative fallback skipped (no alternate candidates)'), {
-                        processId
-                    });
-                }
-
-                const refreshId = getActiveId() || activeBefore;
-                if (!refreshId) {
-                    Logger.add(LogEvents.tagged('ASSET_HINT_SKIP', 'Processing asset recovery exhausted without refresh target'), {
-                        processId
-                    });
-                    return;
-                }
-                const refreshState = getState(refreshId);
-                const eligibility = recoveryManager.canRequestRefresh
-                    ? recoveryManager.canRequestRefresh(refreshId, refreshState, {
-                        reason: 'processing_asset_exhausted'
-                    })
-                    : { allow: true };
-                const refreshed = eligibility.allow
-                    ? recoveryManager.requestRefresh(refreshId, refreshState, {
-                        reason: 'processing_asset_exhausted',
-                        trigger: 'processing_asset',
-                        detail: 'no_candidate_progress',
-                        eligibility
-                    })
-                    : false;
-                Logger.add(LogEvents.tagged('ASSET_HINT', 'Processing asset recovery exhausted, refresh decision applied'), {
-                    processId,
-                    videoId: refreshId || null,
-                    refreshEligible: eligibility.allow,
-                    refreshEligibilityReason: eligibility.reason || null,
-                    refreshed
+                    signalLevel,
+                    signalMessage,
+                    activeBefore,
+                    helpers
                 });
             }).catch((error) => {
                 Logger.add(LogEvents.tagged('ERROR', 'Processing asset recovery process failed'), {
