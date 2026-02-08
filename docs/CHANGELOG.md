@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.14.5 - 2026-02-08T20:37:36.154Z
+Previous: 4.14.4
+Commit: 0e893b4
+Changes:
+- make file-size enforcement configurable with warning policy
+
 ## 4.14.4 - 2026-02-08T20:34:00.993Z
 Previous: 4.14.3
 Commit: 45fd42d

@@ -63,6 +63,7 @@ const main = () => {
 
     if (violations.length === 0) {
         console.log(`[check-file-size] OK (all src/*.js files <= ${LIMIT} lines).`);
+        console.log('[check-file-size] Warning count: 0');
         return;
     }
 
@@ -73,11 +74,13 @@ const main = () => {
     });
 
     if (activePolicy === 'error') {
+        console.error(`[check-file-size] Warning count: ${violations.length}`);
         process.exit(1);
         return;
     }
 
     console.warn('[check-file-size] Policy=warn; continuing without failure.');
+    console.warn(`[check-file-size] Warning count: ${violations.length}`);
 };
 
 main();
