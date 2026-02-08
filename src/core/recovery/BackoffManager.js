@@ -3,6 +3,15 @@
  * Tracks stall backoff state for no-heal-point scenarios.
  */
 const BackoffManager = (() => {
+    const backoffBucket = (remainingMs) => {
+        if (!Number.isFinite(remainingMs) || remainingMs <= 0) return 0;
+        if (remainingMs <= 5000) return 1;
+        if (remainingMs <= 15000) return 2;
+        if (remainingMs <= 30000) return 3;
+        if (remainingMs <= 45000) return 4;
+        return 5;
+    };
+
     const create = (options = {}) => {
         const logDebug = options.logDebug || (() => {});
 
@@ -59,8 +68,16 @@ const BackoffManager = (() => {
             const now = Date.now();
             const status = getBackoffStatus(monitorState, now);
             if (status.shouldSkip) {
-                if (now - (monitorState.lastBackoffLogTime || 0) > CONFIG.logging.BACKOFF_LOG_INTERVAL_MS) {
+                const lastLogTime = monitorState.lastBackoffLogTime || 0;
+                const bucket = backoffBucket(status.remainingMs);
+                const bucketChanged = bucket !== (monitorState.lastBackoffRemainingBucket || 0);
+                const countChanged = status.noHealPointCount !== (monitorState.lastBackoffNoHealPointCount || 0);
+                const heartbeatDue = (now - lastLogTime) >= (CONFIG.logging.BACKOFF_LOG_INTERVAL_MS * 6);
+                const shouldLog = bucketChanged || countChanged || heartbeatDue;
+                if (shouldLog && (now - lastLogTime) > CONFIG.logging.BACKOFF_LOG_INTERVAL_MS) {
                     PlaybackStateStore.markBackoffLog(monitorState, now);
+                    monitorState.lastBackoffRemainingBucket = bucket;
+                    monitorState.lastBackoffNoHealPointCount = status.noHealPointCount;
                     logDebug(LogEvents.tagged('BACKOFF', 'Stall skipped due to backoff'), {
                         videoId,
                         remainingMs: status.remainingMs,

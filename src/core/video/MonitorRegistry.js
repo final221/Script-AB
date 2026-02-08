@@ -100,7 +100,6 @@ const MonitorRegistry = (() => {
             }
 
             if (monitoredVideos.has(video)) {
-                logDebug(LogEvents.tagged('SKIP', 'Video already being monitored'));
                 return;
             }
 

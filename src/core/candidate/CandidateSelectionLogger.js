@@ -11,6 +11,7 @@ const CandidateSelectionLogger = (() => {
             counts: {},
             lastSample: null
         };
+        const recentImmediateSuppressions = new Map();
 
         const shouldLogDecision = (reason) => (
             reason !== 'interval'
@@ -76,6 +77,25 @@ const CandidateSelectionLogger = (() => {
         const logSuppression = (detail) => {
             if (!detail) return;
             if (detail.reason !== 'interval') {
+                const key = [
+                    detail.from || '',
+                    detail.to || '',
+                    detail.cause || '',
+                    detail.activeState || '',
+                    detail.probationActive ? '1' : '0'
+                ].join('|');
+                const now = Date.now();
+                const dedupeWindowMs = CONFIG.stall.WATCHDOG_INTERVAL_MS * 2;
+                const lastSeen = recentImmediateSuppressions.get(key) || 0;
+                for (const [seenKey, seenAt] of recentImmediateSuppressions.entries()) {
+                    if ((now - seenAt) > dedupeWindowMs) {
+                        recentImmediateSuppressions.delete(seenKey);
+                    }
+                }
+                if ((now - lastSeen) < dedupeWindowMs) {
+                    return;
+                }
+                recentImmediateSuppressions.set(key, now);
                 logDebug(LogEvents.tagged('CANDIDATE', 'Switch suppressed'), detail);
                 return;
             }

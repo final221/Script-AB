@@ -44,6 +44,8 @@ const PlaybackStateStore = (() => {
         state.nextHealAllowedTime = 0;
         state.noHealPointRefreshUntil = 0;
         state.noHealPointQuietUntil = 0;
+        state.lastBackoffRemainingBucket = 0;
+        state.lastBackoffNoHealPointCount = 0;
         return true;
     };
 
@@ -52,6 +54,8 @@ const PlaybackStateStore = (() => {
         state.noHealPointCount = count;
         if (count === 0) {
             state.noHealPointQuietUntil = 0;
+            state.lastBackoffRemainingBucket = 0;
+            state.lastBackoffNoHealPointCount = 0;
         }
         return true;
     };

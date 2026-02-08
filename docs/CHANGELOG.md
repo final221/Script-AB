@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.8.1 - 2026-02-08T15:55:27.617Z
+Previous: 4.8.0
+Commit: 2f3cd0a
+Changes:
+- feat: track former stream candidates after switches
+
 ## 4.8.0 - 2026-02-08T15:42:58.528Z
 Previous: 4.7.0
 Commit: 0b970ad

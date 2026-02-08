@@ -5,6 +5,7 @@
 const ResourceWindow = (() => {
     const resourceEvents = [];
     const pendingWindows = new Map();
+    const completedWindows = new Map();
 
     const truncateUrl = (url) => (
         String(url).substring(0, CONFIG.logging.LOG_URL_MAX_LEN)
@@ -29,7 +30,15 @@ const ResourceWindow = (() => {
         const stallKey = Number.isFinite(detail.stallKey) ? detail.stallKey : stallTime;
         const videoId = detail.videoId || 'unknown';
         const key = `${videoId}:${stallKey}`;
-        if (pendingWindows.has(key)) return;
+        const now = Date.now();
+        const completionTtlMs = 10 * 60 * 1000;
+        for (const [seenKey, seenAt] of completedWindows.entries()) {
+            if ((now - seenAt) > completionTtlMs) {
+                completedWindows.delete(seenKey);
+            }
+        }
+
+        if (pendingWindows.has(key) || completedWindows.has(key)) return;
         pendingWindows.set(key, true);
 
         const pastMs = CONFIG.logging.RESOURCE_WINDOW_PAST_MS || 30000;
@@ -64,6 +73,7 @@ const ResourceWindow = (() => {
                 requests: entries
             });
             pendingWindows.delete(key);
+            completedWindows.set(key, Date.now());
         }, futureMs);
     };
 

@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.8.0
+// @version       4.8.1
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -169,7 +169,7 @@ const CONFIG = (() => {
  * Build metadata helpers (version injected at build time).
  */
 const BuildInfo = (() => {
-    const VERSION = '4.8.0';
+    const VERSION = '4.8.1';
 
     const getVersion = () => {
         const gmVersion = (typeof GM_info !== 'undefined' && GM_info?.script?.version)
@@ -180,7 +180,7 @@ const BuildInfo = (() => {
             ? unsafeWindow.GM_info.script.version
             : null;
         if (unsafeVersion) return unsafeVersion;
-        if (VERSION && VERSION !== '4.8.0') return VERSION;
+        if (VERSION && VERSION !== '4.8.1') return VERSION;
         return null;
     };
 
@@ -2298,6 +2298,7 @@ ${legendLines}
 const ResourceWindow = (() => {
     const resourceEvents = [];
     const pendingWindows = new Map();
+    const completedWindows = new Map();
 
     const truncateUrl = (url) => (
         String(url).substring(0, CONFIG.logging.LOG_URL_MAX_LEN)
@@ -2322,7 +2323,15 @@ const ResourceWindow = (() => {
         const stallKey = Number.isFinite(detail.stallKey) ? detail.stallKey : stallTime;
         const videoId = detail.videoId || 'unknown';
         const key = `${videoId}:${stallKey}`;
-        if (pendingWindows.has(key)) return;
+        const now = Date.now();
+        const completionTtlMs = 10 * 60 * 1000;
+        for (const [seenKey, seenAt] of completedWindows.entries()) {
+            if ((now - seenAt) > completionTtlMs) {
+                completedWindows.delete(seenKey);
+            }
+        }
+
+        if (pendingWindows.has(key) || completedWindows.has(key)) return;
         pendingWindows.set(key, true);
 
         const pastMs = CONFIG.logging.RESOURCE_WINDOW_PAST_MS || 30000;
@@ -2357,6 +2366,7 @@ const ResourceWindow = (() => {
                 requests: entries
             });
             pendingWindows.delete(key);
+            completedWindows.set(key, Date.now());
         }, futureMs);
     };
 
@@ -3229,7 +3239,6 @@ const MonitorRegistry = (() => {
             }
 
             if (monitoredVideos.has(video)) {
-                logDebug(LogEvents.tagged('SKIP', 'Video already being monitored'));
                 return;
             }
 
@@ -3383,21 +3392,31 @@ const MonitorCoordinator = (() => {
             }
             const beforeCount = monitorsById.size;
             const videos = Array.from(document.querySelectorAll('video'));
+            const discovered = videos.map((video) => {
+                const videoId = getVideoId(video);
+                return {
+                    video,
+                    videoId,
+                    alreadyMonitored: monitorsById.has(videoId)
+                };
+            });
             Logger.add(LogEvents.tagged('SCAN', 'Video rescan requested'), {
                 reason,
                 found: videos.length,
                 ...detail
             });
-            for (const video of videos) {
-                const videoId = getVideoId(video);
+            for (const item of discovered) {
+                if (item.alreadyMonitored) {
+                    continue;
+                }
                 logDebug(LogEvents.tagged('SCAN_ITEM', 'Video discovered'), {
                     reason,
-                    videoId,
-                    alreadyMonitored: monitorsById.has(videoId)
+                    videoId: item.videoId,
+                    alreadyMonitored: false
                 });
             }
-            for (const video of videos) {
-                monitorRegistry.monitor(video);
+            for (const item of discovered) {
+                monitorRegistry.monitor(item.video);
             }
             candidateSelector.evaluateCandidates(`scan_${reason || 'manual'}`);
             candidateSelector.getActiveId();
@@ -3405,6 +3424,7 @@ const MonitorCoordinator = (() => {
             Logger.add(LogEvents.tagged('SCAN', 'Video rescan complete'), {
                 reason,
                 found: videos.length,
+                alreadyMonitored: discovered.filter(item => item.alreadyMonitored).length,
                 newMonitors: Math.max(afterCount - beforeCount, 0),
                 totalMonitors: afterCount
             });
@@ -3715,6 +3735,8 @@ const PlaybackStateDefaults = (() => {
             lastHealPointKey: null,
             healPointRepeatCount: 0,
             lastBackoffLogTime: 0,
+            lastBackoffRemainingBucket: 0,
+            lastBackoffNoHealPointCount: 0,
             lastHealAttemptTime: 0,
             lastHealDeferralLogTime: 0,
             healDeferSince: 0,
@@ -3724,6 +3746,8 @@ const PlaybackStateDefaults = (() => {
         },
         events: {
             lastWatchdogLogTime: 0,
+            lastWatchdogSnapshot: '',
+            lastWatchdogStallBucket: 0,
             lastNonActiveEventLogTime: 0,
             nonActiveEventCounts: {},
             lastActiveEventLogTime: 0,
@@ -3758,6 +3782,7 @@ const PlaybackStateDefaults = (() => {
             bufferStarved: false,
             bufferStarveUntil: 0,
             lastBufferStarveLogTime: 0,
+            lastBufferStarveBucket: 0,
             lastBufferStarveSkipLogTime: 0,
             lastBufferStarveRescanTime: 0,
             lastBufferAhead: null,
@@ -3808,6 +3833,8 @@ const PlaybackStateDefaults = (() => {
         lastHealPointKey: ['heal', 'lastHealPointKey'],
         healPointRepeatCount: ['heal', 'healPointRepeatCount'],
         lastBackoffLogTime: ['heal', 'lastBackoffLogTime'],
+        lastBackoffRemainingBucket: ['heal', 'lastBackoffRemainingBucket'],
+        lastBackoffNoHealPointCount: ['heal', 'lastBackoffNoHealPointCount'],
         lastHealAttemptTime: ['heal', 'lastHealAttemptTime'],
         lastHealDeferralLogTime: ['heal', 'lastHealDeferralLogTime'],
         healDeferSince: ['heal', 'healDeferSince'],
@@ -3815,6 +3842,8 @@ const PlaybackStateDefaults = (() => {
         lastRefreshAt: ['heal', 'lastRefreshAt'],
         lastEmergencySwitchAt: ['heal', 'lastEmergencySwitchAt'],
         lastWatchdogLogTime: ['events', 'lastWatchdogLogTime'],
+        lastWatchdogSnapshot: ['events', 'lastWatchdogSnapshot'],
+        lastWatchdogStallBucket: ['events', 'lastWatchdogStallBucket'],
         lastNonActiveEventLogTime: ['events', 'lastNonActiveEventLogTime'],
         nonActiveEventCounts: ['events', 'nonActiveEventCounts'],
         lastActiveEventLogTime: ['events', 'lastActiveEventLogTime'],
@@ -3839,6 +3868,7 @@ const PlaybackStateDefaults = (() => {
         bufferStarved: ['stall', 'bufferStarved'],
         bufferStarveUntil: ['stall', 'bufferStarveUntil'],
         lastBufferStarveLogTime: ['stall', 'lastBufferStarveLogTime'],
+        lastBufferStarveBucket: ['stall', 'lastBufferStarveBucket'],
         lastBufferStarveSkipLogTime: ['stall', 'lastBufferStarveSkipLogTime'],
         lastBufferStarveRescanTime: ['stall', 'lastBufferStarveRescanTime'],
         lastBufferAhead: ['stall', 'lastBufferAhead'],
@@ -4056,6 +4086,8 @@ const PlaybackStateStore = (() => {
         state.nextHealAllowedTime = 0;
         state.noHealPointRefreshUntil = 0;
         state.noHealPointQuietUntil = 0;
+        state.lastBackoffRemainingBucket = 0;
+        state.lastBackoffNoHealPointCount = 0;
         return true;
     };
 
@@ -4064,6 +4096,8 @@ const PlaybackStateStore = (() => {
         state.noHealPointCount = count;
         if (count === 0) {
             state.noHealPointQuietUntil = 0;
+            state.lastBackoffRemainingBucket = 0;
+            state.lastBackoffNoHealPointCount = 0;
         }
         return true;
     };
@@ -4498,6 +4532,7 @@ const PlaybackProgressReset = (() => {
                 state.bufferStarvedSince = 0;
                 state.bufferStarveUntil = 0;
                 state.lastBufferStarveLogTime = 0;
+                state.lastBufferStarveBucket = 0;
                 state.lastBufferStarveSkipLogTime = 0;
             }
         };
@@ -4779,6 +4814,17 @@ const PlaybackSyncLogic = (() => {
  * Buffer starvation tracking helper.
  */
 const PlaybackStarvationLogic = (() => {
+    const starvationBucket = (starvedForMs) => {
+        if (!Number.isFinite(starvedForMs) || starvedForMs <= 0) return 0;
+        if (starvedForMs < 15000) return 1;
+        if (starvedForMs < 30000) return 2;
+        if (starvedForMs < 60000) return 3;
+        if (starvedForMs < 120000) return 4;
+        if (starvedForMs < 300000) return 5;
+        if (starvedForMs < 600000) return 6;
+        return 7;
+    };
+
     const create = (options = {}) => {
         const state = options.state;
         const logDebugLazy = options.logDebugLazy || (() => {});
@@ -4820,6 +4866,7 @@ const PlaybackStarvationLogic = (() => {
                     state.bufferStarved = true;
                     state.bufferStarveUntil = now + CONFIG.stall.BUFFER_STARVE_BACKOFF_MS;
                     state.lastBufferStarveLogTime = now;
+                    state.lastBufferStarveBucket = starvationBucket(starvedForMs);
                     logDebugLazy(LogEvents.tagged('STARVE', 'Buffer starvation detected'), () => ({
                         reason,
                         bufferAhead: bufferAhead.toFixed(3),
@@ -4827,9 +4874,15 @@ const PlaybackStarvationLogic = (() => {
                         confirmMs: CONFIG.stall.BUFFER_STARVE_CONFIRM_MS,
                         backoffMs: CONFIG.stall.BUFFER_STARVE_BACKOFF_MS
                     }));
-                } else if (state.bufferStarved
-                    && (now - state.lastBufferStarveLogTime) >= CONFIG.logging.STARVE_LOG_MS) {
+                } else if (state.bufferStarved) {
+                    const bucket = starvationBucket(starvedForMs);
+                    const bucketChanged = bucket !== (state.lastBufferStarveBucket || 0);
+                    const heartbeatDue = (now - state.lastBufferStarveLogTime) >= (CONFIG.logging.STARVE_LOG_MS * 3);
+                    if (!bucketChanged && !heartbeatDue) {
+                        return state.bufferStarved;
+                    }
                     state.lastBufferStarveLogTime = now;
+                    state.lastBufferStarveBucket = bucket;
                     if (now >= state.bufferStarveUntil) {
                         state.bufferStarveUntil = now + CONFIG.stall.BUFFER_STARVE_BACKOFF_MS;
                     }
@@ -4849,6 +4902,7 @@ const PlaybackStarvationLogic = (() => {
                 state.bufferStarvedSince = 0;
                 state.bufferStarveUntil = 0;
                 state.lastBufferStarveLogTime = 0;
+                state.lastBufferStarveBucket = 0;
                 state.lastBufferStarveSkipLogTime = 0;
                 logDebugLazy(LogEvents.tagged('STARVE_CLEAR', 'Buffer starvation cleared'), () => ({
                     reason,
@@ -5268,6 +5322,16 @@ const PlaybackWatchdog = (() => {
     const LOG = {
         WATCHDOG: LogEvents.TAG.WATCHDOG
     };
+    const watchdogBucket = (stalledForMs) => {
+        if (!Number.isFinite(stalledForMs) || stalledForMs <= 0) return 0;
+        if (stalledForMs < 10000) return 1;
+        if (stalledForMs < 30000) return 2;
+        if (stalledForMs < 60000) return 3;
+        if (stalledForMs < 120000) return 4;
+        if (stalledForMs < 300000) return 5;
+        if (stalledForMs < 600000) return 6;
+        return 7;
+    };
 
     const create = (options) => {
         const video = options.video;
@@ -5346,8 +5410,27 @@ const PlaybackWatchdog = (() => {
             stallMachine.handleWatchdogNoProgress();
 
             const logIntervalMs = Tuning.logIntervalMs(isActive());
-            if (now - state.lastWatchdogLogTime > logIntervalMs) {
+            const stalledBucket = watchdogBucket(stalledForMs);
+            const snapshot = [
+                state.state,
+                video.paused ? 1 : 0,
+                video.readyState ?? null,
+                video.networkState ?? null,
+                bufferExhausted ? 1 : 0,
+                pauseFromStall ? 1 : 0
+            ].join('|');
+            const snapshotChanged = (
+                state.lastWatchdogSnapshot !== snapshot
+                || state.lastWatchdogStallBucket !== stalledBucket
+            );
+            const heartbeatMs = logIntervalMs * 6;
+            const heartbeatDue = (now - state.lastWatchdogLogTime) >= heartbeatMs;
+            const shouldLog = snapshotChanged || heartbeatDue;
+
+            if (shouldLog && (now - state.lastWatchdogLogTime) > logIntervalMs) {
                 state.lastWatchdogLogTime = now;
+                state.lastWatchdogSnapshot = snapshot;
+                state.lastWatchdogStallBucket = stalledBucket;
                 const entry = logHelper.buildWatchdogNoProgress(stalledForMs, bufferExhausted, pauseFromStall);
                 logDebug(entry.message, entry.detail);
             }
@@ -5995,6 +6078,7 @@ const CandidateSelectionLogger = (() => {
             counts: {},
             lastSample: null
         };
+        const recentImmediateSuppressions = new Map();
 
         const shouldLogDecision = (reason) => (
             reason !== 'interval'
@@ -6060,6 +6144,25 @@ const CandidateSelectionLogger = (() => {
         const logSuppression = (detail) => {
             if (!detail) return;
             if (detail.reason !== 'interval') {
+                const key = [
+                    detail.from || '',
+                    detail.to || '',
+                    detail.cause || '',
+                    detail.activeState || '',
+                    detail.probationActive ? '1' : '0'
+                ].join('|');
+                const now = Date.now();
+                const dedupeWindowMs = CONFIG.stall.WATCHDOG_INTERVAL_MS * 2;
+                const lastSeen = recentImmediateSuppressions.get(key) || 0;
+                for (const [seenKey, seenAt] of recentImmediateSuppressions.entries()) {
+                    if ((now - seenAt) > dedupeWindowMs) {
+                        recentImmediateSuppressions.delete(seenKey);
+                    }
+                }
+                if ((now - lastSeen) < dedupeWindowMs) {
+                    return;
+                }
+                recentImmediateSuppressions.set(key, now);
                 logDebug(LogEvents.tagged('CANDIDATE', 'Switch suppressed'), detail);
                 return;
             }
@@ -6975,6 +7078,15 @@ const RecoveryContext = (() => {
  * Tracks stall backoff state for no-heal-point scenarios.
  */
 const BackoffManager = (() => {
+    const backoffBucket = (remainingMs) => {
+        if (!Number.isFinite(remainingMs) || remainingMs <= 0) return 0;
+        if (remainingMs <= 5000) return 1;
+        if (remainingMs <= 15000) return 2;
+        if (remainingMs <= 30000) return 3;
+        if (remainingMs <= 45000) return 4;
+        return 5;
+    };
+
     const create = (options = {}) => {
         const logDebug = options.logDebug || (() => {});
 
@@ -7031,8 +7143,16 @@ const BackoffManager = (() => {
             const now = Date.now();
             const status = getBackoffStatus(monitorState, now);
             if (status.shouldSkip) {
-                if (now - (monitorState.lastBackoffLogTime || 0) > CONFIG.logging.BACKOFF_LOG_INTERVAL_MS) {
+                const lastLogTime = monitorState.lastBackoffLogTime || 0;
+                const bucket = backoffBucket(status.remainingMs);
+                const bucketChanged = bucket !== (monitorState.lastBackoffRemainingBucket || 0);
+                const countChanged = status.noHealPointCount !== (monitorState.lastBackoffNoHealPointCount || 0);
+                const heartbeatDue = (now - lastLogTime) >= (CONFIG.logging.BACKOFF_LOG_INTERVAL_MS * 6);
+                const shouldLog = bucketChanged || countChanged || heartbeatDue;
+                if (shouldLog && (now - lastLogTime) > CONFIG.logging.BACKOFF_LOG_INTERVAL_MS) {
                     PlaybackStateStore.markBackoffLog(monitorState, now);
+                    monitorState.lastBackoffRemainingBucket = bucket;
+                    monitorState.lastBackoffNoHealPointCount = status.noHealPointCount;
                     logDebug(LogEvents.tagged('BACKOFF', 'Stall skipped due to backoff'), {
                         videoId,
                         remainingMs: status.remainingMs,
@@ -7168,6 +7288,15 @@ const RecoveryLogDetails = (() => {
  * Applies recovery policy decisions with centralized side effects.
  */
 const RecoveryDecisionApplier = (() => {
+    const backoffBucket = (remainingMs) => {
+        if (!Number.isFinite(remainingMs) || remainingMs <= 0) return 0;
+        if (remainingMs <= 5000) return 1;
+        if (remainingMs <= 15000) return 2;
+        if (remainingMs <= 30000) return 3;
+        if (remainingMs <= 45000) return 4;
+        return 5;
+    };
+
     const create = (options = {}) => {
         const backoffManager = options.backoffManager;
         const candidateSelector = options.candidateSelector;
@@ -7175,6 +7304,26 @@ const RecoveryDecisionApplier = (() => {
         const onRescan = options.onRescan || (() => {});
         const onPersistentFailure = options.onPersistentFailure || (() => {});
         const probationPolicy = options.probationPolicy;
+        const shouldLogBackoffSkip = (monitorState, backoff, now) => {
+            if (!monitorState || !backoff) return false;
+            const lastLogTime = monitorState.lastBackoffLogTime || 0;
+            const bucket = backoffBucket(backoff.remainingMs);
+            const bucketChanged = bucket !== (monitorState.lastBackoffRemainingBucket || 0);
+            const count = backoff.noHealPointCount || 0;
+            const countChanged = count !== (monitorState.lastBackoffNoHealPointCount || 0);
+            const heartbeatDue = (now - lastLogTime) >= (CONFIG.logging.BACKOFF_LOG_INTERVAL_MS * 6);
+            const shouldLog = bucketChanged || countChanged || heartbeatDue;
+            if (!shouldLog) {
+                return false;
+            }
+            if ((now - lastLogTime) <= CONFIG.logging.BACKOFF_LOG_INTERVAL_MS) {
+                return false;
+            }
+            monitorState.lastBackoffRemainingBucket = bucket;
+            monitorState.lastBackoffNoHealPointCount = count;
+            return true;
+        };
+
         const applyEmergencySwitch = (monitorState, reason, now, switchOptions = {}) => {
             if (!monitorState || !candidateSelector || typeof candidateSelector.selectEmergencyCandidate !== 'function') {
                 return false;
@@ -7364,7 +7513,7 @@ const RecoveryDecisionApplier = (() => {
             const now = context.now;
             if (!monitorState) return true;
             if (data.reason === 'backoff' && data.backoff) {
-                if (now - (monitorState.lastBackoffLogTime || 0) > CONFIG.logging.BACKOFF_LOG_INTERVAL_MS) {
+                if (shouldLogBackoffSkip(monitorState, data.backoff, now)) {
                     PlaybackStateStore.markBackoffLog(monitorState, now);
                     logDebug(LogEvents.tagged('BACKOFF', 'Stall skipped due to backoff'), {
                         videoId,
@@ -9736,6 +9885,10 @@ const StallHandler = (() => {
         const maybeLogResourceWindow = (context, details, now) => {
             const state = context.monitorState;
             if (!state) return;
+            const activeCandidateId = candidateSelector.getActiveId();
+            if (activeCandidateId && activeCandidateId !== context.videoId) {
+                return;
+            }
             if (state.lastResourceWindowLogTime
                 && (now - state.lastResourceWindowLogTime) <= CONFIG.logging.BACKOFF_LOG_INTERVAL_MS) {
                 return;

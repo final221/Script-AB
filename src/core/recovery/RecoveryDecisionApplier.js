@@ -3,6 +3,15 @@
  * Applies recovery policy decisions with centralized side effects.
  */
 const RecoveryDecisionApplier = (() => {
+    const backoffBucket = (remainingMs) => {
+        if (!Number.isFinite(remainingMs) || remainingMs <= 0) return 0;
+        if (remainingMs <= 5000) return 1;
+        if (remainingMs <= 15000) return 2;
+        if (remainingMs <= 30000) return 3;
+        if (remainingMs <= 45000) return 4;
+        return 5;
+    };
+
     const create = (options = {}) => {
         const backoffManager = options.backoffManager;
         const candidateSelector = options.candidateSelector;
@@ -10,6 +19,26 @@ const RecoveryDecisionApplier = (() => {
         const onRescan = options.onRescan || (() => {});
         const onPersistentFailure = options.onPersistentFailure || (() => {});
         const probationPolicy = options.probationPolicy;
+        const shouldLogBackoffSkip = (monitorState, backoff, now) => {
+            if (!monitorState || !backoff) return false;
+            const lastLogTime = monitorState.lastBackoffLogTime || 0;
+            const bucket = backoffBucket(backoff.remainingMs);
+            const bucketChanged = bucket !== (monitorState.lastBackoffRemainingBucket || 0);
+            const count = backoff.noHealPointCount || 0;
+            const countChanged = count !== (monitorState.lastBackoffNoHealPointCount || 0);
+            const heartbeatDue = (now - lastLogTime) >= (CONFIG.logging.BACKOFF_LOG_INTERVAL_MS * 6);
+            const shouldLog = bucketChanged || countChanged || heartbeatDue;
+            if (!shouldLog) {
+                return false;
+            }
+            if ((now - lastLogTime) <= CONFIG.logging.BACKOFF_LOG_INTERVAL_MS) {
+                return false;
+            }
+            monitorState.lastBackoffRemainingBucket = bucket;
+            monitorState.lastBackoffNoHealPointCount = count;
+            return true;
+        };
+
         const applyEmergencySwitch = (monitorState, reason, now, switchOptions = {}) => {
             if (!monitorState || !candidateSelector || typeof candidateSelector.selectEmergencyCandidate !== 'function') {
                 return false;
@@ -199,7 +228,7 @@ const RecoveryDecisionApplier = (() => {
             const now = context.now;
             if (!monitorState) return true;
             if (data.reason === 'backoff' && data.backoff) {
-                if (now - (monitorState.lastBackoffLogTime || 0) > CONFIG.logging.BACKOFF_LOG_INTERVAL_MS) {
+                if (shouldLogBackoffSkip(monitorState, data.backoff, now)) {
                     PlaybackStateStore.markBackoffLog(monitorState, now);
                     logDebug(LogEvents.tagged('BACKOFF', 'Stall skipped due to backoff'), {
                         videoId,

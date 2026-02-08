@@ -52,6 +52,7 @@ const PlaybackProgressReset = (() => {
                 state.bufferStarvedSince = 0;
                 state.bufferStarveUntil = 0;
                 state.lastBufferStarveLogTime = 0;
+                state.lastBufferStarveBucket = 0;
                 state.lastBufferStarveSkipLogTime = 0;
             }
         };

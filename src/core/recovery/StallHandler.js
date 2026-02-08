@@ -16,6 +16,10 @@ const StallHandler = (() => {
         const maybeLogResourceWindow = (context, details, now) => {
             const state = context.monitorState;
             if (!state) return;
+            const activeCandidateId = candidateSelector.getActiveId();
+            if (activeCandidateId && activeCandidateId !== context.videoId) {
+                return;
+            }
             if (state.lastResourceWindowLogTime
                 && (now - state.lastResourceWindowLogTime) <= CONFIG.logging.BACKOFF_LOG_INTERVAL_MS) {
                 return;

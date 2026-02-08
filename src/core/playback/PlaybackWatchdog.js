@@ -6,6 +6,16 @@ const PlaybackWatchdog = (() => {
     const LOG = {
         WATCHDOG: LogEvents.TAG.WATCHDOG
     };
+    const watchdogBucket = (stalledForMs) => {
+        if (!Number.isFinite(stalledForMs) || stalledForMs <= 0) return 0;
+        if (stalledForMs < 10000) return 1;
+        if (stalledForMs < 30000) return 2;
+        if (stalledForMs < 60000) return 3;
+        if (stalledForMs < 120000) return 4;
+        if (stalledForMs < 300000) return 5;
+        if (stalledForMs < 600000) return 6;
+        return 7;
+    };
 
     const create = (options) => {
         const video = options.video;
@@ -84,8 +94,27 @@ const PlaybackWatchdog = (() => {
             stallMachine.handleWatchdogNoProgress();
 
             const logIntervalMs = Tuning.logIntervalMs(isActive());
-            if (now - state.lastWatchdogLogTime > logIntervalMs) {
+            const stalledBucket = watchdogBucket(stalledForMs);
+            const snapshot = [
+                state.state,
+                video.paused ? 1 : 0,
+                video.readyState ?? null,
+                video.networkState ?? null,
+                bufferExhausted ? 1 : 0,
+                pauseFromStall ? 1 : 0
+            ].join('|');
+            const snapshotChanged = (
+                state.lastWatchdogSnapshot !== snapshot
+                || state.lastWatchdogStallBucket !== stalledBucket
+            );
+            const heartbeatMs = logIntervalMs * 6;
+            const heartbeatDue = (now - state.lastWatchdogLogTime) >= heartbeatMs;
+            const shouldLog = snapshotChanged || heartbeatDue;
+
+            if (shouldLog && (now - state.lastWatchdogLogTime) > logIntervalMs) {
                 state.lastWatchdogLogTime = now;
+                state.lastWatchdogSnapshot = snapshot;
+                state.lastWatchdogStallBucket = stalledBucket;
                 const entry = logHelper.buildWatchdogNoProgress(stalledForMs, bufferExhausted, pauseFromStall);
                 logDebug(entry.message, entry.detail);
             }

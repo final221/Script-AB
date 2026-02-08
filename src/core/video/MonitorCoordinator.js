@@ -80,21 +80,31 @@ const MonitorCoordinator = (() => {
             }
             const beforeCount = monitorsById.size;
             const videos = Array.from(document.querySelectorAll('video'));
+            const discovered = videos.map((video) => {
+                const videoId = getVideoId(video);
+                return {
+                    video,
+                    videoId,
+                    alreadyMonitored: monitorsById.has(videoId)
+                };
+            });
             Logger.add(LogEvents.tagged('SCAN', 'Video rescan requested'), {
                 reason,
                 found: videos.length,
                 ...detail
             });
-            for (const video of videos) {
-                const videoId = getVideoId(video);
+            for (const item of discovered) {
+                if (item.alreadyMonitored) {
+                    continue;
+                }
                 logDebug(LogEvents.tagged('SCAN_ITEM', 'Video discovered'), {
                     reason,
-                    videoId,
-                    alreadyMonitored: monitorsById.has(videoId)
+                    videoId: item.videoId,
+                    alreadyMonitored: false
                 });
             }
-            for (const video of videos) {
-                monitorRegistry.monitor(video);
+            for (const item of discovered) {
+                monitorRegistry.monitor(item.video);
             }
             candidateSelector.evaluateCandidates(`scan_${reason || 'manual'}`);
             candidateSelector.getActiveId();
@@ -102,6 +112,7 @@ const MonitorCoordinator = (() => {
             Logger.add(LogEvents.tagged('SCAN', 'Video rescan complete'), {
                 reason,
                 found: videos.length,
+                alreadyMonitored: discovered.filter(item => item.alreadyMonitored).length,
                 newMonitors: Math.max(afterCount - beforeCount, 0),
                 totalMonitors: afterCount
             });

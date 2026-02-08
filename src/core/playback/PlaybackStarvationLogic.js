@@ -3,6 +3,17 @@
  * Buffer starvation tracking helper.
  */
 const PlaybackStarvationLogic = (() => {
+    const starvationBucket = (starvedForMs) => {
+        if (!Number.isFinite(starvedForMs) || starvedForMs <= 0) return 0;
+        if (starvedForMs < 15000) return 1;
+        if (starvedForMs < 30000) return 2;
+        if (starvedForMs < 60000) return 3;
+        if (starvedForMs < 120000) return 4;
+        if (starvedForMs < 300000) return 5;
+        if (starvedForMs < 600000) return 6;
+        return 7;
+    };
+
     const create = (options = {}) => {
         const state = options.state;
         const logDebugLazy = options.logDebugLazy || (() => {});
@@ -44,6 +55,7 @@ const PlaybackStarvationLogic = (() => {
                     state.bufferStarved = true;
                     state.bufferStarveUntil = now + CONFIG.stall.BUFFER_STARVE_BACKOFF_MS;
                     state.lastBufferStarveLogTime = now;
+                    state.lastBufferStarveBucket = starvationBucket(starvedForMs);
                     logDebugLazy(LogEvents.tagged('STARVE', 'Buffer starvation detected'), () => ({
                         reason,
                         bufferAhead: bufferAhead.toFixed(3),
@@ -51,9 +63,15 @@ const PlaybackStarvationLogic = (() => {
                         confirmMs: CONFIG.stall.BUFFER_STARVE_CONFIRM_MS,
                         backoffMs: CONFIG.stall.BUFFER_STARVE_BACKOFF_MS
                     }));
-                } else if (state.bufferStarved
-                    && (now - state.lastBufferStarveLogTime) >= CONFIG.logging.STARVE_LOG_MS) {
+                } else if (state.bufferStarved) {
+                    const bucket = starvationBucket(starvedForMs);
+                    const bucketChanged = bucket !== (state.lastBufferStarveBucket || 0);
+                    const heartbeatDue = (now - state.lastBufferStarveLogTime) >= (CONFIG.logging.STARVE_LOG_MS * 3);
+                    if (!bucketChanged && !heartbeatDue) {
+                        return state.bufferStarved;
+                    }
                     state.lastBufferStarveLogTime = now;
+                    state.lastBufferStarveBucket = bucket;
                     if (now >= state.bufferStarveUntil) {
                         state.bufferStarveUntil = now + CONFIG.stall.BUFFER_STARVE_BACKOFF_MS;
                     }
@@ -73,6 +91,7 @@ const PlaybackStarvationLogic = (() => {
                 state.bufferStarvedSince = 0;
                 state.bufferStarveUntil = 0;
                 state.lastBufferStarveLogTime = 0;
+                state.lastBufferStarveBucket = 0;
                 state.lastBufferStarveSkipLogTime = 0;
                 logDebugLazy(LogEvents.tagged('STARVE_CLEAR', 'Buffer starvation cleared'), () => ({
                     reason,
