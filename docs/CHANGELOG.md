@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.14.3 - 2026-02-08T20:29:09.155Z
+Previous: 4.14.2
+Commit: ac629c2
+Changes:
+- Harden commit workflow, enforce file-size guard, and refresh AI context
+
 ## 4.14.2 - 2026-02-08T20:22:59.882Z
 Previous: 4.14.1
 Commit: 4e5c72b

@@ -39,28 +39,32 @@ window.Fn = window.Fn || {};
 
 console.log('[Setup] Starting setup.js...');
 
-// Load all files
-const loadSourceFiles = () => {
-    const topLevelDecl = /^(?:const|let|var|function|class)\s+([a-zA-Z_][a-zA-Z0-9_]*)\b/gm;
+const TEST_SYMBOL_OVERRIDES = {
+    'config/Config.js': ['CONFIG'],
+    'config/Validate.js': ['ConfigValidator'],
+    'utils/Utils.js': ['Fn'],
+    'core/playback/PlaybackStateDefaults.js': ['MonitorStates', 'PlaybackStateDefaults']
+};
 
+const normalizeRelativePath = file => path.relative(SRC_DIR, file).replace(/\\/g, '/');
+
+const getExpectedSymbol = file => {
+    const relativePath = normalizeRelativePath(file);
+    return TEST_SYMBOL_OVERRIDES[relativePath] || [path.basename(file, '.js')];
+};
+
+const loadSourceFiles = () => {
     loadOrder.forEach(file => {
         if (fs.existsSync(file)) {
             const content = fs.readFileSync(file, 'utf8');
-            const names = new Set();
-            let match;
+            const symbols = getExpectedSymbol(file);
+            const exposeLines = symbols.map(symbol => `if (typeof ${symbol} !== 'undefined') {
+    window['${symbol}'] = global['${symbol}'] = ${symbol};
+}`);
+            const exposedContent = `${content}
 
-            topLevelDecl.lastIndex = 0;
-            while ((match = topLevelDecl.exec(content)) !== null) {
-                names.add(match[1]);
-            }
-
-            let exposedContent = content;
-            if (names.size > 0) {
-                const lines = Array.from(names).map(
-                    name => `window.${name} = global.${name} = ${name};`
-                );
-                exposedContent = `${content}\n\n// Expose top-level declarations for tests\n${lines.join('\n')}\n`;
-            }
+// Expose module symbols for tests
+${exposeLines.join('\n')}`;
 
             try {
                 // Execute in global scope
