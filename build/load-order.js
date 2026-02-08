@@ -94,12 +94,16 @@ const buildGraphError = (report) => {
     return new Error(`[load-order] Graph manifest validation failed. ${issues.join(' | ')}`);
 };
 
-const getGraphLoadOrder = ({ srcDir, legacyOrder }) => {
+const getGraphLoadOrder = ({ srcDir, legacyOrder, allFiles }) => {
     const metadata = collectModuleMetadata(srcDir);
     const graph = buildDependencyGraph(metadata.moduleToEntry);
     const entryRelative = toPosix(path.relative(srcDir, legacyOrder.entryFile));
     const legacyRelative = legacyOrder.loadOrder.map(file => toPosix(path.relative(srcDir, file)));
-    const legacySet = new Set(legacyRelative);
+    const files = allFiles || listFilesRecursive(srcDir);
+    const allRelative = files
+        .filter(file => file.endsWith('.js'))
+        .map(file => toPosix(path.relative(srcDir, file)))
+        .sort((a, b) => a.localeCompare(b));
 
     const orderHint = new Map();
     legacyRelative.forEach((relPath, index) => {
@@ -123,40 +127,25 @@ const getGraphLoadOrder = ({ srcDir, legacyOrder }) => {
         throw graphError;
     }
 
-    const candidateAnnotatedPaths = topo.ordered
+    const orderedAnnotated = topo.ordered
         .map(moduleName => metadata.moduleToEntry.get(moduleName))
         .filter(Boolean)
         .map(entry => entry.relPath)
-        .filter(relPath => relPath !== entryRelative && legacySet.has(relPath));
-
-    let cursor = 0;
-    const graphRelative = legacyRelative.map((relPath) => {
-        if (relPath === entryRelative) {
-            return relPath;
-        }
-
-        const moduleName = metadata.pathToModule.get(relPath);
-        if (!moduleName) {
-            return relPath;
-        }
-
-        const replacement = candidateAnnotatedPaths[cursor] || relPath;
-        cursor += 1;
-        return replacement;
-    });
-
-    const priorityCount = legacyOrder.priorityFiles.length;
-    const priorityRelative = graphRelative.slice(0, priorityCount);
-    const otherRelative = graphRelative.slice(priorityCount, graphRelative.length - 1);
+        .filter(relPath => relPath !== entryRelative);
+    const annotatedSet = new Set(orderedAnnotated);
+    const unannotated = allRelative.filter(relPath => relPath !== entryRelative && !annotatedSet.has(relPath));
+    const graphRelative = [...orderedAnnotated, ...unannotated, entryRelative];
+    const priorityRelative = graphRelative.slice(0, graphRelative.length - 1);
 
     return {
         priorityFiles: priorityRelative.map(relPath => path.join(srcDir, relPath)),
-        otherFiles: otherRelative.map(relPath => path.join(srcDir, relPath)),
+        otherFiles: [],
         entryFile: path.join(srcDir, entryRelative),
         loadOrder: graphRelative.map(relPath => path.join(srcDir, relPath)),
         graphReport: {
             ...report,
-            candidateAnnotatedCount: candidateAnnotatedPaths.length
+            candidateAnnotatedCount: orderedAnnotated.length,
+            unannotatedCount: unannotated.length
         }
     };
 };
@@ -197,7 +186,8 @@ const getLoadOrder = ({ srcDir, manifestPath, manifest, allFiles, mode, legacyMa
 
     const graphOrder = getGraphLoadOrder({
         srcDir,
-        legacyOrder
+        legacyOrder,
+        allFiles
     });
 
     return {

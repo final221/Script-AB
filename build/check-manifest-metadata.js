@@ -20,9 +20,11 @@ const relSrcPath = (filePath) => filePath.replace(SRC + path.sep, '').replace(/\
 
 const main = () => {
     if (!VALID_POLICIES.has(POLICY)) {
-        console.warn(`[check-manifest-metadata] Invalid MODULE_METADATA_POLICY="${POLICY}", using "warn".`);
+        console.error(`[check-manifest-metadata] Invalid MODULE_METADATA_POLICY="${POLICY}". Expected one of: warn, error, off.`);
+        process.exit(1);
+        return;
     }
-    const activePolicy = VALID_POLICIES.has(POLICY) ? POLICY : 'warn';
+    const activePolicy = POLICY;
     if (activePolicy === 'off') {
         console.log('[check-manifest-metadata] Policy off; skipping check.');
         return;

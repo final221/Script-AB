@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.14.12 - 2026-02-08T21:32:34.739Z
+Previous: 4.14.11
+Commit: 8d8eb17
+Changes:
+- build: complete graph manifest migration with strict module metadata
+
 ## 4.14.11 - 2026-02-08T21:16:51.631Z
 Previous: 4.14.10
 Commit: 9d78f25

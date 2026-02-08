@@ -11,6 +11,7 @@ const LEGACY_MANIFEST_PATH = path.join(__dirname, 'manifest.legacy.json');
 const DEFAULT_ENTRY = 'core/orchestrators/CoreOrchestrator.js';
 
 const toPosix = (filePath) => filePath.replace(/\\/g, '/');
+const byLex = (a, b) => a.localeCompare(b);
 
 const readManifestSafe = (filePath) => {
     if (!fs.existsSync(filePath)) return null;
@@ -21,22 +22,31 @@ const readManifestSafe = (filePath) => {
     }
 };
 
-const buildOrderHint = ({ manifests, pathToModule }) => {
+const buildOrderHint = ({ legacyManifest, pathToModule, allJsFiles, entry }) => {
     const hint = new Map();
     let cursor = 0;
-    manifests.forEach((manifest) => {
-        if (!manifest) return;
-        const orderedPaths = [
-            ...(Array.isArray(manifest.priority) ? manifest.priority : []),
-            manifest.entry || DEFAULT_ENTRY
-        ];
-        orderedPaths.forEach((relPath) => {
-            const moduleName = pathToModule.get(relPath);
-            if (!moduleName || hint.has(moduleName)) return;
-            hint.set(moduleName, cursor);
-            cursor += 1;
-        });
+
+    const orderedPaths = legacyManifest
+        ? [
+            ...(Array.isArray(legacyManifest.priority) ? legacyManifest.priority : []),
+            legacyManifest.entry || entry
+        ]
+        : [];
+
+    orderedPaths.forEach((relPath) => {
+        const moduleName = pathToModule.get(relPath);
+        if (!moduleName || hint.has(moduleName)) return;
+        hint.set(moduleName, cursor);
+        cursor += 1;
     });
+
+    allJsFiles.forEach((relPath) => {
+        const moduleName = pathToModule.get(relPath);
+        if (!moduleName || hint.has(moduleName)) return;
+        hint.set(moduleName, cursor);
+        cursor += 1;
+    });
+
     return hint;
 };
 
@@ -54,23 +64,23 @@ const buildGraphIssues = ({ duplicates, unresolvedDependencies, topo }) => {
     return issues;
 };
 
-const buildManifest = () => {
-    const allJsFiles = listJsFilesRecursive(SRC)
-        .map(filePath => toPosix(path.relative(SRC, filePath)))
-        .sort((a, b) => a.localeCompare(b));
-    const entry = DEFAULT_ENTRY;
+const buildManifest = ({ srcDir = SRC, legacyManifestPath = LEGACY_MANIFEST_PATH, entry = DEFAULT_ENTRY } = {}) => {
+    const allJsFiles = listJsFilesRecursive(srcDir)
+        .map(filePath => toPosix(path.relative(srcDir, filePath)))
+        .sort(byLex);
 
     if (!allJsFiles.includes(entry)) {
         throw new Error(`[generate-manifest] Missing entry file: ${entry}`);
     }
 
-    const metadata = collectModuleMetadata(SRC);
+    const metadata = collectModuleMetadata(srcDir);
     const graph = buildDependencyGraph(metadata.moduleToEntry);
-    const currentManifest = readManifestSafe(MANIFEST_PATH);
-    const legacyManifest = readManifestSafe(LEGACY_MANIFEST_PATH);
+    const legacyManifest = readManifestSafe(legacyManifestPath);
     const hint = buildOrderHint({
-        manifests: [legacyManifest, currentManifest],
-        pathToModule: metadata.pathToModule
+        legacyManifest,
+        pathToModule: metadata.pathToModule,
+        allJsFiles,
+        entry
     });
     const topo = topoSort(graph, hint);
     const issues = buildGraphIssues({
@@ -98,11 +108,21 @@ const buildManifest = () => {
     };
 };
 
-const generateManifest = ({ check = false } = {}) => {
-    const manifest = buildManifest();
+const generateManifest = ({
+    check = false,
+    srcDir = SRC,
+    manifestPath = MANIFEST_PATH,
+    legacyManifestPath = LEGACY_MANIFEST_PATH,
+    entry = DEFAULT_ENTRY
+} = {}) => {
+    const manifest = buildManifest({
+        srcDir,
+        legacyManifestPath,
+        entry
+    });
     const serialized = JSON.stringify(manifest, null, 2) + '\n';
-    const exists = fs.existsSync(MANIFEST_PATH);
-    const current = exists ? fs.readFileSync(MANIFEST_PATH, 'utf8') : '';
+    const exists = fs.existsSync(manifestPath);
+    const current = exists ? fs.readFileSync(manifestPath, 'utf8') : '';
 
     if (check) {
         if (!exists || current !== serialized) {
@@ -112,7 +132,7 @@ const generateManifest = ({ check = false } = {}) => {
     }
 
     if (!exists || current !== serialized) {
-        fs.writeFileSync(MANIFEST_PATH, serialized);
+        fs.writeFileSync(manifestPath, serialized);
         return { ok: true, updated: true, manifest };
     }
     return { ok: true, updated: false, manifest };
@@ -130,4 +150,4 @@ if (require.main === module) {
     }
 }
 
-module.exports = { generateManifest };
+module.exports = { generateManifest, buildManifest };
