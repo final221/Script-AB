@@ -1,5 +1,13 @@
 # Changelog
 
+## 4.7.0 - 2026-02-08T15:36:10.772Z
+Previous: 4.6.0
+Commit: 09c7a17
+Changes:
+- Clarify continuation behavior during active implementation
+- Finalize staged processing-asset recovery behavior and tests
+- Implement bounded processing-asset recovery flow with staged logging
+
 ## 4.6.0 - 2026-02-08T12:33:55.855Z
 Previous: 4.5.45
 Commit: 4ac1980

@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.6.0
+// @version       4.7.0
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -88,10 +88,11 @@ const CONFIG = (() => {
             NO_HEAL_POINT_LAST_RESORT_SWITCH: true, // Attempt last-resort candidate switch before refresh
             NO_HEAL_POINT_LAST_RESORT_AFTER: 1, // Trigger last-resort after this many no-heal points
             NO_HEAL_POINT_LAST_RESORT_REQUIRE_STARVED: true, // Require buffer starvation before last-resort switch
-            NO_HEAL_POINT_LAST_RESORT_MIN_READY_STATE: 0, // Allow last-resort candidates with any readyState
-            NO_HEAL_POINT_LAST_RESORT_REQUIRE_SRC: false, // Allow last-resort candidates without src
-            NO_HEAL_POINT_LAST_RESORT_ALLOW_DEAD: true, // Allow last-resort switches to dead candidates
+            NO_HEAL_POINT_LAST_RESORT_MIN_READY_STATE: 2, // Require ready media for last-resort switching
+            NO_HEAL_POINT_LAST_RESORT_REQUIRE_SRC: true, // Require src for last-resort candidates
+            NO_HEAL_POINT_LAST_RESORT_ALLOW_DEAD: false, // Do not switch to dead candidates as last-resort
             PROCESSING_ASSET_LAST_RESORT_SWITCH: true, // Attempt last-resort switch on processing asset hint
+            PROCESSING_ASSET_HARD_FAILURE_WINDOW_MS: 20000, // Short hard-failure window after processing-asset exhaustion
         },
 
         monitoring: {
@@ -168,7 +169,7 @@ const CONFIG = (() => {
  * Build metadata helpers (version injected at build time).
  */
 const BuildInfo = (() => {
-    const VERSION = '4.6.0';
+    const VERSION = '4.7.0';
 
     const getVersion = () => {
         const gmVersion = (typeof GM_info !== 'undefined' && GM_info?.script?.version)
@@ -179,7 +180,7 @@ const BuildInfo = (() => {
             ? unsafeWindow.GM_info.script.version
             : null;
         if (unsafeVersion) return unsafeVersion;
-        if (VERSION && VERSION !== '4.6.0') return VERSION;
+        if (VERSION && VERSION !== '4.7.0') return VERSION;
         return null;
     };
 
@@ -7316,8 +7317,9 @@ const NoHealPointPolicy = (() => {
             const decisionContext = policyContext.decisionContext;
             const now = decisionContext.now;
             const ranges = decisionContext.ranges;
+            const hardFailureMode = reason === 'processing_asset_hard_failure';
             const nextNoHealPointCount = monitorState ? (monitorState.noHealPointCount || 0) + 1 : 0;
-            const shouldSetRefreshWindow = monitorState
+            const shouldSetRefreshWindow = !hardFailureMode && monitorState
                 && nextNoHealPointCount >= CONFIG.stall.REFRESH_AFTER_NO_HEAL_POINTS
                 && ranges.length
                 && decisionContext.headroom < CONFIG.recovery.MIN_HEAL_HEADROOM_S
@@ -7327,10 +7329,12 @@ const NoHealPointPolicy = (() => {
             const refreshUntil = monitorState?.noHealPointRefreshUntil
                 || (shouldSetRefreshWindow ? now + CONFIG.stall.NO_HEAL_POINT_REFRESH_DELAY_MS : 0);
             const shouldFailover = monitorsById && monitorsById.size > 1
-                && (nextNoHealPointCount >= CONFIG.stall.FAILOVER_AFTER_NO_HEAL_POINTS
+                && (hardFailureMode
+                    || nextNoHealPointCount >= CONFIG.stall.FAILOVER_AFTER_NO_HEAL_POINTS
                     || (decisionContext.stalledForMs !== null
                         && decisionContext.stalledForMs >= CONFIG.stall.FAILOVER_AFTER_STALL_MS));
-            const quietEligible = canEnterQuiet(monitorState, decisionContext, nextNoHealPointCount);
+            const quietEligible = !hardFailureMode
+                && canEnterQuiet(monitorState, decisionContext, nextNoHealPointCount);
             const quietUntil = quietEligible ? now + CONFIG.stall.NO_HEAL_POINT_QUIET_MS : 0;
 
             return RecoveryContext.buildDecision('no_heal_point', policyContext, {
@@ -7342,13 +7346,19 @@ const NoHealPointPolicy = (() => {
                 quietUntil,
                 stalledForMs: decisionContext.stalledForMs,
                 bufferStarved: monitorState?.bufferStarved || false,
-                probationEligible: Boolean(probationPolicy?.maybeTriggerProbation)
+                probationEligible: !hardFailureMode
+                    && Boolean(probationPolicy?.maybeTriggerProbation)
                     && monitorState
                     && nextNoHealPointCount >= CONFIG.stall.PROBATION_AFTER_NO_HEAL_POINTS,
                 shouldFailover,
-                emergencyEligible: canEmergencySwitch(monitorState, nextNoHealPointCount, now),
-                lastResortEligible: canLastResortSwitch(monitorState, nextNoHealPointCount, now),
-                refreshEligible: canRefresh(monitorState, nextNoHealPointCount, now, refreshUntil)
+                emergencyEligible: !hardFailureMode
+                    && canEmergencySwitch(monitorState, nextNoHealPointCount, now),
+                lastResortEligible: !hardFailureMode
+                    && canLastResortSwitch(monitorState, nextNoHealPointCount, now),
+                refreshEligible: hardFailureMode
+                    ? true
+                    : canRefresh(monitorState, nextNoHealPointCount, now, refreshUntil),
+                hardFailureMode
             });
         };
 
@@ -8062,6 +8072,27 @@ const RecoveryManager = (() => {
             resetBackoff: policy.resetBackoff
         });
         const probeCandidate = failoverManager.probeCandidate;
+        const hardFailureWindowMs = CONFIG.stall.PROCESSING_ASSET_HARD_FAILURE_WINDOW_MS || 0;
+        let processingAssetHardFailureUntil = 0;
+        let lastHardFailureLogTime = 0;
+
+        const isProcessingAssetHardFailureActive = (now = Date.now()) => (
+            hardFailureWindowMs > 0
+            && processingAssetHardFailureUntil
+            && now < processingAssetHardFailureUntil
+        );
+
+        const activateProcessingAssetHardFailureWindow = (videoId, reason, now = Date.now()) => {
+            if (hardFailureWindowMs <= 0) return;
+            processingAssetHardFailureUntil = now + hardFailureWindowMs;
+            Logger.add(LogEvents.tagged('ASSET_HINT', 'Processing asset hard-failure window activated'), {
+                videoId,
+                reason,
+                windowMs: hardFailureWindowMs,
+                activeUntilMs: processingAssetHardFailureUntil
+            });
+        };
+
         const normalizeVideoInput = (videoOrContext, monitorStateOverride, detail = {}) => {
             if (videoOrContext && typeof videoOrContext === 'object' && videoOrContext.video) {
                 return { videoOrContext, monitorStateOverride, detail };
@@ -8078,19 +8109,30 @@ const RecoveryManager = (() => {
             return { videoOrContext, monitorStateOverride, detail };
         };
         const handleNoHealPoint = (videoOrContext, monitorStateOverride, reason) => {
-            const normalized = normalizeVideoInput(videoOrContext, monitorStateOverride, { reason });
+            const now = Date.now();
+            const hardFailureMode = isProcessingAssetHardFailureActive(now);
+            const policyReason = hardFailureMode ? 'processing_asset_hard_failure' : reason;
+            if (hardFailureMode && (now - lastHardFailureLogTime) >= CONFIG.logging.BACKOFF_LOG_INTERVAL_MS) {
+                Logger.add(LogEvents.tagged('ASSET_HINT', 'Processing asset hard-failure mode active'), {
+                    reason,
+                    policyReason,
+                    remainingMs: Math.max(processingAssetHardFailureUntil - now, 0)
+                });
+                lastHardFailureLogTime = now;
+            }
+            const normalized = normalizeVideoInput(videoOrContext, monitorStateOverride, {
+                reason: policyReason,
+                trigger: reason
+            });
             const context = RecoveryContext.from(
                 normalized.videoOrContext,
                 normalized.monitorStateOverride,
                 getVideoId,
                 normalized.detail
             );
-            const result = policy.handleNoHealPoint(context, reason);
-            if (result.emergencySwitched) {
-                return;
-            }
+            const result = policy.handleNoHealPoint(context, policyReason);
             if (result.shouldFailover) {
-                failoverManager.attemptFailover(context.videoId, reason, context.monitorState);
+                failoverManager.attemptFailover(context.videoId, policyReason, context.monitorState);
             }
             if (result.refreshed) {
                 return;
@@ -8217,6 +8259,13 @@ const RecoveryManager = (() => {
                 reason: detail.reason || 'source_loss',
                 detail: detail.detail || 'source_loss'
             });
+            if (detail.reason === 'processing_asset_exhausted') {
+                activateProcessingAssetHardFailureWindow(
+                    context.videoId,
+                    detail.reason,
+                    eligibility.now || Date.now()
+                );
+            }
             return true;
         };
 
