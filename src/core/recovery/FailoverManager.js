@@ -21,6 +21,7 @@ const FailoverManager = (() => {
             inProgress: false,
             timerId: null,
             lastAttemptTime: 0,
+            lastAttemptCooldownMs: CONFIG.stall.FAILOVER_COOLDOWN_MS,
             fromId: null,
             toId: null,
             startTime: 0,
@@ -58,11 +59,12 @@ const FailoverManager = (() => {
                 });
                 return false;
             }
-            if (now - state.lastAttemptTime < CONFIG.stall.FAILOVER_COOLDOWN_MS) {
+            const activeCooldownMs = state.lastAttemptCooldownMs || CONFIG.stall.FAILOVER_COOLDOWN_MS;
+            if (now - state.lastAttemptTime < activeCooldownMs) {
                 logDebug(LogEvents.tagged('FAILOVER_SKIP', 'Failover cooldown active'), {
                     from: fromVideoId,
                     reason,
-                    cooldownMs: CONFIG.stall.FAILOVER_COOLDOWN_MS,
+                    cooldownMs: activeCooldownMs,
                     lastAttemptAgoMs: now - state.lastAttemptTime
                 });
                 return false;
@@ -89,9 +91,15 @@ const FailoverManager = (() => {
 
             const toId = candidate.id;
             const entry = candidate.entry;
+            const fallbackCooldownMs = CONFIG.stall.FAILOVER_FALLBACK_COOLDOWN_MS
+                || CONFIG.stall.FAILOVER_COOLDOWN_MS;
+            const attemptCooldownMs = candidate.selectionMode === 'viable_untrusted_fallback'
+                ? fallbackCooldownMs
+                : CONFIG.stall.FAILOVER_COOLDOWN_MS;
 
             state.inProgress = true;
             state.lastAttemptTime = now;
+            state.lastAttemptCooldownMs = attemptCooldownMs;
             state.fromId = fromVideoId;
             state.toId = toId;
             state.startTime = now;
@@ -120,6 +128,7 @@ const FailoverManager = (() => {
                 reason,
                 selectionMode: candidate.selectionMode || 'unknown',
                 trusted: CandidateTrust.isTrusted(candidate.result),
+                attemptCooldownMs,
                 stalledForMs: monitorState?.lastProgressTime ? (now - monitorState.lastProgressTime) : null,
                 candidateState: VideoStateSnapshot.forLog(entry.video, toId)
             });

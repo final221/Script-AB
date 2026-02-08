@@ -270,4 +270,95 @@ describe('FailoverManager attemptFailover', () => {
         ));
         expect(fallbackLogged).toBe(true);
     });
+
+    it('uses fallback cooldown for viable-untrusted failover attempts', () => {
+        vi.useFakeTimers();
+        const nowSpy = vi.spyOn(Date, 'now');
+
+        const fromVideo = createVideo({
+            currentTime: 0,
+            readyState: 2,
+            currentSrc: 'blob:from'
+        }, [[0, 10]]);
+        fromVideo.play = vi.fn().mockResolvedValue();
+        const fallbackVideoA = createVideo({
+            currentTime: 0,
+            readyState: 2,
+            currentSrc: 'blob:fallback-a'
+        }, [[0, 10]]);
+        fallbackVideoA.play = vi.fn().mockResolvedValue();
+        const fallbackVideoB = createVideo({
+            currentTime: 0,
+            readyState: 2,
+            currentSrc: 'blob:fallback-b'
+        }, [[0, 10]]);
+        fallbackVideoB.play = vi.fn().mockResolvedValue();
+
+        const monitorsById = new Map([
+            ['video-1', { video: fromVideo, monitor: { state: { hasProgress: false, lastProgressTime: 0 } } }],
+            ['video-2', { video: fallbackVideoA, monitor: { state: { hasProgress: false, lastProgressTime: 0 } } }],
+            ['video-3', { video: fallbackVideoB, monitor: { state: { hasProgress: false, lastProgressTime: 0 } } }]
+        ]);
+
+        const candidateSelector = {
+            setActiveId: vi.fn(),
+            scoreVideo: vi.fn((_video, _monitor, videoId) => {
+                if (videoId === 'video-2') {
+                    return {
+                        score: 20,
+                        progressEligible: false,
+                        reasons: [],
+                        deadCandidate: false,
+                        vs: { readyState: 2, currentSrc: 'blob:fallback-a' },
+                        progressStreakMs: 0,
+                        progressAgoMs: null
+                    };
+                }
+                if (videoId === 'video-3') {
+                    return {
+                        score: 10,
+                        progressEligible: false,
+                        reasons: [],
+                        deadCandidate: false,
+                        vs: { readyState: 2, currentSrc: 'blob:fallback-b' },
+                        progressStreakMs: 0,
+                        progressAgoMs: null
+                    };
+                }
+                return {
+                    score: 1,
+                    progressEligible: true,
+                    reasons: [],
+                    deadCandidate: false,
+                    vs: { readyState: 2, currentSrc: 'blob:from' },
+                    progressStreakMs: 0,
+                    progressAgoMs: 0
+                };
+            })
+        };
+
+        const manager = window.FailoverManager.create({
+            monitorsById,
+            candidateSelector,
+            getVideoId: () => 'video-1',
+            logDebug: () => {}
+        });
+
+        const startTime = CONFIG.stall.FAILOVER_COOLDOWN_MS + 1000;
+        nowSpy.mockReturnValue(startTime);
+        const first = manager.attemptFailover('video-1', 'test', monitorsById.get('video-1').monitor.state);
+        expect(first).toBe(true);
+        expect(candidateSelector.setActiveId).toHaveBeenCalledWith('video-2');
+
+        vi.advanceTimersByTime(CONFIG.stall.FAILOVER_PROGRESS_TIMEOUT_MS + 1);
+
+        nowSpy.mockReturnValue(startTime + CONFIG.stall.FAILOVER_FALLBACK_COOLDOWN_MS - 1);
+        const second = manager.attemptFailover('video-1', 'test', monitorsById.get('video-1').monitor.state);
+        expect(second).toBe(false);
+
+        nowSpy.mockReturnValue(startTime + CONFIG.stall.FAILOVER_FALLBACK_COOLDOWN_MS + 1);
+        const third = manager.attemptFailover('video-1', 'test', monitorsById.get('video-1').monitor.state);
+        expect(third).toBe(true);
+        expect(candidateSelector.setActiveId).toHaveBeenCalledWith('video-3');
+    });
 });

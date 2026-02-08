@@ -43,6 +43,17 @@ const ConfigValidator = (() => {
                 stallConfirmMs: config.stall.STALL_CONFIRM_MS
             });
         }
+        if ((config.stall.FAILOVER_FALLBACK_COOLDOWN_MS || 0) <= 0) {
+            warn('FAILOVER_FALLBACK_COOLDOWN_MS must be positive', {
+                value: config.stall.FAILOVER_FALLBACK_COOLDOWN_MS
+            });
+        }
+        if ((config.stall.FAILOVER_FALLBACK_COOLDOWN_MS || 0) > (config.stall.FAILOVER_COOLDOWN_MS || 0)) {
+            warn('FAILOVER_FALLBACK_COOLDOWN_MS exceeds FAILOVER_COOLDOWN_MS', {
+                fallbackCooldownMs: config.stall.FAILOVER_FALLBACK_COOLDOWN_MS,
+                failoverCooldownMs: config.stall.FAILOVER_COOLDOWN_MS
+            });
+        }
         if ((config.monitoring?.PROGRESS_MIN_DELTA_S || 0) <= 0) {
             warn('PROGRESS_MIN_DELTA_S must be positive', {
                 value: config.monitoring?.PROGRESS_MIN_DELTA_S

@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.11.0
+// @version       4.12.0
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -70,6 +70,7 @@ const CONFIG = (() => {
             HEALPOINT_REPEAT_FAILOVER_COUNT: 3, // Failover after repeated identical heal points
             FAILOVER_PROGRESS_TIMEOUT_MS: 8000, // Trial time for failover candidate to progress
             FAILOVER_COOLDOWN_MS: 30000,     // Minimum time between failover attempts
+            FAILOVER_FALLBACK_COOLDOWN_MS: 3000, // Cooldown after viable-untrusted fallback attempts
             PROBATION_AFTER_NO_HEAL_POINTS: 2, // Open probation after this many no-heal points
             PROBATION_AFTER_PLAY_ERRORS: 2, // Open probation after this many play failures
             PROBATION_RESCAN_COOLDOWN_MS: 15000, // Min time between probation rescans
@@ -174,7 +175,7 @@ const CONFIG = (() => {
  * Build metadata helpers (version injected at build time).
  */
 const BuildInfo = (() => {
-    const VERSION = '4.11.0';
+    const VERSION = '4.12.0';
 
     const getVersion = () => {
         const gmVersion = (typeof GM_info !== 'undefined' && GM_info?.script?.version)
@@ -185,7 +186,7 @@ const BuildInfo = (() => {
             ? unsafeWindow.GM_info.script.version
             : null;
         if (unsafeVersion) return unsafeVersion;
-        if (VERSION && VERSION !== '4.11.0') return VERSION;
+        if (VERSION && VERSION !== '4.12.0') return VERSION;
         return null;
     };
 
@@ -265,6 +266,17 @@ const ConfigValidator = (() => {
             warn('HEAL_TIMEOUT_S is shorter than STALL_CONFIRM_MS', {
                 healTimeoutMs: config.stall.HEAL_TIMEOUT_S * 1000,
                 stallConfirmMs: config.stall.STALL_CONFIRM_MS
+            });
+        }
+        if ((config.stall.FAILOVER_FALLBACK_COOLDOWN_MS || 0) <= 0) {
+            warn('FAILOVER_FALLBACK_COOLDOWN_MS must be positive', {
+                value: config.stall.FAILOVER_FALLBACK_COOLDOWN_MS
+            });
+        }
+        if ((config.stall.FAILOVER_FALLBACK_COOLDOWN_MS || 0) > (config.stall.FAILOVER_COOLDOWN_MS || 0)) {
+            warn('FAILOVER_FALLBACK_COOLDOWN_MS exceeds FAILOVER_COOLDOWN_MS', {
+                fallbackCooldownMs: config.stall.FAILOVER_FALLBACK_COOLDOWN_MS,
+                failoverCooldownMs: config.stall.FAILOVER_COOLDOWN_MS
             });
         }
         if ((config.monitoring?.PROGRESS_MIN_DELTA_S || 0) <= 0) {
@@ -8591,6 +8603,7 @@ const FailoverManager = (() => {
             inProgress: false,
             timerId: null,
             lastAttemptTime: 0,
+            lastAttemptCooldownMs: CONFIG.stall.FAILOVER_COOLDOWN_MS,
             fromId: null,
             toId: null,
             startTime: 0,
@@ -8628,11 +8641,12 @@ const FailoverManager = (() => {
                 });
                 return false;
             }
-            if (now - state.lastAttemptTime < CONFIG.stall.FAILOVER_COOLDOWN_MS) {
+            const activeCooldownMs = state.lastAttemptCooldownMs || CONFIG.stall.FAILOVER_COOLDOWN_MS;
+            if (now - state.lastAttemptTime < activeCooldownMs) {
                 logDebug(LogEvents.tagged('FAILOVER_SKIP', 'Failover cooldown active'), {
                     from: fromVideoId,
                     reason,
-                    cooldownMs: CONFIG.stall.FAILOVER_COOLDOWN_MS,
+                    cooldownMs: activeCooldownMs,
                     lastAttemptAgoMs: now - state.lastAttemptTime
                 });
                 return false;
@@ -8659,9 +8673,15 @@ const FailoverManager = (() => {
 
             const toId = candidate.id;
             const entry = candidate.entry;
+            const fallbackCooldownMs = CONFIG.stall.FAILOVER_FALLBACK_COOLDOWN_MS
+                || CONFIG.stall.FAILOVER_COOLDOWN_MS;
+            const attemptCooldownMs = candidate.selectionMode === 'viable_untrusted_fallback'
+                ? fallbackCooldownMs
+                : CONFIG.stall.FAILOVER_COOLDOWN_MS;
 
             state.inProgress = true;
             state.lastAttemptTime = now;
+            state.lastAttemptCooldownMs = attemptCooldownMs;
             state.fromId = fromVideoId;
             state.toId = toId;
             state.startTime = now;
@@ -8690,6 +8710,7 @@ const FailoverManager = (() => {
                 reason,
                 selectionMode: candidate.selectionMode || 'unknown',
                 trusted: CandidateTrust.isTrusted(candidate.result),
+                attemptCooldownMs,
                 stalledForMs: monitorState?.lastProgressTime ? (now - monitorState.lastProgressTime) : null,
                 candidateState: VideoStateSnapshot.forLog(entry.video, toId)
             });

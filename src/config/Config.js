@@ -56,6 +56,7 @@ const CONFIG = (() => {
             HEALPOINT_REPEAT_FAILOVER_COUNT: 3, // Failover after repeated identical heal points
             FAILOVER_PROGRESS_TIMEOUT_MS: 8000, // Trial time for failover candidate to progress
             FAILOVER_COOLDOWN_MS: 30000,     // Minimum time between failover attempts
+            FAILOVER_FALLBACK_COOLDOWN_MS: 3000, // Cooldown after viable-untrusted fallback attempts
             PROBATION_AFTER_NO_HEAL_POINTS: 2, // Open probation after this many no-heal points
             PROBATION_AFTER_PLAY_ERRORS: 2, // Open probation after this many play failures
             PROBATION_RESCAN_COOLDOWN_MS: 15000, // Min time between probation rescans

@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.12.0 - 2026-02-08T17:39:38.055Z
+Previous: 4.11.0
+Commit: 31d2870
+Changes:
+- feat: add viable untrusted failover fallback with bounded revert
+
 ## 4.11.0 - 2026-02-08T17:22:22.095Z
 Previous: 4.10.0
 Commit: 33ad6fc
