@@ -1,5 +1,12 @@
 # Changelog
 
+## 4.8.0 - 2026-02-08T15:42:58.528Z
+Previous: 4.7.0
+Commit: 0b970ad
+Changes:
+- fix(recovery): escalate processing-asset collapse handling
+- feat(recovery): harden processing-asset collapse escalation
+
 ## 4.7.0 - 2026-02-08T15:36:10.772Z
 Previous: 4.6.0
 Commit: 09c7a17

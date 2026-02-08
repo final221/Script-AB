@@ -63,6 +63,6 @@ describe('EmergencyCandidatePicker', () => {
         result = picker.selectEmergencyCandidate('no_heal_point');
         expect(result?.id).toBe('video-2');
         expect(setActiveId).toHaveBeenCalledTimes(1);
-        expect(setActiveId).toHaveBeenCalledWith('video-2');
+        expect(setActiveId).toHaveBeenCalledWith('video-2', 'emergency:no_heal_point');
     });
 });

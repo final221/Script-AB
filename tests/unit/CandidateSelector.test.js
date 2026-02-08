@@ -239,4 +239,58 @@ describe('CandidateSelector', () => {
 
         expect(selector.getActiveId()).toBe('video-1');
     });
+
+    it('logs post-switch status for former active stream candidates', () => {
+        const initialLogs = Logger.getLogs().length;
+        const CandidateSelector = window.CandidateSelector;
+        const monitorsById = new Map();
+        const selector = CandidateSelector.create({
+            monitorsById,
+            logDebug: () => {},
+            maxMonitors: 3,
+            minProgressMs: 5000,
+            switchDelta: 2,
+            isFallbackSource: () => false
+        });
+
+        const now = Date.now();
+        const stalledVideo = makeVideo({
+            paused: true,
+            readyState: 2,
+            currentTime: 10,
+            currentSrc: 'blob:stream-a',
+            buffered: { length: 1, start: () => 0, end: () => 20 }
+        });
+        const goodVideo = makeVideo({
+            paused: false,
+            readyState: 4,
+            currentTime: 20,
+            currentSrc: 'blob:stream-b',
+            buffered: { length: 1, start: () => 10, end: () => 30 }
+        });
+
+        monitorsById.set('video-1', {
+            video: stalledVideo,
+            monitor: { state: { state: 'STALLED', hasProgress: true, lastProgressTime: now - 20000, progressStreakMs: 6000, progressEligible: true } }
+        });
+        monitorsById.set('video-2', {
+            video: goodVideo,
+            monitor: { state: { state: 'PLAYING', hasProgress: true, lastProgressTime: now, progressStreakMs: 8000, progressEligible: true } }
+        });
+
+        selector.setActiveId('video-1', 'test_setup');
+        selector.evaluateCandidates('former_stream_check');
+
+        const logs = Logger.getLogs().slice(initialLogs);
+        const formerLog = logs.find((log) => (
+            log.message === LogTags.TAG.CANDIDATE
+            && log.detail?.message === 'Former stream candidate status'
+        ));
+
+        expect(selector.getActiveId()).toBe('video-2');
+        expect(formerLog).toBeTruthy();
+        expect(formerLog.detail.formerVideoId).toBe('video-1');
+        expect(formerLog.detail.switchReason).toBe('switch:former_stream_check');
+        expect(typeof formerLog.detail.status).toBe('string');
+    });
 });

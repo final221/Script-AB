@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.7.0
+// @version       4.8.0
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -169,7 +169,7 @@ const CONFIG = (() => {
  * Build metadata helpers (version injected at build time).
  */
 const BuildInfo = (() => {
-    const VERSION = '4.7.0';
+    const VERSION = '4.8.0';
 
     const getVersion = () => {
         const gmVersion = (typeof GM_info !== 'undefined' && GM_info?.script?.version)
@@ -180,7 +180,7 @@ const BuildInfo = (() => {
             ? unsafeWindow.GM_info.script.version
             : null;
         if (unsafeVersion) return unsafeVersion;
-        if (VERSION && VERSION !== '4.7.0') return VERSION;
+        if (VERSION && VERSION !== '4.8.0') return VERSION;
         return null;
     };
 
@@ -6156,12 +6156,31 @@ const CandidateSelector = (() => {
 
         const scoreVideo = (video, monitor, videoId) => scorer.score(video, monitor, videoId);
         const getActiveIdRaw = () => state.activeCandidateId;
-        const setActiveId = (id) => {
+        const formerStreamTracker = FormerStreamTracker.create({
+            monitorsById,
+            scoreVideo
+        });
+        const setActiveId = (id, reason = 'manual') => {
+            const previousActiveId = state.activeCandidateId;
+            if (previousActiveId && previousActiveId !== id) {
+                formerStreamTracker.trackSwitch({
+                    fromId: previousActiveId,
+                    toId: id,
+                    reason
+                });
+            }
             state.activeCandidateId = id;
+            formerStreamTracker.onActive(id);
         };
         const getLastGoodId = () => state.lastGoodCandidateId;
         const setLastGoodId = (id) => {
             state.lastGoodCandidateId = id;
+        };
+        const observeFormerStreams = (reason) => {
+            formerStreamTracker.observe({
+                reason,
+                activeId: state.activeCandidateId
+            });
         };
 
         const getActiveContext = () => {
@@ -6239,7 +6258,7 @@ const CandidateSelector = (() => {
 
             if (allowSwitch) {
                 const fromId = context.activeId;
-                setActiveId(best.id);
+                setActiveId(best.id, `force_switch:${reason}`);
                 Logger.add(LogEvents.tagged('CANDIDATE', options.label || 'Forced switch'), {
                     from: fromId,
                     to: best.id,
@@ -6250,6 +6269,7 @@ const CandidateSelector = (() => {
                     activeState: context.activeState,
                     bufferStarved: context.monitorState?.bufferStarved || false
                 });
+                observeFormerStreams(`force_switch:${reason}`);
                 return {
                     ...context,
                     activeId: best.id,
@@ -6289,19 +6309,24 @@ const CandidateSelector = (() => {
 
         const evaluateCandidates = (reason) => {
             const result = selectionEngine.evaluateCandidates(reason);
-            if (!result) return null;
+            if (!result) {
+                observeFormerStreams(reason);
+                return null;
+            }
 
             if (result.status === 'locked') {
                 logDebug(LogEvents.tagged('CANDIDATE', 'Failover lock active'), {
                     reason,
                     activeVideoId: result.activeCandidateId
                 });
+                observeFormerStreams(reason);
                 return result.activeCandidateId ? { id: result.activeCandidateId } : null;
             }
 
             if (result.status === 'empty') {
-                setActiveId(null);
+                setActiveId(null, 'empty');
                 setLastGoodId(null);
+                observeFormerStreams(reason);
                 return null;
             }
 
@@ -6315,7 +6340,7 @@ const CandidateSelector = (() => {
                     reason: result.activation.reason,
                     scores: result.scores
                 });
-                setActiveId(result.activation.toId);
+                setActiveId(result.activation.toId, `activation:${result.activation.reason}`);
             }
 
             const decision = result.decision;
@@ -6333,8 +6358,9 @@ const CandidateSelector = (() => {
                         preferredProgressStreakMs: decision.preferred.progressStreakMs,
                         preferredTrusted: decision.preferred.trusted
                     });
-                    setActiveId(decision.toId);
+                    setActiveId(decision.toId, `fast_switch:${decision.reason}`);
                     logOutcome(decision);
+                    observeFormerStreams(reason);
                     return result.preferred;
                 }
 
@@ -6352,12 +6378,13 @@ const CandidateSelector = (() => {
                         probationActive: decision.probationActive,
                         scores: result.scores
                     });
-                    setActiveId(decision.toId);
+                    setActiveId(decision.toId, `switch:${decision.reason}`);
                 }
 
                 logOutcome(decision);
             }
 
+            observeFormerStreams(reason);
             return result.preferred;
         };
 
@@ -6629,7 +6656,7 @@ const EmergencyCandidatePicker = (() => {
             if (!best) return null;
 
             const fromId = activeCandidateId;
-            setActiveId(best.id);
+            setActiveId(best.id, `emergency:${reason}`);
             Logger.add(LogEvents.tagged('CANDIDATE', label), {
                 from: fromId,
                 to: best.id,
@@ -6642,6 +6669,186 @@ const EmergencyCandidatePicker = (() => {
         };
 
         return { selectEmergencyCandidate };
+    };
+
+    return { create };
+})();
+
+// --- FormerStreamTracker ---
+/**
+ * Tracks previously active stream candidates and logs their post-switch status.
+ */
+const FormerStreamTracker = (() => {
+    const create = (options = {}) => {
+        const monitorsById = options.monitorsById;
+        const scoreVideo = options.scoreVideo;
+        const maxTracked = Number.isFinite(options.maxTracked) ? options.maxTracked : 12;
+        const ttlMs = Number.isFinite(options.ttlMs) ? options.ttlMs : 120000;
+        const logIntervalMs = Number.isFinite(options.logIntervalMs)
+            ? options.logIntervalMs
+            : CONFIG.logging.ACTIVE_LOG_MS;
+        const records = new Map();
+
+        const trimRecords = (now, activeId) => {
+            for (const [videoId, record] of records.entries()) {
+                if (videoId === activeId) {
+                    records.delete(videoId);
+                    continue;
+                }
+                if ((now - record.switchedAt) > ttlMs) {
+                    records.delete(videoId);
+                }
+            }
+
+            if (records.size <= maxTracked) {
+                return;
+            }
+
+            const oldestFirst = Array.from(records.entries())
+                .sort((a, b) => a[1].switchedAt - b[1].switchedAt);
+            const removeCount = records.size - maxTracked;
+            for (let i = 0; i < removeCount; i += 1) {
+                records.delete(oldestFirst[i][0]);
+            }
+        };
+
+        const buildStatus = (videoId, record, now) => {
+            const entry = monitorsById.get(videoId);
+            if (!entry) {
+                return {
+                    status: 'removed',
+                    terminal: true
+                };
+            }
+
+            const video = entry.video;
+            const monitorState = entry.monitor?.state || {};
+            const currentTime = Number.isFinite(video?.currentTime) ? Number(video.currentTime.toFixed(3)) : null;
+            const readyState = video?.readyState ?? null;
+            const paused = Boolean(video?.paused);
+            const hasSrc = Boolean(
+                video?.currentSrc
+                || video?.getAttribute?.('src')
+            );
+            const progressSinceSwitch = Boolean(
+                monitorState.hasProgress
+                && monitorState.lastProgressTime
+                && monitorState.lastProgressTime > Math.max(record.switchedAt, record.baselineProgressTime || 0)
+            );
+            const lastProgressAgoMs = monitorState.lastProgressTime
+                ? Math.max(now - monitorState.lastProgressTime, 0)
+                : null;
+            const currentTimeDelta = (
+                Number.isFinite(currentTime)
+                && Number.isFinite(record.baselineCurrentTime)
+            )
+                ? Number((currentTime - record.baselineCurrentTime).toFixed(3))
+                : null;
+            const score = typeof scoreVideo === 'function'
+                ? scoreVideo(video, entry.monitor, videoId)?.score ?? null
+                : null;
+
+            let status = 'no_progress';
+            if (progressSinceSwitch || (Number.isFinite(currentTimeDelta) && currentTimeDelta > 0.05)) {
+                status = 'progressed_after_switch';
+            } else if (!hasSrc && (readyState === 0 || readyState === 1)) {
+                status = 'no_source';
+            } else if (paused) {
+                status = 'paused_no_progress';
+            }
+
+            return {
+                status,
+                terminal: status === 'progressed_after_switch',
+                currentTime,
+                currentTimeDelta,
+                readyState,
+                paused,
+                hasSrc,
+                monitorState: monitorState.state || null,
+                progressSinceSwitch,
+                lastProgressAgoMs,
+                score
+            };
+        };
+
+        const trackSwitch = ({ fromId, toId, reason }) => {
+            if (!fromId || fromId === toId) {
+                return;
+            }
+            const now = Date.now();
+            const entry = monitorsById.get(fromId);
+            const baselineCurrentTime = Number.isFinite(entry?.video?.currentTime)
+                ? Number(entry.video.currentTime.toFixed(3))
+                : null;
+            const baselineProgressTime = entry?.monitor?.state?.lastProgressTime || 0;
+            records.set(fromId, {
+                fromId,
+                toId: toId || null,
+                reason: reason || 'switch',
+                switchedAt: now,
+                baselineCurrentTime,
+                baselineProgressTime,
+                lastLoggedAt: 0,
+                lastStatus: null
+            });
+            if (toId) {
+                records.delete(toId);
+            }
+            trimRecords(now, toId || null);
+        };
+
+        const onActive = (activeId) => {
+            if (!activeId) return;
+            records.delete(activeId);
+        };
+
+        const observe = ({ reason, activeId } = {}) => {
+            const now = Date.now();
+            trimRecords(now, activeId || null);
+            for (const [videoId, record] of records.entries()) {
+                const elapsedSinceLog = now - (record.lastLoggedAt || 0);
+                if (elapsedSinceLog < logIntervalMs) {
+                    continue;
+                }
+                const snapshot = buildStatus(videoId, record, now);
+                const statusChanged = snapshot.status !== record.lastStatus;
+                if (!statusChanged && elapsedSinceLog < (logIntervalMs * 3)) {
+                    continue;
+                }
+
+                Logger.add(LogEvents.tagged('CANDIDATE', 'Former stream candidate status'), {
+                    formerVideoId: videoId,
+                    switchedTo: record.toId,
+                    switchReason: record.reason,
+                    observeReason: reason || null,
+                    status: snapshot.status,
+                    ageMs: now - record.switchedAt,
+                    currentTime: snapshot.currentTime ?? null,
+                    currentTimeDelta: snapshot.currentTimeDelta ?? null,
+                    readyState: snapshot.readyState ?? null,
+                    paused: snapshot.paused ?? null,
+                    hasSrc: snapshot.hasSrc ?? null,
+                    monitorState: snapshot.monitorState ?? null,
+                    progressSinceSwitch: snapshot.progressSinceSwitch ?? false,
+                    lastProgressAgoMs: snapshot.lastProgressAgoMs ?? null,
+                    score: snapshot.score
+                });
+
+                record.lastLoggedAt = now;
+                record.lastStatus = snapshot.status;
+
+                if (snapshot.terminal) {
+                    records.delete(videoId);
+                }
+            }
+        };
+
+        return {
+            trackSwitch,
+            onActive,
+            observe
+        };
     };
 
     return { create };

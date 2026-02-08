@@ -64,7 +64,7 @@ const EmergencyCandidatePicker = (() => {
             if (!best) return null;
 
             const fromId = activeCandidateId;
-            setActiveId(best.id);
+            setActiveId(best.id, `emergency:${reason}`);
             Logger.add(LogEvents.tagged('CANDIDATE', label), {
                 from: fromId,
                 to: best.id,

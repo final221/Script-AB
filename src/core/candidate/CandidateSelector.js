@@ -38,12 +38,31 @@ const CandidateSelector = (() => {
 
         const scoreVideo = (video, monitor, videoId) => scorer.score(video, monitor, videoId);
         const getActiveIdRaw = () => state.activeCandidateId;
-        const setActiveId = (id) => {
+        const formerStreamTracker = FormerStreamTracker.create({
+            monitorsById,
+            scoreVideo
+        });
+        const setActiveId = (id, reason = 'manual') => {
+            const previousActiveId = state.activeCandidateId;
+            if (previousActiveId && previousActiveId !== id) {
+                formerStreamTracker.trackSwitch({
+                    fromId: previousActiveId,
+                    toId: id,
+                    reason
+                });
+            }
             state.activeCandidateId = id;
+            formerStreamTracker.onActive(id);
         };
         const getLastGoodId = () => state.lastGoodCandidateId;
         const setLastGoodId = (id) => {
             state.lastGoodCandidateId = id;
+        };
+        const observeFormerStreams = (reason) => {
+            formerStreamTracker.observe({
+                reason,
+                activeId: state.activeCandidateId
+            });
         };
 
         const getActiveContext = () => {
@@ -121,7 +140,7 @@ const CandidateSelector = (() => {
 
             if (allowSwitch) {
                 const fromId = context.activeId;
-                setActiveId(best.id);
+                setActiveId(best.id, `force_switch:${reason}`);
                 Logger.add(LogEvents.tagged('CANDIDATE', options.label || 'Forced switch'), {
                     from: fromId,
                     to: best.id,
@@ -132,6 +151,7 @@ const CandidateSelector = (() => {
                     activeState: context.activeState,
                     bufferStarved: context.monitorState?.bufferStarved || false
                 });
+                observeFormerStreams(`force_switch:${reason}`);
                 return {
                     ...context,
                     activeId: best.id,
@@ -171,19 +191,24 @@ const CandidateSelector = (() => {
 
         const evaluateCandidates = (reason) => {
             const result = selectionEngine.evaluateCandidates(reason);
-            if (!result) return null;
+            if (!result) {
+                observeFormerStreams(reason);
+                return null;
+            }
 
             if (result.status === 'locked') {
                 logDebug(LogEvents.tagged('CANDIDATE', 'Failover lock active'), {
                     reason,
                     activeVideoId: result.activeCandidateId
                 });
+                observeFormerStreams(reason);
                 return result.activeCandidateId ? { id: result.activeCandidateId } : null;
             }
 
             if (result.status === 'empty') {
-                setActiveId(null);
+                setActiveId(null, 'empty');
                 setLastGoodId(null);
+                observeFormerStreams(reason);
                 return null;
             }
 
@@ -197,7 +222,7 @@ const CandidateSelector = (() => {
                     reason: result.activation.reason,
                     scores: result.scores
                 });
-                setActiveId(result.activation.toId);
+                setActiveId(result.activation.toId, `activation:${result.activation.reason}`);
             }
 
             const decision = result.decision;
@@ -215,8 +240,9 @@ const CandidateSelector = (() => {
                         preferredProgressStreakMs: decision.preferred.progressStreakMs,
                         preferredTrusted: decision.preferred.trusted
                     });
-                    setActiveId(decision.toId);
+                    setActiveId(decision.toId, `fast_switch:${decision.reason}`);
                     logOutcome(decision);
+                    observeFormerStreams(reason);
                     return result.preferred;
                 }
 
@@ -234,12 +260,13 @@ const CandidateSelector = (() => {
                         probationActive: decision.probationActive,
                         scores: result.scores
                     });
-                    setActiveId(decision.toId);
+                    setActiveId(decision.toId, `switch:${decision.reason}`);
                 }
 
                 logOutcome(decision);
             }
 
+            observeFormerStreams(reason);
             return result.preferred;
         };
 
