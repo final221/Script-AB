@@ -104,4 +104,36 @@ describe('NoHealPointPolicy', () => {
         expect(decision.data.emergencyEligible).toBe(true);
         expect(decision.data.lastResortEligible).toBe(false);
     });
+
+    it('prioritizes failover/refresh in processing-asset hard-failure mode', () => {
+        const now = 350000;
+        const monitorState = {
+            noHealPointCount: 0,
+            bufferStarved: true,
+            lastEmergencySwitchAt: 0
+        };
+        const video = createVideo({
+            currentTime: 9.5,
+            readyState: 2,
+            currentSrc: 'blob:https://www.twitch.tv/stream'
+        }, [[0, 10]]);
+
+        const monitorsById = new Map([
+            ['video-1', { video, monitor: { state: monitorState } }],
+            ['video-2', { video: createVideo({}, [[0, 10]]), monitor: { state: {} } }]
+        ]);
+
+        const policy = window.NoHealPointPolicy.create({
+            monitorsById,
+            candidateSelector: { selectEmergencyCandidate: () => ({ id: 'video-2' }) }
+        });
+        const decision = policy.decide({ video, monitorState, now }, 'processing_asset_hard_failure');
+
+        expect(decision.data.hardFailureMode).toBe(true);
+        expect(decision.data.shouldFailover).toBe(true);
+        expect(decision.data.probationEligible).toBe(false);
+        expect(decision.data.emergencyEligible).toBe(false);
+        expect(decision.data.lastResortEligible).toBe(false);
+        expect(decision.data.refreshEligible).toBe(true);
+    });
 });

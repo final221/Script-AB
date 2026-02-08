@@ -74,10 +74,11 @@ const CONFIG = (() => {
             NO_HEAL_POINT_LAST_RESORT_SWITCH: true, // Attempt last-resort candidate switch before refresh
             NO_HEAL_POINT_LAST_RESORT_AFTER: 1, // Trigger last-resort after this many no-heal points
             NO_HEAL_POINT_LAST_RESORT_REQUIRE_STARVED: true, // Require buffer starvation before last-resort switch
-            NO_HEAL_POINT_LAST_RESORT_MIN_READY_STATE: 0, // Allow last-resort candidates with any readyState
-            NO_HEAL_POINT_LAST_RESORT_REQUIRE_SRC: false, // Allow last-resort candidates without src
-            NO_HEAL_POINT_LAST_RESORT_ALLOW_DEAD: true, // Allow last-resort switches to dead candidates
+            NO_HEAL_POINT_LAST_RESORT_MIN_READY_STATE: 2, // Require ready media for last-resort switching
+            NO_HEAL_POINT_LAST_RESORT_REQUIRE_SRC: true, // Require src for last-resort candidates
+            NO_HEAL_POINT_LAST_RESORT_ALLOW_DEAD: false, // Do not switch to dead candidates as last-resort
             PROCESSING_ASSET_LAST_RESORT_SWITCH: true, // Attempt last-resort switch on processing asset hint
+            PROCESSING_ASSET_HARD_FAILURE_WINDOW_MS: 20000, // Short hard-failure window after processing-asset exhaustion
         },
 
         monitoring: {

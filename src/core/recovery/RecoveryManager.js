@@ -27,6 +27,27 @@ const RecoveryManager = (() => {
             resetBackoff: policy.resetBackoff
         });
         const probeCandidate = failoverManager.probeCandidate;
+        const hardFailureWindowMs = CONFIG.stall.PROCESSING_ASSET_HARD_FAILURE_WINDOW_MS || 0;
+        let processingAssetHardFailureUntil = 0;
+        let lastHardFailureLogTime = 0;
+
+        const isProcessingAssetHardFailureActive = (now = Date.now()) => (
+            hardFailureWindowMs > 0
+            && processingAssetHardFailureUntil
+            && now < processingAssetHardFailureUntil
+        );
+
+        const activateProcessingAssetHardFailureWindow = (videoId, reason, now = Date.now()) => {
+            if (hardFailureWindowMs <= 0) return;
+            processingAssetHardFailureUntil = now + hardFailureWindowMs;
+            Logger.add(LogEvents.tagged('ASSET_HINT', 'Processing asset hard-failure window activated'), {
+                videoId,
+                reason,
+                windowMs: hardFailureWindowMs,
+                activeUntilMs: processingAssetHardFailureUntil
+            });
+        };
+
         const normalizeVideoInput = (videoOrContext, monitorStateOverride, detail = {}) => {
             if (videoOrContext && typeof videoOrContext === 'object' && videoOrContext.video) {
                 return { videoOrContext, monitorStateOverride, detail };
@@ -43,19 +64,30 @@ const RecoveryManager = (() => {
             return { videoOrContext, monitorStateOverride, detail };
         };
         const handleNoHealPoint = (videoOrContext, monitorStateOverride, reason) => {
-            const normalized = normalizeVideoInput(videoOrContext, monitorStateOverride, { reason });
+            const now = Date.now();
+            const hardFailureMode = isProcessingAssetHardFailureActive(now);
+            const policyReason = hardFailureMode ? 'processing_asset_hard_failure' : reason;
+            if (hardFailureMode && (now - lastHardFailureLogTime) >= CONFIG.logging.BACKOFF_LOG_INTERVAL_MS) {
+                Logger.add(LogEvents.tagged('ASSET_HINT', 'Processing asset hard-failure mode active'), {
+                    reason,
+                    policyReason,
+                    remainingMs: Math.max(processingAssetHardFailureUntil - now, 0)
+                });
+                lastHardFailureLogTime = now;
+            }
+            const normalized = normalizeVideoInput(videoOrContext, monitorStateOverride, {
+                reason: policyReason,
+                trigger: reason
+            });
             const context = RecoveryContext.from(
                 normalized.videoOrContext,
                 normalized.monitorStateOverride,
                 getVideoId,
                 normalized.detail
             );
-            const result = policy.handleNoHealPoint(context, reason);
-            if (result.emergencySwitched) {
-                return;
-            }
+            const result = policy.handleNoHealPoint(context, policyReason);
             if (result.shouldFailover) {
-                failoverManager.attemptFailover(context.videoId, reason, context.monitorState);
+                failoverManager.attemptFailover(context.videoId, policyReason, context.monitorState);
             }
             if (result.refreshed) {
                 return;
@@ -182,6 +214,13 @@ const RecoveryManager = (() => {
                 reason: detail.reason || 'source_loss',
                 detail: detail.detail || 'source_loss'
             });
+            if (detail.reason === 'processing_asset_exhausted') {
+                activateProcessingAssetHardFailureWindow(
+                    context.videoId,
+                    detail.reason,
+                    eligibility.now || Date.now()
+                );
+            }
             return true;
         };
 

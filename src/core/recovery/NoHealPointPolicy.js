@@ -81,8 +81,9 @@ const NoHealPointPolicy = (() => {
             const decisionContext = policyContext.decisionContext;
             const now = decisionContext.now;
             const ranges = decisionContext.ranges;
+            const hardFailureMode = reason === 'processing_asset_hard_failure';
             const nextNoHealPointCount = monitorState ? (monitorState.noHealPointCount || 0) + 1 : 0;
-            const shouldSetRefreshWindow = monitorState
+            const shouldSetRefreshWindow = !hardFailureMode && monitorState
                 && nextNoHealPointCount >= CONFIG.stall.REFRESH_AFTER_NO_HEAL_POINTS
                 && ranges.length
                 && decisionContext.headroom < CONFIG.recovery.MIN_HEAL_HEADROOM_S
@@ -92,10 +93,12 @@ const NoHealPointPolicy = (() => {
             const refreshUntil = monitorState?.noHealPointRefreshUntil
                 || (shouldSetRefreshWindow ? now + CONFIG.stall.NO_HEAL_POINT_REFRESH_DELAY_MS : 0);
             const shouldFailover = monitorsById && monitorsById.size > 1
-                && (nextNoHealPointCount >= CONFIG.stall.FAILOVER_AFTER_NO_HEAL_POINTS
+                && (hardFailureMode
+                    || nextNoHealPointCount >= CONFIG.stall.FAILOVER_AFTER_NO_HEAL_POINTS
                     || (decisionContext.stalledForMs !== null
                         && decisionContext.stalledForMs >= CONFIG.stall.FAILOVER_AFTER_STALL_MS));
-            const quietEligible = canEnterQuiet(monitorState, decisionContext, nextNoHealPointCount);
+            const quietEligible = !hardFailureMode
+                && canEnterQuiet(monitorState, decisionContext, nextNoHealPointCount);
             const quietUntil = quietEligible ? now + CONFIG.stall.NO_HEAL_POINT_QUIET_MS : 0;
 
             return RecoveryContext.buildDecision('no_heal_point', policyContext, {
@@ -107,13 +110,19 @@ const NoHealPointPolicy = (() => {
                 quietUntil,
                 stalledForMs: decisionContext.stalledForMs,
                 bufferStarved: monitorState?.bufferStarved || false,
-                probationEligible: Boolean(probationPolicy?.maybeTriggerProbation)
+                probationEligible: !hardFailureMode
+                    && Boolean(probationPolicy?.maybeTriggerProbation)
                     && monitorState
                     && nextNoHealPointCount >= CONFIG.stall.PROBATION_AFTER_NO_HEAL_POINTS,
                 shouldFailover,
-                emergencyEligible: canEmergencySwitch(monitorState, nextNoHealPointCount, now),
-                lastResortEligible: canLastResortSwitch(monitorState, nextNoHealPointCount, now),
-                refreshEligible: canRefresh(monitorState, nextNoHealPointCount, now, refreshUntil)
+                emergencyEligible: !hardFailureMode
+                    && canEmergencySwitch(monitorState, nextNoHealPointCount, now),
+                lastResortEligible: !hardFailureMode
+                    && canLastResortSwitch(monitorState, nextNoHealPointCount, now),
+                refreshEligible: hardFailureMode
+                    ? true
+                    : canRefresh(monitorState, nextNoHealPointCount, now, refreshUntil),
+                hardFailureMode
             });
         };
 

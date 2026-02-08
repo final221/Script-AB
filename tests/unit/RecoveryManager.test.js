@@ -153,4 +153,135 @@ describe('RecoveryManager refresh gating', () => {
 
         vi.useRealTimers();
     });
+
+    it('attempts failover even when an emergency switch was applied', () => {
+        const originalRecoveryPolicyCreate = window.RecoveryPolicy.create;
+        const originalFailoverManagerCreate = window.FailoverManager.create;
+        const attemptFailover = vi.fn();
+        const handleNoHealPoint = vi.fn(() => ({
+            emergencySwitched: true,
+            shouldFailover: true,
+            refreshed: false
+        }));
+
+        window.RecoveryPolicy.create = vi.fn(() => ({
+            resetBackoff: vi.fn(),
+            resetPlayError: vi.fn(),
+            handleNoHealPoint,
+            handlePlayFailure: vi.fn(() => ({
+                probationTriggered: false,
+                repeatStuck: false,
+                shouldFailover: false
+            })),
+            shouldSkipStall: vi.fn(() => false)
+        }));
+        window.FailoverManager.create = vi.fn(() => ({
+            isActive: () => false,
+            resetFailover: vi.fn(),
+            attemptFailover,
+            probeCandidate: vi.fn(),
+            shouldIgnoreStall: () => false,
+            onMonitorRemoved: vi.fn()
+        }));
+
+        try {
+            const monitorsById = new Map();
+            const candidateSelector = {
+                getActiveId: () => 'video-1',
+                evaluateCandidates: vi.fn()
+            };
+            const manager = window.RecoveryManager.create({
+                monitorsById,
+                candidateSelector,
+                getVideoId: () => 'video-1',
+                logDebug: () => {},
+                onRescan: () => {},
+                onPersistentFailure: () => {}
+            });
+
+            const video = createVideo();
+            const monitorState = {};
+            monitorsById.set('video-1', { video, monitor: { state: monitorState } });
+
+            manager.handleNoHealPoint(video, monitorState, 'no_heal_point');
+
+            expect(handleNoHealPoint).toHaveBeenCalled();
+            expect(attemptFailover).toHaveBeenCalledWith('video-1', 'no_heal_point', monitorState);
+        } finally {
+            window.RecoveryPolicy.create = originalRecoveryPolicyCreate;
+            window.FailoverManager.create = originalFailoverManagerCreate;
+        }
+    });
+
+    it('applies a temporary hard-failure mode after processing-asset exhaustion refresh', () => {
+        vi.useFakeTimers();
+        vi.setSystemTime(100000);
+        const originalRecoveryPolicyCreate = window.RecoveryPolicy.create;
+        const originalFailoverManagerCreate = window.FailoverManager.create;
+        const handleNoHealPoint = vi.fn(() => ({
+            emergencySwitched: false,
+            shouldFailover: false,
+            refreshed: false
+        }));
+
+        window.RecoveryPolicy.create = vi.fn(() => ({
+            resetBackoff: vi.fn(),
+            resetPlayError: vi.fn(),
+            handleNoHealPoint,
+            handlePlayFailure: vi.fn(() => ({
+                probationTriggered: false,
+                repeatStuck: false,
+                shouldFailover: false
+            })),
+            shouldSkipStall: vi.fn(() => false)
+        }));
+        window.FailoverManager.create = vi.fn(() => ({
+            isActive: () => false,
+            resetFailover: vi.fn(),
+            attemptFailover: vi.fn(),
+            probeCandidate: vi.fn(),
+            shouldIgnoreStall: () => false,
+            onMonitorRemoved: vi.fn()
+        }));
+
+        try {
+            const monitorsById = new Map();
+            const candidateSelector = {
+                getActiveId: () => 'video-1',
+                evaluateCandidates: vi.fn()
+            };
+            const manager = window.RecoveryManager.create({
+                monitorsById,
+                candidateSelector,
+                getVideoId: () => 'video-1',
+                logDebug: () => {},
+                onRescan: () => {},
+                onPersistentFailure: () => {}
+            });
+
+            const video = createVideo({ currentSrc: 'blob:https://www.twitch.tv/stream' });
+            const monitorState = {
+                lastRefreshAt: Date.now() - CONFIG.stall.REFRESH_COOLDOWN_MS - 1,
+                noHealPointCount: 2
+            };
+            monitorsById.set('video-1', { video, monitor: { state: monitorState } });
+
+            const refreshed = manager.requestRefresh(video, monitorState, {
+                reason: 'processing_asset_exhausted',
+                now: Date.now()
+            });
+            expect(refreshed).toBe(true);
+
+            manager.handleNoHealPoint(video, monitorState, 'no_heal_point');
+            expect(handleNoHealPoint.mock.calls.at(-1)[1]).toBe('processing_asset_hard_failure');
+
+            vi.advanceTimersByTime(CONFIG.stall.PROCESSING_ASSET_HARD_FAILURE_WINDOW_MS + 1);
+            manager.handleNoHealPoint(video, monitorState, 'no_heal_point');
+            expect(handleNoHealPoint.mock.calls.at(-1)[1]).toBe('no_heal_point');
+        } finally {
+            window.RecoveryPolicy.create = originalRecoveryPolicyCreate;
+            window.FailoverManager.create = originalFailoverManagerCreate;
+            vi.useRealTimers();
+        }
+    });
 });
