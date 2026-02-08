@@ -30,6 +30,11 @@
 - Ask clarifying questions only when ambiguity blocks a correct action.
 - Prefer concrete examples and file references when explaining repository behavior.
 
+## Scope confirmation on ambiguous requests
+- When a request can reasonably mean observability-only, behavior-only, or both, ask one explicit scope question before implementing.
+- Do not assume scope when behavior changes are possible unless the user has already made scope explicit.
+- If the user says "go ahead" after discussing both, confirm the intended scope before implementation.
+
 ## Role registry (opt-in)
 - Roles are invoked by `Role: <name>` or `Use role: <name>` in the user request.
 
