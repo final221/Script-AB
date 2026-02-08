@@ -1,137 +1,200 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
+import { createVideo } from '../helpers/video.js';
+
+const flushMicrotasks = async () => {
+    await Promise.resolve();
+    await Promise.resolve();
+};
+
+const createHarness = (overrides = {}) => {
+    const videoA = createVideo({ paused: true, readyState: 1, currentSrc: 'src-a' });
+    const videoB = createVideo({ paused: true, readyState: 1, currentSrc: 'src-b' });
+    const videoC = createVideo({ paused: true, readyState: 1, currentSrc: 'src-c' });
+    videoA.play = vi.fn().mockResolvedValue();
+    videoB.play = vi.fn().mockResolvedValue();
+    videoC.play = vi.fn().mockResolvedValue();
+
+    const monitorA = { state: { hasProgress: false, lastProgressTime: 0 } };
+    const monitorB = { state: { hasProgress: false, lastProgressTime: 0 } };
+    const monitorC = { state: { hasProgress: false, lastProgressTime: 0 } };
+
+    const monitorsById = new Map([
+        ['video-1', { video: videoA, monitor: monitorA }],
+        ['video-2', { video: videoB, monitor: monitorB }],
+        ['video-3', { video: videoC, monitor: monitorC }]
+    ]);
+
+    let activeId = overrides.activeId || 'video-1';
+    const scoreMap = overrides.scoreMap || {
+        'video-1': { score: 5, deadCandidate: false, progressEligible: true, trusted: true, vs: { readyState: 3, currentSrc: 'src-a', src: 'src-a' } },
+        'video-2': { score: 9, deadCandidate: false, progressEligible: true, trusted: true, vs: { readyState: 3, currentSrc: 'src-b', src: 'src-b' } },
+        'video-3': { score: 4, deadCandidate: false, progressEligible: false, trusted: false, vs: { readyState: 0, currentSrc: '', src: '' } }
+    };
+
+    const candidateSelector = {
+        activateProbation: vi.fn(),
+        evaluateCandidates: vi.fn(),
+        scoreVideo: vi.fn((video, monitor, videoId) => scoreMap[videoId]),
+        getActiveId: vi.fn(() => activeId),
+        setActiveId: vi.fn((nextId) => {
+            activeId = nextId;
+        })
+    };
+
+    const recoveryManager = {
+        isFailoverActive: vi.fn(() => false),
+        probeCandidate: vi.fn(() => true),
+        canRequestRefresh: vi.fn(() => ({ allow: true, reason: 'ok' })),
+        requestRefresh: vi.fn(() => true)
+    };
+
+    const onRescan = vi.fn();
+    const logDebug = vi.fn();
+    const handler = window.ExternalSignalHandlerAsset.create({
+        monitorsById,
+        candidateSelector,
+        recoveryManager,
+        logDebug,
+        onRescan
+    });
+
+    const helpers = {
+        truncateMessage: (message) => message,
+        logCandidateSnapshot: vi.fn(),
+        probeCandidates: vi.fn()
+    };
+
+    return {
+        handler,
+        helpers,
+        monitorsById,
+        candidateSelector,
+        recoveryManager,
+        onRescan,
+        logDebug,
+        getActiveId: () => activeId
+    };
+};
 
 describe('ExternalSignalHandlerAsset', () => {
     afterEach(() => {
+        vi.useRealTimers();
         vi.restoreAllMocks();
         Logger.getLogs().length = 0;
         document.body.innerHTML = '';
     });
 
-    it('skips candidate switching while failover is active', () => {
+    it('skips processing-asset recovery when failover is active', async () => {
         const addSpy = vi.spyOn(Logger, 'add');
-        const video = document.createElement('video');
-        const monitorsById = new Map([
-            ['video-1', { video, monitor: { state: {} } }]
-        ]);
+        const harness = createHarness();
+        harness.recoveryManager.isFailoverActive.mockReturnValue(true);
 
-        const candidateSelector = {
-            activateProbation: vi.fn(),
-            evaluateCandidates: vi.fn().mockReturnValue({ id: 'video-1' }),
-            forceSwitch: vi.fn().mockReturnValue({ activeId: 'video-1', activeIsStalled: false }),
-            getActiveId: vi.fn().mockReturnValue('video-1'),
-            selectEmergencyCandidate: vi.fn()
-        };
-        const recoveryManager = {
-            isFailoverActive: () => true,
-            probeCandidate: vi.fn()
-        };
-        const logDebug = vi.fn();
-        const onRescan = vi.fn();
-
-        const handler = window.ExternalSignalHandlerAsset.create({
-            monitorsById,
-            candidateSelector,
-            recoveryManager,
-            logDebug,
-            onRescan
-        });
-
-        const helpers = {
-            truncateMessage: (message) => message,
-            logCandidateSnapshot: vi.fn(),
-            probeCandidates: vi.fn()
-        };
-
-        const result = handler({ level: 'error', message: 'processing asset' }, helpers);
-
+        const result = harness.handler({ level: 'error', message: 'processing asset' }, harness.helpers);
         expect(result).toBe(true);
-        expect(candidateSelector.evaluateCandidates).not.toHaveBeenCalled();
-        expect(candidateSelector.forceSwitch).not.toHaveBeenCalled();
-        expect(helpers.logCandidateSnapshot).toHaveBeenCalled();
-        expect(onRescan).toHaveBeenCalled();
-        const recoveryStartLogged = addSpy.mock.calls.some((call) => (
-            call[0]?.message === LogTags.TAG.ASSET_HINT
-            && call[0]?.detail?.message === 'Processing/offline asset recovery initiated'
+
+        await flushMicrotasks();
+
+        expect(harness.candidateSelector.evaluateCandidates).not.toHaveBeenCalled();
+        expect(harness.recoveryManager.probeCandidate).not.toHaveBeenCalled();
+        expect(harness.recoveryManager.requestRefresh).not.toHaveBeenCalled();
+        expect(harness.helpers.logCandidateSnapshot).toHaveBeenCalledTimes(1);
+        expect(harness.onRescan).toHaveBeenCalledTimes(1);
+        const skipLogged = addSpy.mock.calls.some((call) => (
+            call[0]?.detail?.message === 'Processing asset recovery skipped during failover'
         ));
-        const failoverSkipLogged = addSpy.mock.calls.some((call) => (
-            call[0]?.message === LogTags.TAG.ASSET_HINT_SKIP
-            && call[0]?.detail?.message === 'Processing asset recovery skipped during failover'
-        ));
-        expect(recoveryStartLogged).toBe(true);
-        expect(failoverSkipLogged).toBe(true);
+        expect(skipLogged).toBe(true);
     });
 
-    it('logs processing-asset recovery decisions end-to-end', () => {
+    it('completes recovery in strict candidate pass when candidate progresses', async () => {
+        vi.useFakeTimers();
+        vi.setSystemTime(100000);
         const addSpy = vi.spyOn(Logger, 'add');
-        const primary = document.createElement('video');
-        const secondary = document.createElement('video');
-        secondary.play = vi.fn().mockResolvedValue();
-        const monitorsById = new Map([
-            ['video-1', { video: primary, monitor: { state: {} } }],
-            ['video-2', { video: secondary, monitor: { state: {} } }]
-        ]);
-
-        const candidateSelector = {
-            activateProbation: vi.fn(),
-            evaluateCandidates: vi.fn().mockReturnValue({
-                id: 'video-2',
-                score: 8,
-                progressEligible: true,
-                trusted: true
-            }),
-            forceSwitch: vi.fn().mockReturnValue({
-                activeId: 'video-1',
-                activeIsStalled: true,
-                suppressed: true,
-                switched: false
-            }),
-            getActiveId: vi.fn()
-                .mockReturnValueOnce('video-1')
-                .mockReturnValueOnce('video-2')
-                .mockReturnValue('video-2'),
-            selectEmergencyCandidate: vi.fn().mockReturnValue({ id: 'video-2' })
-        };
-        const recoveryManager = {
-            isFailoverActive: () => false,
-            probeCandidate: vi.fn().mockReturnValue(true)
-        };
-
-        const handler = window.ExternalSignalHandlerAsset.create({
-            monitorsById,
-            candidateSelector,
-            recoveryManager,
-            logDebug: vi.fn(),
-            onRescan: vi.fn()
+        const harness = createHarness({
+            scoreMap: {
+                'video-1': { score: 5, deadCandidate: false, progressEligible: true, trusted: true, vs: { readyState: 3, currentSrc: 'src-a', src: 'src-a' } },
+                'video-2': { score: 10, deadCandidate: false, progressEligible: true, trusted: true, vs: { readyState: 4, currentSrc: 'src-b', src: 'src-b' } },
+                'video-3': { score: 2, deadCandidate: true, progressEligible: false, trusted: false, vs: { readyState: 0, currentSrc: '', src: '' } }
+            }
         });
 
-        const helpers = {
-            truncateMessage: (message) => message,
-            logCandidateSnapshot: vi.fn(),
-            probeCandidates: vi.fn()
-        };
+        setTimeout(() => {
+            const state = harness.monitorsById.get('video-2').monitor.state;
+            state.hasProgress = true;
+            state.lastProgressTime = Date.now();
+        }, 300);
 
-        const result = handler({ level: 'warn', message: 'processing asset' }, helpers);
+        harness.handler({ level: 'warn', message: 'processing asset' }, harness.helpers);
+        await vi.advanceTimersByTimeAsync(700);
 
-        expect(result).toBe(true);
-        expect(recoveryManager.probeCandidate).toHaveBeenCalledWith('video-2', 'processing_asset');
-        expect(helpers.probeCandidates).toHaveBeenCalledWith(
-            recoveryManager,
-            monitorsById,
-            'processing_asset',
-            'video-2'
+        expect(harness.candidateSelector.setActiveId).toHaveBeenCalledWith('video-2');
+        expect(harness.recoveryManager.probeCandidate).not.toHaveBeenCalled();
+        expect(harness.recoveryManager.requestRefresh).not.toHaveBeenCalled();
+        const messages = addSpy.mock.calls.map((call) => call[0]?.detail?.message);
+        expect(messages).toContain('Strict candidate pass applied');
+        expect(messages).toContain('Strict candidate verified progress, recovery completed');
+    });
+
+    it('switches to a probing candidate when probe window finds progress', async () => {
+        vi.useFakeTimers();
+        vi.setSystemTime(200000);
+        const addSpy = vi.spyOn(Logger, 'add');
+        const harness = createHarness({
+            scoreMap: {
+                'video-1': { score: 5, deadCandidate: false, progressEligible: true, trusted: true, vs: { readyState: 3, currentSrc: 'src-a', src: 'src-a' } },
+                'video-2': { score: 9, deadCandidate: false, progressEligible: false, trusted: false, vs: { readyState: 1, currentSrc: '', src: '' } },
+                'video-3': { score: 8, deadCandidate: false, progressEligible: false, trusted: false, vs: { readyState: 0, currentSrc: '', src: '' } }
+            }
+        });
+
+        setTimeout(() => {
+            const state = harness.monitorsById.get('video-3').monitor.state;
+            state.hasProgress = true;
+            state.lastProgressTime = Date.now();
+        }, 700);
+
+        harness.handler({ level: 'warn', message: 'processing asset' }, harness.helpers);
+        await vi.advanceTimersByTimeAsync(1400);
+
+        expect(harness.recoveryManager.probeCandidate).toHaveBeenCalledWith('video-2', 'processing_asset');
+        expect(harness.recoveryManager.probeCandidate).toHaveBeenCalledWith('video-3', 'processing_asset');
+        expect(harness.candidateSelector.setActiveId).toHaveBeenCalledWith('video-3');
+        expect(harness.recoveryManager.requestRefresh).not.toHaveBeenCalled();
+        const messages = addSpy.mock.calls.map((call) => call[0]?.detail?.message);
+        expect(messages).toContain('Fast probe pass started');
+        expect(messages).toContain('Fast probe pass found progressing candidate');
+    });
+
+    it('runs speculative fallback then reverts and refreshes when no progress is found', async () => {
+        vi.useFakeTimers();
+        vi.setSystemTime(300000);
+        const addSpy = vi.spyOn(Logger, 'add');
+        const harness = createHarness({
+            scoreMap: {
+                'video-1': { score: 4, deadCandidate: false, progressEligible: true, trusted: true, vs: { readyState: 3, currentSrc: 'src-a', src: 'src-a' } },
+                'video-2': { score: 10, deadCandidate: false, progressEligible: false, trusted: false, vs: { readyState: 1, currentSrc: '', src: '' } },
+                'video-3': { score: 7, deadCandidate: false, progressEligible: false, trusted: false, vs: { readyState: 0, currentSrc: '', src: '' } }
+            }
+        });
+
+        harness.handler({ level: 'warn', message: 'processing asset' }, harness.helpers);
+        await vi.advanceTimersByTimeAsync(2600);
+
+        expect(harness.candidateSelector.setActiveId).toHaveBeenCalledWith('video-2');
+        expect(harness.candidateSelector.setActiveId).toHaveBeenCalledWith('video-1');
+        expect(harness.recoveryManager.requestRefresh).toHaveBeenCalledWith(
+            'video-1',
+            harness.monitorsById.get('video-1').monitor.state,
+            expect.objectContaining({
+                reason: 'processing_asset_exhausted',
+                trigger: 'processing_asset',
+                detail: 'no_candidate_progress'
+            })
         );
-        expect(secondary.play).toHaveBeenCalled();
 
-        const messages = addSpy.mock.calls
-            .map((call) => call[0]?.detail?.message)
-            .filter(Boolean);
-
-        expect(messages).toContain('Processing/offline asset recovery initiated');
-        expect(messages).toContain('Candidate evaluation complete');
-        expect(messages).toContain('Forced switch decision applied');
-        expect(messages).toContain('Suppressed switch follow-up probe attempted');
-        expect(messages).toContain('Last-resort candidate decision evaluated');
-        expect(messages).toContain('Probe burst requested for stalled active candidate');
-        expect(messages).toContain('Play attempt issued after processing asset recovery');
+        const messages = addSpy.mock.calls.map((call) => call[0]?.detail?.message);
+        expect(messages).toContain('Speculative fallback switch applied');
+        expect(messages).toContain('Speculative fallback candidate failed to progress, reverting');
+        expect(messages).toContain('Speculative fallback reverted to previous active candidate');
+        expect(messages).toContain('Processing asset recovery exhausted, refresh decision applied');
     });
 });
