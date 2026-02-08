@@ -1,4 +1,5 @@
 // @module LogFormatter
+// @depends DetailFormatter
 // --- LogFormatter ---
 /**
  * Formats merged script + console logs into aligned report lines.

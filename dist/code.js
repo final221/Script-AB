@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.14.12
+// @version       4.14.13
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -174,12 +174,13 @@ const CONFIG = (() => {
 
 
 // @module BuildInfo
+// @depends Config
 // --- BuildInfo ---
 /**
  * Build metadata helpers (version injected at build time).
  */
 const BuildInfo = (() => {
-    const VERSION = '4.14.12';
+    const VERSION = '4.14.13';
 
     const getVersion = () => {
         const gmVersion = (typeof GM_info !== 'undefined' && GM_info?.script?.version)
@@ -190,7 +191,7 @@ const BuildInfo = (() => {
             ? unsafeWindow.GM_info.script.version
             : null;
         if (unsafeVersion) return unsafeVersion;
-        if (VERSION && VERSION !== '4.14.12') return VERSION;
+        if (VERSION && VERSION !== '4.14.13') return VERSION;
         return null;
     };
 
@@ -207,6 +208,7 @@ const BuildInfo = (() => {
 })();
 
 // @module Tuning
+// @depends BuildInfo
 // --- Tuning ---
 /**
  * Derived thresholds and helper accessors for tuning logic.
@@ -229,6 +231,7 @@ const Tuning = (() => {
 })();
 
 // @module Validate
+// @depends Tuning
 // --- ConfigValidator ---
 /**
  * Lightweight config validation and sanity checks.
@@ -318,6 +321,7 @@ const ConfigValidator = (() => {
 })();
 
 // @module Utils
+// @depends Validate
 // ============================================================================
 // 2. FUNCTIONAL UTILITIES
 // ============================================================================
@@ -354,6 +358,7 @@ const Fn = {
 };
 
 // @module Adapters
+// @depends Utils
 // ============================================================================
 // 3. ADAPTERS (Side-Effects)
 // ============================================================================
@@ -376,6 +381,7 @@ const Adapters = {
 };
 
 // @module BufferRanges
+// @depends Adapters
 // --- BufferRanges ---
 /**
  * Helpers for working with media buffer ranges.
@@ -488,6 +494,7 @@ const BufferRanges = (() => {
 })();
 
 // @module HealPointFinder
+// @depends BufferRanges
 // --- HealPointFinder ---
 /**
  * Finds heal points in buffered ranges.
@@ -651,6 +658,7 @@ const HealPointFinder = (() => {
 })();
 
 // @module BufferGapFinder
+// @depends HealPointFinder
 // --- BufferGapFinder ---
 /**
  * Finds "heal points" in the video buffer after a stall.
@@ -688,6 +696,7 @@ const BufferGapFinder = (() => {
 })();
 
 // @module SeekTargetCalculator
+// @depends BufferGapFinder
 // --- SeekTargetCalculator ---
 /**
  * Calculates and validates safe seek targets.
@@ -745,6 +754,7 @@ const SeekTargetCalculator = (() => {
 })();
 
 // @module LiveEdgeSeeker
+// @depends SeekTargetCalculator
 // --- LiveEdgeSeeker ---
 /**
  * Seeks to a heal point and resumes playback.
@@ -859,6 +869,7 @@ const LiveEdgeSeeker = (() => {
 })();
 
 // @module ErrorClassifier
+// @depends LiveEdgeSeeker
 // --- Error Classifier ---
 /**
  * Classifies errors based on type, message, and known patterns.
@@ -899,6 +910,7 @@ const ErrorClassifier = (() => {
 
 
 // @module LogTags
+// @depends ErrorClassifier
 // --- LogTags ---
 /**
  * Canonical log tag strings for Stream Healer.
@@ -1004,6 +1016,7 @@ const LogTags = (() => {
 })();
 
 // @module LogTagGroups
+// @depends LogTags
 // --- LogTagGroups ---
 /**
  * Log tag grouping metadata (icons, groups, legends).
@@ -1139,6 +1152,7 @@ const LogTagGroups = (() => {
 })();
 
 // @module LogTagSchemas
+// @depends LogTagGroups
 // --- LogTagSchemas ---
 /**
  * Optional key ordering hints for log detail payloads.
@@ -1266,6 +1280,7 @@ const LogTagSchemas = (() => {
 })();
 
 // @module LogTagRegistry
+// @depends LogTagSchemas
 // --- LogTagRegistry ---
 /**
  * Central registry for log tag metadata (icons, groups, schemas).
@@ -1348,6 +1363,7 @@ const LogTagRegistry = (() => {
 })();
 
 // @module LogSchemas
+// @depends LogTagRegistry
 // --- LogSchemas ---
 /**
  * Optional key ordering hints for log detail payloads.
@@ -1364,6 +1380,7 @@ const LogSchemas = (() => {
 })();
 
 // @module LogSanitizer
+// @depends LogSchemas
 // --- LogSanitizer ---
 /**
  * Helpers for normalizing and sanitizing log details.
@@ -1562,6 +1579,7 @@ const LogSanitizer = (() => {
 })();
 
 // @module LogNormalizer
+// @depends LogSanitizer
 // --- LogNormalizer ---
 /**
  * Normalizes internal log messages into tag + structured detail fields.
@@ -1668,6 +1686,7 @@ const LogNormalizer = (() => {
 
 // --- LoggerPlaceholderSuppression ---
 // @module LoggerPlaceholderSuppression
+// @depends LogNormalizer
 /**
  * Suppresses repetitive placeholder/no-source log churn and emits periodic summaries.
  */
@@ -1947,6 +1966,7 @@ const Logger = (() => {
 
 
 // @module LogEvents
+// @depends Logger
 // --- LogEvents ---
 /**
  * Central log tags and summary helpers for consistent, compact log messages.
@@ -2100,6 +2120,7 @@ const LogEvents = (() => {
 })();
 
 // @module TagCategorizer
+// @depends LogEvents
 // --- TagCategorizer ---
 /**
  * Central mapping of log tags to categories and icons.
@@ -2186,6 +2207,7 @@ const TagCategorizer = (() => {
 })();
 
 // @module DetailFormatter
+// @depends TagCategorizer
 // --- DetailFormatter ---
 /**
  * Formats aligned log lines and detail columns.
@@ -2237,6 +2259,7 @@ const DetailFormatter = (() => {
 })();
 
 // @module LogFormatter
+// @depends DetailFormatter
 // --- LogFormatter ---
 /**
  * Formats merged script + console logs into aligned report lines.
@@ -2326,6 +2349,7 @@ const LogFormatter = (() => {
 })();
 
 // @module LegendRenderer
+// @depends LogFormatter
 // --- LegendRenderer ---
 /**
  * Builds the legend section for report exports.
@@ -2347,6 +2371,7 @@ const LegendRenderer = (() => {
 })();
 
 // @module ReportTemplate
+// @depends LegendRenderer
 // --- ReportTemplate ---
 /**
  * Shared header/legend template for report exports.
@@ -2391,6 +2416,7 @@ ${legendLines}
 })();
 
 // @module ResourceWindow
+// @depends ReportTemplate
 // --- ResourceWindow ---
 /**
  * Tracks network resource activity for stall-adjacent windows.
@@ -2477,6 +2503,7 @@ const ResourceWindow = (() => {
 })();
 
 // @module Metrics
+// @depends ResourceWindow
 // --- Metrics ---
 /**
  * High-level telemetry and metrics tracking for Stream Healer.
@@ -2555,6 +2582,7 @@ const Metrics = (() => {
 })();
 
 // @module TimelineRenderer
+// @depends Metrics
 // --- TimelineRenderer ---
 /**
  * Renders the merged log timeline for report exports.
@@ -2570,6 +2598,7 @@ const TimelineRenderer = (() => {
 })();
 
 // @module ReportGenerator
+// @depends TimelineRenderer
 // --- ReportGenerator ---
 /**
  * Generates and facilitates the download of a comprehensive report.
@@ -2664,6 +2693,7 @@ Total entries: ${logs.length}
 
 
 // @module ConsoleInterceptor
+// @depends ReportGenerator
 // --- ConsoleInterceptor ---
 /**
  * Captures console output and forwards to callbacks.
@@ -2703,6 +2733,7 @@ const ConsoleInterceptor = (() => {
 })();
 
 // @module ConsoleSignalDetector
+// @depends ConsoleInterceptor
 // --- ConsoleSignalDetector ---
 /**
  * Detects console messages that hint at playback issues.
@@ -2799,6 +2830,7 @@ const ConsoleSignalDetector = (() => {
 
 
 // @module Instrumentation
+// @depends ConsoleSignalDetector
 // --- Instrumentation ---
 /**
  * Hooks into global events and console methods to monitor application behavior.
@@ -3030,6 +3062,7 @@ const Instrumentation = (() => {
 
 
 // @module LogDebug
+// @depends Instrumentation
 // --- LogDebug ---
 /**
  * Shared debug logger helper to avoid repeating CONFIG.debug checks.
@@ -3067,6 +3100,7 @@ const LogDebug = (() => {
 })();
 
 // @module VideoState
+// @depends LogDebug
 // --- VideoState ---
 /**
  * Shared helper for consistent video state logging.
@@ -3161,6 +3195,7 @@ const VideoState = (() => {
 })();
 
 // @module VideoStateSnapshot
+// @depends VideoState
 // --- VideoStateSnapshot ---
 /**
  * Standardized helpers for capturing video state snapshots for logs.
@@ -3218,6 +3253,7 @@ const VideoStateSnapshot = (() => {
 })();
 
 // @module StateSnapshot
+// @depends VideoStateSnapshot
 // --- StateSnapshot ---
 /**
  * Central helper for consistent video state snapshots.
@@ -3248,6 +3284,7 @@ const StateSnapshot = (() => {
 })();
 
 // @module MonitorRegistry
+// @depends StateSnapshot
 // --- MonitorRegistry ---
 /**
  * Tracks monitored videos and coordinates playback monitoring lifecycle.
@@ -3422,6 +3459,7 @@ const MonitorRegistry = (() => {
 })();
 
 // @module MonitorCoordinator
+// @depends MonitorRegistry
 // --- MonitorCoordinator ---
 /**
  * Coordinates monitor registry and candidate selection lifecycle.
@@ -3608,6 +3646,7 @@ const MonitorCoordinator = (() => {
 })();
 
 // @module VideoDiscovery
+// @depends MonitorCoordinator
 // --- VideoDiscovery ---
 /**
  * Scans the DOM for video elements and wires the mutation observer.
@@ -3675,6 +3714,7 @@ const VideoDiscovery = (() => {
 })();
 
 // @module LogContext
+// @depends VideoDiscovery
 // --- LogContext ---
 /**
  * Shared helper for consistent log payloads with video context.
@@ -3712,6 +3752,7 @@ const LogContext = (() => {
 })();
 
 // @module PlaybackLogHelper
+// @depends LogContext
 // --- PlaybackLogHelper ---
 /**
  * Shared logging helpers for playback-related modules.
@@ -3810,6 +3851,7 @@ const PlaybackLogHelper = (() => {
 })();
 
 // @module PlaybackStateDefaults
+// @depends PlaybackLogHelper
 // --- PlaybackStateDefaults ---
 /**
  * Provides initial playback state structure and alias map.
@@ -4014,6 +4056,7 @@ const PlaybackStateDefaults = (() => {
 })();
 
 // @module PlaybackMediaWatcher
+// @depends PlaybackStateDefaults
 // --- PlaybackMediaWatcher ---
 /**
  * Tracks media element property changes for watchdog logs.
@@ -4138,6 +4181,7 @@ const PlaybackMediaWatcher = (() => {
 })();
 
 // @module MediaState
+// @depends PlaybackMediaWatcher
 // --- MediaState ---
 /**
  * Unified helpers for video state + buffer info.
@@ -4161,6 +4205,7 @@ const MediaState = (() => {
 })();
 
 // @module PlaybackStateStore
+// @depends MediaState
 // --- PlaybackStateStore ---
 /**
  * Builds playback state objects with alias mapping.
@@ -4332,6 +4377,7 @@ const PlaybackStateStore = (() => {
 })();
 
 // @module PlaybackStateTransitions
+// @depends PlaybackStateStore
 // --- PlaybackStateTransitions ---
 /**
  * Centralizes guarded playback state transitions.
@@ -4375,6 +4421,7 @@ const PlaybackStateTransitions = (() => {
 })();
 
 // @module PlaybackStallStateMachine
+// @depends PlaybackStateTransitions
 // --- PlaybackStallStateMachine ---
 /**
  * Centralizes stall-related state transitions.
@@ -4440,6 +4487,7 @@ const PlaybackStallStateMachine = (() => {
 })();
 
 // @module PlaybackResetLogic
+// @depends PlaybackStallStateMachine
 // --- PlaybackResetLogic ---
 /**
  * Reset evaluation + pending reset handling for playback state.
@@ -4603,6 +4651,7 @@ const PlaybackResetLogic = (() => {
 })();
 
 // @module PlaybackProgressReset
+// @depends PlaybackResetLogic
 // --- PlaybackProgressReset ---
 /**
  * Clears backoff/reset flags when progress resumes.
@@ -4674,6 +4723,7 @@ const PlaybackProgressReset = (() => {
 })();
 
 // @module PlaybackProgressTracker
+// @depends PlaybackProgressReset
 // --- PlaybackProgressTracker ---
 /**
  * Tracks progress streaks and candidate eligibility.
@@ -4732,6 +4782,7 @@ const PlaybackProgressTracker = (() => {
 })();
 
 // @module PlaybackProgressLogic
+// @depends PlaybackProgressTracker
 // --- PlaybackProgressLogic ---
 /**
  * Progress, ready, and stall-related tracking helpers.
@@ -4875,6 +4926,7 @@ const PlaybackProgressLogic = (() => {
 })();
 
 // @module PlaybackSyncLogic
+// @depends PlaybackProgressLogic
 // --- PlaybackSyncLogic ---
 /**
  * Sync drift sampling helper.
@@ -4938,6 +4990,7 @@ const PlaybackSyncLogic = (() => {
 })();
 
 // @module PlaybackStarvationLogic
+// @depends PlaybackSyncLogic
 // --- PlaybackStarvationLogic ---
 /**
  * Buffer starvation tracking helper.
@@ -5050,6 +5103,7 @@ const PlaybackStarvationLogic = (() => {
 })();
 
 // @module PlaybackStateTracker
+// @depends PlaybackStarvationLogic
 // --- PlaybackStateTracker ---
 /**
  * Shared playback state tracking for PlaybackMonitor.
@@ -5123,6 +5177,7 @@ const PlaybackStateTracker = (() => {
 
 
 // @module PlaybackEventLogger
+// @depends PlaybackStateTracker
 // --- PlaybackEventLogger ---
 /**
  * Shared logging for playback event handlers.
@@ -5199,6 +5254,7 @@ const PlaybackEventLogger = (() => {
 })();
 
 // @module PlaybackEventHandlersProgress
+// @depends PlaybackEventLogger
 // --- PlaybackEventHandlersProgress ---
 /**
  * Progress-related playback event handlers.
@@ -5230,6 +5286,7 @@ const PlaybackEventHandlersProgress = (() => {
 })();
 
 // @module PlaybackEventHandlersReady
+// @depends PlaybackEventHandlersProgress
 // --- PlaybackEventHandlersReady ---
 /**
  * Ready/playback-start event handlers.
@@ -5277,6 +5334,7 @@ const PlaybackEventHandlersReady = (() => {
 })();
 
 // @module PlaybackEventHandlersStall
+// @depends PlaybackEventHandlersReady
 // --- PlaybackEventHandlersStall ---
 /**
  * Stall-related playback event handlers.
@@ -5319,6 +5377,7 @@ const PlaybackEventHandlersStall = (() => {
 })();
 
 // @module PlaybackEventHandlersLifecycle
+// @depends PlaybackEventHandlersStall
 // --- PlaybackEventHandlersLifecycle ---
 /**
  * Lifecycle event handlers (ended/error/abort/emptied/suspend).
@@ -5389,6 +5448,7 @@ const PlaybackEventHandlersLifecycle = (() => {
 })();
 
 // @module PlaybackEventHandlers
+// @depends PlaybackEventHandlersLifecycle
 // --- PlaybackEventHandlers ---
 /**
  * Wires media element events to playback state tracking.
@@ -5451,6 +5511,7 @@ const PlaybackEventHandlers = (() => {
 })();
 
 // @module PlaybackWatchdog
+// @depends PlaybackEventHandlers
 // --- PlaybackWatchdog ---
 /**
  * Watchdog interval that evaluates stalled playback state.
@@ -5598,6 +5659,7 @@ const PlaybackWatchdog = (() => {
 })();
 
 // @module PlaybackMonitor
+// @depends PlaybackWatchdog
 // --- PlaybackMonitor ---
 /**
  * Tracks playback progress using media events plus a watchdog interval.
@@ -5693,6 +5755,7 @@ const PlaybackMonitor = (() => {
 })();
 
 // @module ProgressModel
+// @depends PlaybackMonitor
 // --- ProgressModel ---
 /**
  * Canonical progress classification helpers shared across recovery flows.
@@ -5809,6 +5872,7 @@ const ProgressModel = (() => {
 })();
 
 // @module CandidateScorer
+// @depends ProgressModel
 // --- CandidateScorer ---
 /**
  * Scores a video candidate based on playback state.
@@ -5951,6 +6015,7 @@ const CandidateScorer = (() => {
 })();
 
 // @module CandidateSwitchPolicy
+// @depends CandidateScorer
 // --- CandidateSwitchPolicy ---
 /**
  * Determines whether switching candidates should be allowed.
@@ -6140,6 +6205,7 @@ const CandidateSwitchPolicy = (() => {
 })();
 
 // @module CandidateDecision
+// @depends CandidateSwitchPolicy
 // --- CandidateDecision ---
 /**
  * Builds candidate switch decisions from scoring + policy inputs.
@@ -6168,6 +6234,7 @@ const CandidateDecision = (() => {
 })();
 
 // @module CandidateTrust
+// @depends CandidateDecision
 // --- CandidateTrust ---
 /**
  * Determines whether a candidate is trusted for switching/failover.
@@ -6201,6 +6268,7 @@ const CandidateTrust = (() => {
 })();
 
 // @module CandidateScoreRecord
+// @depends CandidateTrust
 // --- CandidateScoreRecord ---
 /**
  * Standardizes candidate score and trust records.
@@ -6240,6 +6308,7 @@ const CandidateScoreRecord = (() => {
 })();
 
 // @module CandidateProbation
+// @depends CandidateScoreRecord
 // --- CandidateProbation ---
 /**
  * Handles probation window tracking for candidate switching.
@@ -6282,6 +6351,7 @@ const CandidateProbation = (() => {
 })();
 
 // @module CandidateEvaluation
+// @depends CandidateProbation
 // --- CandidateEvaluation ---
 /**
  * Aggregates candidate score snapshots for selection decisions.
@@ -6340,6 +6410,7 @@ const CandidateEvaluation = (() => {
 })();
 
 // @module CandidateSelectionLogger
+// @depends CandidateEvaluation
 // --- CandidateSelectionLogger ---
 /**
  * Logging helpers for candidate selection decisions/suppressions.
@@ -6496,6 +6567,7 @@ const CandidateSelectionLogger = (() => {
 
 // --- CandidateForceSwitch ---
 // @module CandidateForceSwitch
+// @depends CandidateSelectionLogger
 /**
  * Encapsulates active-candidate context inspection and forced switch logic.
  */
@@ -6836,6 +6908,7 @@ const CandidateSelector = (() => {
 })();
 
 // @module CandidatePruner
+// @depends CandidateSelector
 // --- CandidatePruner ---
 /**
  * Enforces the monitor cap by pruning the worst candidate.
@@ -6891,6 +6964,7 @@ const CandidatePruner = (() => {
 })();
 
 // @module CandidateSelectionEngine
+// @depends CandidatePruner
 // --- CandidateSelectionEngine ---
 /**
  * Evaluation flow for selecting the active candidate.
@@ -7004,6 +7078,7 @@ const CandidateSelectionEngine = (() => {
 })();
 
 // @module EmergencyCandidatePicker
+// @depends CandidateSelectionEngine
 // --- EmergencyCandidatePicker ---
 /**
  * Emergency candidate selection for no-heal-point scenarios.
@@ -7089,6 +7164,7 @@ const EmergencyCandidatePicker = (() => {
 })();
 
 // @module FormerStreamTracker
+// @depends EmergencyCandidatePicker
 // --- FormerStreamTracker ---
 /**
  * Tracks previously active stream candidates and logs their post-switch status.
@@ -7270,6 +7346,7 @@ const FormerStreamTracker = (() => {
 })();
 
 // @module StreamIdentityModel
+// @depends FormerStreamTracker
 // --- StreamIdentityModel ---
 /**
  * Tracks stream-origin continuity signals so candidate scoring can favor
@@ -7414,6 +7491,7 @@ const StreamIdentityModel = (() => {
 })();
 
 // @module RecoveryContext
+// @depends StreamIdentityModel
 // --- RecoveryContext ---
 /**
  * Shared context wrapper for recovery flows.
@@ -7531,6 +7609,7 @@ const RecoveryContext = (() => {
 })();
 
 // @module BackoffManager
+// @depends RecoveryContext
 // --- BackoffManager ---
 /**
  * Tracks stall backoff state for no-heal-point scenarios.
@@ -7634,6 +7713,7 @@ const BackoffManager = (() => {
 })();
 
 // @module ProbationPolicy
+// @depends BackoffManager
 // --- ProbationPolicy ---
 /**
  * Shared probation/rescan logic for recovery decisions.
@@ -7705,6 +7785,7 @@ const ProbationPolicy = (() => {
 })();
 
 // @module RecoveryLogDetails
+// @depends ProbationPolicy
 // --- RecoveryLogDetails ---
 /**
  * Shared log detail builders for recovery policies.
@@ -7745,6 +7826,7 @@ const RecoveryLogDetails = (() => {
 
 // --- RecoveryStallSkipApplier ---
 // @module RecoveryStallSkipApplier
+// @depends RecoveryLogDetails
 /**
  * Applies stall skip decisions and throttled skip logging.
  */
@@ -8060,6 +8142,7 @@ const RecoveryDecisionApplier = (() => {
 })();
 
 // @module NoHealPointPolicy
+// @depends RecoveryDecisionApplier
 // --- NoHealPointPolicy ---
 /**
  * Handles no-heal-point scenarios, refreshes, and failover decisions.
@@ -8203,6 +8286,7 @@ const NoHealPointPolicy = (() => {
 })();
 
 // @module PlayErrorPolicy
+// @depends NoHealPointPolicy
 // --- PlayErrorPolicy ---
 /**
  * Handles play error backoff and repeat heal-point behavior.
@@ -8287,6 +8371,7 @@ const PlayErrorPolicy = (() => {
 })();
 
 // @module StallSkipPolicy
+// @depends PlayErrorPolicy
 // --- StallSkipPolicy ---
 /**
  * Determines when stall handling should be skipped due to backoff or recovery windows.
@@ -8421,6 +8506,7 @@ const StallSkipPolicy = (() => {
 })();
 
 // @module RecoveryPolicyFactory
+// @depends StallSkipPolicy
 // --- RecoveryPolicyFactory ---
 /**
  * Factory that wires recovery policy submodules into a single policy interface.
@@ -8487,6 +8573,7 @@ const RecoveryPolicyFactory = (() => {
 })();
 
 // @module RecoveryPolicy
+// @depends RecoveryPolicyFactory
 // --- RecoveryPolicy ---
 /**
  * Centralized recovery/backoff policy logic.
@@ -8498,6 +8585,7 @@ const RecoveryPolicy = (() => {
 })();
 
 // @module FailoverCandidatePicker
+// @depends RecoveryPolicy
 // --- FailoverCandidatePicker ---
 /**
  * Chooses a failover candidate from monitored videos.
@@ -8576,6 +8664,7 @@ const FailoverCandidatePicker = (() => {
 })();
 
 // @module FailoverProbeController
+// @depends FailoverCandidatePicker
 // --- FailoverProbeController ---
 /**
  * Tracks probe attempts for failover candidates.
@@ -8712,6 +8801,7 @@ const FailoverProbeController = (() => {
 })();
 
 // @module FailoverManager
+// @depends FailoverProbeController
 // --- FailoverManager ---
 /**
  * Handles candidate failover attempts when healing fails.
@@ -8945,6 +9035,7 @@ const FailoverManager = (() => {
 
 // --- RecoveryRefreshController ---
 // @module RecoveryRefreshController
+// @depends FailoverManager
 /**
  * Handles refresh eligibility checks, refresh execution, and recovery context normalization.
  */
@@ -9348,6 +9439,7 @@ const RecoveryManager = (() => {
 })();
 
 // @module CatchUpController
+// @depends RecoveryManager
 // --- CatchUpController ---
 /**
  * Schedules catch-up seeks toward the live edge after healing.
@@ -9470,6 +9562,7 @@ const CatchUpController = (() => {
 })();
 
 // @module HealAttemptUtils
+// @depends CatchUpController
 // --- HealAttemptUtils ---
 /**
  * Shared helper functions for heal attempts.
@@ -9505,6 +9598,7 @@ const HealAttemptUtils = (() => {
 })();
 
 // @module HealAttemptLogger
+// @depends HealAttemptUtils
 // --- HealAttemptLogger ---
 /**
  * Logging helper for heal attempts.
@@ -9674,6 +9768,7 @@ const HealAttemptLogger = (() => {
 })();
 
 // @module HealAttemptRunner
+// @depends HealAttemptLogger
 // --- HealAttemptRunner ---
 /**
  * Executes heal attempts as explicit phases.
@@ -9874,6 +9969,7 @@ const HealAttemptRunner = (() => {
 })();
 
 // @module HealPointPoller
+// @depends HealAttemptRunner
 // --- HealPointPoller ---
 /**
  * Polls for heal points and detects self-recovery.
@@ -10076,6 +10172,7 @@ const HealPointPoller = (() => {
 })();
 
 // @module HealPipeline
+// @depends HealPointPoller
 // --- HealPipeline ---
 /**
  * Handles heal-point polling and seek recovery.
@@ -10269,6 +10366,7 @@ const HealPipeline = (() => {
 })();
 
 // @module AdGapSignals
+// @depends HealPipeline
 // --- AdGapSignals ---
 /**
  * Detects ad-gap-like buffered range gaps around stalled playheads.
@@ -10352,6 +10450,7 @@ const AdGapSignals = (() => {
 })();
 
 // @module PlayheadAttribution
+// @depends AdGapSignals
 // --- PlayheadAttribution ---
 /**
  * Resolves console playhead stall hints to a monitored video candidate.
@@ -10434,6 +10533,7 @@ const PlayheadAttribution = (() => {
 })();
 
 // @module HealPipelinePoller
+// @depends PlayheadAttribution
 // --- HealPipelinePoller ---
 /**
  * Polling helpers for heal points.
@@ -10495,6 +10595,7 @@ const HealPipelinePoller = (() => {
 })();
 
 // @module HealPipelineRevalidate
+// @depends HealPipelinePoller
 // --- HealPipelineRevalidate ---
 /**
  * Revalidation helpers for heal points.
@@ -10537,6 +10638,7 @@ const HealPipelineRevalidate = (() => {
 })();
 
 // @module HealPipelineSeek
+// @depends HealPipelineRevalidate
 // --- HealPipelineSeek ---
 /**
  * Seek and retry helpers for heal attempts.
@@ -10577,6 +10679,7 @@ const HealPipelineSeek = (() => {
 })();
 
 // @module StallHandler
+// @depends HealPipelineSeek
 // --- StallHandler ---
 /**
  * Encapsulates stall handling flow (gating, logging, recovery triggers).
@@ -10804,6 +10907,7 @@ const StallHandler = (() => {
 })();
 
 // @module ExternalSignalUtils
+// @depends StallHandler
 // --- ExternalSignalUtils ---
 /**
  * Shared helpers for external signal handling.
@@ -10878,6 +10982,7 @@ const ExternalSignalUtils = (() => {
 })();
 
 // @module ExternalSignalHandlerStall
+// @depends ExternalSignalUtils
 // --- ExternalSignalHandlerStall ---
 /**
  * Handles playhead stall signals.
@@ -10954,7 +11059,7 @@ const ExternalSignalHandlerStall = (() => {
     return { create };
 })();
 
-// --- ExternalAssetRecoveryFlow ---
+// @depends ExternalSignalHandlerStall
 // @module ExternalAssetRecoveryFlow
 const ExternalAssetRecoveryFlow = (() => {
     const create = (options = {}) => {
@@ -11294,6 +11399,7 @@ const ExternalSignalHandlerAsset = (() => {
 })();
 
 // @module ExternalSignalHandlerAdblock
+// @depends ExternalSignalHandlerAsset
 // --- ExternalSignalHandlerAdblock ---
 /**
  * Handles adblock resource signals.
@@ -11315,6 +11421,7 @@ const ExternalSignalHandlerAdblock = (() => {
 })();
 
 // @module ExternalSignalHandlerDecoder
+// @depends ExternalSignalHandlerAdblock
 // --- ExternalSignalHandlerDecoder ---
 /**
  * Handles decoder/runtime error signals (IVS wasm worker failures).
@@ -11357,6 +11464,7 @@ const ExternalSignalHandlerDecoder = (() => {
 })();
 
 // @module ExternalSignalHandlerFallback
+// @depends ExternalSignalHandlerDecoder
 // --- ExternalSignalHandlerFallback ---
 /**
  * Logs unhandled external signals.
@@ -11377,6 +11485,7 @@ const ExternalSignalHandlerFallback = (() => {
 })();
 
 // @module ExternalSignalRouter
+// @depends ExternalSignalHandlerFallback
 // --- ExternalSignalRouter ---
 /**
  * Handles console-based external signal hints for recovery actions.
@@ -11441,6 +11550,7 @@ const ExternalSignalRouter = (() => {
 
 
 // @module MonitoringOrchestrator
+// @depends ExternalSignalRouter
 // --- MonitoringOrchestrator ---
 /**
  * Sets up monitoring, candidate scoring, and recovery helpers.
@@ -11511,6 +11621,7 @@ const MonitoringOrchestrator = (() => {
 })();
 
 // @module RecoveryOrchestrator
+// @depends MonitoringOrchestrator
 // --- RecoveryOrchestrator ---
 /**
  * Coordinates stall handling, healing, and external signal recovery.
@@ -11577,6 +11688,7 @@ const RecoveryOrchestrator = (() => {
 
 
 // @module StreamHealer
+// @depends RecoveryOrchestrator
 // --- StreamHealer ---
 /**
  * Main orchestrator for stream healing.
@@ -11705,6 +11817,7 @@ const StreamHealer = (() => {
 })();
 
 // @module CoreOrchestrator
+// @depends StreamHealer
 // ============================================================================
 // 6. CORE ORCHESTRATOR (Stream Healer Edition)
 // ============================================================================

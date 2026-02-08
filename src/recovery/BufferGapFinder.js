@@ -1,4 +1,5 @@
 // @module BufferGapFinder
+// @depends HealPointFinder
 // --- BufferGapFinder ---
 /**
  * Finds "heal points" in the video buffer after a stall.

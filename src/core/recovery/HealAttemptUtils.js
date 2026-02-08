@@ -1,4 +1,5 @@
 // @module HealAttemptUtils
+// @depends CatchUpController
 // --- HealAttemptUtils ---
 /**
  * Shared helper functions for heal attempts.

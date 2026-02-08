@@ -1,4 +1,5 @@
 // @module ExternalSignalUtils
+// @depends StallHandler
 // --- ExternalSignalUtils ---
 /**
  * Shared helpers for external signal handling.

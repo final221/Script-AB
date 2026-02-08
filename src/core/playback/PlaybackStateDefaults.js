@@ -1,4 +1,5 @@
 // @module PlaybackStateDefaults
+// @depends PlaybackLogHelper
 // --- PlaybackStateDefaults ---
 /**
  * Provides initial playback state structure and alias map.

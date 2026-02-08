@@ -1,4 +1,5 @@
 // @module ProbationPolicy
+// @depends BackoffManager
 // --- ProbationPolicy ---
 /**
  * Shared probation/rescan logic for recovery decisions.

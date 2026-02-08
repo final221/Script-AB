@@ -1,4 +1,5 @@
 // @module TagCategorizer
+// @depends LogEvents
 // --- TagCategorizer ---
 /**
  * Central mapping of log tags to categories and icons.

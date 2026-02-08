@@ -1,4 +1,5 @@
 // @module RecoveryLogDetails
+// @depends ProbationPolicy
 // --- RecoveryLogDetails ---
 /**
  * Shared log detail builders for recovery policies.

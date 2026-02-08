@@ -1,4 +1,5 @@
 // @module ReportTemplate
+// @depends LegendRenderer
 // --- ReportTemplate ---
 /**
  * Shared header/legend template for report exports.

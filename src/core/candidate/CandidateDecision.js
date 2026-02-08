@@ -1,4 +1,5 @@
 // @module CandidateDecision
+// @depends CandidateSwitchPolicy
 // --- CandidateDecision ---
 /**
  * Builds candidate switch decisions from scoring + policy inputs.

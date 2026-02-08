@@ -1,4 +1,5 @@
 // @module MonitorCoordinator
+// @depends MonitorRegistry
 // --- MonitorCoordinator ---
 /**
  * Coordinates monitor registry and candidate selection lifecycle.

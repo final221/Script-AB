@@ -1,4 +1,5 @@
 // @module PlaybackProgressTracker
+// @depends PlaybackProgressReset
 // --- PlaybackProgressTracker ---
 /**
  * Tracks progress streaks and candidate eligibility.

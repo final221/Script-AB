@@ -1,4 +1,5 @@
 // @module FailoverManager
+// @depends FailoverProbeController
 // --- FailoverManager ---
 /**
  * Handles candidate failover attempts when healing fails.

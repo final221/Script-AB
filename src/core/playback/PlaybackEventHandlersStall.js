@@ -1,4 +1,5 @@
 // @module PlaybackEventHandlersStall
+// @depends PlaybackEventHandlersReady
 // --- PlaybackEventHandlersStall ---
 /**
  * Stall-related playback event handlers.

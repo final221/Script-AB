@@ -1,4 +1,5 @@
 // @module FormerStreamTracker
+// @depends EmergencyCandidatePicker
 // --- FormerStreamTracker ---
 /**
  * Tracks previously active stream candidates and logs their post-switch status.

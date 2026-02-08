@@ -1,4 +1,5 @@
 // @module LogContext
+// @depends VideoDiscovery
 // --- LogContext ---
 /**
  * Shared helper for consistent log payloads with video context.

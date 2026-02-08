@@ -1,4 +1,5 @@
 // @module LogNormalizer
+// @depends LogSanitizer
 // --- LogNormalizer ---
 /**
  * Normalizes internal log messages into tag + structured detail fields.

@@ -1,4 +1,5 @@
 // @module RecoveryPolicy
+// @depends RecoveryPolicyFactory
 // --- RecoveryPolicy ---
 /**
  * Centralized recovery/backoff policy logic.

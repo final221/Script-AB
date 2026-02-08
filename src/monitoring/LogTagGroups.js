@@ -1,4 +1,5 @@
 // @module LogTagGroups
+// @depends LogTags
 // --- LogTagGroups ---
 /**
  * Log tag grouping metadata (icons, groups, legends).

@@ -1,4 +1,5 @@
 // @module ReportGenerator
+// @depends TimelineRenderer
 // --- ReportGenerator ---
 /**
  * Generates and facilitates the download of a comprehensive report.

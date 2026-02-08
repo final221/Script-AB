@@ -1,4 +1,5 @@
 // @module BufferRanges
+// @depends Adapters
 // --- BufferRanges ---
 /**
  * Helpers for working with media buffer ranges.

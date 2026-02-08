@@ -1,4 +1,5 @@
 // @module LogTags
+// @depends ErrorClassifier
 // --- LogTags ---
 /**
  * Canonical log tag strings for Stream Healer.

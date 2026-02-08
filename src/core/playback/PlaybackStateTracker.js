@@ -1,4 +1,5 @@
 // @module PlaybackStateTracker
+// @depends PlaybackStarvationLogic
 // --- PlaybackStateTracker ---
 /**
  * Shared playback state tracking for PlaybackMonitor.

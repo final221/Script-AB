@@ -1,4 +1,5 @@
 // @module RecoveryContext
+// @depends StreamIdentityModel
 // --- RecoveryContext ---
 /**
  * Shared context wrapper for recovery flows.

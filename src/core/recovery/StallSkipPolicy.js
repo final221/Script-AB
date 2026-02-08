@@ -1,4 +1,5 @@
 // @module StallSkipPolicy
+// @depends PlayErrorPolicy
 // --- StallSkipPolicy ---
 /**
  * Determines when stall handling should be skipped due to backoff or recovery windows.

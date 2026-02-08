@@ -1,4 +1,5 @@
 // @module MediaState
+// @depends PlaybackMediaWatcher
 // --- MediaState ---
 /**
  * Unified helpers for video state + buffer info.

@@ -1,4 +1,5 @@
 // @module NoHealPointPolicy
+// @depends RecoveryDecisionApplier
 // --- NoHealPointPolicy ---
 /**
  * Handles no-heal-point scenarios, refreshes, and failover decisions.

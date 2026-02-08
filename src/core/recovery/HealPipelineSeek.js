@@ -1,4 +1,5 @@
 // @module HealPipelineSeek
+// @depends HealPipelineRevalidate
 // --- HealPipelineSeek ---
 /**
  * Seek and retry helpers for heal attempts.

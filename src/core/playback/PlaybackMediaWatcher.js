@@ -1,4 +1,5 @@
 // @module PlaybackMediaWatcher
+// @depends PlaybackStateDefaults
 // --- PlaybackMediaWatcher ---
 /**
  * Tracks media element property changes for watchdog logs.

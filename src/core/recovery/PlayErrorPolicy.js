@@ -1,4 +1,5 @@
 // @module PlayErrorPolicy
+// @depends NoHealPointPolicy
 // --- PlayErrorPolicy ---
 /**
  * Handles play error backoff and repeat heal-point behavior.

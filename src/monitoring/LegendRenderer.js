@@ -1,4 +1,5 @@
 // @module LegendRenderer
+// @depends LogFormatter
 // --- LegendRenderer ---
 /**
  * Builds the legend section for report exports.

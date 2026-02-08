@@ -1,4 +1,5 @@
 // @module CatchUpController
+// @depends RecoveryManager
 // --- CatchUpController ---
 /**
  * Schedules catch-up seeks toward the live edge after healing.

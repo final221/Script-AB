@@ -1,4 +1,5 @@
 // @module LogSchemas
+// @depends LogTagRegistry
 // --- LogSchemas ---
 /**
  * Optional key ordering hints for log detail payloads.

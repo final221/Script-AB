@@ -1,4 +1,5 @@
 // @module Metrics
+// @depends ResourceWindow
 // --- Metrics ---
 /**
  * High-level telemetry and metrics tracking for Stream Healer.

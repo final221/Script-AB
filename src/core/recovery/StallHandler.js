@@ -1,4 +1,5 @@
 // @module StallHandler
+// @depends HealPipelineSeek
 // --- StallHandler ---
 /**
  * Encapsulates stall handling flow (gating, logging, recovery triggers).

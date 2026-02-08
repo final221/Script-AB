@@ -1,4 +1,5 @@
 // @module ProgressModel
+// @depends PlaybackMonitor
 // --- ProgressModel ---
 /**
  * Canonical progress classification helpers shared across recovery flows.

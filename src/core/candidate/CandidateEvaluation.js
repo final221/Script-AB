@@ -1,4 +1,5 @@
 // @module CandidateEvaluation
+// @depends CandidateProbation
 // --- CandidateEvaluation ---
 /**
  * Aggregates candidate score snapshots for selection decisions.

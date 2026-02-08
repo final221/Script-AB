@@ -1,4 +1,5 @@
 // @module CandidateSwitchPolicy
+// @depends CandidateScorer
 // --- CandidateSwitchPolicy ---
 /**
  * Determines whether switching candidates should be allowed.

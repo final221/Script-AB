@@ -1,5 +1,6 @@
 // --- LoggerPlaceholderSuppression ---
 // @module LoggerPlaceholderSuppression
+// @depends LogNormalizer
 /**
  * Suppresses repetitive placeholder/no-source log churn and emits periodic summaries.
  */

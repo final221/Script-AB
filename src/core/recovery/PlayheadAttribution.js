@@ -1,4 +1,5 @@
 // @module PlayheadAttribution
+// @depends AdGapSignals
 // --- PlayheadAttribution ---
 /**
  * Resolves console playhead stall hints to a monitored video candidate.

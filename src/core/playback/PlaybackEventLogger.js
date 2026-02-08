@@ -1,4 +1,5 @@
 // @module PlaybackEventLogger
+// @depends PlaybackStateTracker
 // --- PlaybackEventLogger ---
 /**
  * Shared logging for playback event handlers.

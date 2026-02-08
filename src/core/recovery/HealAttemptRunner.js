@@ -1,4 +1,5 @@
 // @module HealAttemptRunner
+// @depends HealAttemptLogger
 // --- HealAttemptRunner ---
 /**
  * Executes heal attempts as explicit phases.

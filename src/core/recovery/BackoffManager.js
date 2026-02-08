@@ -1,4 +1,5 @@
 // @module BackoffManager
+// @depends RecoveryContext
 // --- BackoffManager ---
 /**
  * Tracks stall backoff state for no-heal-point scenarios.

@@ -1,4 +1,5 @@
 // @module FailoverCandidatePicker
+// @depends RecoveryPolicy
 // --- FailoverCandidatePicker ---
 /**
  * Chooses a failover candidate from monitored videos.

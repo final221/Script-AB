@@ -1,4 +1,5 @@
 // @module CandidatePruner
+// @depends CandidateSelector
 // --- CandidatePruner ---
 /**
  * Enforces the monitor cap by pruning the worst candidate.

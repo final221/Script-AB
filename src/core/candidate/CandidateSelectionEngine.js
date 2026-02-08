@@ -1,4 +1,5 @@
 // @module CandidateSelectionEngine
+// @depends CandidatePruner
 // --- CandidateSelectionEngine ---
 /**
  * Evaluation flow for selecting the active candidate.

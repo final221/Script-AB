@@ -1,4 +1,5 @@
 // @module LiveEdgeSeeker
+// @depends SeekTargetCalculator
 // --- LiveEdgeSeeker ---
 /**
  * Seeks to a heal point and resumes playback.

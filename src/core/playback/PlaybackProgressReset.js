@@ -1,4 +1,5 @@
 // @module PlaybackProgressReset
+// @depends PlaybackResetLogic
 // --- PlaybackProgressReset ---
 /**
  * Clears backoff/reset flags when progress resumes.

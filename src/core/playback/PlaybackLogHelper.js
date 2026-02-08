@@ -1,4 +1,5 @@
 // @module PlaybackLogHelper
+// @depends LogContext
 // --- PlaybackLogHelper ---
 /**
  * Shared logging helpers for playback-related modules.

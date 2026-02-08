@@ -1,4 +1,5 @@
 // @module PlaybackSyncLogic
+// @depends PlaybackProgressLogic
 // --- PlaybackSyncLogic ---
 /**
  * Sync drift sampling helper.

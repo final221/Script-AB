@@ -1,4 +1,5 @@
 // @module ExternalSignalHandlerDecoder
+// @depends ExternalSignalHandlerAdblock
 // --- ExternalSignalHandlerDecoder ---
 /**
  * Handles decoder/runtime error signals (IVS wasm worker failures).

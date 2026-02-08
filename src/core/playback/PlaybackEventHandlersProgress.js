@@ -1,4 +1,5 @@
 // @module PlaybackEventHandlersProgress
+// @depends PlaybackEventLogger
 // --- PlaybackEventHandlersProgress ---
 /**
  * Progress-related playback event handlers.

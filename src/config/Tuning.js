@@ -1,4 +1,5 @@
 // @module Tuning
+// @depends BuildInfo
 // --- Tuning ---
 /**
  * Derived thresholds and helper accessors for tuning logic.

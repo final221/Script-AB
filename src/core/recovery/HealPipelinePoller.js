@@ -1,4 +1,5 @@
 // @module HealPipelinePoller
+// @depends PlayheadAttribution
 // --- HealPipelinePoller ---
 /**
  * Polling helpers for heal points.

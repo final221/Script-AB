@@ -1,4 +1,5 @@
 // @module LogSanitizer
+// @depends LogSchemas
 // --- LogSanitizer ---
 /**
  * Helpers for normalizing and sanitizing log details.

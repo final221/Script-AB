@@ -1,4 +1,5 @@
 // @module ExternalSignalRouter
+// @depends ExternalSignalHandlerFallback
 // --- ExternalSignalRouter ---
 /**
  * Handles console-based external signal hints for recovery actions.

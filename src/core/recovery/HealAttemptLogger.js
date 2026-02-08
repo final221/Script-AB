@@ -1,4 +1,5 @@
 // @module HealAttemptLogger
+// @depends HealAttemptUtils
 // --- HealAttemptLogger ---
 /**
  * Logging helper for heal attempts.

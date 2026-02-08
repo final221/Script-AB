@@ -1,4 +1,5 @@
 // @module LogTagRegistry
+// @depends LogTagSchemas
 // --- LogTagRegistry ---
 /**
  * Central registry for log tag metadata (icons, groups, schemas).

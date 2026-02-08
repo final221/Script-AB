@@ -1,4 +1,5 @@
 // @module CandidateProbation
+// @depends CandidateScoreRecord
 // --- CandidateProbation ---
 /**
  * Handles probation window tracking for candidate switching.

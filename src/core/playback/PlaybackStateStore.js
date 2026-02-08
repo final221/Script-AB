@@ -1,4 +1,5 @@
 // @module PlaybackStateStore
+// @depends MediaState
 // --- PlaybackStateStore ---
 /**
  * Builds playback state objects with alias mapping.

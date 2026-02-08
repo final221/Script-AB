@@ -1,4 +1,5 @@
 // @module PlaybackResetLogic
+// @depends PlaybackStallStateMachine
 // --- PlaybackResetLogic ---
 /**
  * Reset evaluation + pending reset handling for playback state.

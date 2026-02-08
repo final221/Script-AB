@@ -1,4 +1,5 @@
 // @module ExternalSignalHandlerStall
+// @depends ExternalSignalUtils
 // --- ExternalSignalHandlerStall ---
 /**
  * Handles playhead stall signals.

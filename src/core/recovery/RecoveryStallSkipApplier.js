@@ -1,5 +1,6 @@
 // --- RecoveryStallSkipApplier ---
 // @module RecoveryStallSkipApplier
+// @depends RecoveryLogDetails
 /**
  * Applies stall skip decisions and throttled skip logging.
  */

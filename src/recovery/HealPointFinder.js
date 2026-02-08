@@ -1,4 +1,5 @@
 // @module HealPointFinder
+// @depends BufferRanges
 // --- HealPointFinder ---
 /**
  * Finds heal points in buffered ranges.

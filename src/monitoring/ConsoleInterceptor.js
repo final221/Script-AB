@@ -1,4 +1,5 @@
 // @module ConsoleInterceptor
+// @depends ReportGenerator
 // --- ConsoleInterceptor ---
 /**
  * Captures console output and forwards to callbacks.

@@ -1,4 +1,5 @@
 // @module PlaybackEventHandlers
+// @depends PlaybackEventHandlersLifecycle
 // --- PlaybackEventHandlers ---
 /**
  * Wires media element events to playback state tracking.

@@ -1,4 +1,5 @@
 // @module FailoverProbeController
+// @depends FailoverCandidatePicker
 // --- FailoverProbeController ---
 /**
  * Tracks probe attempts for failover candidates.

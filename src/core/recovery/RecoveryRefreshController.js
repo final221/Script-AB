@@ -1,5 +1,6 @@
 // --- RecoveryRefreshController ---
 // @module RecoveryRefreshController
+// @depends FailoverManager
 /**
  * Handles refresh eligibility checks, refresh execution, and recovery context normalization.
  */

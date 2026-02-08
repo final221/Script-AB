@@ -1,4 +1,4 @@
-// --- ExternalAssetRecoveryFlow ---
+// @depends ExternalSignalHandlerStall
 // @module ExternalAssetRecoveryFlow
 const ExternalAssetRecoveryFlow = (() => {
     const create = (options = {}) => {

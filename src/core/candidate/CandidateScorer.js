@@ -1,4 +1,5 @@
 // @module CandidateScorer
+// @depends ProgressModel
 // --- CandidateScorer ---
 /**
  * Scores a video candidate based on playback state.

@@ -1,4 +1,5 @@
 // @module VideoState
+// @depends LogDebug
 // --- VideoState ---
 /**
  * Shared helper for consistent video state logging.

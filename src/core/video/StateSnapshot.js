@@ -1,4 +1,5 @@
 // @module StateSnapshot
+// @depends VideoStateSnapshot
 // --- StateSnapshot ---
 /**
  * Central helper for consistent video state snapshots.

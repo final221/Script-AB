@@ -1,4 +1,5 @@
 // @module PlaybackEventHandlersReady
+// @depends PlaybackEventHandlersProgress
 // --- PlaybackEventHandlersReady ---
 /**
  * Ready/playback-start event handlers.

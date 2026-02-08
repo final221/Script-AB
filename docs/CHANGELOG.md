@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.14.13 - 2026-02-08T21:39:47.859Z
+Previous: 4.14.12
+Commit: 9822e01
+Changes:
+- build: harden graph manifest checks and deterministic ordering
+
 ## 4.14.12 - 2026-02-08T21:32:34.739Z
 Previous: 4.14.11
 Commit: 8d8eb17

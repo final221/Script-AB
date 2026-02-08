@@ -1,4 +1,5 @@
 // @module TimelineRenderer
+// @depends Metrics
 // --- TimelineRenderer ---
 /**
  * Renders the merged log timeline for report exports.

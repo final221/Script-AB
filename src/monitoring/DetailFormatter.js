@@ -1,4 +1,5 @@
 // @module DetailFormatter
+// @depends TagCategorizer
 // --- DetailFormatter ---
 /**
  * Formats aligned log lines and detail columns.

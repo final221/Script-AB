@@ -1,4 +1,5 @@
 // @module Validate
+// @depends Tuning
 // --- ConfigValidator ---
 /**
  * Lightweight config validation and sanity checks.

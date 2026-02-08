@@ -1,4 +1,5 @@
 // @module SeekTargetCalculator
+// @depends BufferGapFinder
 // --- SeekTargetCalculator ---
 /**
  * Calculates and validates safe seek targets.

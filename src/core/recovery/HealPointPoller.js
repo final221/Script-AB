@@ -1,4 +1,5 @@
 // @module HealPointPoller
+// @depends HealAttemptRunner
 // --- HealPointPoller ---
 /**
  * Polls for heal points and detects self-recovery.

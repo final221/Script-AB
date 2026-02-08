@@ -1,4 +1,5 @@
 // @module StreamIdentityModel
+// @depends FormerStreamTracker
 // --- StreamIdentityModel ---
 /**
  * Tracks stream-origin continuity signals so candidate scoring can favor

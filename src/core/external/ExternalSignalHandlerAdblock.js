@@ -1,4 +1,5 @@
 // @module ExternalSignalHandlerAdblock
+// @depends ExternalSignalHandlerAsset
 // --- ExternalSignalHandlerAdblock ---
 /**
  * Handles adblock resource signals.

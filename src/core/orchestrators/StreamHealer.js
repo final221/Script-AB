@@ -1,4 +1,5 @@
 // @module StreamHealer
+// @depends RecoveryOrchestrator
 // --- StreamHealer ---
 /**
  * Main orchestrator for stream healing.
