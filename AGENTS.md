@@ -35,6 +35,10 @@
 - Do not assume scope when behavior changes are possible unless the user has already made scope explicit.
 - If the user says "go ahead" after discussing both, confirm the intended scope before implementation.
 
+## Continuation during implementation
+- When implementation is in progress, continue to completion despite interleaved user messages unless the message explicitly requests an interruption, pause, or redirection.
+- Treat status questions during implementation as non-interrupting by default; answer briefly and continue.
+
 ## Role registry (opt-in)
 - Roles are invoked by `Role: <name>` or `Use role: <name>` in the user request.
 
