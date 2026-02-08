@@ -80,6 +80,7 @@
 - Use `npm.cmd` on Windows to avoid PowerShell script policy blocks.
 - Doc-only changes: skip `npm.cmd run agent:verify` (no version bump/build). Commit and push directly; do not touch generated files.
 - When reporting `agent:verify` results, always include warning count (explicitly state `0` when none).
+- Documentation sync is mandatory: whenever code/config/behavior/logging/debug hooks change, update the corresponding docs in the same change set.
 
 ## Module metadata and load-order system (canonical)
 - Source contract: Every `src/**/*.js` file must declare a unique `// @module <Name>` header.
@@ -110,6 +111,12 @@
 - Use `LogEvents` + `Logger` for logs; update LogTags when adding new tags.
 - File size cap: keep files ~200 lines (+/-50). Anything above is auto-flagged for refactor.
 - When changing public debug hooks or hot-path flow names/entrypoints, update `docs/AI_CONTEXT.md` in the same change.
+- Keep docs explicitly in sync with the changed surface:
+- Architecture/flow/module interactions -> `docs/ARCHITECTURE.md`
+- AI navigation/start points/hot paths/debug hooks -> `docs/AI_CONTEXT.md`
+- Debug/runtime operations -> `docs/DEBUGGING.md`
+- Tuning knobs/operational thresholds -> `docs/TUNING.md`
+- Config/log tag contracts -> generated docs via `build/sync-docs.js` (`docs/CONFIG.md`, `docs/LOG_TAGS.md`)
 
 ## Quick refs (only if needed)
 - docs/DEBUGGING.md
