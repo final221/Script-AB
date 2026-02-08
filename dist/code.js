@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.8.2
+// @version       4.9.0
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -103,6 +103,7 @@ const CONFIG = (() => {
             PROBATION_READY_STATE: 2,       // Minimum readyState to allow probation override
             PROBATION_MIN_PROGRESS_MS: 500, // Require brief progress before probation takeover
             PROGRESS_STREAK_RESET_MS: 2500, // Reset progress streak after this long without progress
+            PROGRESS_MIN_DELTA_S: 0.05,     // Minimum forward playhead delta considered real progress
             PROGRESS_RECENT_MS: 2000,       // "Recent progress" threshold for scoring
             PROGRESS_STALE_MS: 5000,        // "Stale progress" threshold for scoring
             TRUST_STALE_MS: 8000,           // Trust expires if progress is older than this
@@ -169,7 +170,7 @@ const CONFIG = (() => {
  * Build metadata helpers (version injected at build time).
  */
 const BuildInfo = (() => {
-    const VERSION = '4.8.2';
+    const VERSION = '4.9.0';
 
     const getVersion = () => {
         const gmVersion = (typeof GM_info !== 'undefined' && GM_info?.script?.version)
@@ -180,7 +181,7 @@ const BuildInfo = (() => {
             ? unsafeWindow.GM_info.script.version
             : null;
         if (unsafeVersion) return unsafeVersion;
-        if (VERSION && VERSION !== '4.8.2') return VERSION;
+        if (VERSION && VERSION !== '4.9.0') return VERSION;
         return null;
     };
 
@@ -260,6 +261,11 @@ const ConfigValidator = (() => {
             warn('HEAL_TIMEOUT_S is shorter than STALL_CONFIRM_MS', {
                 healTimeoutMs: config.stall.HEAL_TIMEOUT_S * 1000,
                 stallConfirmMs: config.stall.STALL_CONFIRM_MS
+            });
+        }
+        if ((config.monitoring?.PROGRESS_MIN_DELTA_S || 0) <= 0) {
+            warn('PROGRESS_MIN_DELTA_S must be positive', {
+                value: config.monitoring?.PROGRESS_MIN_DELTA_S
             });
         }
 
@@ -5582,6 +5588,121 @@ const PlaybackMonitor = (() => {
     return { create };
 })();
 
+// --- ProgressModel ---
+/**
+ * Canonical progress classification helpers shared across recovery flows.
+ */
+const ProgressModel = (() => {
+    const toFinite = (value) => (Number.isFinite(value) ? value : null);
+
+    const buildSnapshot = (video, monitorState, nowMs = Date.now()) => {
+        const currentTime = toFinite(video?.currentTime);
+        const readyState = toFinite(video?.readyState);
+        const paused = typeof video?.paused === 'boolean' ? video.paused : null;
+        const lastProgressTime = toFinite(monitorState?.lastProgressTime);
+        const progressStreakMs = toFinite(monitorState?.progressStreakMs) || 0;
+        const hasProgress = Boolean(monitorState?.hasProgress) || lastProgressTime !== null;
+
+        return {
+            nowMs,
+            currentTime,
+            paused,
+            readyState,
+            lastProgressTime,
+            progressStreakMs,
+            hasProgress
+        };
+    };
+
+    const captureActionBaseline = (video, monitorState, actionStartMs = Date.now()) => ({
+        actionStartMs,
+        baselineCurrentTime: toFinite(video?.currentTime),
+        baselineProgressTime: toFinite(monitorState?.lastProgressTime) || 0
+    });
+
+    const evaluate = (snapshot, options = {}) => {
+        const nowMs = toFinite(options.nowMs) || toFinite(snapshot?.nowMs) || Date.now();
+        const currentTime = toFinite(snapshot?.currentTime);
+        const paused = typeof snapshot?.paused === 'boolean' ? snapshot.paused : null;
+        const readyState = toFinite(snapshot?.readyState);
+        const lastProgressTime = toFinite(snapshot?.lastProgressTime);
+        const progressStreakMs = toFinite(snapshot?.progressStreakMs) || 0;
+        const hasProgress = Boolean(snapshot?.hasProgress) || lastProgressTime !== null;
+
+        const minDeltaS = toFinite(options.minDeltaS) || CONFIG.monitoring.PROGRESS_MIN_DELTA_S || 0.05;
+        const recentWindowMs = toFinite(options.recentWindowMs) || CONFIG.monitoring.PROGRESS_RECENT_MS;
+        const sustainedWindowMs = toFinite(options.sustainedWindowMs) || CONFIG.monitoring.CANDIDATE_MIN_PROGRESS_MS;
+        const actionStartMs = toFinite(options.actionStartMs);
+        const baselineCurrentTime = toFinite(options.baselineCurrentTime);
+        const baselineProgressTime = toFinite(options.baselineProgressTime) || 0;
+        const previousCurrentTime = toFinite(options.previousCurrentTime);
+        const requireSustained = options.requireSustained === true;
+
+        const mediaReady = paused !== true
+            && (readyState === null || readyState >= 2);
+        const comparisonCurrentTime = baselineCurrentTime !== null
+            ? baselineCurrentTime
+            : previousCurrentTime;
+        const currentTimeDeltaS = (
+            currentTime !== null && comparisonCurrentTime !== null
+        )
+            ? Number((currentTime - comparisonCurrentTime).toFixed(3))
+            : null;
+
+        const raw_progress = mediaReady
+            && currentTimeDeltaS !== null
+            && currentTimeDeltaS > minDeltaS;
+        const recent_progress = lastProgressTime !== null
+            && (nowMs - lastProgressTime) <= recentWindowMs;
+        const sustained_progress = progressStreakMs >= sustainedWindowMs;
+        const action_progress = mediaReady
+            && hasProgress
+            && actionStartMs !== null
+            && lastProgressTime !== null
+            && lastProgressTime > Math.max(actionStartMs, baselineProgressTime)
+            && currentTimeDeltaS !== null
+            && currentTimeDeltaS > minDeltaS;
+
+        return {
+            mediaReady,
+            raw_progress,
+            recent_progress,
+            sustained_progress,
+            action_progress,
+            candidate_viable: recent_progress || sustained_progress,
+            action_succeeded: action_progress && (!requireSustained || sustained_progress),
+            currentTimeDeltaS,
+            minDeltaS,
+            recentWindowMs,
+            sustainedWindowMs
+        };
+    };
+
+    const evaluateVideo = (video, monitorState, options = {}) => {
+        const nowMs = toFinite(options.nowMs) || Date.now();
+        const snapshot = buildSnapshot(video, monitorState, nowMs);
+        return evaluate(snapshot, { ...options, nowMs });
+    };
+
+    const hasActionProgress = (video, monitorState, baseline = {}, options = {}) => {
+        const evaluation = evaluateVideo(video, monitorState, {
+            ...options,
+            actionStartMs: baseline.actionStartMs,
+            baselineCurrentTime: baseline.baselineCurrentTime,
+            baselineProgressTime: baseline.baselineProgressTime
+        });
+        return evaluation.action_progress;
+    };
+
+    return {
+        buildSnapshot,
+        captureActionBaseline,
+        evaluate,
+        evaluateVideo,
+        hasActionProgress
+    };
+})();
+
 // --- CandidateScorer ---
 /**
  * Scores a video candidate based on playback state.
@@ -8259,6 +8380,7 @@ const FailoverManager = (() => {
             fromId: null,
             toId: null,
             startTime: 0,
+            baselineCurrentTime: null,
             baselineProgressTime: 0,
             recentFailures: new Map()
         };
@@ -8279,6 +8401,7 @@ const FailoverManager = (() => {
             state.fromId = null;
             state.toId = null;
             state.startTime = 0;
+            state.baselineCurrentTime = null;
             state.baselineProgressTime = 0;
         };
 
@@ -8328,7 +8451,9 @@ const FailoverManager = (() => {
             state.fromId = fromVideoId;
             state.toId = toId;
             state.startTime = now;
-            state.baselineProgressTime = entry.monitor.state.lastProgressTime || 0;
+            const baseline = ProgressModel.captureActionBaseline(entry.video, entry.monitor.state, now);
+            state.baselineCurrentTime = baseline.baselineCurrentTime;
+            state.baselineProgressTime = baseline.baselineProgressTime;
 
             candidateSelector.setActiveId(toId);
 
@@ -8359,16 +8484,23 @@ const FailoverManager = (() => {
                 const currentEntry = monitorsById.get(toId);
                 const fromEntry = monitorsById.get(fromVideoId);
                 const latestProgressTime = currentEntry?.monitor.state.lastProgressTime || 0;
-                const progressed = currentEntry
-                    && currentEntry.monitor.state.hasProgress
-                    && latestProgressTime > state.baselineProgressTime
-                    && latestProgressTime >= state.startTime;
+                const progressEvaluation = currentEntry
+                    ? ProgressModel.evaluateVideo(currentEntry.video, currentEntry.monitor.state, {
+                        actionStartMs: state.startTime,
+                        baselineCurrentTime: state.baselineCurrentTime,
+                        baselineProgressTime: state.baselineProgressTime,
+                        recentWindowMs: CONFIG.stall.FAILOVER_PROGRESS_TIMEOUT_MS,
+                        sustainedWindowMs: CONFIG.monitoring.CANDIDATE_MIN_PROGRESS_MS
+                    })
+                    : null;
+                const progressed = Boolean(progressEvaluation?.action_progress);
 
                 if (progressed) {
                     Logger.add(LogEvents.tagged('FAILOVER_SUCCESS', 'Candidate progressed'), {
                         from: fromVideoId,
                         to: toId,
                         progressDelayMs: latestProgressTime - state.startTime,
+                        progressDeltaS: progressEvaluation?.currentTimeDeltaS ?? null,
                         candidateState: VideoStateSnapshot.forLog(currentEntry.video, toId)
                     });
                     resetBackoff(currentEntry.monitor.state, 'failover_success');
@@ -8379,6 +8511,8 @@ const FailoverManager = (() => {
                         to: toId,
                         timeoutMs: CONFIG.stall.FAILOVER_PROGRESS_TIMEOUT_MS,
                         progressObserved: Boolean(currentEntry?.monitor.state.hasProgress),
+                        actionProgress: Boolean(progressEvaluation?.action_progress),
+                        progressDeltaS: progressEvaluation?.currentTimeDeltaS ?? null,
                         candidateState: currentEntry ? VideoStateSnapshot.forLog(currentEntry.video, toId) : null
                     });
                     state.recentFailures.set(toId, Date.now());
@@ -9228,15 +9362,27 @@ const HealPointPoller = (() => {
         const logDebug = options.logDebug;
         const shouldAbort = options.shouldAbort || (() => false);
 
-        const hasRecovered = (video, monitorState) => {
+        const hasRecovered = (video, monitorState, actionBaseline = null) => {
             if (!video || !monitorState) return false;
-            return Date.now() - monitorState.lastProgressTime < CONFIG.stall.RECOVERY_WINDOW_MS;
+            const evaluation = ProgressModel.evaluateVideo(video, monitorState, {
+                nowMs: Date.now(),
+                recentWindowMs: CONFIG.stall.RECOVERY_WINDOW_MS,
+                sustainedWindowMs: CONFIG.monitoring.CANDIDATE_MIN_PROGRESS_MS,
+                actionStartMs: actionBaseline?.actionStartMs,
+                baselineCurrentTime: actionBaseline?.baselineCurrentTime,
+                baselineProgressTime: actionBaseline?.baselineProgressTime
+            });
+            if (actionBaseline?.actionStartMs) {
+                return evaluation.action_progress;
+            }
+            return evaluation.recent_progress;
         };
 
         const pollForHealPoint = async (video, monitorState, timeoutMs) => {
             const startTime = Date.now();
             let pollCount = 0;
             const videoId = getVideoId(video);
+            const actionBaseline = ProgressModel.captureActionBaseline(video, monitorState, startTime);
 
             logWithState(LogEvents.TAG.POLL_START, video, {
                 timeout: timeoutMs + 'ms'
@@ -9262,11 +9408,12 @@ const HealPointPoller = (() => {
                     return {
                         healPoint: null,
                         aborted: true,
-                        reason: typeof abortReason === 'string' ? abortReason : 'abort'
+                        reason: typeof abortReason === 'string' ? abortReason : 'abort',
+                        actionBaseline
                     };
                 }
 
-                if (hasRecovered(video, monitorState)) {
+                if (hasRecovered(video, monitorState, actionBaseline)) {
                     logWithState(LogEvents.TAG.SELF_RECOVERED, video, {
                         pollCount,
                         elapsed: (Date.now() - startTime) + 'ms'
@@ -9274,7 +9421,8 @@ const HealPointPoller = (() => {
                     resetDeferTracking();
                     return {
                         healPoint: null,
-                        aborted: false
+                        aborted: false,
+                        actionBaseline
                     };
                 }
 
@@ -9306,7 +9454,8 @@ const HealPointPoller = (() => {
                             resetDeferTracking();
                             return {
                                 healPoint,
-                                aborted: false
+                                aborted: false,
+                                actionBaseline
                             };
                         }
 
@@ -9331,7 +9480,8 @@ const HealPointPoller = (() => {
                                 return {
                                     healPoint: null,
                                     aborted: false,
-                                    reason: 'defer_limit'
+                                    reason: 'defer_limit',
+                                    actionBaseline
                                 };
                             }
                         }
@@ -9364,7 +9514,8 @@ const HealPointPoller = (() => {
                     });
                     return {
                         healPoint,
-                        aborted: false
+                        aborted: false,
+                        actionBaseline
                     };
                 }
 
@@ -9387,7 +9538,8 @@ const HealPointPoller = (() => {
 
             return {
                 healPoint: null,
-                aborted: false
+                aborted: false,
+                actionBaseline
             };
         };
 
@@ -9792,7 +9944,7 @@ const HealPipelinePoller = (() => {
 
             const healPoint = pollResult.healPoint;
             if (!healPoint) {
-                if (poller.hasRecovered(video, monitorState)) {
+                if (poller.hasRecovered(video, monitorState, pollResult.actionBaseline)) {
                     attemptLogger.logSelfRecovered(getDurationMs(healStartTime), video, videoId);
                     resetRecovery(monitorState, 'self_recovered');
                     return { status: 'recovered' };
@@ -10308,11 +10460,25 @@ const ExternalSignalHandlerAsset = (() => {
 
         const getState = (videoId) => getEntry(videoId)?.monitor?.state || null;
 
-        const hasCandidateProgress = (videoId, baseline) => {
-            const state = getState(videoId);
-            if (!state || !state.hasProgress) return false;
-            const progressTime = state.lastProgressTime || 0;
-            return progressTime > (baseline || 0);
+        const captureCandidateBaseline = (videoId, actionStartMs = Date.now()) => {
+            const entry = getEntry(videoId);
+            if (!entry) return null;
+            return ProgressModel.captureActionBaseline(entry.video, entry.monitor?.state, actionStartMs);
+        };
+
+        const hasCandidateProgress = (videoId, actionBaseline) => {
+            if (!actionBaseline) return false;
+            const entry = getEntry(videoId);
+            if (!entry) return false;
+            return ProgressModel.hasActionProgress(
+                entry.video,
+                entry.monitor?.state,
+                actionBaseline,
+                {
+                    recentWindowMs: CONFIG.stall.RECOVERY_WINDOW_MS,
+                    sustainedWindowMs: CONFIG.monitoring.CANDIDATE_MIN_PROGRESS_MS
+                }
+            );
         };
 
         const getCandidateRecords = () => {
@@ -10466,7 +10632,7 @@ const ExternalSignalHandlerAsset = (() => {
                 ));
 
                 if (strictCandidate) {
-                    const strictBaseline = getState(strictCandidate.id)?.lastProgressTime || 0;
+                    const strictBaseline = captureCandidateBaseline(strictCandidate.id, Date.now());
                     const strictSwitch = setActiveAndPlay(processId, strictCandidate.id, 'strict_pass');
                     Logger.add(LogEvents.tagged('ASSET_HINT', 'Strict candidate pass applied'), {
                         processId,
@@ -10507,7 +10673,7 @@ const ExternalSignalHandlerAsset = (() => {
                 const activeAfterStrict = getActiveId();
                 const probeTargets = candidates.filter(candidate => candidate.id !== activeAfterStrict);
                 const probeBaselineById = new Map(
-                    probeTargets.map((candidate) => [candidate.id, getState(candidate.id)?.lastProgressTime || 0])
+                    probeTargets.map((candidate) => [candidate.id, captureCandidateBaseline(candidate.id, Date.now())])
                 );
                 const probeAttempts = probeTargets.map((candidate) => ({
                     videoId: candidate.id,
@@ -10541,7 +10707,7 @@ const ExternalSignalHandlerAsset = (() => {
                 const activeBeforeSpeculative = getActiveId();
                 const speculativeCandidate = candidates.find(candidate => candidate.id !== activeBeforeSpeculative);
                 if (speculativeCandidate) {
-                    const speculativeBaseline = getState(speculativeCandidate.id)?.lastProgressTime || 0;
+                    const speculativeBaseline = captureCandidateBaseline(speculativeCandidate.id, Date.now());
                     const speculativeSwitch = setActiveAndPlay(processId, speculativeCandidate.id, 'speculative_fallback');
                     Logger.add(LogEvents.tagged('ASSET_HINT', 'Speculative fallback switch applied'), {
                         processId,

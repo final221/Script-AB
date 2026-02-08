@@ -43,6 +43,11 @@ const ConfigValidator = (() => {
                 stallConfirmMs: config.stall.STALL_CONFIRM_MS
             });
         }
+        if ((config.monitoring?.PROGRESS_MIN_DELTA_S || 0) <= 0) {
+            warn('PROGRESS_MIN_DELTA_S must be positive', {
+                value: config.monitoring?.PROGRESS_MIN_DELTA_S
+            });
+        }
 
         return warnings;
     };

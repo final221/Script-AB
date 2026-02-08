@@ -89,6 +89,7 @@ const CONFIG = (() => {
             PROBATION_READY_STATE: 2,       // Minimum readyState to allow probation override
             PROBATION_MIN_PROGRESS_MS: 500, // Require brief progress before probation takeover
             PROGRESS_STREAK_RESET_MS: 2500, // Reset progress streak after this long without progress
+            PROGRESS_MIN_DELTA_S: 0.05,     // Minimum forward playhead delta considered real progress
             PROGRESS_RECENT_MS: 2000,       // "Recent progress" threshold for scoring
             PROGRESS_STALE_MS: 5000,        // "Stale progress" threshold for scoring
             TRUST_STALE_MS: 8000,           // Trust expires if progress is older than this

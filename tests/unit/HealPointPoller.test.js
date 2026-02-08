@@ -148,19 +148,21 @@ describe('HealPointPoller', () => {
         }
     });
 
-    it('skips healing when recent progress indicates self-recovery', async () => {
+    it('skips healing when progress occurs after polling starts', async () => {
         vi.useFakeTimers();
         vi.setSystemTime(10000);
 
         const video = document.createElement('video');
+        Object.defineProperty(video, 'currentTime', { value: 5, configurable: true });
+        Object.defineProperty(video, 'paused', { value: false, configurable: true });
+        Object.defineProperty(video, 'readyState', { value: 4, configurable: true });
         const monitorState = {
-            lastProgressTime: Date.now() - (CONFIG.stall.RECOVERY_WINDOW_MS - 100)
+            hasProgress: true,
+            lastProgressTime: Date.now() - (CONFIG.stall.RECOVERY_WINDOW_MS - 100),
+            progressStreakMs: 0
         };
 
-        findSpy = vi.spyOn(window.BufferGapFinder, 'findHealPoint').mockReturnValue({
-            start: 10,
-            end: 12
-        });
+        findSpy = vi.spyOn(window.BufferGapFinder, 'findHealPoint').mockReturnValue(null);
 
         const poller = window.HealPointPoller.create({
             getVideoId: () => 'video-1',
@@ -168,10 +170,18 @@ describe('HealPointPoller', () => {
             logDebug: vi.fn()
         });
 
-        const result = await poller.pollForHealPoint(video, monitorState, 2000);
+        setTimeout(() => {
+            Object.defineProperty(video, 'currentTime', { value: 5.3, configurable: true });
+            monitorState.lastProgressTime = Date.now();
+            monitorState.hasProgress = true;
+        }, CONFIG.stall.HEAL_POLL_INTERVAL_MS);
+
+        const promise = poller.pollForHealPoint(video, monitorState, 2000);
+        await vi.advanceTimersByTimeAsync(CONFIG.stall.HEAL_POLL_INTERVAL_MS * 3);
+        const result = await promise;
 
         expect(result.healPoint).toBeNull();
         expect(result.aborted).toBe(false);
-        expect(findSpy).not.toHaveBeenCalled();
+        expect(findSpy).toHaveBeenCalled();
     });
 });

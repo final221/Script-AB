@@ -9,15 +9,27 @@ const HealPointPoller = (() => {
         const logDebug = options.logDebug;
         const shouldAbort = options.shouldAbort || (() => false);
 
-        const hasRecovered = (video, monitorState) => {
+        const hasRecovered = (video, monitorState, actionBaseline = null) => {
             if (!video || !monitorState) return false;
-            return Date.now() - monitorState.lastProgressTime < CONFIG.stall.RECOVERY_WINDOW_MS;
+            const evaluation = ProgressModel.evaluateVideo(video, monitorState, {
+                nowMs: Date.now(),
+                recentWindowMs: CONFIG.stall.RECOVERY_WINDOW_MS,
+                sustainedWindowMs: CONFIG.monitoring.CANDIDATE_MIN_PROGRESS_MS,
+                actionStartMs: actionBaseline?.actionStartMs,
+                baselineCurrentTime: actionBaseline?.baselineCurrentTime,
+                baselineProgressTime: actionBaseline?.baselineProgressTime
+            });
+            if (actionBaseline?.actionStartMs) {
+                return evaluation.action_progress;
+            }
+            return evaluation.recent_progress;
         };
 
         const pollForHealPoint = async (video, monitorState, timeoutMs) => {
             const startTime = Date.now();
             let pollCount = 0;
             const videoId = getVideoId(video);
+            const actionBaseline = ProgressModel.captureActionBaseline(video, monitorState, startTime);
 
             logWithState(LogEvents.TAG.POLL_START, video, {
                 timeout: timeoutMs + 'ms'
@@ -43,11 +55,12 @@ const HealPointPoller = (() => {
                     return {
                         healPoint: null,
                         aborted: true,
-                        reason: typeof abortReason === 'string' ? abortReason : 'abort'
+                        reason: typeof abortReason === 'string' ? abortReason : 'abort',
+                        actionBaseline
                     };
                 }
 
-                if (hasRecovered(video, monitorState)) {
+                if (hasRecovered(video, monitorState, actionBaseline)) {
                     logWithState(LogEvents.TAG.SELF_RECOVERED, video, {
                         pollCount,
                         elapsed: (Date.now() - startTime) + 'ms'
@@ -55,7 +68,8 @@ const HealPointPoller = (() => {
                     resetDeferTracking();
                     return {
                         healPoint: null,
-                        aborted: false
+                        aborted: false,
+                        actionBaseline
                     };
                 }
 
@@ -87,7 +101,8 @@ const HealPointPoller = (() => {
                             resetDeferTracking();
                             return {
                                 healPoint,
-                                aborted: false
+                                aborted: false,
+                                actionBaseline
                             };
                         }
 
@@ -112,7 +127,8 @@ const HealPointPoller = (() => {
                                 return {
                                     healPoint: null,
                                     aborted: false,
-                                    reason: 'defer_limit'
+                                    reason: 'defer_limit',
+                                    actionBaseline
                                 };
                             }
                         }
@@ -145,7 +161,8 @@ const HealPointPoller = (() => {
                     });
                     return {
                         healPoint,
-                        aborted: false
+                        aborted: false,
+                        actionBaseline
                     };
                 }
 
@@ -168,7 +185,8 @@ const HealPointPoller = (() => {
 
             return {
                 healPoint: null,
-                aborted: false
+                aborted: false,
+                actionBaseline
             };
         };
 

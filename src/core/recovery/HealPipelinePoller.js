@@ -35,7 +35,7 @@ const HealPipelinePoller = (() => {
 
             const healPoint = pollResult.healPoint;
             if (!healPoint) {
-                if (poller.hasRecovered(video, monitorState)) {
+                if (poller.hasRecovered(video, monitorState, pollResult.actionBaseline)) {
                     attemptLogger.logSelfRecovered(getDurationMs(healStartTime), video, videoId);
                     resetRecovery(monitorState, 'self_recovered');
                     return { status: 'recovered' };

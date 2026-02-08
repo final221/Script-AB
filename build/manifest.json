@@ -63,6 +63,7 @@
     "core/playback/PlaybackEventHandlers.js",
     "core/playback/PlaybackWatchdog.js",
     "core/playback/PlaybackMonitor.js",
+    "core/playback/ProgressModel.js",
     "core/candidate/CandidateScorer.js",
     "core/candidate/CandidateSwitchPolicy.js",
     "core/candidate/CandidateDecision.js",

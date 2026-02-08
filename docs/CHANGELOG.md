@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.9.0 - 2026-02-08T16:21:58.016Z
+Previous: 4.8.2
+Commit: 8f99887
+Changes:
+- fix: align timeline separators for long log tags
+
 ## 4.8.2 - 2026-02-08T15:58:32.000Z
 Previous: 4.8.1
 Commit: aad97ad

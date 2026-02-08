@@ -24,6 +24,7 @@ const FailoverManager = (() => {
             fromId: null,
             toId: null,
             startTime: 0,
+            baselineCurrentTime: null,
             baselineProgressTime: 0,
             recentFailures: new Map()
         };
@@ -44,6 +45,7 @@ const FailoverManager = (() => {
             state.fromId = null;
             state.toId = null;
             state.startTime = 0;
+            state.baselineCurrentTime = null;
             state.baselineProgressTime = 0;
         };
 
@@ -93,7 +95,9 @@ const FailoverManager = (() => {
             state.fromId = fromVideoId;
             state.toId = toId;
             state.startTime = now;
-            state.baselineProgressTime = entry.monitor.state.lastProgressTime || 0;
+            const baseline = ProgressModel.captureActionBaseline(entry.video, entry.monitor.state, now);
+            state.baselineCurrentTime = baseline.baselineCurrentTime;
+            state.baselineProgressTime = baseline.baselineProgressTime;
 
             candidateSelector.setActiveId(toId);
 
@@ -124,16 +128,23 @@ const FailoverManager = (() => {
                 const currentEntry = monitorsById.get(toId);
                 const fromEntry = monitorsById.get(fromVideoId);
                 const latestProgressTime = currentEntry?.monitor.state.lastProgressTime || 0;
-                const progressed = currentEntry
-                    && currentEntry.monitor.state.hasProgress
-                    && latestProgressTime > state.baselineProgressTime
-                    && latestProgressTime >= state.startTime;
+                const progressEvaluation = currentEntry
+                    ? ProgressModel.evaluateVideo(currentEntry.video, currentEntry.monitor.state, {
+                        actionStartMs: state.startTime,
+                        baselineCurrentTime: state.baselineCurrentTime,
+                        baselineProgressTime: state.baselineProgressTime,
+                        recentWindowMs: CONFIG.stall.FAILOVER_PROGRESS_TIMEOUT_MS,
+                        sustainedWindowMs: CONFIG.monitoring.CANDIDATE_MIN_PROGRESS_MS
+                    })
+                    : null;
+                const progressed = Boolean(progressEvaluation?.action_progress);
 
                 if (progressed) {
                     Logger.add(LogEvents.tagged('FAILOVER_SUCCESS', 'Candidate progressed'), {
                         from: fromVideoId,
                         to: toId,
                         progressDelayMs: latestProgressTime - state.startTime,
+                        progressDeltaS: progressEvaluation?.currentTimeDeltaS ?? null,
                         candidateState: VideoStateSnapshot.forLog(currentEntry.video, toId)
                     });
                     resetBackoff(currentEntry.monitor.state, 'failover_success');
@@ -144,6 +155,8 @@ const FailoverManager = (() => {
                         to: toId,
                         timeoutMs: CONFIG.stall.FAILOVER_PROGRESS_TIMEOUT_MS,
                         progressObserved: Boolean(currentEntry?.monitor.state.hasProgress),
+                        actionProgress: Boolean(progressEvaluation?.action_progress),
+                        progressDeltaS: progressEvaluation?.currentTimeDeltaS ?? null,
                         candidateState: currentEntry ? VideoStateSnapshot.forLog(currentEntry.video, toId) : null
                     });
                     state.recentFailures.set(toId, Date.now());

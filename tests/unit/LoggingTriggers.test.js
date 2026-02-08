@@ -165,6 +165,7 @@ describe('Logging triggers', () => {
         const monitorB = monitorsById.get('video-2').monitor;
         monitorB.state.hasProgress = true;
         monitorB.state.lastProgressTime = Date.now() + 1;
+        defineVideoProps(videoB, { currentTime: 1.2, paused: false, readyState: 4 });
 
         vi.advanceTimersByTime(CONFIG.stall.FAILOVER_PROGRESS_TIMEOUT_MS + 1);
 

@@ -7,9 +7,9 @@ const flushMicrotasks = async () => {
 };
 
 const createHarness = (overrides = {}) => {
-    const videoA = createVideo({ paused: true, readyState: 1, currentSrc: 'src-a' });
-    const videoB = createVideo({ paused: true, readyState: 1, currentSrc: 'src-b' });
-    const videoC = createVideo({ paused: true, readyState: 1, currentSrc: 'src-c' });
+    const videoA = createVideo({ paused: false, readyState: 4, currentSrc: 'src-a', currentTime: 0 });
+    const videoB = createVideo({ paused: false, readyState: 4, currentSrc: 'src-b', currentTime: 0 });
+    const videoC = createVideo({ paused: false, readyState: 4, currentSrc: 'src-c', currentTime: 0 });
     videoA.play = vi.fn().mockResolvedValue();
     videoB.play = vi.fn().mockResolvedValue();
     videoC.play = vi.fn().mockResolvedValue();
@@ -118,6 +118,10 @@ describe('ExternalSignalHandlerAsset', () => {
         });
 
         setTimeout(() => {
+            const video = harness.monitorsById.get('video-2').video;
+            Object.defineProperty(video, 'currentTime', { value: 0.25, configurable: true });
+            Object.defineProperty(video, 'paused', { value: false, configurable: true });
+            Object.defineProperty(video, 'readyState', { value: 4, configurable: true });
             const state = harness.monitorsById.get('video-2').monitor.state;
             state.hasProgress = true;
             state.lastProgressTime = Date.now();
@@ -147,6 +151,10 @@ describe('ExternalSignalHandlerAsset', () => {
         });
 
         setTimeout(() => {
+            const video = harness.monitorsById.get('video-3').video;
+            Object.defineProperty(video, 'currentTime', { value: 0.3, configurable: true });
+            Object.defineProperty(video, 'paused', { value: false, configurable: true });
+            Object.defineProperty(video, 'readyState', { value: 4, configurable: true });
             const state = harness.monitorsById.get('video-3').monitor.state;
             state.hasProgress = true;
             state.lastProgressTime = Date.now();

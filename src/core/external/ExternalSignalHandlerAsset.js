@@ -36,11 +36,25 @@ const ExternalSignalHandlerAsset = (() => {
 
         const getState = (videoId) => getEntry(videoId)?.monitor?.state || null;
 
-        const hasCandidateProgress = (videoId, baseline) => {
-            const state = getState(videoId);
-            if (!state || !state.hasProgress) return false;
-            const progressTime = state.lastProgressTime || 0;
-            return progressTime > (baseline || 0);
+        const captureCandidateBaseline = (videoId, actionStartMs = Date.now()) => {
+            const entry = getEntry(videoId);
+            if (!entry) return null;
+            return ProgressModel.captureActionBaseline(entry.video, entry.monitor?.state, actionStartMs);
+        };
+
+        const hasCandidateProgress = (videoId, actionBaseline) => {
+            if (!actionBaseline) return false;
+            const entry = getEntry(videoId);
+            if (!entry) return false;
+            return ProgressModel.hasActionProgress(
+                entry.video,
+                entry.monitor?.state,
+                actionBaseline,
+                {
+                    recentWindowMs: CONFIG.stall.RECOVERY_WINDOW_MS,
+                    sustainedWindowMs: CONFIG.monitoring.CANDIDATE_MIN_PROGRESS_MS
+                }
+            );
         };
 
         const getCandidateRecords = () => {
@@ -194,7 +208,7 @@ const ExternalSignalHandlerAsset = (() => {
                 ));
 
                 if (strictCandidate) {
-                    const strictBaseline = getState(strictCandidate.id)?.lastProgressTime || 0;
+                    const strictBaseline = captureCandidateBaseline(strictCandidate.id, Date.now());
                     const strictSwitch = setActiveAndPlay(processId, strictCandidate.id, 'strict_pass');
                     Logger.add(LogEvents.tagged('ASSET_HINT', 'Strict candidate pass applied'), {
                         processId,
@@ -235,7 +249,7 @@ const ExternalSignalHandlerAsset = (() => {
                 const activeAfterStrict = getActiveId();
                 const probeTargets = candidates.filter(candidate => candidate.id !== activeAfterStrict);
                 const probeBaselineById = new Map(
-                    probeTargets.map((candidate) => [candidate.id, getState(candidate.id)?.lastProgressTime || 0])
+                    probeTargets.map((candidate) => [candidate.id, captureCandidateBaseline(candidate.id, Date.now())])
                 );
                 const probeAttempts = probeTargets.map((candidate) => ({
                     videoId: candidate.id,
@@ -269,7 +283,7 @@ const ExternalSignalHandlerAsset = (() => {
                 const activeBeforeSpeculative = getActiveId();
                 const speculativeCandidate = candidates.find(candidate => candidate.id !== activeBeforeSpeculative);
                 if (speculativeCandidate) {
-                    const speculativeBaseline = getState(speculativeCandidate.id)?.lastProgressTime || 0;
+                    const speculativeBaseline = captureCandidateBaseline(speculativeCandidate.id, Date.now());
                     const speculativeSwitch = setActiveAndPlay(processId, speculativeCandidate.id, 'speculative_fallback');
                     Logger.add(LogEvents.tagged('ASSET_HINT', 'Speculative fallback switch applied'), {
                         processId,

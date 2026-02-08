@@ -69,6 +69,7 @@ describe('Stream failover integration', () => {
             expect(monitoring.candidateSelector.getActiveId()).toBe(idB);
 
             entryB.monitor.state.lastProgressTime = Date.now() + 1;
+            defineVideoProps(videoB, { currentTime: Number(videoB.currentTime) + 0.2, paused: false, readyState: 4 });
 
             vi.advanceTimersByTime(CONFIG.stall.FAILOVER_PROGRESS_TIMEOUT_MS + 1);
 
