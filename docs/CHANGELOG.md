@@ -1,5 +1,13 @@
 # Changelog
 
+## 4.6.0 - 2026-02-08T12:33:55.855Z
+Previous: 4.5.45
+Commit: 4ac1980
+Changes:
+- Clarify scope confirmation for ambiguous requests
+- Trace processing-asset recovery decisions in logs
+- Add processing-asset recovery decision trace logging
+
 ## 4.5.45 - 2026-02-08T12:17:18.606Z
 Previous: 4.5.44
 Commit: 9813496
