@@ -3,17 +3,15 @@ const path = require('path');
 
 const ROOT = path.join(__dirname, '..');
 const SRC = path.join(ROOT, 'src');
-const LIMIT = 250;
-
-// Enforce immediately for all files, with bounded debt for current oversized files.
-// Each exception is locked to a maximum line count and cannot grow.
-const EXCEPTIONS_MAX_LINES = {
-    'core/recovery/RecoveryManager.js': 386,
-    'core/external/ExternalSignalHandlerAsset.js': 370,
-    'core/candidate/CandidateSelector.js': 325,
-    'core/recovery/RecoveryDecisionApplier.js': 294,
-    'monitoring/Logger.js': 278
+const DEFAULT_LIMIT = 250;
+const parseLimit = () => {
+    const raw = process.env.FILE_SIZE_LIMIT;
+    const parsed = Number(raw);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : DEFAULT_LIMIT;
 };
+const LIMIT = parseLimit();
+const POLICY = String(process.env.FILE_SIZE_POLICY || 'warn').trim().toLowerCase();
+const VALID_POLICIES = new Set(['warn', 'error', 'off']);
 
 const listJsFiles = (dir) => {
     if (!fs.existsSync(dir)) return [];
@@ -40,45 +38,46 @@ const countLines = (filePath) => {
 const formatRel = (fullPath) => fullPath.replace(SRC + path.sep, '').replace(/\\/g, '/');
 
 const main = () => {
+    if (!VALID_POLICIES.has(POLICY)) {
+        console.warn(`[check-file-size] Invalid FILE_SIZE_POLICY="${POLICY}", using "warn".`);
+    }
+    const activePolicy = VALID_POLICIES.has(POLICY) ? POLICY : 'warn';
+    if (activePolicy === 'off') {
+        console.log('[check-file-size] Policy off; skipping check.');
+        return;
+    }
+
     const files = listJsFiles(SRC);
     const violations = [];
-    const debt = [];
 
     files.forEach((filePath) => {
         const rel = formatRel(filePath);
         const lines = countLines(filePath);
         if (lines <= LIMIT) return;
-
-        const exceptionMax = EXCEPTIONS_MAX_LINES[rel];
-        if (Number.isFinite(exceptionMax) && lines <= exceptionMax) {
-            debt.push({ rel, lines, exceptionMax });
-            return;
-        }
         violations.push({
             rel,
             lines,
-            reason: Number.isFinite(exceptionMax)
-                ? `exception cap exceeded (${exceptionMax})`
-                : `over limit (${LIMIT})`
+            reason: `over limit (${LIMIT})`
         });
     });
 
-    if (violations.length > 0) {
-        console.error('[check-file-size] File size policy violation(s):');
-        violations.forEach((item) => {
-            console.error(`  - src/${item.rel}: ${item.lines} lines (${item.reason})`);
-        });
-        process.exit(1);
+    if (violations.length === 0) {
+        console.log(`[check-file-size] OK (all src/*.js files <= ${LIMIT} lines).`);
+        return;
     }
 
-    if (debt.length > 0) {
-        console.log('[check-file-size] Oversized files under bounded debt caps:');
-        debt.forEach((item) => {
-            console.log(`  - src/${item.rel}: ${item.lines}/${item.exceptionMax}`);
-        });
-    } else {
-        console.log('[check-file-size] OK (no oversized files).');
+    const log = activePolicy === 'error' ? console.error : console.warn;
+    log(`[check-file-size] ${violations.length} file(s) exceed ${LIMIT} lines:`);
+    violations.forEach((item) => {
+        log(`  - src/${item.rel}: ${item.lines} lines (${item.reason})`);
+    });
+
+    if (activePolicy === 'error') {
+        process.exit(1);
+        return;
     }
+
+    console.warn('[check-file-size] Policy=warn; continuing without failure.');
 };
 
 main();

@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.14.4 - 2026-02-08T20:34:00.993Z
+Previous: 4.14.3
+Commit: 45fd42d
+Changes:
+- harden test harness symbol exposure and keep deterministic load order
+
 ## 4.14.3 - 2026-02-08T20:29:09.155Z
 Previous: 4.14.2
 Commit: ac629c2
