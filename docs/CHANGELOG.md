@@ -1,5 +1,12 @@
 # Changelog
 
+## 4.14.1 - 2026-02-08T20:12:02.077Z
+Previous: 4.14.0
+Commit: e5ae179
+Changes:
+- Wire manual last-resort API and tests
+- Add browser hook to trigger last-resort refresh flow
+
 ## 4.14.0 - 2026-02-08T17:58:24.993Z
 Previous: 4.13.0
 Commit: c03c587
