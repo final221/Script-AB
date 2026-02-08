@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.13.0
+// @version       4.14.0
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -177,7 +177,7 @@ const CONFIG = (() => {
  * Build metadata helpers (version injected at build time).
  */
 const BuildInfo = (() => {
-    const VERSION = '4.13.0';
+    const VERSION = '4.14.0';
 
     const getVersion = () => {
         const gmVersion = (typeof GM_info !== 'undefined' && GM_info?.script?.version)
@@ -188,7 +188,7 @@ const BuildInfo = (() => {
             ? unsafeWindow.GM_info.script.version
             : null;
         if (unsafeVersion) return unsafeVersion;
-        if (VERSION && VERSION !== '4.13.0') return VERSION;
+        if (VERSION && VERSION !== '4.14.0') return VERSION;
         return null;
     };
 
@@ -11476,6 +11476,54 @@ const StreamHealer = (() => {
             logDebug
         });
 
+        const triggerLastResortRefresh = (options = {}) => {
+            const activeId = monitoring.candidateSelector.getActiveId();
+            const fallbackId = monitoring.monitorsById.keys().next().value || null;
+            const targetVideoId = options.videoId || activeId || fallbackId;
+            if (!targetVideoId) {
+                Logger.add(LogEvents.tagged('REFRESH', 'Manual last-resort refresh skipped (no monitored video)'), {
+                    reason: 'manual_last_resort',
+                    activeVideoId: activeId || null,
+                    monitoredCount: monitoring.getMonitoredCount()
+                });
+                return {
+                    ok: false,
+                    reason: 'no_monitored_video',
+                    activeVideoId: activeId || null
+                };
+            }
+
+            const entry = monitoring.monitorsById.get(targetVideoId);
+            const monitorState = entry?.monitor?.state || null;
+            const eligibility = monitoring.recoveryManager.canRequestRefresh(targetVideoId, monitorState, {
+                reason: 'manual_last_resort',
+                trigger: 'manual_command',
+                ignoreRefreshCooldown: true
+            });
+            const refreshed = eligibility.allow && monitoring.recoveryManager.requestRefresh(targetVideoId, monitorState, {
+                reason: 'manual_last_resort',
+                trigger: 'manual_command',
+                detail: options.detail || 'manual_last_resort',
+                forcePageRefresh: true,
+                ignoreRefreshCooldown: true,
+                eligibility
+            });
+
+            Logger.add(LogEvents.tagged('REFRESH', 'Manual last-resort refresh requested'), {
+                videoId: targetVideoId,
+                refreshEligible: eligibility.allow,
+                refreshEligibilityReason: eligibility.reason || null,
+                refreshed
+            });
+
+            return {
+                ok: refreshed,
+                videoId: targetVideoId,
+                refreshEligible: eligibility.allow,
+                refreshEligibilityReason: eligibility.reason || null
+            };
+        };
+
         return {
             monitor: monitoring.monitor,
             stopMonitoring: monitoring.stopMonitoring,
@@ -11483,6 +11531,7 @@ const StreamHealer = (() => {
             attemptHeal: (video, state) => recovery.attemptHeal(video, state),
             handleExternalSignal: (signal) => recovery.handleExternalSignal(signal),
             scanForVideos: monitoring.scanForVideos,
+            triggerLastResortRefresh,
             getStats: () => ({
                 healAttempts: recovery.getAttempts(),
                 isHealing: recovery.isHealing(),
@@ -11514,6 +11563,7 @@ const StreamHealer = (() => {
         attemptHeal: callDefault('attemptHeal'),
         handleExternalSignal: callDefault('handleExternalSignal'),
         scanForVideos: callDefault('scanForVideos'),
+        triggerLastResortRefresh: callDefault('triggerLastResortRefresh'),
         getStats: callDefault('getStats')
     };
 })();
@@ -11612,14 +11662,43 @@ const CoreOrchestrator = (() => {
         Logger?.add?.('[CORE] exportTwitchAdLogs not available in top window');
     };
 
+    const triggerLastResortProxy = (options = {}) => {
+        try {
+            if (window.top && typeof window.top.triggerTwitchAdLastResort === 'function') {
+                return window.top.triggerTwitchAdLastResort(options);
+            }
+        } catch (error) {
+            Logger?.add?.('[CORE] triggerTwitchAdLastResort proxy failed', { error: error?.message });
+            return { ok: false, reason: 'proxy_failed' };
+        }
+        Logger?.add?.('[CORE] triggerTwitchAdLastResort not available in top window');
+        return { ok: false, reason: 'proxy_missing' };
+    };
+
+    const triggerLastResort = (options = {}) => {
+        try {
+            const healer = ensureStreamHealer();
+            if (typeof healer?.triggerLastResortRefresh !== 'function') {
+                return { ok: false, reason: 'method_unavailable' };
+            }
+            return healer.triggerLastResortRefresh(options);
+        } catch (error) {
+            Logger?.add?.('[CORE] triggerTwitchAdLastResort failed', { error: error?.message });
+            return { ok: false, reason: 'exception', error: error?.message };
+        }
+    };
+
     return {
         init: () => {
             Logger.add('[CORE] Initializing Stream Healer');
 
             const isTopWindow = window.self === window.top;
             const exportFn = isTopWindow ? exportLogs : exportLogsProxy;
+            const lastResortFn = isTopWindow ? triggerLastResort : triggerLastResortProxy;
             exposeGlobal('exportTwitchAdLogs', exportFn);
             exposeGlobal('exporttwitchadlogs', exportFn);
+            exposeGlobal('triggerTwitchAdLastResort', lastResortFn);
+            exposeGlobal('triggertwitchadlastresort', lastResortFn);
 
             if (!isTopWindow) {
                 return;

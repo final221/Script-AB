@@ -1,5 +1,12 @@
 # Changelog
 
+## 4.14.0 - 2026-02-08T17:58:24.993Z
+Previous: 4.13.0
+Commit: c03c587
+Changes:
+- Implement last-resort page refresh trigger and tests
+- Add last-resort page refresh escalation for persistent collapse
+
 ## 4.13.0 - 2026-02-08T17:55:35.997Z
 Previous: 4.12.0
 Commit: 5e5f6a4
