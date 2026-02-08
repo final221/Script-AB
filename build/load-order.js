@@ -6,8 +6,6 @@ const { collectModuleMetadata, buildDependencyGraph, topoSort } = require('./man
 
 const DEFAULT_ENTRY = 'core/orchestrators/CoreOrchestrator.js';
 const DEFAULT_MODE = 'graph';
-const LEGACY_MANIFEST_NAME = 'manifest.legacy.json';
-const VALID_MODES = new Set(['legacy', 'graph']);
 
 const toPosix = (value) => value.replace(/\\/g, '/');
 const normalizePath = (value) => path.normalize(value);
@@ -17,23 +15,16 @@ const readManifest = (manifestPath) => {
     return JSON.parse(content);
 };
 
-const resolveLegacyManifestPath = (manifestPath, explicitLegacyManifestPath) => {
-    if (explicitLegacyManifestPath) return explicitLegacyManifestPath;
-    if (process.env.MANIFEST_LEGACY_PATH) return process.env.MANIFEST_LEGACY_PATH;
-    const base = manifestPath ? path.dirname(manifestPath) : __dirname;
-    return path.join(base, LEGACY_MANIFEST_NAME);
-};
-
-const getManifestMode = (explicitMode) => {
+const resolveMode = (explicitMode) => {
     const raw = explicitMode || process.env.MANIFEST_MODE || DEFAULT_MODE;
     const normalized = String(raw).trim().toLowerCase();
-    if (VALID_MODES.has(normalized)) {
-        return normalized;
+    if (normalized === DEFAULT_MODE) {
+        return DEFAULT_MODE;
     }
-    return DEFAULT_MODE;
+    throw new Error(`[load-order] Unsupported MANIFEST_MODE="${normalized}". Only "${DEFAULT_MODE}" is supported.`);
 };
 
-const getLegacyLoadOrder = ({ srcDir, resolvedManifest, allFiles }) => {
+const getManifestLoadOrder = ({ srcDir, resolvedManifest, allFiles }) => {
     const priority = Array.isArray(resolvedManifest.priority) ? resolvedManifest.priority : [];
     const entry = resolvedManifest.entry || DEFAULT_ENTRY;
     const priorityFiles = priority.map(file => path.join(srcDir, file));
@@ -57,8 +48,6 @@ const getLegacyLoadOrder = ({ srcDir, resolvedManifest, allFiles }) => {
     const loadOrder = [...priorityFiles, ...otherFiles, entryFile];
 
     return {
-        priority,
-        entry,
         priorityFiles,
         entryFile,
         otherFiles,
@@ -94,11 +83,11 @@ const buildGraphError = (report) => {
     return new Error(`[load-order] Graph manifest validation failed. ${issues.join(' | ')}`);
 };
 
-const getGraphLoadOrder = ({ srcDir, legacyOrder, allFiles }) => {
+const getGraphLoadOrder = ({ srcDir, manifestOrder, allFiles }) => {
     const metadata = collectModuleMetadata(srcDir);
     const graph = buildDependencyGraph(metadata.moduleToEntry);
-    const entryRelative = toPosix(path.relative(srcDir, legacyOrder.entryFile));
-    const legacyRelative = legacyOrder.loadOrder.map(file => toPosix(path.relative(srcDir, file)));
+    const entryRelative = toPosix(path.relative(srcDir, manifestOrder.entryFile));
+    const manifestRelative = manifestOrder.loadOrder.map(file => toPosix(path.relative(srcDir, file)));
     const files = allFiles || listFilesRecursive(srcDir);
     const allRelative = files
         .filter(file => file.endsWith('.js'))
@@ -106,7 +95,7 @@ const getGraphLoadOrder = ({ srcDir, legacyOrder, allFiles }) => {
         .sort((a, b) => a.localeCompare(b));
 
     const orderHint = new Map();
-    legacyRelative.forEach((relPath, index) => {
+    manifestRelative.forEach((relPath, index) => {
         const moduleName = metadata.pathToModule.get(relPath);
         if (!moduleName || moduleName === metadata.pathToModule.get(entryRelative)) return;
         if (!orderHint.has(moduleName)) {
@@ -150,43 +139,24 @@ const getGraphLoadOrder = ({ srcDir, legacyOrder, allFiles }) => {
     };
 };
 
-const getLoadOrder = ({ srcDir, manifestPath, manifest, allFiles, mode, legacyManifestPath } = {}) => {
+const getLoadOrder = ({ srcDir, manifestPath, manifest, allFiles, mode } = {}) => {
     if (!srcDir) {
         throw new Error('[load-order] srcDir is required');
     }
-
-    const resolvedMode = getManifestMode(mode);
-    const primaryManifest = manifest || readManifest(manifestPath);
-    let resolvedManifest = primaryManifest;
-
-    if (resolvedMode === 'legacy' && !manifest) {
-        const fallbackPath = resolveLegacyManifestPath(manifestPath, legacyManifestPath);
-        if (fs.existsSync(fallbackPath)) {
-            resolvedManifest = readManifest(fallbackPath);
-        }
+    if (!manifest && !manifestPath) {
+        throw new Error('[load-order] manifestPath or manifest is required');
     }
 
-    const legacyOrder = getLegacyLoadOrder({
+    const resolvedMode = resolveMode(mode);
+    const resolvedManifest = manifest || readManifest(manifestPath);
+    const manifestOrder = getManifestLoadOrder({
         srcDir,
         resolvedManifest,
         allFiles
     });
-
-    if (resolvedMode === 'legacy') {
-        return {
-            mode: resolvedMode,
-            manifest: resolvedManifest,
-            priorityFiles: legacyOrder.priorityFiles,
-            entryFile: legacyOrder.entryFile,
-            otherFiles: legacyOrder.otherFiles,
-            loadOrder: legacyOrder.loadOrder,
-            graphReport: null
-        };
-    }
-
     const graphOrder = getGraphLoadOrder({
         srcDir,
-        legacyOrder,
+        manifestOrder,
         allFiles
     });
 

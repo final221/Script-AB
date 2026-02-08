@@ -7,38 +7,14 @@ const { collectModuleMetadata, buildDependencyGraph, topoSort } = require('./man
 const ROOT = path.join(__dirname, '..');
 const SRC = path.join(ROOT, 'src');
 const MANIFEST_PATH = path.join(__dirname, 'manifest.json');
-const LEGACY_MANIFEST_PATH = path.join(__dirname, 'manifest.legacy.json');
 const DEFAULT_ENTRY = 'core/orchestrators/CoreOrchestrator.js';
 
 const toPosix = (filePath) => filePath.replace(/\\/g, '/');
 const byLex = (a, b) => a.localeCompare(b);
 
-const readManifestSafe = (filePath) => {
-    if (!fs.existsSync(filePath)) return null;
-    try {
-        return JSON.parse(fs.readFileSync(filePath, 'utf8'));
-    } catch (error) {
-        return null;
-    }
-};
-
-const buildOrderHint = ({ legacyManifest, pathToModule, allJsFiles, entry }) => {
+const buildOrderHint = ({ pathToModule, allJsFiles }) => {
     const hint = new Map();
     let cursor = 0;
-
-    const orderedPaths = legacyManifest
-        ? [
-            ...(Array.isArray(legacyManifest.priority) ? legacyManifest.priority : []),
-            legacyManifest.entry || entry
-        ]
-        : [];
-
-    orderedPaths.forEach((relPath) => {
-        const moduleName = pathToModule.get(relPath);
-        if (!moduleName || hint.has(moduleName)) return;
-        hint.set(moduleName, cursor);
-        cursor += 1;
-    });
 
     allJsFiles.forEach((relPath) => {
         const moduleName = pathToModule.get(relPath);
@@ -64,7 +40,7 @@ const buildGraphIssues = ({ duplicates, unresolvedDependencies, topo }) => {
     return issues;
 };
 
-const buildManifest = ({ srcDir = SRC, legacyManifestPath = LEGACY_MANIFEST_PATH, entry = DEFAULT_ENTRY } = {}) => {
+const buildManifest = ({ srcDir = SRC, entry = DEFAULT_ENTRY } = {}) => {
     const allJsFiles = listJsFilesRecursive(srcDir)
         .map(filePath => toPosix(path.relative(srcDir, filePath)))
         .sort(byLex);
@@ -75,12 +51,9 @@ const buildManifest = ({ srcDir = SRC, legacyManifestPath = LEGACY_MANIFEST_PATH
 
     const metadata = collectModuleMetadata(srcDir);
     const graph = buildDependencyGraph(metadata.moduleToEntry);
-    const legacyManifest = readManifestSafe(legacyManifestPath);
     const hint = buildOrderHint({
-        legacyManifest,
         pathToModule: metadata.pathToModule,
-        allJsFiles,
-        entry
+        allJsFiles
     });
     const topo = topoSort(graph, hint);
     const issues = buildGraphIssues({
@@ -112,12 +85,10 @@ const generateManifest = ({
     check = false,
     srcDir = SRC,
     manifestPath = MANIFEST_PATH,
-    legacyManifestPath = LEGACY_MANIFEST_PATH,
     entry = DEFAULT_ENTRY
 } = {}) => {
     const manifest = buildManifest({
         srcDir,
-        legacyManifestPath,
         entry
     });
     const serialized = JSON.stringify(manifest, null, 2) + '\n';

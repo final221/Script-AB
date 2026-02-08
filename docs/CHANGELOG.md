@@ -1,5 +1,13 @@
 # Changelog
 
+## 4.14.14 - 2026-02-08T21:59:29.914Z
+Previous: 4.14.13
+Commit: ee89780
+Changes:
+- docs: require per-surface documentation sync
+- docs: document canonical manifest metadata workflow
+- build: expand module dependency metadata coverage
+
 ## 4.14.13 - 2026-02-08T21:39:47.859Z
 Previous: 4.14.12
 Commit: 9822e01

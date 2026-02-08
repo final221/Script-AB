@@ -162,68 +162,9 @@ const topoSort = (graph, orderHint = new Map()) => {
     };
 };
 
-const computeShadowReport = ({ srcDir, manifest }) => {
-    const metadata = collectModuleMetadata(srcDir);
-    const graph = buildDependencyGraph(metadata.moduleToEntry);
-    const legacyPathOrder = [
-        ...(Array.isArray(manifest.priority) ? manifest.priority : []),
-        manifest.entry || 'core/orchestrators/CoreOrchestrator.js'
-    ];
-    const legacyModuleOrder = legacyPathOrder
-        .map(relPath => metadata.pathToModule.get(relPath))
-        .filter(Boolean);
-
-    const orderHint = new Map();
-    legacyModuleOrder.forEach((moduleName, index) => {
-        if (!orderHint.has(moduleName)) {
-            orderHint.set(moduleName, index);
-        }
-    });
-
-    const topo = topoSort(graph, orderHint);
-    const candidateModuleOrder = topo.ordered;
-    const candidatePathOrder = candidateModuleOrder
-        .map(moduleName => metadata.moduleToEntry.get(moduleName))
-        .filter(Boolean)
-        .map(entry => entry.relPath);
-    const legacyAnnotatedPathOrder = legacyModuleOrder
-        .map(moduleName => metadata.moduleToEntry.get(moduleName))
-        .filter(Boolean)
-        .map(entry => entry.relPath);
-
-    const mismatchDetails = [];
-    const maxLen = Math.max(candidatePathOrder.length, legacyAnnotatedPathOrder.length);
-    for (let i = 0; i < maxLen; i += 1) {
-        const legacyPath = legacyAnnotatedPathOrder[i] || null;
-        const candidatePath = candidatePathOrder[i] || null;
-        if (legacyPath !== candidatePath) {
-            mismatchDetails.push({
-                index: i,
-                legacyPath,
-                candidatePath
-            });
-        }
-    }
-
-    return {
-        filesScanned: metadata.filesScanned,
-        annotatedModules: metadata.moduleToEntry.size,
-        duplicateModules: metadata.duplicates,
-        missingModule: metadata.missingModule,
-        unresolvedDependencies: graph.unresolvedDependencies,
-        edgeCount: graph.edgeCount,
-        topoOk: topo.ok,
-        cycleNodes: topo.cycleNodes,
-        legacyAnnotatedPathOrder,
-        candidatePathOrder,
-        orderMismatches: mismatchDetails
-    };
-};
-
 module.exports = {
     parseMetadataHeader,
     collectModuleMetadata,
     buildDependencyGraph,
-    topoSort,
-    computeShadowReport
+    topoSort
 };

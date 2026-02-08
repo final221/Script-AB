@@ -63,21 +63,17 @@ describe('load-order graph mode', () => {
             .toThrow(/Dependency cycles/);
     });
 
-    it('allows legacy rollback mode even with invalid metadata', () => {
+    it('rejects legacy mode now that rollback path is removed', () => {
         const srcDir = createTempSrc({
             'a.js': [
                 '// @module A',
-                '// @depends MissingModule',
                 'const A = true;'
             ].join('\n'),
             'entry.js': 'const Entry = true;'
         });
 
         const manifest = { priority: ['a.js'], entry: 'entry.js' };
-        const result = getLoadOrder({ srcDir, manifest, mode: 'legacy' });
-
-        expect(result.mode).toBe('legacy');
-        expect(result.loadOrder.length).toBe(2);
-        expect(path.basename(result.entryFile)).toBe('entry.js');
+        expect(() => getLoadOrder({ srcDir, manifest, mode: 'legacy' }))
+            .toThrow(/Unsupported MANIFEST_MODE/);
     });
 });

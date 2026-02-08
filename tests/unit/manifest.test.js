@@ -71,11 +71,8 @@ describe('Manifest', () => {
         expect(toRel(first.entryFile)).toBe('core/orchestrators/CoreOrchestrator.js');
     });
 
-    it('supports legacy rollback mode', () => {
-        const legacy = getLoadOrder({ srcDir: SRC_DIR, manifestPath: MANIFEST_PATH, mode: 'legacy' });
-
-        expect(legacy.mode).toBe('legacy');
-        expect(legacy.loadOrder.length).toBeGreaterThan(0);
-        expect(toRel(legacy.entryFile)).toBe('core/orchestrators/CoreOrchestrator.js');
+    it('rejects legacy rollback mode', () => {
+        expect(() => getLoadOrder({ srcDir: SRC_DIR, manifestPath: MANIFEST_PATH, mode: 'legacy' }))
+            .toThrow(/Unsupported MANIFEST_MODE/);
     });
 });

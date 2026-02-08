@@ -36,27 +36,20 @@ afterEach(() => {
 });
 
 describe('generate-manifest', () => {
-    it('uses legacy manifest as canonical hint instead of current manifest order', () => {
+    it('uses deterministic module ordering from source metadata', () => {
         const { srcDir, buildDir } = createWorkspace();
         const manifestPath = path.join(buildDir, 'manifest.json');
-        const legacyManifestPath = path.join(buildDir, 'manifest.legacy.json');
         const current = {
             priority: ['b.js', 'a.js'],
             entry: 'entry.js'
         };
-        const legacy = {
-            priority: ['a.js', 'b.js'],
-            entry: 'entry.js'
-        };
 
         fs.writeFileSync(manifestPath, JSON.stringify(current, null, 2) + '\n');
-        fs.writeFileSync(legacyManifestPath, JSON.stringify(legacy, null, 2) + '\n');
 
         const checkResult = generateManifest({
             check: true,
             srcDir,
             manifestPath,
-            legacyManifestPath,
             entry: 'entry.js'
         });
 
@@ -64,26 +57,20 @@ describe('generate-manifest', () => {
         expect(checkResult.manifest.priority).toEqual(['a.js', 'b.js']);
     });
 
-    it('uses deterministic path fallback when no legacy manifest exists', () => {
+    it('writes manifest on non-check mode', () => {
         const { srcDir, buildDir } = createWorkspace();
         const manifestPath = path.join(buildDir, 'manifest.json');
-        const legacyManifestPath = path.join(buildDir, 'missing-legacy.json');
-        const current = {
-            priority: ['b.js', 'a.js'],
-            entry: 'entry.js'
-        };
 
-        fs.writeFileSync(manifestPath, JSON.stringify(current, null, 2) + '\n');
-
-        const checkResult = generateManifest({
-            check: true,
+        const result = generateManifest({
+            check: false,
             srcDir,
             manifestPath,
-            legacyManifestPath,
             entry: 'entry.js'
         });
+        const written = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
 
-        expect(checkResult.ok).toBe(false);
-        expect(checkResult.manifest.priority).toEqual(['a.js', 'b.js']);
+        expect(result.ok).toBe(true);
+        expect(written.priority).toEqual(['a.js', 'b.js']);
+        expect(written.entry).toBe('entry.js');
     });
 });
