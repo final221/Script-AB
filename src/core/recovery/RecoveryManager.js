@@ -172,7 +172,8 @@ const RecoveryManager = (() => {
             }
             const now = Number.isFinite(detail.now) ? detail.now : Date.now();
             const lastRefreshAt = monitorState.lastRefreshAt || 0;
-            if (now - lastRefreshAt < CONFIG.stall.REFRESH_COOLDOWN_MS) {
+            const ignoreRefreshCooldown = Boolean(detail.ignoreRefreshCooldown);
+            if (!ignoreRefreshCooldown && now - lastRefreshAt < CONFIG.stall.REFRESH_COOLDOWN_MS) {
                 return {
                     allow: false,
                     reason: 'cooldown',
@@ -189,6 +190,34 @@ const RecoveryManager = (() => {
             return { allow: true, reason, now };
         };
 
+        const shouldTriggerLastResortPageRefresh = (
+            context,
+            detail,
+            result,
+            failoverAttempted,
+            failoverStarted,
+            now
+        ) => {
+            if (!context.monitorState) return false;
+            if (detail?.errorName !== 'PLAY_STUCK') return false;
+            if (!result?.shouldFailover) return false;
+            if (!failoverAttempted || failoverStarted) return false;
+
+            const playErrorCount = context.monitorState.playErrorCount || 0;
+            if (playErrorCount < CONFIG.stall.PLAY_STUCK_LAST_RESORT_PAGE_REFRESH_AFTER) {
+                return false;
+            }
+
+            const lastProgressTime = context.monitorState.lastProgressTime || 0;
+            const stalledForMs = lastProgressTime ? (now - lastProgressTime) : null;
+            const minStallMs = CONFIG.stall.PLAY_STUCK_LAST_RESORT_MIN_STALL_MS || 0;
+            if (stalledForMs !== null && stalledForMs < minStallMs) {
+                return false;
+            }
+
+            return true;
+        };
+
         const handlePlayFailure = (videoOrContext, monitorStateOverride, detail = {}) => {
             const normalized = normalizeVideoInput(videoOrContext, monitorStateOverride, detail);
             const context = RecoveryContext.from(
@@ -198,12 +227,14 @@ const RecoveryManager = (() => {
                 normalized.detail
             );
             const result = policy.handlePlayFailure(context, detail);
+            const now = Date.now();
             if (detail?.errorName === 'PLAY_STUCK'
                 && context.monitorState
                 && (monitorsById?.size || 0) <= 1) {
                 if (context.monitorState.playErrorCount >= CONFIG.stall.PLAY_STUCK_REFRESH_AFTER) {
                     const eligibility = evaluateRefreshEligibility(context, {
-                        reason: 'play_stuck'
+                        reason: 'play_stuck',
+                        now
                     });
                     const refreshed = eligibility.allow && requestRefresh(context.videoId, context.monitorState, {
                         reason: 'play_stuck',
@@ -223,9 +254,52 @@ const RecoveryManager = (() => {
             const beforeActive = candidateSelector.getActiveId();
             candidateSelector.evaluateCandidates('play_error');
             const afterActive = candidateSelector.getActiveId();
+            let failoverAttempted = false;
+            let failoverStarted = false;
             if (result.shouldFailover && afterActive === beforeActive) {
-                failoverManager.attemptFailover(context.videoId, detail.reason || 'play_error', context.monitorState);
+                failoverAttempted = true;
+                failoverStarted = failoverManager.attemptFailover(
+                    context.videoId,
+                    detail.reason || 'play_error',
+                    context.monitorState
+                );
             }
+
+            if (!shouldTriggerLastResortPageRefresh(
+                context,
+                detail,
+                result,
+                failoverAttempted,
+                failoverStarted,
+                now
+            )) {
+                return;
+            }
+
+            const eligibility = evaluateRefreshEligibility(context, {
+                reason: 'play_stuck_last_resort',
+                trigger: detail.reason || 'play_error',
+                now,
+                ignoreRefreshCooldown: true
+            });
+            const refreshed = eligibility.allow && requestRefresh(context.videoId, context.monitorState, {
+                reason: 'play_stuck_last_resort',
+                trigger: detail.reason || 'play_error',
+                detail: 'persistent_play_stuck_no_failover',
+                forcePageRefresh: true,
+                ignoreRefreshCooldown: true,
+                eligibility
+            });
+            Logger.add(LogEvents.tagged('REFRESH', 'Last-resort page refresh decision applied'), {
+                videoId: context.videoId,
+                reason: detail.reason || 'play_error',
+                playErrorCount: context.monitorState?.playErrorCount || 0,
+                failoverAttempted,
+                failoverStarted,
+                refreshEligible: eligibility.allow,
+                refreshEligibilityReason: eligibility.reason || null,
+                refreshed
+            });
         };
 
         const requestRefresh = (videoOrContext, monitorStateOverride, detail = {}) => {
@@ -250,11 +324,13 @@ const RecoveryManager = (() => {
                     noHealPointCount: monitorState.noHealPointCount || 0
                 }),
                 trigger: detail.trigger || null,
-                resetType: detail.resetType || null
+                resetType: detail.resetType || null,
+                forcePageRefresh: Boolean(detail.forcePageRefresh)
             });
             onPersistentFailure(context.videoId, {
                 reason: detail.reason || 'source_loss',
-                detail: detail.detail || 'source_loss'
+                detail: detail.detail || 'source_loss',
+                forcePageRefresh: Boolean(detail.forcePageRefresh)
             });
             if (detail.reason === 'processing_asset_exhausted') {
                 activateProcessingAssetHardFailureWindow(

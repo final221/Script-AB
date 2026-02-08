@@ -342,6 +342,83 @@ describe('RecoveryManager refresh gating', () => {
         }
     });
 
+    it('forces page refresh as last resort after persistent play-stuck when failover cannot start', () => {
+        vi.useFakeTimers();
+        vi.setSystemTime(500000);
+        const originalRecoveryPolicyCreate = window.RecoveryPolicy.create;
+        const originalFailoverManagerCreate = window.FailoverManager.create;
+        const attemptFailover = vi.fn(() => false);
+        const onPersistentFailure = vi.fn();
+
+        window.RecoveryPolicy.create = vi.fn(() => ({
+            resetBackoff: vi.fn(),
+            resetPlayError: vi.fn(),
+            handleNoHealPoint: vi.fn(() => ({
+                shouldFailover: false,
+                failoverEligible: false,
+                refreshEligible: false,
+                primaryAction: 'none'
+            })),
+            handlePlayFailure: vi.fn(() => ({
+                probationTriggered: true,
+                repeatStuck: true,
+                shouldFailover: true
+            })),
+            shouldSkipStall: vi.fn(() => false)
+        }));
+        window.FailoverManager.create = vi.fn(() => ({
+            isActive: () => false,
+            resetFailover: vi.fn(),
+            attemptFailover,
+            probeCandidate: vi.fn(),
+            shouldIgnoreStall: () => false,
+            onMonitorRemoved: vi.fn()
+        }));
+
+        try {
+            const monitorsById = new Map();
+            const candidateSelector = {
+                getActiveId: () => 'video-1',
+                evaluateCandidates: vi.fn()
+            };
+            const manager = window.RecoveryManager.create({
+                monitorsById,
+                candidateSelector,
+                getVideoId: () => 'video-1',
+                logDebug: () => {},
+                onRescan: () => {},
+                onPersistentFailure
+            });
+
+            const video = createVideo({ currentSrc: 'blob:https://www.twitch.tv/stream' });
+            const monitorState = {
+                playErrorCount: CONFIG.stall.PLAY_STUCK_LAST_RESORT_PAGE_REFRESH_AFTER,
+                lastProgressTime: Date.now() - CONFIG.stall.PLAY_STUCK_LAST_RESORT_MIN_STALL_MS - 1,
+                lastRefreshAt: Date.now(),
+                noHealPointCount: 0
+            };
+            monitorsById.set('video-1', { video, monitor: { state: monitorState } });
+
+            manager.handlePlayFailure(video, monitorState, {
+                reason: 'play_error',
+                errorName: 'PLAY_STUCK',
+                error: 'Play did not resume'
+            });
+
+            expect(attemptFailover).toHaveBeenCalledWith('video-1', 'play_error', monitorState);
+            expect(onPersistentFailure).toHaveBeenCalledTimes(1);
+            expect(onPersistentFailure).toHaveBeenCalledWith('video-1', expect.objectContaining({
+                reason: 'play_stuck_last_resort',
+                detail: 'persistent_play_stuck_no_failover',
+                forcePageRefresh: true
+            }));
+        } finally {
+            window.RecoveryPolicy.create = originalRecoveryPolicyCreate;
+            window.FailoverManager.create = originalFailoverManagerCreate;
+            vi.useRealTimers();
+        }
+    });
+
     it('applies a temporary hard-failure mode after processing-asset exhaustion refresh', () => {
         vi.useFakeTimers();
         vi.setSystemTime(100000);

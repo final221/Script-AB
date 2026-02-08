@@ -4,6 +4,12 @@ describe('MonitorCoordinator', () => {
     afterEach(() => {
         vi.useRealTimers();
         document.body.innerHTML = '';
+        Logger.getLogs().length = 0;
+        try {
+            sessionStorage.removeItem('twad_auto_refresh_at');
+        } catch {
+            // ignore storage failures in test env
+        }
     });
 
     it('refreshes a video and triggers a rescan', () => {
@@ -89,5 +95,49 @@ describe('MonitorCoordinator', () => {
         expect(scanItemCalls.length).toBe(1);
         expect(scanItemCalls[0][1]?.videoId).toBe('video-2');
         expect(monitorRegistry.monitor).toHaveBeenCalledTimes(2);
+    });
+
+    it('forces page refresh path when requested, even if auto refresh is disabled', () => {
+        vi.useFakeTimers();
+        const autoRefreshBackup = CONFIG.stall.AUTO_PAGE_REFRESH;
+        CONFIG.stall.AUTO_PAGE_REFRESH = false;
+
+        try {
+            const video = document.createElement('video');
+            document.body.appendChild(video);
+
+            const monitorsById = new Map([
+                ['video-1', { video, monitor: { state: {} } }]
+            ]);
+            const monitorRegistry = {
+                monitorsById,
+                getVideoId: () => 'video-1',
+                monitor: vi.fn(),
+                stopMonitoring: vi.fn(),
+                resetVideoId: vi.fn()
+            };
+            const candidateSelector = {
+                evaluateCandidates: vi.fn(),
+                getActiveId: vi.fn()
+            };
+
+            const coordinator = MonitorCoordinator.create({
+                monitorRegistry,
+                candidateSelector,
+                logDebug: vi.fn()
+            });
+
+            const result = coordinator.refreshVideo('video-1', {
+                reason: 'play_stuck_last_resort',
+                forcePageRefresh: true
+            });
+
+            expect(result).toBe(true);
+            expect(monitorRegistry.stopMonitoring).not.toHaveBeenCalled();
+            expect(monitorRegistry.resetVideoId).not.toHaveBeenCalled();
+            expect(Number(sessionStorage.getItem('twad_auto_refresh_at') || 0)).toBeGreaterThan(0);
+        } finally {
+            CONFIG.stall.AUTO_PAGE_REFRESH = autoRefreshBackup;
+        }
     });
 });

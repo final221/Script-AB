@@ -28,8 +28,8 @@ const MonitorCoordinator = (() => {
             }
         };
 
-        const canAutoRefresh = (now) => {
-            if (!CONFIG.stall.AUTO_PAGE_REFRESH) {
+        const canAutoRefresh = (now, forcePageRefresh = false) => {
+            if (!forcePageRefresh && !CONFIG.stall.AUTO_PAGE_REFRESH) {
                 return { ok: false, reason: 'disabled' };
             }
             const lastRefreshAt = readAutoRefreshStamp();
@@ -125,14 +125,16 @@ const MonitorCoordinator = (() => {
             const elementId = typeof monitorRegistry.getElementId === 'function'
                 ? monitorRegistry.getElementId(video)
                 : null;
+            const forcePageRefresh = Boolean(detail?.forcePageRefresh);
             const now = Date.now();
-            const autoRefresh = canAutoRefresh(now);
+            const autoRefresh = canAutoRefresh(now, forcePageRefresh);
             if (autoRefresh.ok) {
                 const exportResult = attemptLogExport();
                 Logger.add(LogEvents.tagged('REFRESH', 'Auto page refresh scheduled'), {
                     videoId,
                     elementId,
                     detail,
+                    forced: forcePageRefresh,
                     exportOk: exportResult.ok,
                     exportReason: exportResult.reason || null,
                     delayMs: CONFIG.stall.AUTO_PAGE_REFRESH_DELAY_MS
