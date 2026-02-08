@@ -81,6 +81,23 @@
 - Doc-only changes: skip `npm.cmd run agent:verify` (no version bump/build). Commit and push directly; do not touch generated files.
 - When reporting `agent:verify` results, always include warning count (explicitly state `0` when none).
 
+## Module metadata and load-order system (canonical)
+- Source contract: Every `src/**/*.js` file must declare a unique `// @module <Name>` header.
+- Source contract: Every module should declare `// @depends <ModuleA, ModuleB, ...>` when it relies on earlier module initialization. Empty `@depends` is only acceptable for true graph roots.
+- Manifest generation: `build/generate-manifest.js` generates `build/manifest.json` from `@module`/`@depends` metadata.
+- Manifest generation: `build/manifest.json` is generated output; do not hand-edit it.
+- Manifest generation: Generation hinting is anchored to `build/manifest.legacy.json` (rollback baseline), not the current generated manifest.
+- Load-order modes: Default mode is graph (`MANIFEST_MODE=graph`).
+- Load-order modes: Rollback mode is legacy (`MANIFEST_MODE=legacy`).
+- Load-order modes: Legacy mode reads `build/manifest.legacy.json` by default; override path with `MANIFEST_LEGACY_PATH`.
+- Verification gates: `build/check-manifest-metadata.js` uses `MODULE_METADATA_POLICY=error` by default; invalid policy values fail fast.
+- Verification gates: `build/check-manifest-graph.js` hard-fails on duplicate modules, unresolved dependencies, and dependency cycles.
+- Verification gates: `build/check-manifest-shadow.js` compares graph candidate order vs legacy-annotated order and reports warning count.
+- Verification gates: `tests/unit/manifest-dependency-coverage.test.js` enforces high dependency-coverage floor and no unresolved metadata.
+- Maintenance rules: When adding/refactoring modules, update `@module`/`@depends` in the same change.
+- Maintenance rules: Keep metadata check warning count at `0` in normal operation.
+- Maintenance rules: Update `build/manifest.legacy.json` only as an explicit rollback-baseline refresh, and call that out in the commit message.
+
 ## Bump policy
 - Patch: refactors, docs, tests, internal tooling
 - Minor: new user-visible features or behavior changes
