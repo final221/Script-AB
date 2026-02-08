@@ -1,12 +1,15 @@
 import fs from 'fs';
 import path from 'path';
 import { describe, it, expect } from 'vitest';
+import loadOrderModule from '../../build/load-order.js';
 
 const ROOT = path.resolve(__dirname, '../..');
 const MANIFEST_PATH = path.join(ROOT, 'build', 'manifest.json');
 const SRC_DIR = path.join(ROOT, 'src');
+const { getLoadOrder } = loadOrderModule;
 
 const fileExists = (relativePath) => fs.existsSync(path.join(SRC_DIR, relativePath));
+const toRel = (filePath) => path.relative(SRC_DIR, filePath).replace(/\\/g, '/');
 
 describe('Manifest', () => {
     it('contains existing files and no duplicates', () => {
@@ -47,5 +50,32 @@ describe('Manifest', () => {
         expect(registryIndex).toBeGreaterThan(-1);
         expect(groupsIndex).toBeLessThan(registryIndex);
         expect(schemasIndex).toBeLessThan(registryIndex);
+    });
+
+    it('builds a deterministic graph load order', () => {
+        const first = getLoadOrder({ srcDir: SRC_DIR, manifestPath: MANIFEST_PATH, mode: 'graph' });
+        const second = getLoadOrder({ srcDir: SRC_DIR, manifestPath: MANIFEST_PATH, mode: 'graph' });
+        const firstRel = first.loadOrder.map(toRel);
+        const secondRel = second.loadOrder.map(toRel);
+
+        expect(first.mode).toBe('graph');
+        expect(firstRel).toEqual(secondRel);
+
+        const seen = new Set();
+        firstRel.forEach((relPath) => {
+            expect(fileExists(relPath)).toBe(true);
+            expect(seen.has(relPath)).toBe(false);
+            seen.add(relPath);
+        });
+
+        expect(toRel(first.entryFile)).toBe('core/orchestrators/CoreOrchestrator.js');
+    });
+
+    it('supports legacy rollback mode', () => {
+        const legacy = getLoadOrder({ srcDir: SRC_DIR, manifestPath: MANIFEST_PATH, mode: 'legacy' });
+
+        expect(legacy.mode).toBe('legacy');
+        expect(legacy.loadOrder.length).toBeGreaterThan(0);
+        expect(toRel(legacy.entryFile)).toBe('core/orchestrators/CoreOrchestrator.js');
     });
 });

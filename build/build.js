@@ -192,11 +192,15 @@ const updateChangelog = (oldVersion, newVersion) => {
     }
 
     const srcDir = path.join(CONFIG.BASE, 'src');
-    const { priorityFiles, entryFile, otherFiles } = getLoadOrder({
+    const { priorityFiles, entryFile, otherFiles, mode: manifestMode, graphReport } = getLoadOrder({
         srcDir,
         manifestPath: CONFIG.MANIFEST,
         manifest: { priority, entry }
     });
+    console.log(`[build] Manifest mode: ${manifestMode}`);
+    if (graphReport) {
+        console.log(`[build] Graph validation: duplicate=${graphReport.duplicateModules.length}, unresolved=${graphReport.unresolvedDependencies.length}, cycles=${graphReport.cycleNodes.length}`);
+    }
 
     const headerContent = fs.existsSync(CONFIG.HEADER)
         ? fs.readFileSync(CONFIG.HEADER, 'utf8').replace('{{VERSION}}', version) + '\n'

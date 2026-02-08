@@ -15,5 +15,6 @@ const npmCmd = process.platform === 'win32' ? 'npm.cmd' : 'npm';
 run(npmCmd, ['run', 'build']);
 run('node', ['build/check-file-size.js']);
 run('node', ['build/check-manifest-metadata.js']);
+run('node', ['build/check-manifest-graph.js']);
 run('node', ['build/check-manifest-shadow.js']);
 run('git', ['status', '-sb']);

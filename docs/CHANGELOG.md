@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.14.10 - 2026-02-08T21:11:50.415Z
+Previous: 4.14.9
+Commit: d93b452
+Changes:
+- add shadow dependency graph order checks without changing manifest behavior
+
 ## 4.14.9 - 2026-02-08T21:05:46.370Z
 Previous: 4.14.8
 Commit: f5069a4
