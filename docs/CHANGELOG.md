@@ -1,5 +1,12 @@
 # Changelog
 
+## 4.5.45 - 2026-02-08T12:17:18.606Z
+Previous: 4.5.44
+Commit: 9813496
+Changes:
+- Update red team tests and findings
+- Update red team challenge tests
+
 ## 4.5.44 - 2026-02-04T22:05:18.472Z
 Previous: 4.5.43
 Commit: 36251a4

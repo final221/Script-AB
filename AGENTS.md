@@ -18,6 +18,18 @@
 - When the user is brainstorming or asking questions, do not change files or run builds.
 - Provide a full opinion and push back when needed; wait for explicit confirmation before edits.
 
+## Communication calibration
+- Calibrate explanation depth to the user’s request and demonstrated context.
+- Default to concise answers for straightforward tasks.
+- Expand detail when reasoning, tradeoffs, or step-by-step logic are requested.
+- Do not assume the user has internal module knowledge.
+- Define non-obvious terms and module roles on first use.
+- State assumptions explicitly when they affect conclusions.
+- For recommendations, include practical runtime impact, not only code-level rationale.
+- Avoid rigid response templates; choose the clearest structure for the question and context.
+- Ask clarifying questions only when ambiguity blocks a correct action.
+- Prefer concrete examples and file references when explaining repository behavior.
+
 ## Role registry (opt-in)
 - Roles are invoked by `Role: <name>` or `Use role: <name>` in the user request.
 
