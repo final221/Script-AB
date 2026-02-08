@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.13.0 - 2026-02-08T17:55:35.997Z
+Previous: 4.12.0
+Commit: 5e5f6a4
+Changes:
+- feat: shorten cooldown after viable untrusted failover trials
+
 ## 4.12.0 - 2026-02-08T17:39:38.055Z
 Previous: 4.11.0
 Commit: 31d2870

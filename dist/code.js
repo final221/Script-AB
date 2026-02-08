@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.12.0
+// @version       4.13.0
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -62,6 +62,8 @@ const CONFIG = (() => {
             PLAY_ABORT_BACKOFF_MAX_MS: 30000, // Max backoff after repeated AbortError failures
             PLAY_ERROR_DECAY_MS: 15000,    // Reset play-error count after this idle window
             PLAY_STUCK_REFRESH_AFTER: 2,   // Refresh after this many PLAY_STUCK failures
+            PLAY_STUCK_LAST_RESORT_PAGE_REFRESH_AFTER: 6, // Force page refresh after repeated PLAY_STUCK + failover dead-end
+            PLAY_STUCK_LAST_RESORT_MIN_STALL_MS: 30000, // Require persistent stall before last-resort page refresh
             FAILOVER_AFTER_NO_HEAL_POINTS: 3, // Failover after this many consecutive no-heal points
             FAILOVER_AFTER_PLAY_ERRORS: 3, // Failover after this many consecutive play failures
             FAILOVER_AFTER_STALL_MS: 30000,  // Failover after this long stuck without progress
@@ -175,7 +177,7 @@ const CONFIG = (() => {
  * Build metadata helpers (version injected at build time).
  */
 const BuildInfo = (() => {
-    const VERSION = '4.12.0';
+    const VERSION = '4.13.0';
 
     const getVersion = () => {
         const gmVersion = (typeof GM_info !== 'undefined' && GM_info?.script?.version)
@@ -186,7 +188,7 @@ const BuildInfo = (() => {
             ? unsafeWindow.GM_info.script.version
             : null;
         if (unsafeVersion) return unsafeVersion;
-        if (VERSION && VERSION !== '4.12.0') return VERSION;
+        if (VERSION && VERSION !== '4.13.0') return VERSION;
         return null;
     };
 
@@ -3410,8 +3412,8 @@ const MonitorCoordinator = (() => {
             }
         };
 
-        const canAutoRefresh = (now) => {
-            if (!CONFIG.stall.AUTO_PAGE_REFRESH) {
+        const canAutoRefresh = (now, forcePageRefresh = false) => {
+            if (!forcePageRefresh && !CONFIG.stall.AUTO_PAGE_REFRESH) {
                 return { ok: false, reason: 'disabled' };
             }
             const lastRefreshAt = readAutoRefreshStamp();
@@ -3507,14 +3509,16 @@ const MonitorCoordinator = (() => {
             const elementId = typeof monitorRegistry.getElementId === 'function'
                 ? monitorRegistry.getElementId(video)
                 : null;
+            const forcePageRefresh = Boolean(detail?.forcePageRefresh);
             const now = Date.now();
-            const autoRefresh = canAutoRefresh(now);
+            const autoRefresh = canAutoRefresh(now, forcePageRefresh);
             if (autoRefresh.ok) {
                 const exportResult = attemptLogExport();
                 Logger.add(LogEvents.tagged('REFRESH', 'Auto page refresh scheduled'), {
                     videoId,
                     elementId,
                     detail,
+                    forced: forcePageRefresh,
                     exportOk: exportResult.ok,
                     exportReason: exportResult.reason || null,
                     delayMs: CONFIG.stall.AUTO_PAGE_REFRESH_DELAY_MS
@@ -8985,7 +8989,8 @@ const RecoveryManager = (() => {
             }
             const now = Number.isFinite(detail.now) ? detail.now : Date.now();
             const lastRefreshAt = monitorState.lastRefreshAt || 0;
-            if (now - lastRefreshAt < CONFIG.stall.REFRESH_COOLDOWN_MS) {
+            const ignoreRefreshCooldown = Boolean(detail.ignoreRefreshCooldown);
+            if (!ignoreRefreshCooldown && now - lastRefreshAt < CONFIG.stall.REFRESH_COOLDOWN_MS) {
                 return {
                     allow: false,
                     reason: 'cooldown',
@@ -9002,6 +9007,34 @@ const RecoveryManager = (() => {
             return { allow: true, reason, now };
         };
 
+        const shouldTriggerLastResortPageRefresh = (
+            context,
+            detail,
+            result,
+            failoverAttempted,
+            failoverStarted,
+            now
+        ) => {
+            if (!context.monitorState) return false;
+            if (detail?.errorName !== 'PLAY_STUCK') return false;
+            if (!result?.shouldFailover) return false;
+            if (!failoverAttempted || failoverStarted) return false;
+
+            const playErrorCount = context.monitorState.playErrorCount || 0;
+            if (playErrorCount < CONFIG.stall.PLAY_STUCK_LAST_RESORT_PAGE_REFRESH_AFTER) {
+                return false;
+            }
+
+            const lastProgressTime = context.monitorState.lastProgressTime || 0;
+            const stalledForMs = lastProgressTime ? (now - lastProgressTime) : null;
+            const minStallMs = CONFIG.stall.PLAY_STUCK_LAST_RESORT_MIN_STALL_MS || 0;
+            if (stalledForMs !== null && stalledForMs < minStallMs) {
+                return false;
+            }
+
+            return true;
+        };
+
         const handlePlayFailure = (videoOrContext, monitorStateOverride, detail = {}) => {
             const normalized = normalizeVideoInput(videoOrContext, monitorStateOverride, detail);
             const context = RecoveryContext.from(
@@ -9011,12 +9044,14 @@ const RecoveryManager = (() => {
                 normalized.detail
             );
             const result = policy.handlePlayFailure(context, detail);
+            const now = Date.now();
             if (detail?.errorName === 'PLAY_STUCK'
                 && context.monitorState
                 && (monitorsById?.size || 0) <= 1) {
                 if (context.monitorState.playErrorCount >= CONFIG.stall.PLAY_STUCK_REFRESH_AFTER) {
                     const eligibility = evaluateRefreshEligibility(context, {
-                        reason: 'play_stuck'
+                        reason: 'play_stuck',
+                        now
                     });
                     const refreshed = eligibility.allow && requestRefresh(context.videoId, context.monitorState, {
                         reason: 'play_stuck',
@@ -9036,9 +9071,52 @@ const RecoveryManager = (() => {
             const beforeActive = candidateSelector.getActiveId();
             candidateSelector.evaluateCandidates('play_error');
             const afterActive = candidateSelector.getActiveId();
+            let failoverAttempted = false;
+            let failoverStarted = false;
             if (result.shouldFailover && afterActive === beforeActive) {
-                failoverManager.attemptFailover(context.videoId, detail.reason || 'play_error', context.monitorState);
+                failoverAttempted = true;
+                failoverStarted = failoverManager.attemptFailover(
+                    context.videoId,
+                    detail.reason || 'play_error',
+                    context.monitorState
+                );
             }
+
+            if (!shouldTriggerLastResortPageRefresh(
+                context,
+                detail,
+                result,
+                failoverAttempted,
+                failoverStarted,
+                now
+            )) {
+                return;
+            }
+
+            const eligibility = evaluateRefreshEligibility(context, {
+                reason: 'play_stuck_last_resort',
+                trigger: detail.reason || 'play_error',
+                now,
+                ignoreRefreshCooldown: true
+            });
+            const refreshed = eligibility.allow && requestRefresh(context.videoId, context.monitorState, {
+                reason: 'play_stuck_last_resort',
+                trigger: detail.reason || 'play_error',
+                detail: 'persistent_play_stuck_no_failover',
+                forcePageRefresh: true,
+                ignoreRefreshCooldown: true,
+                eligibility
+            });
+            Logger.add(LogEvents.tagged('REFRESH', 'Last-resort page refresh decision applied'), {
+                videoId: context.videoId,
+                reason: detail.reason || 'play_error',
+                playErrorCount: context.monitorState?.playErrorCount || 0,
+                failoverAttempted,
+                failoverStarted,
+                refreshEligible: eligibility.allow,
+                refreshEligibilityReason: eligibility.reason || null,
+                refreshed
+            });
         };
 
         const requestRefresh = (videoOrContext, monitorStateOverride, detail = {}) => {
@@ -9063,11 +9141,13 @@ const RecoveryManager = (() => {
                     noHealPointCount: monitorState.noHealPointCount || 0
                 }),
                 trigger: detail.trigger || null,
-                resetType: detail.resetType || null
+                resetType: detail.resetType || null,
+                forcePageRefresh: Boolean(detail.forcePageRefresh)
             });
             onPersistentFailure(context.videoId, {
                 reason: detail.reason || 'source_loss',
-                detail: detail.detail || 'source_loss'
+                detail: detail.detail || 'source_loss',
+                forcePageRefresh: Boolean(detail.forcePageRefresh)
             });
             if (detail.reason === 'processing_asset_exhausted') {
                 activateProcessingAssetHardFailureWindow(
