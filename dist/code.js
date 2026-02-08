@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.14.8
+// @version       4.14.9
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -177,7 +177,7 @@ const CONFIG = (() => {
  * Build metadata helpers (version injected at build time).
  */
 const BuildInfo = (() => {
-    const VERSION = '4.14.8';
+    const VERSION = '4.14.9';
 
     const getVersion = () => {
         const gmVersion = (typeof GM_info !== 'undefined' && GM_info?.script?.version)
@@ -188,7 +188,7 @@ const BuildInfo = (() => {
             ? unsafeWindow.GM_info.script.version
             : null;
         if (unsafeVersion) return unsafeVersion;
-        if (VERSION && VERSION !== '4.14.8') return VERSION;
+        if (VERSION && VERSION !== '4.14.9') return VERSION;
         return null;
     };
 
@@ -1796,6 +1796,7 @@ const LoggerPlaceholderSuppression = (() => {
 
 // --- Logger ---
 // @module Logger
+// @depends LoggerPlaceholderSuppression
 /**
  * Logging and telemetry collection with console capture for timeline correlation.
  * @exports add, captureConsole, getMergedTimeline, getLogs, getConsoleLogs
@@ -6540,6 +6541,7 @@ const CandidateForceSwitch = (() => {
 
 // --- CandidateSelector ---
 // @module CandidateSelector
+// @depends CandidateForceSwitch
 /**
  * Scores and selects the best video candidate for healing.
  */
@@ -7770,6 +7772,7 @@ const RecoveryStallSkipApplier = (() => {
 
 // --- RecoveryDecisionApplier ---
 // @module RecoveryDecisionApplier
+// @depends RecoveryStallSkipApplier
 /**
  * Applies recovery policy decisions with centralized side effects.
  */
@@ -9017,6 +9020,7 @@ const RecoveryRefreshController = (() => {
 
 // --- RecoveryManager ---
 // @module RecoveryManager
+// @depends RecoveryRefreshController
 /**
  * Coordinates backoff and failover recovery strategies.
  */
@@ -11100,6 +11104,7 @@ const ExternalAssetRecoveryFlow = (() => {
 
 // --- ExternalSignalHandlerAsset ---
 // @module ExternalSignalHandlerAsset
+// @depends ExternalAssetRecoveryFlow
 /**
  * Handles processing/offline asset signals.
  */

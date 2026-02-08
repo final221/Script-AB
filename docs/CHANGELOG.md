@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.14.9 - 2026-02-08T21:05:46.370Z
+Previous: 4.14.8
+Commit: f5069a4
+Changes:
+- add phase-1 module metadata scaffold and non-blocking metadata checker
+
 ## 4.14.8 - 2026-02-08T21:02:16.044Z
 Previous: 4.14.7
 Commit: e311720

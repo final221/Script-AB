@@ -1,5 +1,6 @@
 // --- RecoveryDecisionApplier ---
 // @module RecoveryDecisionApplier
+// @depends RecoveryStallSkipApplier
 /**
  * Applies recovery policy decisions with centralized side effects.
  */

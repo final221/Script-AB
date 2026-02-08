@@ -1,5 +1,6 @@
 // --- ExternalSignalHandlerAsset ---
 // @module ExternalSignalHandlerAsset
+// @depends ExternalAssetRecoveryFlow
 /**
  * Handles processing/offline asset signals.
  */

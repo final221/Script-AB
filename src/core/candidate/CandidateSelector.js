@@ -1,5 +1,6 @@
 // --- CandidateSelector ---
 // @module CandidateSelector
+// @depends CandidateForceSwitch
 /**
  * Scores and selects the best video candidate for healing.
  */
