@@ -79,7 +79,7 @@ const FailoverManager = (() => {
 
             const candidate = picker.selectPreferred(fromVideoId, excluded);
             if (!candidate) {
-                Logger.add(LogEvents.tagged('FAILOVER_SKIP', 'No trusted candidate available'), {
+                Logger.add(LogEvents.tagged('FAILOVER_SKIP', 'No failover candidate available'), {
                     from: fromVideoId,
                     reason,
                     excluded: Array.from(excluded)
@@ -100,11 +100,26 @@ const FailoverManager = (() => {
             state.baselineProgressTime = baseline.baselineProgressTime;
 
             candidateSelector.setActiveId(toId);
+            if (candidate.selectionMode === 'viable_untrusted_fallback') {
+                Logger.add(LogEvents.tagged('FAILOVER', 'Using viable untrusted fallback candidate'), {
+                    from: fromVideoId,
+                    to: toId,
+                    reason,
+                    score: candidate.score,
+                    trusted: false,
+                    trustReason: CandidateTrust.getTrustInfo(candidate.result).reason,
+                    readyState: candidate.result?.vs?.readyState ?? null,
+                    hasSrc: Boolean(candidate.result?.vs?.currentSrc || candidate.result?.vs?.src),
+                    deadCandidate: Boolean(candidate.result?.deadCandidate)
+                });
+            }
 
             Logger.add(LogEvents.tagged('FAILOVER', 'Switching to candidate'), {
                 from: fromVideoId,
                 to: toId,
                 reason,
+                selectionMode: candidate.selectionMode || 'unknown',
+                trusted: CandidateTrust.isTrusted(candidate.result),
                 stalledForMs: monitorState?.lastProgressTime ? (now - monitorState.lastProgressTime) : null,
                 candidateState: VideoStateSnapshot.forLog(entry.video, toId)
             });

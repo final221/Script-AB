@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.11.0 - 2026-02-08T17:22:22.095Z
+Previous: 4.10.0
+Commit: 33ad6fc
+Changes:
+- feat: add stream identity continuity scoring and no-heal arbitration
+
 ## 4.10.0 - 2026-02-08T16:55:25.444Z
 Previous: 4.9.0
 Commit: e9ca74a

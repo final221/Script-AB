@@ -197,4 +197,77 @@ describe('FailoverManager attemptFailover', () => {
         const revertLogged = logs.some((entry) => entry.message === LogTags.TAG.FAILOVER_REVERT);
         expect(revertLogged).toBe(true);
     });
+
+    it('starts failover with viable untrusted fallback and still auto-reverts on no progress', () => {
+        vi.useFakeTimers();
+        vi.setSystemTime(150000);
+
+        const fromVideo = createVideo({
+            currentTime: 0,
+            readyState: 2,
+            currentSrc: 'blob:from'
+        }, [[0, 10]]);
+        fromVideo.play = vi.fn().mockResolvedValue();
+
+        const toVideo = createVideo({
+            currentTime: 0,
+            readyState: 2,
+            currentSrc: 'blob:to'
+        }, [[0, 10]]);
+        toVideo.play = vi.fn().mockResolvedValue();
+
+        const monitorsById = new Map([
+            ['video-1', { video: fromVideo, monitor: { state: { hasProgress: false, lastProgressTime: 0 } } }],
+            ['video-2', { video: toVideo, monitor: { state: { hasProgress: false, lastProgressTime: 0 } } }]
+        ]);
+
+        const candidateSelector = {
+            setActiveId: vi.fn(),
+            scoreVideo: vi.fn((_video, _monitor, videoId) => {
+                if (videoId === 'video-2') {
+                    return {
+                        score: 10,
+                        progressEligible: false,
+                        reasons: [],
+                        deadCandidate: false,
+                        vs: { readyState: 2, currentSrc: 'blob:to' },
+                        progressStreakMs: 0,
+                        progressAgoMs: null
+                    };
+                }
+                return {
+                    score: 1,
+                    progressEligible: true,
+                    reasons: [],
+                    deadCandidate: false,
+                    vs: { readyState: 2, currentSrc: 'blob:from' },
+                    progressStreakMs: 0,
+                    progressAgoMs: 0
+                };
+            })
+        };
+
+        Logger.getLogs().length = 0;
+
+        const manager = window.FailoverManager.create({
+            monitorsById,
+            candidateSelector,
+            getVideoId: () => 'video-1',
+            logDebug: () => {}
+        });
+
+        const attempted = manager.attemptFailover('video-1', 'test', monitorsById.get('video-1').monitor.state);
+        expect(attempted).toBe(true);
+        expect(candidateSelector.setActiveId).toHaveBeenCalledWith('video-2');
+
+        vi.advanceTimersByTime(CONFIG.stall.FAILOVER_PROGRESS_TIMEOUT_MS + 1);
+
+        expect(candidateSelector.setActiveId).toHaveBeenLastCalledWith('video-1');
+        const logs = Logger.getLogs();
+        const fallbackLogged = logs.some((entry) => (
+            entry.message === LogTags.TAG.FAILOVER
+            && entry.detail?.message === 'Using viable untrusted fallback candidate'
+        ));
+        expect(fallbackLogged).toBe(true);
+    });
 });
