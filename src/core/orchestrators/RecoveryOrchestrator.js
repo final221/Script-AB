@@ -1,5 +1,5 @@
 // @module RecoveryOrchestrator
-// @depends MonitoringOrchestrator
+// @depends MonitoringOrchestrator, HealPipeline, StallHandler, ExternalSignalRouter
 // --- RecoveryOrchestrator ---
 /**
  * Coordinates stall handling, healing, and external signal recovery.

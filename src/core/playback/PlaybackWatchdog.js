@@ -1,5 +1,5 @@
 // @module PlaybackWatchdog
-// @depends PlaybackEventHandlers
+// @depends PlaybackEventHandlers, PlaybackLogHelper, PlaybackMediaWatcher, MediaState
 // --- PlaybackWatchdog ---
 /**
  * Watchdog interval that evaluates stalled playback state.

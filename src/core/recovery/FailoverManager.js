@@ -1,5 +1,5 @@
 // @module FailoverManager
-// @depends FailoverProbeController
+// @depends FailoverProbeController, FailoverCandidatePicker, ProgressModel, CandidateTrust, VideoStateSnapshot
 // --- FailoverManager ---
 /**
  * Handles candidate failover attempts when healing fails.

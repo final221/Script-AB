@@ -1,5 +1,5 @@
 // @module PlaybackMonitor
-// @depends PlaybackWatchdog
+// @depends PlaybackWatchdog, PlaybackStateTracker, PlaybackEventHandlers, PlaybackStateTransitions, PlaybackStateStore
 // --- PlaybackMonitor ---
 /**
  * Tracks playback progress using media events plus a watchdog interval.

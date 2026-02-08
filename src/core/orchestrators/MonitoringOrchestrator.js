@@ -1,5 +1,5 @@
 // @module MonitoringOrchestrator
-// @depends ExternalSignalRouter
+// @depends ExternalSignalRouter, MonitorRegistry, CandidateSelector, MonitorCoordinator, RecoveryManager
 // --- MonitoringOrchestrator ---
 /**
  * Sets up monitoring, candidate scoring, and recovery helpers.

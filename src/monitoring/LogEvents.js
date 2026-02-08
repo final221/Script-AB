@@ -1,5 +1,5 @@
 // @module LogEvents
-// @depends Logger
+// @depends Logger, LogTags
 // --- LogEvents ---
 /**
  * Central log tags and summary helpers for consistent, compact log messages.

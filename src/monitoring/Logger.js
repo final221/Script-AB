@@ -1,6 +1,6 @@
 // --- Logger ---
 // @module Logger
-// @depends LoggerPlaceholderSuppression
+// @depends LoggerPlaceholderSuppression, LogNormalizer
 /**
  * Logging and telemetry collection with console capture for timeline correlation.
  * @exports add, captureConsole, getMergedTimeline, getLogs, getConsoleLogs

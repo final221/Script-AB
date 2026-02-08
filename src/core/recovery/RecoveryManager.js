@@ -1,6 +1,6 @@
 // --- RecoveryManager ---
 // @module RecoveryManager
-// @depends RecoveryRefreshController
+// @depends RecoveryRefreshController, RecoveryPolicy, FailoverManager, RecoveryContext
 /**
  * Coordinates backoff and failover recovery strategies.
  */

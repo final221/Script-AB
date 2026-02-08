@@ -1,5 +1,5 @@
 // @module HealPipeline
-// @depends HealPointPoller
+// @depends HealPointPoller, CatchUpController, HealAttemptLogger, HealAttemptRunner, PlaybackStateTransitions, PlaybackStateStore
 // --- HealPipeline ---
 /**
  * Handles heal-point polling and seek recovery.

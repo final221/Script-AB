@@ -110,6 +110,8 @@
     "core/recovery/StallHandler.js",
     "core/external/ExternalSignalUtils.js",
     "core/external/ExternalSignalHandlerStall.js",
+    "core/external/ExternalAssetRecoveryOps.js",
+    "core/external/ExternalAssetRecoveryProcess.js",
     "core/external/ExternalAssetRecoveryFlow.js",
     "core/external/ExternalSignalHandlerAsset.js",
     "core/external/ExternalSignalHandlerAdblock.js",

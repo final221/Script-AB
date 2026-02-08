@@ -1,5 +1,23 @@
 # Changelog
 
+## 4.14.17 - 2026-02-08T22:09:34.397Z
+Previous: 4.14.16
+Commit: b40043b
+Changes:
+- No commits detected since last build
+
+## 4.14.16 - 2026-02-08T22:09:01.076Z
+Previous: 4.14.15
+Commit: b40043b
+Changes:
+- No commits detected since last build
+
+## 4.14.15 - 2026-02-08T22:08:19.312Z
+Previous: 4.14.14
+Commit: b40043b
+Changes:
+- build: remove legacy manifest and shadow load-order checks
+
 ## 4.14.14 - 2026-02-08T21:59:29.914Z
 Previous: 4.14.13
 Commit: ee89780

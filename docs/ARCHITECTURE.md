@@ -151,16 +151,18 @@ The build uses a priority list followed by auto-discovered modules, then the ent
 108. `core/recovery/StallHandler.js`
 109. `core/external/ExternalSignalUtils.js`
 110. `core/external/ExternalSignalHandlerStall.js`
-111. `core/external/ExternalAssetRecoveryFlow.js`
-112. `core/external/ExternalSignalHandlerAsset.js`
-113. `core/external/ExternalSignalHandlerAdblock.js`
-114. `core/external/ExternalSignalHandlerDecoder.js`
-115. `core/external/ExternalSignalHandlerFallback.js`
-116. `core/external/ExternalSignalRouter.js`
-117. `core/orchestrators/MonitoringOrchestrator.js`
-118. `core/orchestrators/RecoveryOrchestrator.js`
-119. `core/orchestrators/StreamHealer.js`
-120. `core/orchestrators/CoreOrchestrator.js`
+111. `core/external/ExternalAssetRecoveryOps.js`
+112. `core/external/ExternalAssetRecoveryProcess.js`
+113. `core/external/ExternalAssetRecoveryFlow.js`
+114. `core/external/ExternalSignalHandlerAsset.js`
+115. `core/external/ExternalSignalHandlerAdblock.js`
+116. `core/external/ExternalSignalHandlerDecoder.js`
+117. `core/external/ExternalSignalHandlerFallback.js`
+118. `core/external/ExternalSignalRouter.js`
+119. `core/orchestrators/MonitoringOrchestrator.js`
+120. `core/orchestrators/RecoveryOrchestrator.js`
+121. `core/orchestrators/StreamHealer.js`
+122. `core/orchestrators/CoreOrchestrator.js`
 <!-- LOAD_ORDER_END -->
 
 
