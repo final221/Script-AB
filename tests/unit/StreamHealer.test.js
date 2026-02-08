@@ -43,6 +43,10 @@ describe('StreamHealer', () => {
         expect(typeof window.StreamHealer.getStats).toBe('function');
     });
 
+    it('has triggerLastResortRefresh method', () => {
+        expect(typeof window.StreamHealer.triggerLastResortRefresh).toBe('function');
+    });
+
     it('getStats returns expected shape', () => {
         const stats = window.StreamHealer.getStats();
         expect(stats).toHaveProperty('healAttempts');
@@ -65,6 +69,15 @@ describe('StreamHealer', () => {
         StreamHealer.stopMonitoring(videoA);
         StreamHealer.stopMonitoring(videoB);
         vi.useRealTimers();
+    });
+
+    it('returns structured result when manual last-resort refresh is requested without monitors', () => {
+        const healer = window.StreamHealer.create();
+        const result = healer.triggerLastResortRefresh();
+        expect(result).toMatchObject({
+            ok: false,
+            reason: 'no_monitored_video'
+        });
     });
 });
 

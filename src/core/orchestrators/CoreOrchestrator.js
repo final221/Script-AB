@@ -92,14 +92,43 @@ const CoreOrchestrator = (() => {
         Logger?.add?.('[CORE] exportTwitchAdLogs not available in top window');
     };
 
+    const triggerLastResortProxy = (options = {}) => {
+        try {
+            if (window.top && typeof window.top.triggerTwitchAdLastResort === 'function') {
+                return window.top.triggerTwitchAdLastResort(options);
+            }
+        } catch (error) {
+            Logger?.add?.('[CORE] triggerTwitchAdLastResort proxy failed', { error: error?.message });
+            return { ok: false, reason: 'proxy_failed' };
+        }
+        Logger?.add?.('[CORE] triggerTwitchAdLastResort not available in top window');
+        return { ok: false, reason: 'proxy_missing' };
+    };
+
+    const triggerLastResort = (options = {}) => {
+        try {
+            const healer = ensureStreamHealer();
+            if (typeof healer?.triggerLastResortRefresh !== 'function') {
+                return { ok: false, reason: 'method_unavailable' };
+            }
+            return healer.triggerLastResortRefresh(options);
+        } catch (error) {
+            Logger?.add?.('[CORE] triggerTwitchAdLastResort failed', { error: error?.message });
+            return { ok: false, reason: 'exception', error: error?.message };
+        }
+    };
+
     return {
         init: () => {
             Logger.add('[CORE] Initializing Stream Healer');
 
             const isTopWindow = window.self === window.top;
             const exportFn = isTopWindow ? exportLogs : exportLogsProxy;
+            const lastResortFn = isTopWindow ? triggerLastResort : triggerLastResortProxy;
             exposeGlobal('exportTwitchAdLogs', exportFn);
             exposeGlobal('exporttwitchadlogs', exportFn);
+            exposeGlobal('triggerTwitchAdLastResort', lastResortFn);
+            exposeGlobal('triggertwitchadlastresort', lastResortFn);
 
             if (!isTopWindow) {
                 return;

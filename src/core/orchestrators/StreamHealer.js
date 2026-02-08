@@ -33,6 +33,54 @@ const StreamHealer = (() => {
             logDebug
         });
 
+        const triggerLastResortRefresh = (options = {}) => {
+            const activeId = monitoring.candidateSelector.getActiveId();
+            const fallbackId = monitoring.monitorsById.keys().next().value || null;
+            const targetVideoId = options.videoId || activeId || fallbackId;
+            if (!targetVideoId) {
+                Logger.add(LogEvents.tagged('REFRESH', 'Manual last-resort refresh skipped (no monitored video)'), {
+                    reason: 'manual_last_resort',
+                    activeVideoId: activeId || null,
+                    monitoredCount: monitoring.getMonitoredCount()
+                });
+                return {
+                    ok: false,
+                    reason: 'no_monitored_video',
+                    activeVideoId: activeId || null
+                };
+            }
+
+            const entry = monitoring.monitorsById.get(targetVideoId);
+            const monitorState = entry?.monitor?.state || null;
+            const eligibility = monitoring.recoveryManager.canRequestRefresh(targetVideoId, monitorState, {
+                reason: 'manual_last_resort',
+                trigger: 'manual_command',
+                ignoreRefreshCooldown: true
+            });
+            const refreshed = eligibility.allow && monitoring.recoveryManager.requestRefresh(targetVideoId, monitorState, {
+                reason: 'manual_last_resort',
+                trigger: 'manual_command',
+                detail: options.detail || 'manual_last_resort',
+                forcePageRefresh: true,
+                ignoreRefreshCooldown: true,
+                eligibility
+            });
+
+            Logger.add(LogEvents.tagged('REFRESH', 'Manual last-resort refresh requested'), {
+                videoId: targetVideoId,
+                refreshEligible: eligibility.allow,
+                refreshEligibilityReason: eligibility.reason || null,
+                refreshed
+            });
+
+            return {
+                ok: refreshed,
+                videoId: targetVideoId,
+                refreshEligible: eligibility.allow,
+                refreshEligibilityReason: eligibility.reason || null
+            };
+        };
+
         return {
             monitor: monitoring.monitor,
             stopMonitoring: monitoring.stopMonitoring,
@@ -40,6 +88,7 @@ const StreamHealer = (() => {
             attemptHeal: (video, state) => recovery.attemptHeal(video, state),
             handleExternalSignal: (signal) => recovery.handleExternalSignal(signal),
             scanForVideos: monitoring.scanForVideos,
+            triggerLastResortRefresh,
             getStats: () => ({
                 healAttempts: recovery.getAttempts(),
                 isHealing: recovery.isHealing(),
@@ -71,6 +120,7 @@ const StreamHealer = (() => {
         attemptHeal: callDefault('attemptHeal'),
         handleExternalSignal: callDefault('handleExternalSignal'),
         scanForVideos: callDefault('scanForVideos'),
+        triggerLastResortRefresh: callDefault('triggerLastResortRefresh'),
         getStats: callDefault('getStats')
     };
 })();

@@ -65,4 +65,15 @@ describe('Core Modules', () => {
 
     });
 
+    describe('Manual last resort hook', () => {
+        it('exposes triggerTwitchAdLastResort and returns a structured result', () => {
+            const triggerFn = window.triggerTwitchAdLastResort;
+            expect(typeof triggerFn).toBe('function');
+
+            const result = triggerFn();
+            expect(result).toBeDefined();
+            expect(typeof result.ok).toBe('boolean');
+        });
+    });
+
 });
