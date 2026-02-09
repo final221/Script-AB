@@ -1,5 +1,17 @@
 # Changelog
 
+## 4.14.19 - 2026-02-09T20:53:28.487Z
+Previous: 4.14.18
+Commit: 091a5a1
+Changes:
+- No commits detected since last build
+
+## 4.14.18 - 2026-02-09T20:53:06.207Z
+Previous: 4.14.17
+Commit: 091a5a1
+Changes:
+- refactor: split asset recovery flow and strengthen semantic manifest deps
+
 ## 4.14.17 - 2026-02-08T22:09:34.397Z
 Previous: 4.14.16
 Commit: b40043b

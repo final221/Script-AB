@@ -34,10 +34,14 @@ const rootsToAdd = [
     'tests',
     'docs',
     'build',
-    'data'
+    'data',
+    'blueprint'
 ];
 
 const existingRoots = rootsToAdd.filter((entry) => (
+    fs.existsSync(path.join(process.cwd(), entry))
+));
+const existingFiles = filesToAdd.filter((entry) => (
     fs.existsSync(path.join(process.cwd(), entry))
 ));
 
@@ -45,7 +49,7 @@ const existingRoots = rootsToAdd.filter((entry) => (
 run('git', ['add', '-u']);
 
 // Stage generated/release and source roots (includes new files in these roots).
-run('git', ['add', ...filesToAdd, ...existingRoots]);
+run('git', ['add', ...existingFiles, ...existingRoots]);
 
 run('git', ['commit', '-m', commitMessage]);
 run('git', ['push']);

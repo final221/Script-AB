@@ -1,14 +1,13 @@
 {
-  "name": "twitch-stream-healer",
-  "version": "4.14.19",
-  "description": "Twitch Stream Healer userscript with self-healing recovery",
+  "name": "{{PROJECT_NAME}}",
+  "version": "{{INITIAL_VERSION}}",
+  "description": "{{PROJECT_DESCRIPTION}}",
   "private": true,
   "scripts": {
     "sync-docs": "node build/sync-docs.js",
     "build": "node build/build.js",
     "build:minor": "npm run build -- --minor",
     "build:major": "npm run build -- --major",
-    "blueprint:scaffold": "node build/scaffold-blueprint.js",
     "agent:verify": "node build/agent-verify.js",
     "agent:commit": "node build/agent-commit.js",
     "verify": "npm run agent:verify",
@@ -20,7 +19,6 @@
   },
   "devDependencies": {
     "jsdom": "^27.2.0",
-    "nodemon": "^3.0.0",
     "vitest": "^4.0.15"
   }
 }

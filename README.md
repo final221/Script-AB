@@ -14,6 +14,12 @@ Twitch stream healing userscript with comprehensive logging. When uBlock Origin 
 ### Agent Workflow
 For agents, the single authoritative workflow and constraints live in `AGENTS.md`.
 
+### Blueprint New Repos
+```bash
+npm run blueprint:scaffold -- --target ../my-new-repo --name my-new-repo --title "My New Repo" --description "Project description"
+```
+This creates a new repository with the same process behavior (verify/commit workflow, manifest graph gates, metadata checks, and docs sync).
+
 ### Build
 ```bash
 npm.cmd run build             # Patch: 4.0.5 -> 4.0.6
@@ -104,7 +110,7 @@ See `docs/CONFIG.md` for the generated defaults and `docs/TUNING.md` for tuning 
 
 ## Version
 
-Current: **4.14.17**
+Current: **4.14.19**
 
 Version increments automatically on each build (patch).
 Changelog: `docs/CHANGELOG.md`

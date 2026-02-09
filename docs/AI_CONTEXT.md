@@ -38,6 +38,7 @@
 - **Seek Failures**: Check `src/recovery/LiveEdgeSeeker.js`.
 - **Adding Logs**: Use `src/monitoring/Logger.js`.
 - **Verification + Build**: See `AGENTS.md` (single source of workflow truth).
+- **Scaffold new repo with same operating model**: `npm run blueprint:scaffold -- --target ../new-repo --name new-repo`
 - **Red Team findings**: Check `tests/RED_TEAM_FINDINGS.md`.
 
 ## Generated Artifacts
