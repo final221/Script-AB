@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.14.20 - 2026-02-09T20:55:25.723Z
+Previous: 4.14.19
+Commit: fc3eb1b
+Changes:
+- feat: add reusable repo blueprint scaffold and template kit
+
 ## 4.14.19 - 2026-02-09T20:53:28.487Z
 Previous: 4.14.18
 Commit: 091a5a1

@@ -34,8 +34,7 @@ const rootsToAdd = [
     'tests',
     'docs',
     'build',
-    'data',
-    'blueprint'
+    'data'
 ];
 
 const existingRoots = rootsToAdd.filter((entry) => (

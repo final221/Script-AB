@@ -1,6 +1,6 @@
 {
   "name": "twitch-stream-healer",
-  "version": "4.14.19",
+  "version": "4.14.20",
   "description": "Twitch Stream Healer userscript with self-healing recovery",
   "private": true,
   "scripts": {
@@ -8,7 +8,6 @@
     "build": "node build/build.js",
     "build:minor": "npm run build -- --minor",
     "build:major": "npm run build -- --major",
-    "blueprint:scaffold": "node build/scaffold-blueprint.js",
     "agent:verify": "node build/agent-verify.js",
     "agent:commit": "node build/agent-commit.js",
     "verify": "npm run agent:verify",
