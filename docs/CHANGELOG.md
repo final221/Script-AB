@@ -1,5 +1,17 @@
 # Changelog
 
+## 4.14.22 - 2026-02-10T21:45:15.461Z
+Previous: 4.14.21
+Commit: 8b273df
+Changes:
+- No commits detected since last build
+
+## 4.14.21 - 2026-02-10T21:44:05.065Z
+Previous: 4.14.20
+Commit: 8b273df
+Changes:
+- chore: move blueprint out of repo and remove local scaffold artifacts
+
 ## 4.14.20 - 2026-02-09T20:55:25.723Z
 Previous: 4.14.19
 Commit: fc3eb1b
