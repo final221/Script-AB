@@ -200,6 +200,7 @@ const ExternalAssetRecoveryProcess = (() => {
                 reason: 'processing_asset_exhausted',
                 trigger: 'processing_asset',
                 detail: 'no_candidate_progress',
+                forcePageRefresh: true,
                 eligibility
             })
             : false;

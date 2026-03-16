@@ -30,6 +30,7 @@ All settings live in `src/config/Config.js`.
 - `stall.RETRY_COOLDOWN_MS`: Cooldown between heal attempts on the same video.
 - `stall.PLAY_ABORT_BACKOFF_BASE_MS`: Base backoff after AbortError failures.
 - `stall.PLAY_ABORT_BACKOFF_MAX_MS`: Max backoff after repeated AbortError failures.
+- `stall.AUTO_PAGE_REFRESH`: Enables broad automatic page reloads after refresh requests; forced last-resort reloads can still occur for manual triggers and exhausted processing-asset recovery.
 
 ## Failover
 - `stall.FAILOVER_AFTER_NO_HEAL_POINTS`: Failover after repeated no-heal results.

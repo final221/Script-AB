@@ -29,6 +29,7 @@
 - Heal attempt: `StreamHealer.attemptHeal()` -> `HealPipeline.attemptHeal()` -> `HealPointPoller.pollForHealPoint()` -> `LiveEdgeSeeker.seekAndPlay()`
 - No-heal-point: `HealPointPoller.pollForHealPoint()` -> `RecoveryManager.handleNoHealPoint()` -> `NoHealPointPolicy.decide()`
 - Play error: `HealPipeline.attemptHeal()` -> `RecoveryManager.handlePlayFailure()` -> `PlayErrorPolicy.handlePlayFailure()`
+- Processing asset collapse: `ExternalSignalHandlerAsset` -> `ExternalAssetRecoveryProcess.run()` -> forced log export + page reload after exhausted candidate recovery
 - Candidate switch: `CandidateSelector.evaluateCandidates()` -> `CandidateDecision.decide()` -> `CandidateSwitchPolicy.shouldSwitch()`
 - Failover: `RecoveryManager.handleNoHealPoint()/handlePlayFailure()` -> `FailoverManager.attemptFailover()`
 
@@ -89,6 +90,7 @@ Use this to route changes quickly.
 - `src/core/external/ExternalSignalRouter.js`
 - `src/core/external/ExternalSignalHandlerStall.js`
 - `src/core/external/ExternalSignalHandlerAsset.js`
+- `src/core/external/ExternalAssetRecoveryProcess.js`
 
 ### Logging and reporting
 - `src/monitoring/Logger.js`
@@ -99,7 +101,8 @@ Use this to route changes quickly.
 ## Debugging Tools
 The following global functions are exposed for debugging:
 - `window.exportTwitchAdLogs()`: Downloads report (healer + metrics + merged script/console logs).
-- `window.triggerTwitchAdLastResort(options?)`: Forces last-resort refresh flow (log export + page reload path).
+- `window.triggerTwitchAdLastResort(options?)`: Manual last-resort refresh flow (log export + page reload path).
+Automatic processing-asset exhaustion now reuses the same export-and-reload path after candidate recovery is exhausted.
 
 ## Docs Index
 

@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.15.0 - 2026-03-16T18:12:37.486Z
+Previous: 4.14.22
+Commit: 5197a0d
+Changes:
+- Harden agent commit with first-push upstream auto-setup
+
 ## 4.14.22 - 2026-02-10T21:45:15.461Z
 Previous: 4.14.21
 Commit: 8b273df

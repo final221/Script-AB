@@ -78,7 +78,7 @@ const MonitorCoordinator = (() => {
 
         const scanForVideos = (reason, detail = {}) => {
             if (!document?.querySelectorAll) {
-                return;
+                return null;
             }
             const beforeCount = monitorsById.size;
             const videos = Array.from(document.querySelectorAll('video'));
@@ -108,7 +108,7 @@ const MonitorCoordinator = (() => {
             for (const item of discovered) {
                 monitorRegistry.monitor(item.video);
             }
-            candidateSelector.evaluateCandidates(`scan_${reason || 'manual'}`);
+            const preferred = candidateSelector.evaluateCandidates(`scan_${reason || 'manual'}`);
             candidateSelector.getActiveId();
             const afterCount = monitorsById.size;
             Logger.add(LogEvents.tagged('SCAN', 'Video rescan complete'), {
@@ -118,6 +118,20 @@ const MonitorCoordinator = (() => {
                 newMonitors: Math.max(afterCount - beforeCount, 0),
                 totalMonitors: afterCount
             });
+            return {
+                preferred,
+                beforeCount,
+                afterCount,
+                discovered
+            };
+        };
+
+        const shouldForceRefreshTakeover = (detail, preferred) => {
+            if (detail?.reason !== 'processing_asset_exhausted') return false;
+            if (!preferred?.id) return false;
+            const readyState = preferred.vs?.readyState ?? 0;
+            const hasSource = Boolean(preferred.vs?.currentSrc || preferred.vs?.src);
+            return readyState >= CONFIG.monitoring.PROBATION_READY_STATE || hasSource;
         };
 
         const refreshVideo = (videoId, detail = {}) => {
@@ -163,9 +177,19 @@ const MonitorCoordinator = (() => {
             monitorRegistry.stopMonitoring(video);
             monitorRegistry.resetVideoId(video);
             setTimeout(() => {
-                scanForVideos('refresh', {
+                const scanResult = scanForVideos('refresh', {
                     videoId,
                     ...detail
+                });
+                if (!shouldForceRefreshTakeover(detail, scanResult?.preferred)) {
+                    return;
+                }
+                candidateSelector.forceSwitch?.(scanResult.preferred, {
+                    reason: 'refresh_replacement',
+                    requireProgressEligible: false,
+                    requireSevere: false,
+                    label: 'Forced switch to refreshed candidate',
+                    suppressionLabel: 'Refreshed candidate switch suppressed'
                 });
             }, 100);
             return true;

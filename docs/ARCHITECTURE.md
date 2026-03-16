@@ -311,6 +311,7 @@ Script Logger.add() -> Logger.getMergedTimeline()
 - **ExternalSignalUtils.js** - Shared helpers for console signal handling
 - **ExternalSignalHandlerStall.js** - Playhead stall signal logic
 - **ExternalSignalHandlerAsset.js** - Processing/offline asset signal logic; skip forced switching while failover is active
+- **ExternalAssetRecoveryProcess.js** - Candidate recovery passes for processing/offline assets; forces log export + page reload after recovery exhaustion
 - **ExternalSignalHandlerAdblock.js** - Ad-block signal logic
 - **ExternalSignalHandlerFallback.js** - Default external signal logging
 
