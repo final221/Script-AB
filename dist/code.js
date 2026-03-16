@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.15.4
+// @version       4.15.5
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -180,7 +180,7 @@ const CONFIG = (() => {
  * Build metadata helpers (version injected at build time).
  */
 const BuildInfo = (() => {
-    const VERSION = '4.15.4';
+    const VERSION = '4.15.5';
 
     const getVersion = () => {
         const gmVersion = (typeof GM_info !== 'undefined' && GM_info?.script?.version)
@@ -191,7 +191,7 @@ const BuildInfo = (() => {
             ? unsafeWindow.GM_info.script.version
             : null;
         if (unsafeVersion) return unsafeVersion;
-        if (VERSION && VERSION !== '4.15.4') return VERSION;
+        if (VERSION && VERSION !== '4.15.5') return VERSION;
         return null;
     };
 
@@ -1977,6 +1977,79 @@ const Logger = (() => {
 
 
 
+// @module GlobalFunctionBridge
+// @depends Logger
+/**
+ * Exposes debugging functions across window/global/userscript bridge targets.
+ */
+const GlobalFunctionBridge = (() => {
+    const getTargets = () => {
+        const targets = [];
+
+        if (typeof globalThis !== 'undefined') {
+            targets.push(globalThis);
+        }
+        if (typeof window !== 'undefined' && window !== globalThis) {
+            targets.push(window);
+        }
+        if (typeof unsafeWindow !== 'undefined') {
+            targets.push(unsafeWindow);
+        }
+
+        return Array.from(new Set(targets));
+    };
+
+    const assignToTargets = (targets, name, fn) => {
+        targets.forEach((target) => {
+            try {
+                target[name] = fn;
+            } catch (error) {
+                Logger?.add?.('[CORE] Failed to expose global target', {
+                    name,
+                    error: error?.message
+                });
+            }
+        });
+    };
+
+    const exportToTargets = (targets, name, fn) => {
+        if (typeof exportFunction === 'function') {
+            targets.forEach((target) => {
+                const rawTarget = target?.wrappedJSObject || target;
+                try {
+                    exportFunction(fn, rawTarget, { defineAs: name });
+                } catch (error) {
+                    Logger?.add?.('[CORE] Failed to export function', {
+                        name,
+                        error: error?.message
+                    });
+                }
+            });
+            return;
+        }
+
+        targets.forEach((target) => {
+            if (!target?.wrappedJSObject) return;
+            try {
+                target.wrappedJSObject[name] = fn;
+            } catch (error) {
+                Logger?.add?.('[CORE] Failed to expose wrapped global', {
+                    name,
+                    error: error?.message
+                });
+            }
+        });
+    };
+
+    const expose = (name, fn) => {
+        const targets = getTargets();
+        assignToTargets(targets, name, fn);
+        exportToTargets(targets, name, fn);
+    };
+
+    return { expose };
+})();
+
 // @module LogEvents
 // @depends Logger, LogTags
 // --- LogEvents ---
@@ -2703,6 +2776,100 @@ Total entries: ${logs.length}
 })();
 
 
+
+// @module CoreDebugHooks
+// @depends GlobalFunctionBridge, Logger, Metrics, ReportGenerator
+/**
+ * Installs exported debug hooks and their top-window proxies.
+ */
+const CoreDebugHooks = (() => {
+    const getDefaultTopWindow = () => {
+        try {
+            return window.top;
+        } catch (error) {
+            Logger?.add?.('[CORE] Failed to access top window', { error: error?.message });
+            return null;
+        }
+    };
+
+    const create = (options = {}) => {
+        const ensureStreamHealer = options.ensureStreamHealer || (() => null);
+        const getTopWindow = options.getTopWindow || getDefaultTopWindow;
+        const isTopWindow = Boolean(options.isTopWindow);
+
+        const exportLogs = () => {
+            try {
+                const healer = ensureStreamHealer();
+                const healerStats = healer?.getStats ? healer.getStats() : {};
+                const metricsSummary = Metrics?.getSummary ? Metrics.getSummary() : {};
+                const mergedLogs = Logger?.getMergedTimeline ? Logger.getMergedTimeline() : [];
+                ReportGenerator?.exportReport?.(metricsSummary, mergedLogs, healerStats);
+            } catch (error) {
+                Logger?.add?.('[CORE] exportTwitchAdLogs failed', { error: error?.message });
+            }
+        };
+
+        const exportLogsProxy = () => {
+            try {
+                const topWindow = getTopWindow();
+                if (topWindow && typeof topWindow.exportTwitchAdLogs === 'function') {
+                    topWindow.exportTwitchAdLogs();
+                    return;
+                }
+            } catch (error) {
+                Logger?.add?.('[CORE] exportTwitchAdLogs proxy failed', { error: error?.message });
+            }
+            Logger?.add?.('[CORE] exportTwitchAdLogs not available in top window');
+        };
+
+        const triggerLastResort = (options = {}) => {
+            try {
+                const healer = ensureStreamHealer();
+                if (typeof healer?.triggerLastResortRefresh !== 'function') {
+                    return { ok: false, reason: 'method_unavailable' };
+                }
+                return healer.triggerLastResortRefresh(options);
+            } catch (error) {
+                Logger?.add?.('[CORE] triggerTwitchAdLastResort failed', { error: error?.message });
+                return { ok: false, reason: 'exception', error: error?.message };
+            }
+        };
+
+        const triggerLastResortProxy = (options = {}) => {
+            try {
+                const topWindow = getTopWindow();
+                if (topWindow && typeof topWindow.triggerTwitchAdLastResort === 'function') {
+                    return topWindow.triggerTwitchAdLastResort(options);
+                }
+            } catch (error) {
+                Logger?.add?.('[CORE] triggerTwitchAdLastResort proxy failed', { error: error?.message });
+                return { ok: false, reason: 'proxy_failed' };
+            }
+            Logger?.add?.('[CORE] triggerTwitchAdLastResort not available in top window');
+            return { ok: false, reason: 'proxy_missing' };
+        };
+
+        const installGlobals = () => {
+            const exportFn = isTopWindow ? exportLogs : exportLogsProxy;
+            const lastResortFn = isTopWindow ? triggerLastResort : triggerLastResortProxy;
+
+            GlobalFunctionBridge.expose('exportTwitchAdLogs', exportFn);
+            GlobalFunctionBridge.expose('exporttwitchadlogs', exportFn);
+            GlobalFunctionBridge.expose('triggerTwitchAdLastResort', lastResortFn);
+            GlobalFunctionBridge.expose('triggertwitchadlastresort', lastResortFn);
+        };
+
+        return {
+            installGlobals,
+            exportLogs,
+            exportLogsProxy,
+            triggerLastResort,
+            triggerLastResortProxy
+        };
+    };
+
+    return { create };
+})();
 
 // @module ConsoleInterceptor
 // @depends ReportGenerator
@@ -12133,7 +12300,7 @@ const StreamHealer = (() => {
 })();
 
 // @module CoreOrchestrator
-// @depends StreamHealer
+// @depends CoreDebugHooks, Instrumentation, StreamHealer, Validate, VideoDiscovery
 // ============================================================================
 // 6. CORE ORCHESTRATOR (Stream Healer Edition)
 // ============================================================================
@@ -12143,58 +12310,6 @@ const StreamHealer = (() => {
  */
 const CoreOrchestrator = (() => {
     let streamHealer = null;
-    const exposeGlobal = (name, fn) => {
-        const targets = [];
-
-        if (typeof globalThis !== 'undefined') {
-            targets.push(globalThis);
-        }
-        if (typeof window !== 'undefined' && window !== globalThis) {
-            targets.push(window);
-        }
-        if (typeof unsafeWindow !== 'undefined') {
-            targets.push(unsafeWindow);
-        }
-
-        const uniqueTargets = Array.from(new Set(targets));
-
-        uniqueTargets.forEach((target) => {
-            try {
-                target[name] = fn;
-            } catch (error) {
-                Logger?.add?.('[CORE] Failed to expose global target', {
-                    name,
-                    error: error?.message
-                });
-            }
-        });
-
-        if (typeof exportFunction === 'function') {
-            uniqueTargets.forEach((target) => {
-                const rawTarget = target?.wrappedJSObject || target;
-                try {
-                    exportFunction(fn, rawTarget, { defineAs: name });
-                } catch (error) {
-                    Logger?.add?.('[CORE] Failed to export function', {
-                        name,
-                        error: error?.message
-                    });
-                }
-            });
-        } else {
-            uniqueTargets.forEach((target) => {
-                if (!target?.wrappedJSObject) return;
-                try {
-                    target.wrappedJSObject[name] = fn;
-                } catch (error) {
-                    Logger?.add?.('[CORE] Failed to expose wrapped global', {
-                        name,
-                        error: error?.message
-                    });
-                }
-            });
-        }
-    };
 
     const ensureStreamHealer = () => {
         if (!streamHealer) {
@@ -12204,54 +12319,65 @@ const CoreOrchestrator = (() => {
         return streamHealer;
     };
 
-    const exportLogs = () => {
-        try {
-            const healer = ensureStreamHealer();
-            const healerStats = healer?.getStats ? healer.getStats() : {};
-            const metricsSummary = Metrics?.getSummary ? Metrics.getSummary() : {};
-            const mergedLogs = Logger?.getMergedTimeline ? Logger.getMergedTimeline() : [];
-            ReportGenerator?.exportReport?.(metricsSummary, mergedLogs, healerStats);
-        } catch (error) {
-            Logger?.add?.('[CORE] exportTwitchAdLogs failed', { error: error?.message });
+    const installDebugHooks = (isTopWindow) => {
+        const hooks = CoreDebugHooks.create({
+            ensureStreamHealer,
+            isTopWindow
+        });
+        hooks.installGlobals();
+        return hooks;
+    };
+
+    const initializeInstrumentation = (healer) => {
+        Instrumentation.init({
+            onSignal: healer.handleExternalSignal
+        });
+    };
+
+    const startVideoDiscovery = (healer) => {
+        VideoDiscovery.start((video) => {
+            healer.monitor(video);
+        });
+    };
+
+    const startMonitoringWhenReady = (healer) => {
+        const startMonitoring = () => {
+            startVideoDiscovery(healer);
+        };
+
+        if (document.body) {
+            startMonitoring();
+            return;
+        }
+
+        document.addEventListener('DOMContentLoaded', startMonitoring, { once: true });
+    };
+
+    const logReadyState = () => {
+        Logger.add('[CORE] Stream Healer ready', {
+            config: {
+                watchdogInterval: CONFIG.stall.WATCHDOG_INTERVAL_MS + 'ms',
+                healTimeout: CONFIG.stall.HEAL_TIMEOUT_S + 's'
+            }
+        });
+    };
+
+    const logConfigWarnings = () => {
+        const warnings = ConfigValidator.validate(CONFIG);
+        if (warnings.length > 0) {
+            Logger.add('[CORE] Config validation warnings', {
+                count: warnings.length,
+                warnings
+            });
         }
     };
 
-    const exportLogsProxy = () => {
-        try {
-            if (window.top && typeof window.top.exportTwitchAdLogs === 'function') {
-                window.top.exportTwitchAdLogs();
-                return;
-            }
-        } catch (e) {
-            Logger?.add?.('[CORE] exportTwitchAdLogs proxy failed', { error: e?.message });
-        }
-        Logger?.add?.('[CORE] exportTwitchAdLogs not available in top window');
-    };
-
-    const triggerLastResortProxy = (options = {}) => {
-        try {
-            if (window.top && typeof window.top.triggerTwitchAdLastResort === 'function') {
-                return window.top.triggerTwitchAdLastResort(options);
-            }
-        } catch (error) {
-            Logger?.add?.('[CORE] triggerTwitchAdLastResort proxy failed', { error: error?.message });
-            return { ok: false, reason: 'proxy_failed' };
-        }
-        Logger?.add?.('[CORE] triggerTwitchAdLastResort not available in top window');
-        return { ok: false, reason: 'proxy_missing' };
-    };
-
-    const triggerLastResort = (options = {}) => {
-        try {
-            const healer = ensureStreamHealer();
-            if (typeof healer?.triggerLastResortRefresh !== 'function') {
-                return { ok: false, reason: 'method_unavailable' };
-            }
-            return healer.triggerLastResortRefresh(options);
-        } catch (error) {
-            Logger?.add?.('[CORE] triggerTwitchAdLastResort failed', { error: error?.message });
-            return { ok: false, reason: 'exception', error: error?.message };
-        }
+    const bootstrapTopWindow = () => {
+        const healer = ensureStreamHealer();
+        initializeInstrumentation(healer);
+        startMonitoringWhenReady(healer);
+        logReadyState();
+        logConfigWarnings();
     };
 
     return {
@@ -12259,56 +12385,17 @@ const CoreOrchestrator = (() => {
             Logger.add('[CORE] Initializing Stream Healer');
 
             const isTopWindow = window.self === window.top;
-            const exportFn = isTopWindow ? exportLogs : exportLogsProxy;
-            const lastResortFn = isTopWindow ? triggerLastResort : triggerLastResortProxy;
-            exposeGlobal('exportTwitchAdLogs', exportFn);
-            exposeGlobal('exporttwitchadlogs', exportFn);
-            exposeGlobal('triggerTwitchAdLastResort', lastResortFn);
-            exposeGlobal('triggertwitchadlastresort', lastResortFn);
+            installDebugHooks(isTopWindow);
 
             if (!isTopWindow) {
                 return;
             }
 
-            const streamHealer = ensureStreamHealer();
-
-            // Initialize essential modules only
-            Instrumentation.init({
-                onSignal: streamHealer.handleExternalSignal
-            });  // Console capture + external hints
-
-            // Wait for DOM then start monitoring
-            const startMonitoring = () => {
-                VideoDiscovery.start((video) => {
-                    streamHealer.monitor(video);
-                });
-            };
-
-            if (document.body) {
-                startMonitoring();
-            } else {
-                document.addEventListener('DOMContentLoaded', startMonitoring, { once: true });
-            }
-
-            Logger.add('[CORE] Stream Healer ready', {
-                config: {
-                    watchdogInterval: CONFIG.stall.WATCHDOG_INTERVAL_MS + 'ms',
-                    healTimeout: CONFIG.stall.HEAL_TIMEOUT_S + 's'
-                }
-            });
-
-            const warnings = ConfigValidator.validate(CONFIG);
-            if (warnings.length > 0) {
-                Logger.add('[CORE] Config validation warnings', {
-                    count: warnings.length,
-                    warnings
-                });
-            }
+            bootstrapTopWindow();
         }
     };
 })();
 
 CoreOrchestrator.init();
-
 
 })();

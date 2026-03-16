@@ -14,7 +14,7 @@
 4.  **Passive Approach**: Only intervene when playback is definitively stuck. Let the player self-heal when possible.
 
 ## Key Directories for AI
-- `src/core/orchestrators/`: **Start here**. `CoreOrchestrator.js` (entry point) and `StreamHealer.js` (main logic).
+- `src/core/orchestrators/`: **Start here**. `CoreOrchestrator.js` (entry point), `StreamHealer.js` (main logic), and the bootstrap helpers `CoreDebugHooks.js` / `GlobalFunctionBridge.js`.
 - `src/core/playback/`: Playback monitoring + stall detection helpers.
 - `src/core/recovery/`: Heal pipeline, backoff, failover, recovery policies.
 - `src/core/candidate/`: Candidate scoring/selection and probation logic.
@@ -66,6 +66,8 @@ Use this to route changes quickly.
 
 ### Orchestrators
 - `src/core/orchestrators/CoreOrchestrator.js`
+- `src/core/orchestrators/CoreDebugHooks.js`
+- `src/core/orchestrators/GlobalFunctionBridge.js`
 - `src/core/orchestrators/MonitoringOrchestrator.js`
 - `src/core/orchestrators/RecoveryOrchestrator.js`
 - `src/core/orchestrators/StreamHealer.js`
@@ -110,6 +112,7 @@ Use this to route changes quickly.
 The following global functions are exposed for debugging:
 - `window.exportTwitchAdLogs()`: Downloads report (healer + metrics + merged script/console logs).
 - `window.triggerTwitchAdLastResort(options?)`: Manual last-resort refresh flow (log export + page reload path).
+These hooks are installed by `src/core/orchestrators/CoreDebugHooks.js` through `src/core/orchestrators/GlobalFunctionBridge.js`.
 Automatic processing-asset exhaustion now reuses the same export-and-reload path after candidate recovery is exhausted.
 
 ## Docs Index
