@@ -1,6 +1,6 @@
 # Twitch Stream Healer
 
-Twitch stream healing userscript with comprehensive logging. When uBlock Origin blocks ads, this script detects buffer gaps and seeks to resume playback.
+Twitch stream healing userscript with comprehensive logging. When Twitch playback degrades after ad blocking or player churn, the script monitors the active video, evaluates alternate candidates, and applies seek/failover/refresh recovery.
 
 ## Features
 
@@ -48,7 +48,7 @@ Quick knobs (see `docs/TUNING.md` for full mapping):
 ## Project Structure
 
 ```
-Tw Adb/
+Twitch Stream Healer/
 |-- src/
 |   |-- config/       # Configuration
 |   |-- utils/        # Utilities + DOM adapters
@@ -83,10 +83,10 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for detailed architecture.
 
 ## How It Works
 
-1. **Detection**: `StreamHealer.monitor()` polls video element for stuck states
-2. **Analysis**: `BufferGapFinder` scans buffer ranges for gaps
-3. **Healing**: `LiveEdgeSeeker` seeks to heal point and resumes playback
-4. **Logging**: All actions logged for debugging via `exportTwitchAdLogs()`
+1. **Detection**: `PlaybackMonitor` combines event handlers and a watchdog to detect stalls, resets, and dead-end playback.
+2. **Selection**: `CandidateSelector` scores monitored video elements and tracks the active candidate for recovery.
+3. **Recovery**: `HealPipeline`, failover, and refresh coordination try seek, switch, and reload paths in that order.
+4. **Logging**: `Instrumentation` and `Logger` capture script actions plus browser hints for `exportTwitchAdLogs()`.
 
 ## Key Modules
 
@@ -104,7 +104,7 @@ See `docs/CONFIG.md` for the generated defaults and `docs/TUNING.md` for tuning 
 
 ## Version
 
-Current: **4.15.2**
+Current: **4.15.3**
 
 Version increments automatically on each build (patch).
 Changelog: `docs/CHANGELOG.md`

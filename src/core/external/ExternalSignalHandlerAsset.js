@@ -1,6 +1,6 @@
 // --- ExternalSignalHandlerAsset ---
 // @module ExternalSignalHandlerAsset
-// @depends ExternalAssetRecoveryFlow
+// @depends ExternalAssetRecoveryProcess
 /**
  * Handles processing/offline asset signals.
  */
@@ -11,14 +11,6 @@ const ExternalSignalHandlerAsset = (() => {
         const recoveryManager = options.recoveryManager;
         const logDebug = options.logDebug || (() => {});
         const onRescan = options.onRescan || (() => {});
-
-        const flow = ExternalAssetRecoveryFlow.create({
-            monitorsById,
-            candidateSelector,
-            recoveryManager,
-            onRescan,
-            logDebug
-        });
 
         let processCounter = 0;
         let activeProcessId = null;
@@ -61,12 +53,16 @@ const ExternalSignalHandlerAsset = (() => {
             });
 
             Promise.resolve().then(async () => {
-                await flow.run({
+                await ExternalAssetRecoveryProcess.run({
                     processId,
                     signalLevel,
                     signalMessage,
                     activeBefore,
-                    helpers
+                    helpers,
+                    monitorsById,
+                    candidateSelector,
+                    recoveryManager,
+                    onRescan
                 });
             }).catch((error) => {
                 Logger.add(LogEvents.tagged('ERROR', 'Processing asset recovery process failed'), {

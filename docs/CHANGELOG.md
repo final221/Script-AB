@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.15.3 - 2026-03-16T21:21:04.359Z
+Previous: 4.15.2
+Commit: 6f225ebf
+Changes:
+- Refactor recovery coordination seams
+
 ## 4.15.2 - 2026-03-16T20:07:07.916Z
 Previous: 4.15.1
 Commit: 09faea1

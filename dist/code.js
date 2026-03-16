@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.15.2
+// @version       4.15.3
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -180,7 +180,7 @@ const CONFIG = (() => {
  * Build metadata helpers (version injected at build time).
  */
 const BuildInfo = (() => {
-    const VERSION = '4.15.2';
+    const VERSION = '4.15.3';
 
     const getVersion = () => {
         const gmVersion = (typeof GM_info !== 'undefined' && GM_info?.script?.version)
@@ -191,7 +191,7 @@ const BuildInfo = (() => {
             ? unsafeWindow.GM_info.script.version
             : null;
         if (unsafeVersion) return unsafeVersion;
-        if (VERSION && VERSION !== '4.15.2') return VERSION;
+        if (VERSION && VERSION !== '4.15.3') return VERSION;
         return null;
     };
 
@@ -2846,8 +2846,8 @@ const ConsoleSignalDetector = (() => {
 // --- Instrumentation ---
 /**
  * Hooks into global events and console methods to monitor application behavior.
- * Streamlined: Captures console output for debugging timeline, no recovery triggering.
- * Recovery is now handled entirely by StreamHealer.monitor().
+ * Captures console/resource signals for the debugging timeline and emits
+ * external hints into the recovery pipeline when Twitch exposes hard failures.
  */
 const Instrumentation = (() => {
     const classifyError = ErrorClassifier.classify;
@@ -11629,38 +11629,9 @@ const ExternalAssetRecoveryProcess = (() => {
     return { run };
 })();
 
-// @module ExternalAssetRecoveryFlow
-// @depends ExternalAssetRecoveryProcess
-const ExternalAssetRecoveryFlow = (() => {
-    const create = (options = {}) => {
-        const monitorsById = options.monitorsById;
-        const candidateSelector = options.candidateSelector;
-        const recoveryManager = options.recoveryManager;
-        const onRescan = options.onRescan || (() => {});
-
-        const run = async ({ processId, signalLevel, signalMessage, activeBefore, helpers = {} }) => (
-            ExternalAssetRecoveryProcess.run({
-                processId,
-                signalLevel,
-                signalMessage,
-                activeBefore,
-                helpers,
-                monitorsById,
-                candidateSelector,
-                recoveryManager,
-                onRescan
-            })
-        );
-
-        return { run };
-    };
-
-    return { create };
-})();
-
 // --- ExternalSignalHandlerAsset ---
 // @module ExternalSignalHandlerAsset
-// @depends ExternalAssetRecoveryFlow
+// @depends ExternalAssetRecoveryProcess
 /**
  * Handles processing/offline asset signals.
  */
@@ -11671,14 +11642,6 @@ const ExternalSignalHandlerAsset = (() => {
         const recoveryManager = options.recoveryManager;
         const logDebug = options.logDebug || (() => {});
         const onRescan = options.onRescan || (() => {});
-
-        const flow = ExternalAssetRecoveryFlow.create({
-            monitorsById,
-            candidateSelector,
-            recoveryManager,
-            onRescan,
-            logDebug
-        });
 
         let processCounter = 0;
         let activeProcessId = null;
@@ -11721,12 +11684,16 @@ const ExternalSignalHandlerAsset = (() => {
             });
 
             Promise.resolve().then(async () => {
-                await flow.run({
+                await ExternalAssetRecoveryProcess.run({
                     processId,
                     signalLevel,
                     signalMessage,
                     activeBefore,
-                    helpers
+                    helpers,
+                    monitorsById,
+                    candidateSelector,
+                    recoveryManager,
+                    onRescan
                 });
             }).catch((error) => {
                 Logger.add(LogEvents.tagged('ERROR', 'Processing asset recovery process failed'), {

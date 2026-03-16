@@ -3,8 +3,8 @@
 // --- Instrumentation ---
 /**
  * Hooks into global events and console methods to monitor application behavior.
- * Streamlined: Captures console output for debugging timeline, no recovery triggering.
- * Recovery is now handled entirely by StreamHealer.monitor().
+ * Captures console/resource signals for the debugging timeline and emits
+ * external hints into the recovery pipeline when Twitch exposes hard failures.
  */
 const Instrumentation = (() => {
     const classifyError = ErrorClassifier.classify;
