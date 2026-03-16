@@ -22,8 +22,9 @@ describe('MonitorRegistry reset refresh', () => {
     });
 
     const createRegistry = (recoveryManager) => {
+        let activeId = null;
         const candidateSelector = {
-            getActiveId: () => null,
+            getActiveId: () => activeId,
             setActiveId: vi.fn(),
             evaluateCandidates: vi.fn(),
             pruneMonitors: vi.fn()
@@ -34,15 +35,21 @@ describe('MonitorRegistry reset refresh', () => {
             onStall: () => {}
         });
         registry.bind({ candidateSelector, recoveryManager });
-        return { registry };
+        return {
+            registry,
+            setActiveId: (value) => {
+                activeId = value;
+            }
+        };
     };
 
-    it('requests refresh on hard reset when no src is present', () => {
-        const recoveryManager = { requestRefresh: vi.fn(), onMonitorRemoved: vi.fn() };
-        const { registry } = createRegistry(recoveryManager);
+    it('requests refresh on active hard reset when no src is present', () => {
+        const recoveryManager = { requestRefresh: vi.fn(), canRequestRefresh: vi.fn(() => ({ allow: true, reason: 'hard_reset' })), onMonitorRemoved: vi.fn() };
+        const { registry, setActiveId } = createRegistry(recoveryManager);
         const video = document.createElement('video');
 
         registry.monitor(video);
+        setActiveId(registry.getVideoId(video));
 
         lastOptions.onReset({
             resetType: 'hard',
@@ -53,6 +60,26 @@ describe('MonitorRegistry reset refresh', () => {
         expect(recoveryManager.requestRefresh).toHaveBeenCalledTimes(1);
         const [videoId] = recoveryManager.requestRefresh.mock.calls[0];
         expect(videoId).toMatch(/^video-\d+$/);
+    });
+
+    it('drops non-active hard reset placeholders instead of refreshing them', () => {
+        const recoveryManager = { requestRefresh: vi.fn(), canRequestRefresh: vi.fn(), onMonitorRemoved: vi.fn() };
+        const { registry, setActiveId } = createRegistry(recoveryManager);
+        const video = document.createElement('video');
+
+        registry.monitor(video);
+        setActiveId('video-other');
+
+        lastOptions.onReset({
+            resetType: 'hard',
+            reason: 'test',
+            videoState: { currentSrc: '', src: '' }
+        });
+
+        expect(recoveryManager.requestRefresh).not.toHaveBeenCalled();
+        expect(recoveryManager.canRequestRefresh).not.toHaveBeenCalled();
+        expect(recoveryManager.onMonitorRemoved).toHaveBeenCalledTimes(1);
+        expect(registry.getMonitoredCount()).toBe(0);
     });
 
     it('skips refresh on hard reset when src is present', () => {

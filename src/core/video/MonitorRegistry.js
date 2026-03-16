@@ -127,13 +127,39 @@ const MonitorRegistry = (() => {
                     if (recoveryManager?.requestRefresh) {
                         const hasSrc = Boolean(details?.videoState?.currentSrc || details?.videoState?.src);
                         if (details?.resetType === 'hard' && !hasSrc) {
+                            const activeVideoId = candidateSelector.getActiveId();
+                            const isActiveVideo = !activeVideoId || activeVideoId === videoId;
+                            if (!isActiveVideo) {
+                                Logger.add(LogEvents.tagged('RESET_SKIP', 'Dropped non-active hard-reset placeholder'), {
+                                    videoId,
+                                    resetType: details?.resetType || null,
+                                    trigger: details?.reason || 'reset'
+                                });
+                                stopMonitoring(video);
+                                return;
+                            }
                             const entry = monitorsById.get(videoId);
                             const monitorState = entry?.monitor?.state || null;
-                            recoveryManager.requestRefresh(videoId, monitorState, {
+                            const refreshDetail = {
                                 reason: 'hard_reset',
                                 trigger: details?.reason || 'reset',
                                 resetType: details?.resetType || null
-                            });
+                            };
+                            if (typeof recoveryManager.canRequestRefresh === 'function') {
+                                const eligibility = recoveryManager.canRequestRefresh(videoId, monitorState, refreshDetail);
+                                if (!eligibility.allow) {
+                                    Logger.add(LogEvents.tagged('RESET_SKIP', 'Hard reset refresh suppressed'), {
+                                        videoId,
+                                        resetType: details?.resetType || null,
+                                        trigger: details?.reason || 'reset',
+                                        refreshEligibilityReason: eligibility.reason || null,
+                                        remainingMs: eligibility.remainingMs || null
+                                    });
+                                    return;
+                                }
+                                refreshDetail.eligibility = eligibility;
+                            }
+                            recoveryManager.requestRefresh(videoId, monitorState, refreshDetail);
                         }
                     }
                 },

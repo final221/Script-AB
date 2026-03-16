@@ -21,7 +21,7 @@ describe('RecoveryManager refresh gating', () => {
     it('blocks refresh requests during cooldown', () => {
         const manager = createManager();
         const video = createVideo();
-        const now = 100000;
+        const now = 200000;
         const monitorState = {
             lastRefreshAt: now - (CONFIG.stall.REFRESH_COOLDOWN_MS - 500)
         };
@@ -102,6 +102,47 @@ describe('RecoveryManager refresh gating', () => {
 
         expect(() => manager.requestRefresh('video-1', monitorState, { now: 100000, reason: 'manual' }))
             .not.toThrow();
+    });
+
+    it('keeps refresh cooldown on the same video element after re-registration', () => {
+        const monitorsById = new Map();
+        const candidateSelector = {
+            getActiveId: () => 'video-1',
+            evaluateCandidates: vi.fn()
+        };
+        const onPersistentFailure = vi.fn();
+        const manager = window.RecoveryManager.create({
+            monitorsById,
+            candidateSelector,
+            getVideoId: () => 'video-1',
+            logDebug: () => {},
+            onRescan: () => {},
+            onPersistentFailure
+        });
+
+        const video = createVideo();
+        const firstState = { lastRefreshAt: 0 };
+        const secondState = { lastRefreshAt: 0 };
+        monitorsById.set('video-1', { video, monitor: { state: firstState } });
+
+        const refreshed = manager.requestRefresh('video-1', firstState, {
+            now: 200000,
+            reason: 'manual'
+        });
+
+        expect(refreshed).toBe(true);
+
+        monitorsById.delete('video-1');
+        monitorsById.set('video-2', { video, monitor: { state: secondState } });
+
+        const result = manager.canRequestRefresh('video-2', secondState, {
+            now: 200500,
+            reason: 'manual'
+        });
+
+        expect(result.allow).toBe(false);
+        expect(result.reason).toBe('cooldown');
+        expect(result.remainingMs).toBeGreaterThan(0);
     });
 
     it('delays refresh until the no-heal refresh window elapses', () => {

@@ -31,6 +31,7 @@ describe('Stream reset integration', () => {
         video.dispatchEvent(new Event('emptied'));
 
         const videoId = monitoring.getVideoId(video);
+        monitoring.candidateSelector.setActiveId(videoId);
         const entry = monitoring.monitorsById.get(videoId);
         const pendingForMs = CONFIG.stall.RESET_GRACE_MS + 1;
 

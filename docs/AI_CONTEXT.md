@@ -30,6 +30,7 @@
 - No-heal-point: `HealPointPoller.pollForHealPoint()` -> `RecoveryManager.handleNoHealPoint()` -> `NoHealPointPolicy.decide()`
 - Play error: `HealPipeline.attemptHeal()` -> `RecoveryManager.handlePlayFailure()` -> `PlayErrorPolicy.handlePlayFailure()`
 - Processing asset collapse: `ExternalSignalHandlerAsset` -> `ExternalAssetRecoveryProcess.run()` -> forced log export + page reload after exhausted candidate recovery
+- Hard reset without source: `PlaybackResetLogic` -> `MonitorRegistry.onReset()` -> drop non-active placeholders or refresh the active element with element-scoped cooldown
 - Candidate switch: `CandidateSelector.evaluateCandidates()` -> `CandidateDecision.decide()` -> `CandidateSwitchPolicy.shouldSwitch()`
 - Failover: `RecoveryManager.handleNoHealPoint()/handlePlayFailure()` -> `FailoverManager.attemptFailover()`
 

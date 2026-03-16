@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.15.0
+// @version       4.15.1
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -180,7 +180,7 @@ const CONFIG = (() => {
  * Build metadata helpers (version injected at build time).
  */
 const BuildInfo = (() => {
-    const VERSION = '4.15.0';
+    const VERSION = '4.15.1';
 
     const getVersion = () => {
         const gmVersion = (typeof GM_info !== 'undefined' && GM_info?.script?.version)
@@ -191,7 +191,7 @@ const BuildInfo = (() => {
             ? unsafeWindow.GM_info.script.version
             : null;
         if (unsafeVersion) return unsafeVersion;
-        if (VERSION && VERSION !== '4.15.0') return VERSION;
+        if (VERSION && VERSION !== '4.15.1') return VERSION;
         return null;
     };
 
@@ -3412,13 +3412,39 @@ const MonitorRegistry = (() => {
                     if (recoveryManager?.requestRefresh) {
                         const hasSrc = Boolean(details?.videoState?.currentSrc || details?.videoState?.src);
                         if (details?.resetType === 'hard' && !hasSrc) {
+                            const activeVideoId = candidateSelector.getActiveId();
+                            const isActiveVideo = !activeVideoId || activeVideoId === videoId;
+                            if (!isActiveVideo) {
+                                Logger.add(LogEvents.tagged('RESET_SKIP', 'Dropped non-active hard-reset placeholder'), {
+                                    videoId,
+                                    resetType: details?.resetType || null,
+                                    trigger: details?.reason || 'reset'
+                                });
+                                stopMonitoring(video);
+                                return;
+                            }
                             const entry = monitorsById.get(videoId);
                             const monitorState = entry?.monitor?.state || null;
-                            recoveryManager.requestRefresh(videoId, monitorState, {
+                            const refreshDetail = {
                                 reason: 'hard_reset',
                                 trigger: details?.reason || 'reset',
                                 resetType: details?.resetType || null
-                            });
+                            };
+                            if (typeof recoveryManager.canRequestRefresh === 'function') {
+                                const eligibility = recoveryManager.canRequestRefresh(videoId, monitorState, refreshDetail);
+                                if (!eligibility.allow) {
+                                    Logger.add(LogEvents.tagged('RESET_SKIP', 'Hard reset refresh suppressed'), {
+                                        videoId,
+                                        resetType: details?.resetType || null,
+                                        trigger: details?.reason || 'reset',
+                                        refreshEligibilityReason: eligibility.reason || null,
+                                        remainingMs: eligibility.remainingMs || null
+                                    });
+                                    return;
+                                }
+                                refreshDetail.eligibility = eligibility;
+                            }
+                            recoveryManager.requestRefresh(videoId, monitorState, refreshDetail);
                         }
                     }
                 },
@@ -9069,6 +9095,7 @@ const RecoveryRefreshController = (() => {
         const getVideoId = options.getVideoId;
         const onPersistentFailure = options.onPersistentFailure || (() => {});
         const onProcessingAssetExhausted = options.onProcessingAssetExhausted || (() => {});
+        const refreshAtByVideo = new WeakMap();
 
         const normalizeVideoInput = (videoOrContext, monitorStateOverride, detail = {}) => {
             if (videoOrContext && typeof videoOrContext === 'object' && videoOrContext.video) {
@@ -9129,9 +9156,16 @@ const RecoveryRefreshController = (() => {
             }
 
             const now = Number.isFinite(detail.now) ? detail.now : Date.now();
-            const lastRefreshAt = monitorState.lastRefreshAt || 0;
+            const monitorRefreshAt = monitorState.lastRefreshAt || 0;
+            const hasElementRefresh = Boolean(context.video) && refreshAtByVideo.has(context.video);
+            const elementRefreshAt = hasElementRefresh ? refreshAtByVideo.get(context.video) : null;
+            const lastRefreshAt = hasElementRefresh
+                ? Math.max(monitorRefreshAt, elementRefreshAt || 0)
+                : monitorRefreshAt;
             const ignoreRefreshCooldown = Boolean(detail.ignoreRefreshCooldown);
-            if (!ignoreRefreshCooldown && now - lastRefreshAt < CONFIG.stall.REFRESH_COOLDOWN_MS) {
+            if (!ignoreRefreshCooldown
+                && lastRefreshAt > 0
+                && now - lastRefreshAt < CONFIG.stall.REFRESH_COOLDOWN_MS) {
                 return {
                     allow: false,
                     reason: 'cooldown',
@@ -9158,6 +9192,9 @@ const RecoveryRefreshController = (() => {
             if (!eligibility.allow) return false;
 
             PlaybackStateStore.markRefresh(monitorState, eligibility.now);
+            if (context.video) {
+                refreshAtByVideo.set(context.video, eligibility.now);
+            }
             Logger.add(LogEvents.tagged('REFRESH', 'Refreshing video after source loss'), {
                 ...RecoveryLogDetails.refresh({
                     videoId: context.videoId,

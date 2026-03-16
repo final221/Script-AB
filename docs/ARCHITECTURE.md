@@ -249,7 +249,7 @@ Script Logger.add() -> Logger.getMergedTimeline()
 - **VideoState.js** - Shared video state helper
 - **VideoStateSnapshot.js** - Standardized video state snapshots for logs
 - **StateSnapshot.js** - Full/lite snapshot helpers
-- **MonitorRegistry.js** - Tracks monitored video lifecycle
+- **MonitorRegistry.js** - Tracks monitored video lifecycle; drops non-active hard-reset placeholders instead of refreshing them
 - **MonitorCoordinator.js** - Coordinates registry + candidate selection
 
 #### Playback monitoring (src/core/playback)
@@ -297,6 +297,7 @@ Script Logger.add() -> Logger.getMergedTimeline()
 - **FailoverProbeController.js** - Probe attempt tracking for failover
 - **FailoverManager.js** - Failover attempt logic
 - **RecoveryManager.js** - Backoff and failover coordination
+- **RecoveryRefreshController.js** - Refresh eligibility and execution; refresh cooldown persists across same-element re-registration
 - **CatchUpController.js** - Post-heal live-edge catch-up scheduler
 - **HealAttemptUtils.js** - Heal attempt helper utilities
 - **HealAttemptLogger.js** - Heal attempt logging helpers

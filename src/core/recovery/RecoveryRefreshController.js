@@ -10,6 +10,7 @@ const RecoveryRefreshController = (() => {
         const getVideoId = options.getVideoId;
         const onPersistentFailure = options.onPersistentFailure || (() => {});
         const onProcessingAssetExhausted = options.onProcessingAssetExhausted || (() => {});
+        const refreshAtByVideo = new WeakMap();
 
         const normalizeVideoInput = (videoOrContext, monitorStateOverride, detail = {}) => {
             if (videoOrContext && typeof videoOrContext === 'object' && videoOrContext.video) {
@@ -70,9 +71,16 @@ const RecoveryRefreshController = (() => {
             }
 
             const now = Number.isFinite(detail.now) ? detail.now : Date.now();
-            const lastRefreshAt = monitorState.lastRefreshAt || 0;
+            const monitorRefreshAt = monitorState.lastRefreshAt || 0;
+            const hasElementRefresh = Boolean(context.video) && refreshAtByVideo.has(context.video);
+            const elementRefreshAt = hasElementRefresh ? refreshAtByVideo.get(context.video) : null;
+            const lastRefreshAt = hasElementRefresh
+                ? Math.max(monitorRefreshAt, elementRefreshAt || 0)
+                : monitorRefreshAt;
             const ignoreRefreshCooldown = Boolean(detail.ignoreRefreshCooldown);
-            if (!ignoreRefreshCooldown && now - lastRefreshAt < CONFIG.stall.REFRESH_COOLDOWN_MS) {
+            if (!ignoreRefreshCooldown
+                && lastRefreshAt > 0
+                && now - lastRefreshAt < CONFIG.stall.REFRESH_COOLDOWN_MS) {
                 return {
                     allow: false,
                     reason: 'cooldown',
@@ -99,6 +107,9 @@ const RecoveryRefreshController = (() => {
             if (!eligibility.allow) return false;
 
             PlaybackStateStore.markRefresh(monitorState, eligibility.now);
+            if (context.video) {
+                refreshAtByVideo.set(context.video, eligibility.now);
+            }
             Logger.add(LogEvents.tagged('REFRESH', 'Refreshing video after source loss'), {
                 ...RecoveryLogDetails.refresh({
                     videoId: context.videoId,

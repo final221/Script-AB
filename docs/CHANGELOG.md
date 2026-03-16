@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.15.1 - 2026-03-16T19:26:32.306Z
+Previous: 4.15.0
+Commit: ac8cc29
+Changes:
+- Force last-resort reload on processing asset collapse
+
 ## 4.15.0 - 2026-03-16T18:12:37.486Z
 Previous: 4.14.22
 Commit: 5197a0d

@@ -31,6 +31,7 @@ Look for:
 ### Reset/ended/offline indicators
 Look for:
 - `[HEALER:RESET_CHECK]` and `[HEALER:RESET]`
+- `[HEALER:RESET_SKIP]` when a non-active hard-reset placeholder is dropped or a reset refresh is cooldown-blocked
 - `[HEALER:ENDED]`
 - `[HEALER:ASSET_HINT]` (processing/offline assets)
 
@@ -56,6 +57,7 @@ Look for:
 - If the stream appears offline, treat it as a healing failure first; this crash pattern often follows `POLL_TIMEOUT` -> `NO_HEAL_POINT` -> refresh/switch suppression.
 - `[HEALER:ASSET_HINT]` can indicate Twitch swapped in a processing/offline element, but confirm whether the channel is actually live.
 - `processing_asset_exhausted` now uses the same last-resort path as the manual hook: export logs first, then reload the page.
+- Repeated no-source placeholder churn should no longer rescan the same DOM element indefinitely; refresh cooldown now sticks to the element across re-registration.
 - Stalls without `HEALER:START` likely indicate the video never became active or a failover lock is active.
 - Repeated `FAILOVER_REVERT` means candidates are present but not progressing; check readiness logs.
 
