@@ -7,6 +7,7 @@
 const LoggerPlaceholderSuppression = (() => {
     const PLACEHOLDER_SUPPRESSION_THRESHOLD = 20;
     const PLACEHOLDER_SAMPLE_MAX = 5;
+    const PLACEHOLDER_VISIBLE_EVENTS = 3;
     const PLACEHOLDER_SUPPRESS_TAGS = new Set([
         'VIDEO',
         'MONITOR',
@@ -95,18 +96,29 @@ const LoggerPlaceholderSuppression = (() => {
 
             if (videoId && state) {
                 if (isPlaceholderState(state)) {
-                    placeholderVideos.set(videoId, { lastSeenAt: now, elementId });
+                    const existing = placeholderVideos.get(videoId);
+                    placeholderVideos.set(videoId, {
+                        lastSeenAt: now,
+                        elementId,
+                        visibleEvents: existing?.visibleEvents || 0
+                    });
                 } else {
                     placeholderVideos.delete(videoId);
                 }
             }
 
-            if (!videoId || !placeholderVideos.has(videoId)) {
+            const placeholderEntry = videoId ? placeholderVideos.get(videoId) : null;
+            if (!videoId || !placeholderEntry) {
                 return { suppress: false };
             }
 
             const tagKey = getTagKey(message);
             if (!tagKey || !PLACEHOLDER_SUPPRESS_TAGS.has(tagKey)) {
+                return { suppress: false };
+            }
+
+            if (placeholderEntry.visibleEvents < PLACEHOLDER_VISIBLE_EVENTS) {
+                placeholderEntry.visibleEvents += 1;
                 return { suppress: false };
             }
 

@@ -263,7 +263,7 @@ describe('RecoveryManager refresh gating', () => {
             shouldFailover: true,
             failoverEligible: true,
             refreshEligible: true,
-            primaryAction: 'failover'
+            action: 'failover'
         }));
 
         window.RecoveryPolicy.create = vi.fn(() => ({
@@ -324,7 +324,7 @@ describe('RecoveryManager refresh gating', () => {
             shouldFailover: true,
             failoverEligible: true,
             refreshEligible: true,
-            primaryAction: 'failover'
+            action: 'failover'
         }));
 
         window.RecoveryPolicy.create = vi.fn(() => ({
@@ -398,7 +398,7 @@ describe('RecoveryManager refresh gating', () => {
                 shouldFailover: false,
                 failoverEligible: false,
                 refreshEligible: false,
-                primaryAction: 'none'
+                action: 'none'
             })),
             handlePlayFailure: vi.fn(() => ({
                 probationTriggered: true,

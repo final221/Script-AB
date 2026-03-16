@@ -58,6 +58,7 @@ Look for:
 - `[HEALER:ASSET_HINT]` can indicate Twitch swapped in a processing/offline element, but confirm whether the channel is actually live.
 - `processing_asset_exhausted` now uses the same last-resort path as the manual hook: export logs first, then reload the page.
 - Repeated no-source placeholder churn should no longer rescan the same DOM element indefinitely; refresh cooldown now sticks to the element across re-registration.
+- Placeholder/no-source suppression now leaves the first few matching logs visible before collapsing the rest into a suppression summary, so loop starts are easier to diagnose.
 - Stalls without `HEALER:START` likely indicate the video never became active or a failover lock is active.
 - Repeated `FAILOVER_REVERT` means candidates are present but not progressing; check readiness logs.
 

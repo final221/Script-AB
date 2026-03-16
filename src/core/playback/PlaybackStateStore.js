@@ -19,7 +19,7 @@ const PlaybackStateStore = (() => {
         });
     };
 
-    const applyAliases = (target, map) => {
+    const applyAliases = (target, map = {}) => {
         Object.entries(map).forEach(([key, path]) => defineAlias(target, key, path));
     };
 

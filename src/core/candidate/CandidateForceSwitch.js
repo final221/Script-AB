@@ -9,7 +9,7 @@ const CandidateForceSwitch = (() => {
         const monitorsById = options.monitorsById;
         const isFallbackSource = options.isFallbackSource;
         const getActiveId = options.getActiveId;
-        const setActiveId = options.setActiveId;
+        const activateCandidate = options.activateCandidate || options.setActiveId;
         const observeFormerStreams = options.observeFormerStreams;
         const logDebug = options.logDebug || (() => {});
 
@@ -91,7 +91,7 @@ const CandidateForceSwitch = (() => {
             }
 
             const fromId = context.activeId;
-            setActiveId(best.id, `force_switch:${reason}`);
+            activateCandidate(best.id, `force_switch:${reason}`);
             Logger.add(LogEvents.tagged('CANDIDATE', options.label || 'Forced switch'), {
                 from: fromId,
                 to: best.id,

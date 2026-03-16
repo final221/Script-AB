@@ -1,6 +1,6 @@
 // --- CandidateSelector ---
 // @module CandidateSelector
-// @depends CandidateForceSwitch
+// @depends CandidateForceSwitch, ActiveCandidateState
 /**
  * Scores and selects the best video candidate for healing.
  */
@@ -13,10 +13,6 @@ const CandidateSelector = (() => {
         const switchDelta = options.switchDelta;
         const isFallbackSource = options.isFallbackSource;
 
-        const state = {
-            activeCandidateId: null,
-            lastGoodCandidateId: null
-        };
         let lockChecker = null;
         const streamIdentity = StreamIdentityModel.create({
             monitorsById,
@@ -49,41 +45,41 @@ const CandidateSelector = (() => {
         const logOutcome = selectionLogger.logOutcome;
 
         const scoreVideo = (video, monitor, videoId) => scorer.score(video, monitor, videoId);
-        const getActiveIdRaw = () => state.activeCandidateId;
         const formerStreamTracker = FormerStreamTracker.create({
             monitorsById,
             scoreVideo
         });
-        const setActiveId = (id, reason = 'manual') => {
-            const previousActiveId = state.activeCandidateId;
-            if (previousActiveId && previousActiveId !== id) {
+        const activeState = ActiveCandidateState.create({
+            onSwitch: ({ fromId, toId, reason }) => {
                 formerStreamTracker.trackSwitch({
-                    fromId: previousActiveId,
-                    toId: id,
+                    fromId,
+                    toId,
                     reason
                 });
+            },
+            onActive: (id, reason) => {
+                formerStreamTracker.onActive(id);
+                streamIdentity.observeActive(id, reason);
             }
-            state.activeCandidateId = id;
-            formerStreamTracker.onActive(id);
-            streamIdentity.observeActive(id, reason);
-        };
-        const getLastGoodId = () => state.lastGoodCandidateId;
-        const setLastGoodId = (id) => {
-            state.lastGoodCandidateId = id;
-        };
+        });
+        const activateCandidate = (id, reason = 'manual') => activeState.activateCandidate(id, reason);
+        const clearActive = (reason = 'manual_clear') => activeState.clearActive(reason);
+        const getActiveIdRaw = () => activeState.getActiveId();
+        const getLastGoodId = () => activeState.getLastGoodId();
+        const setLastGoodId = (id) => activeState.setLastGoodId(id);
         const observeFormerStreams = (reason) => {
             formerStreamTracker.observe({
                 reason,
-                activeId: state.activeCandidateId
+                activeId: activeState.getActiveId()
             });
         };
 
-        const getActiveId = () => state.activeCandidateId;
+        const getActiveId = () => activeState.getActiveId();
         const forceSwitchController = CandidateForceSwitch.create({
             monitorsById,
             isFallbackSource,
             getActiveId,
-            setActiveId,
+            activateCandidate,
             observeFormerStreams,
             logDebug
         });
@@ -103,6 +99,7 @@ const CandidateSelector = (() => {
         const evaluateCandidates = (reason) => {
             streamIdentity.observeActive(getActiveIdRaw(), `pre_eval:${reason}`);
             const result = selectionEngine.evaluateCandidates(reason);
+            activeState.noteEvaluation(reason, result?.now || Date.now());
             if (!result) {
                 observeFormerStreams(reason);
                 return null;
@@ -118,7 +115,7 @@ const CandidateSelector = (() => {
             }
 
             if (result.status === 'empty') {
-                setActiveId(null, 'empty');
+                clearActive('empty');
                 setLastGoodId(null);
                 observeFormerStreams(reason);
                 return null;
@@ -135,7 +132,7 @@ const CandidateSelector = (() => {
                     streamOriginVideoId: streamIdentity.getSnapshot().originVideoId,
                     scores: result.scores
                 });
-                setActiveId(result.activation.toId, `activation:${result.activation.reason}`);
+                activateCandidate(result.activation.toId, `activation:${result.activation.reason}`);
             }
 
             const decision = result.decision;
@@ -155,7 +152,7 @@ const CandidateSelector = (() => {
                         preferredTrusted: decision.preferred.trusted,
                         streamOriginVideoId: streamIdentity.getSnapshot().originVideoId
                     });
-                    setActiveId(decision.toId, `fast_switch:${decision.reason}`);
+                    activateCandidate(decision.toId, `fast_switch:${decision.reason}`);
                     logOutcome(decision);
                     observeFormerStreams(reason);
                     return result.preferred;
@@ -177,7 +174,7 @@ const CandidateSelector = (() => {
                         streamOriginVideoId: streamIdentity.getSnapshot().originVideoId,
                         scores: result.scores
                     });
-                    setActiveId(decision.toId, `switch:${decision.reason}`);
+                    activateCandidate(decision.toId, `switch:${decision.reason}`);
                 }
 
                 logOutcome(decision);
@@ -200,7 +197,7 @@ const CandidateSelector = (() => {
             monitorsById,
             scoreVideo,
             getActiveId: getActiveIdRaw,
-            setActiveId,
+            activateCandidate,
             isFallbackSource,
             logDebug
         });
@@ -210,13 +207,16 @@ const CandidateSelector = (() => {
             pruneMonitors: pruner.pruneMonitors,
             scoreVideo,
             getActiveId,
-            setActiveId,
+            activateCandidate,
+            clearActive,
+            setActiveId: activateCandidate,
             setLockChecker,
             activateProbation,
             isProbationActive,
             selectEmergencyCandidate: emergencyPicker.selectEmergencyCandidate,
             getActiveContext,
-            forceSwitch
+            forceSwitch,
+            shouldRunIntervalEvaluation: activeState.shouldRunIntervalEvaluation
         };
     };
 

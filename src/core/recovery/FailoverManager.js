@@ -109,7 +109,11 @@ const FailoverManager = (() => {
             state.baselineCurrentTime = baseline.baselineCurrentTime;
             state.baselineProgressTime = baseline.baselineProgressTime;
 
-            candidateSelector.setActiveId(toId);
+            if (typeof candidateSelector.activateCandidate === 'function') {
+                candidateSelector.activateCandidate(toId, `failover:${reason}`);
+            } else {
+                candidateSelector.setActiveId?.(toId);
+            }
             if (candidate.selectionMode === 'viable_untrusted_fallback') {
                 Logger.add(LogEvents.tagged('FAILOVER', 'Using viable untrusted fallback candidate'), {
                     from: fromVideoId,
@@ -187,7 +191,11 @@ const FailoverManager = (() => {
                     });
                     state.recentFailures.set(toId, Date.now());
                     if (fromEntry) {
-                        candidateSelector.setActiveId(fromVideoId);
+                        if (typeof candidateSelector.activateCandidate === 'function') {
+                            candidateSelector.activateCandidate(fromVideoId, `failover_revert:${reason}`);
+                        } else {
+                            candidateSelector.setActiveId?.(fromVideoId);
+                        }
                     }
                 }
 

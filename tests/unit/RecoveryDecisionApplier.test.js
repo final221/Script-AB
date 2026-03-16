@@ -47,7 +47,7 @@ describe('RecoveryDecisionApplier', () => {
         expect(probationPolicy.maybeTriggerProbation).not.toHaveBeenCalled();
         expect(result.shouldFailover).toBe(false);
         expect(result.refreshEligible).toBe(false);
-        expect(result.primaryAction).toBe('none');
+        expect(result.action).toBe('none');
         expect(result.emergencySwitched).toBe(false);
     });
 
@@ -110,7 +110,7 @@ describe('RecoveryDecisionApplier', () => {
                 shouldFailover: true,
                 failoverEligible: true,
                 refreshEligible: true,
-                primaryAction: 'failover',
+                action: 'failover',
                 emergencyEligible: false,
                 lastResortEligible: false
             }
@@ -119,7 +119,7 @@ describe('RecoveryDecisionApplier', () => {
         expect(result.shouldFailover).toBe(true);
         expect(result.failoverEligible).toBe(true);
         expect(result.refreshEligible).toBe(true);
-        expect(result.primaryAction).toBe('failover');
+        expect(result.action).toBe('failover');
     });
 
 

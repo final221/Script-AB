@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.15.2 - 2026-03-16T20:07:07.916Z
+Previous: 4.15.1
+Commit: 09faea1
+Changes:
+- Stop hard reset placeholder refresh loops
+
 ## 4.15.1 - 2026-03-16T19:26:32.306Z
 Previous: 4.15.0
 Commit: ac8cc29

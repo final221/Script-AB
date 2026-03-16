@@ -30,8 +30,8 @@
 - No-heal-point: `HealPointPoller.pollForHealPoint()` -> `RecoveryManager.handleNoHealPoint()` -> `NoHealPointPolicy.decide()`
 - Play error: `HealPipeline.attemptHeal()` -> `RecoveryManager.handlePlayFailure()` -> `PlayErrorPolicy.handlePlayFailure()`
 - Processing asset collapse: `ExternalSignalHandlerAsset` -> `ExternalAssetRecoveryProcess.run()` -> forced log export + page reload after exhausted candidate recovery
-- Hard reset without source: `PlaybackResetLogic` -> `MonitorRegistry.onReset()` -> drop non-active placeholders or refresh the active element with element-scoped cooldown
-- Candidate switch: `CandidateSelector.evaluateCandidates()` -> `CandidateDecision.decide()` -> `CandidateSwitchPolicy.shouldSwitch()`
+- Hard reset without source: `PlaybackResetLogic` -> `MonitorRegistry.onReset()` -> `RecoveryRefreshController.requestRefresh()` -> `RefreshCoordinator.refreshVideo()`
+- Candidate switch: `CandidateSelector.evaluateCandidates()` -> `CandidateDecision.decide()` -> `CandidateSwitchPolicy.shouldSwitch()` -> `ActiveCandidateState.activateCandidate()`
 - Failover: `RecoveryManager.handleNoHealPoint()/handlePlayFailure()` -> `FailoverManager.attemptFailover()`
 
 ## Common Tasks & Files
@@ -75,6 +75,7 @@ Use this to route changes quickly.
 - `src/core/playback/PlaybackWatchdog.js`
 - `src/core/playback/PlaybackStateTracker.js`
 - `src/core/playback/PlaybackEventHandlers.js`
+- `src/core/playback/PlaybackStateAliases.js`
 
 ### Recovery and heal pipeline
 - `src/core/recovery/HealPipeline.js`
@@ -84,6 +85,7 @@ Use this to route changes quickly.
 
 ### Candidate selection
 - `src/core/candidate/CandidateSelector.js`
+- `src/core/candidate/ActiveCandidateState.js`
 - `src/core/candidate/CandidateScorer.js`
 - `src/core/candidate/CandidateSwitchPolicy.js`
 
@@ -98,6 +100,11 @@ Use this to route changes quickly.
 - `src/monitoring/LogEvents.js`
 - `src/monitoring/LogTagRegistry.js`
 - `src/monitoring/ReportGenerator.js`
+
+## Runtime Notes
+- Candidate reevaluation is now event-first with a throttled interval safety pulse; recent event-driven evaluations suppress redundant interval passes.
+- Placeholder/no-source suppression keeps the first few per-element diagnostics visible before collapsing later churn into suppression summaries.
+- Refresh execution is centralized in `src/core/video/RefreshCoordinator.js`; refresh eligibility still lives in `src/core/recovery/RecoveryRefreshController.js`.
 
 ## Debugging Tools
 The following global functions are exposed for debugging:

@@ -1,5 +1,5 @@
 // @module MonitorCoordinator
-// @depends MonitorRegistry
+// @depends MonitorRegistry, RefreshCoordinator
 // --- MonitorCoordinator ---
 /**
  * Coordinates monitor registry and candidate selection lifecycle.
@@ -9,72 +9,9 @@ const MonitorCoordinator = (() => {
         const monitorRegistry = options.monitorRegistry;
         const candidateSelector = options.candidateSelector;
         const logDebug = options.logDebug || (() => {});
-        const AUTO_REFRESH_STORAGE_KEY = 'twad_auto_refresh_at';
 
         const monitorsById = monitorRegistry.monitorsById;
         const getVideoId = monitorRegistry.getVideoId;
-
-        const readAutoRefreshStamp = () => {
-            try {
-                return Number(sessionStorage.getItem(AUTO_REFRESH_STORAGE_KEY) || 0);
-            } catch (error) {
-                return 0;
-            }
-        };
-
-        const writeAutoRefreshStamp = (now) => {
-            try {
-                sessionStorage.setItem(AUTO_REFRESH_STORAGE_KEY, String(now));
-            } catch (error) {
-                // ignore storage failures
-            }
-        };
-
-        const canAutoRefresh = (now, forcePageRefresh = false) => {
-            if (!forcePageRefresh && !CONFIG.stall.AUTO_PAGE_REFRESH) {
-                return { ok: false, reason: 'disabled' };
-            }
-            const lastRefreshAt = readAutoRefreshStamp();
-            if (lastRefreshAt) {
-                const elapsedMs = now - lastRefreshAt;
-                if (elapsedMs < CONFIG.stall.REFRESH_COOLDOWN_MS) {
-                    return {
-                        ok: false,
-                        reason: 'cooldown',
-                        remainingMs: CONFIG.stall.REFRESH_COOLDOWN_MS - elapsedMs
-                    };
-                }
-            }
-            return { ok: true };
-        };
-
-        const getExportLogsFn = () => {
-            if (typeof globalThis !== 'undefined' && typeof globalThis.exportTwitchAdLogs === 'function') {
-                return globalThis.exportTwitchAdLogs;
-            }
-            if (typeof window !== 'undefined'
-                && window.top
-                && typeof window.top.exportTwitchAdLogs === 'function') {
-                return window.top.exportTwitchAdLogs;
-            }
-            return null;
-        };
-
-        const attemptLogExport = () => {
-            const exportFn = getExportLogsFn();
-            if (!exportFn) {
-                return { ok: false, reason: 'missing_export' };
-            }
-            try {
-                exportFn();
-                return { ok: true };
-            } catch (error) {
-                Logger.add(LogEvents.tagged('ERROR', 'Auto refresh log export failed'), {
-                    error: error?.message
-                });
-                return { ok: false, reason: 'exception' };
-            }
-        };
 
         const scanForVideos = (reason, detail = {}) => {
             if (!document?.querySelectorAll) {
@@ -125,81 +62,18 @@ const MonitorCoordinator = (() => {
                 discovered
             };
         };
-
-        const shouldForceRefreshTakeover = (detail, preferred) => {
-            if (detail?.reason !== 'processing_asset_exhausted') return false;
-            if (!preferred?.id) return false;
-            const readyState = preferred.vs?.readyState ?? 0;
-            const hasSource = Boolean(preferred.vs?.currentSrc || preferred.vs?.src);
-            return readyState >= CONFIG.monitoring.PROBATION_READY_STATE || hasSource;
-        };
-
-        const refreshVideo = (videoId, detail = {}) => {
-            const entry = monitorsById.get(videoId);
-            if (!entry) return false;
-            const { video } = entry;
-            const elementId = typeof monitorRegistry.getElementId === 'function'
-                ? monitorRegistry.getElementId(video)
-                : null;
-            const forcePageRefresh = Boolean(detail?.forcePageRefresh);
-            const now = Date.now();
-            const autoRefresh = canAutoRefresh(now, forcePageRefresh);
-            if (autoRefresh.ok) {
-                const exportResult = attemptLogExport();
-                Logger.add(LogEvents.tagged('REFRESH', 'Auto page refresh scheduled'), {
-                    videoId,
-                    elementId,
-                    detail,
-                    forced: forcePageRefresh,
-                    exportOk: exportResult.ok,
-                    exportReason: exportResult.reason || null,
-                    delayMs: CONFIG.stall.AUTO_PAGE_REFRESH_DELAY_MS
-                });
-                writeAutoRefreshStamp(now);
-                setTimeout(() => {
-                    window.location.reload();
-                }, CONFIG.stall.AUTO_PAGE_REFRESH_DELAY_MS);
-                return true;
-            }
-            if (autoRefresh.reason === 'cooldown') {
-                logDebug(LogEvents.tagged('REFRESH', 'Auto page refresh suppressed (cooldown)'), {
-                    videoId,
-                    elementId,
-                    remainingMs: autoRefresh.remainingMs,
-                    detail
-                });
-            }
-            Logger.add(LogEvents.tagged('REFRESH', 'Refreshing video to escape stale state'), {
-                videoId,
-                elementId,
-                detail
-            });
-            monitorRegistry.stopMonitoring(video);
-            monitorRegistry.resetVideoId(video);
-            setTimeout(() => {
-                const scanResult = scanForVideos('refresh', {
-                    videoId,
-                    ...detail
-                });
-                if (!shouldForceRefreshTakeover(detail, scanResult?.preferred)) {
-                    return;
-                }
-                candidateSelector.forceSwitch?.(scanResult.preferred, {
-                    reason: 'refresh_replacement',
-                    requireProgressEligible: false,
-                    requireSevere: false,
-                    label: 'Forced switch to refreshed candidate',
-                    suppressionLabel: 'Refreshed candidate switch suppressed'
-                });
-            }, 100);
-            return true;
-        };
+        const refreshCoordinator = RefreshCoordinator.create({
+            monitorRegistry,
+            candidateSelector,
+            logDebug,
+            scanForVideos
+        });
 
         return {
             monitor: monitorRegistry.monitor,
             stopMonitoring: monitorRegistry.stopMonitoring,
             scanForVideos,
-            refreshVideo,
+            refreshVideo: refreshCoordinator.refreshVideo,
             monitorsById,
             getVideoId,
             getMonitoredCount: () => monitorRegistry.getMonitoredCount()

@@ -77,13 +77,13 @@ const RecoveryManager = (() => {
             const result = policy.handleNoHealPoint(context, policyReason);
             const failoverEligible = Boolean(result?.failoverEligible ?? result?.shouldFailover);
             const refreshEligible = Boolean(result?.refreshEligible);
-            const primaryAction = result?.primaryAction
+            const action = result?.action
                 || (failoverEligible ? 'failover' : (refreshEligible ? 'refresh' : 'none'));
             Logger.add(LogEvents.tagged('BACKOFF', 'No-heal action selected'), {
                 videoId: context.videoId,
                 reason: policyReason,
                 trigger: reason,
-                primaryAction,
+                action,
                 failoverEligible,
                 refreshEligible
             });
@@ -104,7 +104,7 @@ const RecoveryManager = (() => {
                 return refreshed;
             };
 
-            if (primaryAction === 'failover' && failoverEligible) {
+            if (action === 'failover' && failoverEligible) {
                 const failoverStarted = failoverManager.attemptFailover(context.videoId, policyReason, context.monitorState);
                 if (failoverStarted) {
                     return;
@@ -120,7 +120,7 @@ const RecoveryManager = (() => {
                 return;
             }
 
-            if (primaryAction === 'refresh' || refreshEligible) {
+            if (action === 'refresh' || refreshEligible) {
                 tryRefreshFallback();
             }
         };

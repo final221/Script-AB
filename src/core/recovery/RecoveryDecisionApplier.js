@@ -27,10 +27,10 @@ const RecoveryDecisionApplier = (() => {
         const applyNoHealPointDecision = (decision) => {
             if (!decision || decision.type !== 'no_heal_point') {
                 return {
+                    action: 'none',
                     shouldFailover: false,
                     failoverEligible: false,
                     refreshEligible: false,
-                    primaryAction: 'none',
                     probationTriggered: false,
                     emergencySwitched: false
                 };
@@ -52,10 +52,10 @@ const RecoveryDecisionApplier = (() => {
                     bufferStarved: data.bufferStarved
                 });
                 return {
+                    action: 'none',
                     shouldFailover: false,
                     failoverEligible: false,
                     refreshEligible: false,
-                    primaryAction: 'none',
                     probationTriggered: false,
                     emergencySwitched: false
                 };
@@ -100,14 +100,14 @@ const RecoveryDecisionApplier = (() => {
                 : false;
             const failoverEligible = Boolean(data.failoverEligible ?? data.shouldFailover);
             const refreshEligible = Boolean(data.refreshEligible);
-            const primaryAction = data.primaryAction
+            const action = data.action
                 || (failoverEligible ? 'failover' : (refreshEligible ? 'refresh' : 'none'));
 
             return {
+                action,
                 shouldFailover: failoverEligible,
                 failoverEligible,
                 refreshEligible,
-                primaryAction,
                 probationTriggered,
                 emergencySwitched: emergencySwitched || lastResortSwitched
             };

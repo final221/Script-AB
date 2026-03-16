@@ -9,7 +9,7 @@ const EmergencyCandidatePicker = (() => {
         const monitorsById = options.monitorsById;
         const scoreVideo = options.scoreVideo;
         const getActiveId = options.getActiveId;
-        const setActiveId = options.setActiveId;
+        const activateCandidate = options.activateCandidate || options.setActiveId;
         const isFallbackSource = options.isFallbackSource || (() => false);
 
         const isFallbackCandidate = (result) => {
@@ -66,7 +66,7 @@ const EmergencyCandidatePicker = (() => {
             if (!best) return null;
 
             const fromId = activeCandidateId;
-            setActiveId(best.id, `emergency:${reason}`);
+            activateCandidate(best.id, `emergency:${reason}`);
             Logger.add(LogEvents.tagged('CANDIDATE', label), {
                 from: fromId,
                 to: best.id,

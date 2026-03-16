@@ -47,6 +47,11 @@ const MonitorRegistry = (() => {
         const startCandidateEvaluation = () => {
             if (candidateIntervalId || !candidateSelector) return;
             candidateIntervalId = setInterval(() => {
+                const minGapMs = CONFIG.stall.WATCHDOG_INTERVAL_MS * 3;
+                if (typeof candidateSelector.shouldRunIntervalEvaluation === 'function'
+                    && !candidateSelector.shouldRunIntervalEvaluation(minGapMs)) {
+                    return;
+                }
                 candidateSelector.evaluateCandidates('interval');
             }, CONFIG.stall.WATCHDOG_INTERVAL_MS);
         };
@@ -56,7 +61,11 @@ const MonitorRegistry = (() => {
                 clearInterval(candidateIntervalId);
                 candidateIntervalId = null;
                 if (candidateSelector) {
-                    candidateSelector.setActiveId(null);
+                    if (typeof candidateSelector.clearActive === 'function') {
+                        candidateSelector.clearActive('idle');
+                    } else {
+                        candidateSelector.setActiveId?.(null, 'idle');
+                    }
                 }
             }
         };
@@ -75,7 +84,11 @@ const MonitorRegistry = (() => {
                 recoveryManager.onMonitorRemoved(videoId);
             }
             if (candidateSelector && candidateSelector.getActiveId() === videoId) {
-                candidateSelector.setActiveId(null);
+                if (typeof candidateSelector.clearActive === 'function') {
+                    candidateSelector.clearActive('removed');
+                } else {
+                    candidateSelector.setActiveId?.(null, 'removed');
+                }
                 if (monitorsById.size > 0) {
                     candidateSelector.evaluateCandidates('removed');
                 }

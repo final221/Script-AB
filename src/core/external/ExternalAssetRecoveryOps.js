@@ -71,8 +71,12 @@ const ExternalAssetRecoveryOps = (() => {
         }
 
         const fromId = getActiveId(candidateSelector);
-        if (videoId !== fromId && typeof candidateSelector?.setActiveId === 'function') {
-            candidateSelector.setActiveId(videoId);
+        if (videoId !== fromId) {
+            if (typeof candidateSelector?.activateCandidate === 'function') {
+                candidateSelector.activateCandidate(videoId, `processing_asset:${step}`);
+            } else if (typeof candidateSelector?.setActiveId === 'function') {
+                candidateSelector.setActiveId(videoId);
+            }
         }
         const activeNow = getActiveId(candidateSelector);
         const playPromise = entry.video?.play?.();

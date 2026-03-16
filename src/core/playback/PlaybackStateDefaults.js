@@ -1,5 +1,5 @@
 // @module PlaybackStateDefaults
-// @depends PlaybackLogHelper
+// @depends PlaybackLogHelper, PlaybackStateAliases
 // --- PlaybackStateDefaults ---
 /**
  * Provides initial playback state structure and alias map.
@@ -118,87 +118,8 @@ const PlaybackStateDefaults = (() => {
         }
     });
 
-    const aliasMap = {
-        state: ['status', 'value'],
-        lastProgressTime: ['progress', 'lastProgressTime'],
-        lastTime: ['progress', 'lastTime'],
-        progressStartTime: ['progress', 'progressStartTime'],
-        progressStreakMs: ['progress', 'progressStreakMs'],
-        progressEligible: ['progress', 'progressEligible'],
-        hasProgress: ['progress', 'hasProgress'],
-        firstSeenTime: ['progress', 'firstSeenTime'],
-        firstReadyTime: ['progress', 'firstReadyTime'],
-        initialProgressTimeoutLogged: ['progress', 'initialProgressTimeoutLogged'],
-        initLogEmitted: ['progress', 'initLogEmitted'],
-        noHealPointCount: ['heal', 'noHealPointCount'],
-        noHealPointRefreshUntil: ['heal', 'noHealPointRefreshUntil'],
-        noHealPointQuietUntil: ['heal', 'noHealPointQuietUntil'],
-        nextHealAllowedTime: ['heal', 'nextHealAllowedTime'],
-        playErrorCount: ['heal', 'playErrorCount'],
-        nextPlayHealAllowedTime: ['heal', 'nextPlayHealAllowedTime'],
-        lastPlayErrorTime: ['heal', 'lastPlayErrorTime'],
-        lastPlayBackoffLogTime: ['heal', 'lastPlayBackoffLogTime'],
-        lastHealPointKey: ['heal', 'lastHealPointKey'],
-        healPointRepeatCount: ['heal', 'healPointRepeatCount'],
-        lastBackoffLogTime: ['heal', 'lastBackoffLogTime'],
-        lastBackoffRemainingBucket: ['heal', 'lastBackoffRemainingBucket'],
-        lastBackoffNoHealPointCount: ['heal', 'lastBackoffNoHealPointCount'],
-        lastHealAttemptTime: ['heal', 'lastHealAttemptTime'],
-        lastHealDeferralLogTime: ['heal', 'lastHealDeferralLogTime'],
-        healDeferSince: ['heal', 'healDeferSince'],
-        healDeferCount: ['heal', 'healDeferCount'],
-        lastRefreshAt: ['heal', 'lastRefreshAt'],
-        lastEmergencySwitchAt: ['heal', 'lastEmergencySwitchAt'],
-        lastWatchdogLogTime: ['events', 'lastWatchdogLogTime'],
-        lastWatchdogSnapshot: ['events', 'lastWatchdogSnapshot'],
-        lastWatchdogStallBucket: ['events', 'lastWatchdogStallBucket'],
-        lastNonActiveEventLogTime: ['events', 'lastNonActiveEventLogTime'],
-        nonActiveEventCounts: ['events', 'nonActiveEventCounts'],
-        lastActiveEventLogTime: ['events', 'lastActiveEventLogTime'],
-        lastActiveEventSummaryTime: ['events', 'lastActiveEventSummaryTime'],
-        activeEventCounts: ['events', 'activeEventCounts'],
-        lastSrc: ['media', 'lastSrc'],
-        lastSrcAttr: ['media', 'lastSrcAttr'],
-        lastReadyState: ['media', 'lastReadyState'],
-        lastNetworkState: ['media', 'lastNetworkState'],
-        lastSrcChangeTime: ['media', 'lastSrcChangeTime'],
-        lastReadyStateChangeTime: ['media', 'lastReadyStateChangeTime'],
-        lastNetworkStateChangeTime: ['media', 'lastNetworkStateChangeTime'],
-        lastBufferedLengthChangeTime: ['media', 'lastBufferedLengthChangeTime'],
-        lastBufferedLength: ['media', 'lastBufferedLength'],
-        mediaStateVerboseLogged: ['media', 'mediaStateVerboseLogged'],
-        deadCandidateSince: ['media', 'deadCandidateSince'],
-        deadCandidateUntil: ['media', 'deadCandidateUntil'],
-        lastStallEventTime: ['stall', 'lastStallEventTime'],
-        pauseFromStall: ['stall', 'pauseFromStall'],
-        stallStartTime: ['stall', 'stallStartTime'],
-        bufferStarvedSince: ['stall', 'bufferStarvedSince'],
-        bufferStarved: ['stall', 'bufferStarved'],
-        bufferStarveUntil: ['stall', 'bufferStarveUntil'],
-        lastBufferStarveLogTime: ['stall', 'lastBufferStarveLogTime'],
-        lastBufferStarveBucket: ['stall', 'lastBufferStarveBucket'],
-        lastBufferStarveSkipLogTime: ['stall', 'lastBufferStarveSkipLogTime'],
-        lastBufferStarveRescanTime: ['stall', 'lastBufferStarveRescanTime'],
-        lastBufferAhead: ['stall', 'lastBufferAhead'],
-        lastBufferAheadUpdateTime: ['stall', 'lastBufferAheadUpdateTime'],
-        lastBufferAheadIncreaseTime: ['stall', 'lastBufferAheadIncreaseTime'],
-        lastSelfRecoverSkipLogTime: ['stall', 'lastSelfRecoverSkipLogTime'],
-        lastAdGapSignatureLogTime: ['stall', 'lastAdGapSignatureLogTime'],
-        lastResourceWindowLogTime: ['stall', 'lastResourceWindowLogTime'],
-        lastSyncWallTime: ['sync', 'lastSyncWallTime'],
-        lastSyncMediaTime: ['sync', 'lastSyncMediaTime'],
-        lastSyncLogTime: ['sync', 'lastSyncLogTime'],
-        resetPendingAt: ['reset', 'resetPendingAt'],
-        resetPendingReason: ['reset', 'resetPendingReason'],
-        resetPendingType: ['reset', 'resetPendingType'],
-        resetPendingCallback: ['reset', 'resetPendingCallback'],
-        catchUpTimeoutId: ['catchUp', 'catchUpTimeoutId'],
-        catchUpAttempts: ['catchUp', 'catchUpAttempts'],
-        lastCatchUpTime: ['catchUp', 'lastCatchUpTime']
-    };
-
     return {
         create,
-        aliasMap
+        aliasMap: PlaybackStateAliases.aliasMap
     };
 })();

@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.15.1
+// @version       4.15.2
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -180,7 +180,7 @@ const CONFIG = (() => {
  * Build metadata helpers (version injected at build time).
  */
 const BuildInfo = (() => {
-    const VERSION = '4.15.1';
+    const VERSION = '4.15.2';
 
     const getVersion = () => {
         const gmVersion = (typeof GM_info !== 'undefined' && GM_info?.script?.version)
@@ -191,7 +191,7 @@ const BuildInfo = (() => {
             ? unsafeWindow.GM_info.script.version
             : null;
         if (unsafeVersion) return unsafeVersion;
-        if (VERSION && VERSION !== '4.15.1') return VERSION;
+        if (VERSION && VERSION !== '4.15.2') return VERSION;
         return null;
     };
 
@@ -1693,6 +1693,7 @@ const LogNormalizer = (() => {
 const LoggerPlaceholderSuppression = (() => {
     const PLACEHOLDER_SUPPRESSION_THRESHOLD = 20;
     const PLACEHOLDER_SAMPLE_MAX = 5;
+    const PLACEHOLDER_VISIBLE_EVENTS = 3;
     const PLACEHOLDER_SUPPRESS_TAGS = new Set([
         'VIDEO',
         'MONITOR',
@@ -1781,18 +1782,29 @@ const LoggerPlaceholderSuppression = (() => {
 
             if (videoId && state) {
                 if (isPlaceholderState(state)) {
-                    placeholderVideos.set(videoId, { lastSeenAt: now, elementId });
+                    const existing = placeholderVideos.get(videoId);
+                    placeholderVideos.set(videoId, {
+                        lastSeenAt: now,
+                        elementId,
+                        visibleEvents: existing?.visibleEvents || 0
+                    });
                 } else {
                     placeholderVideos.delete(videoId);
                 }
             }
 
-            if (!videoId || !placeholderVideos.has(videoId)) {
+            const placeholderEntry = videoId ? placeholderVideos.get(videoId) : null;
+            if (!videoId || !placeholderEntry) {
                 return { suppress: false };
             }
 
             const tagKey = getTagKey(message);
             if (!tagKey || !PLACEHOLDER_SUPPRESS_TAGS.has(tagKey)) {
+                return { suppress: false };
+            }
+
+            if (placeholderEntry.visibleEvents < PLACEHOLDER_VISIBLE_EVENTS) {
+                placeholderEntry.visibleEvents += 1;
                 return { suppress: false };
             }
 
@@ -3332,6 +3344,11 @@ const MonitorRegistry = (() => {
         const startCandidateEvaluation = () => {
             if (candidateIntervalId || !candidateSelector) return;
             candidateIntervalId = setInterval(() => {
+                const minGapMs = CONFIG.stall.WATCHDOG_INTERVAL_MS * 3;
+                if (typeof candidateSelector.shouldRunIntervalEvaluation === 'function'
+                    && !candidateSelector.shouldRunIntervalEvaluation(minGapMs)) {
+                    return;
+                }
                 candidateSelector.evaluateCandidates('interval');
             }, CONFIG.stall.WATCHDOG_INTERVAL_MS);
         };
@@ -3341,7 +3358,11 @@ const MonitorRegistry = (() => {
                 clearInterval(candidateIntervalId);
                 candidateIntervalId = null;
                 if (candidateSelector) {
-                    candidateSelector.setActiveId(null);
+                    if (typeof candidateSelector.clearActive === 'function') {
+                        candidateSelector.clearActive('idle');
+                    } else {
+                        candidateSelector.setActiveId?.(null, 'idle');
+                    }
                 }
             }
         };
@@ -3360,7 +3381,11 @@ const MonitorRegistry = (() => {
                 recoveryManager.onMonitorRemoved(videoId);
             }
             if (candidateSelector && candidateSelector.getActiveId() === videoId) {
-                candidateSelector.setActiveId(null);
+                if (typeof candidateSelector.clearActive === 'function') {
+                    candidateSelector.clearActive('removed');
+                } else {
+                    candidateSelector.setActiveId?.(null, 'removed');
+                }
                 if (monitorsById.size > 0) {
                     candidateSelector.evaluateCandidates('removed');
                 }
@@ -3484,21 +3509,21 @@ const MonitorRegistry = (() => {
     return { create };
 })();
 
-// @module MonitorCoordinator
+// @module RefreshCoordinator
 // @depends MonitorRegistry
-// --- MonitorCoordinator ---
 /**
- * Coordinates monitor registry and candidate selection lifecycle.
+ * Executes refresh plans and keeps page-vs-element refresh policy in one place.
  */
-const MonitorCoordinator = (() => {
+const RefreshCoordinator = (() => {
+    const AUTO_REFRESH_STORAGE_KEY = 'twad_auto_refresh_at';
+
     const create = (options = {}) => {
         const monitorRegistry = options.monitorRegistry;
         const candidateSelector = options.candidateSelector;
         const logDebug = options.logDebug || (() => {});
-        const AUTO_REFRESH_STORAGE_KEY = 'twad_auto_refresh_at';
+        const scanForVideos = options.scanForVideos || (() => null);
 
         const monitorsById = monitorRegistry.monitorsById;
-        const getVideoId = monitorRegistry.getVideoId;
 
         const readAutoRefreshStamp = () => {
             try {
@@ -3514,24 +3539,6 @@ const MonitorCoordinator = (() => {
             } catch (error) {
                 // ignore storage failures
             }
-        };
-
-        const canAutoRefresh = (now, forcePageRefresh = false) => {
-            if (!forcePageRefresh && !CONFIG.stall.AUTO_PAGE_REFRESH) {
-                return { ok: false, reason: 'disabled' };
-            }
-            const lastRefreshAt = readAutoRefreshStamp();
-            if (lastRefreshAt) {
-                const elapsedMs = now - lastRefreshAt;
-                if (elapsedMs < CONFIG.stall.REFRESH_COOLDOWN_MS) {
-                    return {
-                        ok: false,
-                        reason: 'cooldown',
-                        remainingMs: CONFIG.stall.REFRESH_COOLDOWN_MS - elapsedMs
-                    };
-                }
-            }
-            return { ok: true };
         };
 
         const getExportLogsFn = () => {
@@ -3561,6 +3568,134 @@ const MonitorCoordinator = (() => {
                 return { ok: false, reason: 'exception' };
             }
         };
+
+        const evaluatePlan = (detail = {}, now = Date.now()) => {
+            const forcePageRefresh = Boolean(detail?.forcePageRefresh);
+            if (!forcePageRefresh && !CONFIG.stall.AUTO_PAGE_REFRESH) {
+                return {
+                    mode: 'element',
+                    reason: 'disabled',
+                    forcePageRefresh
+                };
+            }
+            const lastRefreshAt = readAutoRefreshStamp();
+            if (lastRefreshAt) {
+                const elapsedMs = now - lastRefreshAt;
+                if (elapsedMs < CONFIG.stall.REFRESH_COOLDOWN_MS) {
+                    return {
+                        mode: 'element',
+                        reason: 'cooldown',
+                        remainingMs: CONFIG.stall.REFRESH_COOLDOWN_MS - elapsedMs,
+                        forcePageRefresh
+                    };
+                }
+            }
+            return {
+                mode: 'page',
+                reason: forcePageRefresh ? 'forced' : 'auto',
+                forcePageRefresh
+            };
+        };
+
+        const shouldForceRefreshTakeover = (detail, preferred) => {
+            if (detail?.reason !== 'processing_asset_exhausted') return false;
+            if (!preferred?.id) return false;
+            const readyState = preferred.vs?.readyState ?? 0;
+            const hasSource = Boolean(preferred.vs?.currentSrc || preferred.vs?.src);
+            return readyState >= CONFIG.monitoring.PROBATION_READY_STATE || hasSource;
+        };
+
+        const executePageRefresh = (videoId, elementId, detail, now, plan) => {
+            const exportResult = attemptLogExport();
+            Logger.add(LogEvents.tagged('REFRESH', 'Auto page refresh scheduled'), {
+                videoId,
+                elementId,
+                detail,
+                forced: plan.forcePageRefresh,
+                exportOk: exportResult.ok,
+                exportReason: exportResult.reason || null,
+                delayMs: CONFIG.stall.AUTO_PAGE_REFRESH_DELAY_MS
+            });
+            writeAutoRefreshStamp(now);
+            setTimeout(() => {
+                window.location.reload();
+            }, CONFIG.stall.AUTO_PAGE_REFRESH_DELAY_MS);
+            return true;
+        };
+
+        const executeElementRefresh = (videoId, video, elementId, detail, plan) => {
+            if (plan.reason === 'cooldown') {
+                logDebug(LogEvents.tagged('REFRESH', 'Auto page refresh suppressed (cooldown)'), {
+                    videoId,
+                    elementId,
+                    remainingMs: plan.remainingMs,
+                    detail
+                });
+            }
+            Logger.add(LogEvents.tagged('REFRESH', 'Refreshing video to escape stale state'), {
+                videoId,
+                elementId,
+                detail
+            });
+            monitorRegistry.stopMonitoring(video);
+            monitorRegistry.resetVideoId(video);
+            setTimeout(() => {
+                const scanResult = scanForVideos('refresh', {
+                    videoId,
+                    ...detail
+                });
+                if (!shouldForceRefreshTakeover(detail, scanResult?.preferred)) {
+                    return;
+                }
+                candidateSelector.forceSwitch?.(scanResult.preferred, {
+                    reason: 'refresh_replacement',
+                    requireProgressEligible: false,
+                    requireSevere: false,
+                    label: 'Forced switch to refreshed candidate',
+                    suppressionLabel: 'Refreshed candidate switch suppressed'
+                });
+            }, 100);
+            return true;
+        };
+
+        const refreshVideo = (videoId, detail = {}) => {
+            const entry = monitorsById.get(videoId);
+            if (!entry) return false;
+            const { video } = entry;
+            const elementId = typeof monitorRegistry.getElementId === 'function'
+                ? monitorRegistry.getElementId(video)
+                : null;
+            const now = Date.now();
+            const plan = evaluatePlan(detail, now);
+            if (plan.mode === 'page') {
+                return executePageRefresh(videoId, elementId, detail, now, plan);
+            }
+            return executeElementRefresh(videoId, video, elementId, detail, plan);
+        };
+
+        return {
+            evaluatePlan,
+            refreshVideo
+        };
+    };
+
+    return { create };
+})();
+
+// @module MonitorCoordinator
+// @depends MonitorRegistry, RefreshCoordinator
+// --- MonitorCoordinator ---
+/**
+ * Coordinates monitor registry and candidate selection lifecycle.
+ */
+const MonitorCoordinator = (() => {
+    const create = (options = {}) => {
+        const monitorRegistry = options.monitorRegistry;
+        const candidateSelector = options.candidateSelector;
+        const logDebug = options.logDebug || (() => {});
+
+        const monitorsById = monitorRegistry.monitorsById;
+        const getVideoId = monitorRegistry.getVideoId;
 
         const scanForVideos = (reason, detail = {}) => {
             if (!document?.querySelectorAll) {
@@ -3611,81 +3746,18 @@ const MonitorCoordinator = (() => {
                 discovered
             };
         };
-
-        const shouldForceRefreshTakeover = (detail, preferred) => {
-            if (detail?.reason !== 'processing_asset_exhausted') return false;
-            if (!preferred?.id) return false;
-            const readyState = preferred.vs?.readyState ?? 0;
-            const hasSource = Boolean(preferred.vs?.currentSrc || preferred.vs?.src);
-            return readyState >= CONFIG.monitoring.PROBATION_READY_STATE || hasSource;
-        };
-
-        const refreshVideo = (videoId, detail = {}) => {
-            const entry = monitorsById.get(videoId);
-            if (!entry) return false;
-            const { video } = entry;
-            const elementId = typeof monitorRegistry.getElementId === 'function'
-                ? monitorRegistry.getElementId(video)
-                : null;
-            const forcePageRefresh = Boolean(detail?.forcePageRefresh);
-            const now = Date.now();
-            const autoRefresh = canAutoRefresh(now, forcePageRefresh);
-            if (autoRefresh.ok) {
-                const exportResult = attemptLogExport();
-                Logger.add(LogEvents.tagged('REFRESH', 'Auto page refresh scheduled'), {
-                    videoId,
-                    elementId,
-                    detail,
-                    forced: forcePageRefresh,
-                    exportOk: exportResult.ok,
-                    exportReason: exportResult.reason || null,
-                    delayMs: CONFIG.stall.AUTO_PAGE_REFRESH_DELAY_MS
-                });
-                writeAutoRefreshStamp(now);
-                setTimeout(() => {
-                    window.location.reload();
-                }, CONFIG.stall.AUTO_PAGE_REFRESH_DELAY_MS);
-                return true;
-            }
-            if (autoRefresh.reason === 'cooldown') {
-                logDebug(LogEvents.tagged('REFRESH', 'Auto page refresh suppressed (cooldown)'), {
-                    videoId,
-                    elementId,
-                    remainingMs: autoRefresh.remainingMs,
-                    detail
-                });
-            }
-            Logger.add(LogEvents.tagged('REFRESH', 'Refreshing video to escape stale state'), {
-                videoId,
-                elementId,
-                detail
-            });
-            monitorRegistry.stopMonitoring(video);
-            monitorRegistry.resetVideoId(video);
-            setTimeout(() => {
-                const scanResult = scanForVideos('refresh', {
-                    videoId,
-                    ...detail
-                });
-                if (!shouldForceRefreshTakeover(detail, scanResult?.preferred)) {
-                    return;
-                }
-                candidateSelector.forceSwitch?.(scanResult.preferred, {
-                    reason: 'refresh_replacement',
-                    requireProgressEligible: false,
-                    requireSevere: false,
-                    label: 'Forced switch to refreshed candidate',
-                    suppressionLabel: 'Refreshed candidate switch suppressed'
-                });
-            }, 100);
-            return true;
-        };
+        const refreshCoordinator = RefreshCoordinator.create({
+            monitorRegistry,
+            candidateSelector,
+            logDebug,
+            scanForVideos
+        });
 
         return {
             monitor: monitorRegistry.monitor,
             stopMonitoring: monitorRegistry.stopMonitoring,
             scanForVideos,
-            refreshVideo,
+            refreshVideo: refreshCoordinator.refreshVideo,
             monitorsById,
             getVideoId,
             getMonitoredCount: () => monitorRegistry.getMonitoredCount()
@@ -3900,8 +3972,128 @@ const PlaybackLogHelper = (() => {
     return { create };
 })();
 
-// @module PlaybackStateDefaults
+// @module PlaybackStateAliases
 // @depends PlaybackLogHelper
+/**
+ * Legacy playback-state aliases grouped by state section.
+ */
+const PlaybackStateAliases = (() => {
+    const GROUPS = Object.freeze({
+        status: ['state'],
+        progress: [
+            'lastProgressTime',
+            'lastTime',
+            'progressStartTime',
+            'progressStreakMs',
+            'progressEligible',
+            'hasProgress',
+            'firstSeenTime',
+            'firstReadyTime',
+            'initialProgressTimeoutLogged',
+            'initLogEmitted'
+        ],
+        heal: [
+            'noHealPointCount',
+            'noHealPointRefreshUntil',
+            'noHealPointQuietUntil',
+            'nextHealAllowedTime',
+            'playErrorCount',
+            'nextPlayHealAllowedTime',
+            'lastPlayErrorTime',
+            'lastPlayBackoffLogTime',
+            'lastHealPointKey',
+            'healPointRepeatCount',
+            'lastBackoffLogTime',
+            'lastBackoffRemainingBucket',
+            'lastBackoffNoHealPointCount',
+            'lastHealAttemptTime',
+            'lastHealDeferralLogTime',
+            'healDeferSince',
+            'healDeferCount',
+            'lastRefreshAt',
+            'lastEmergencySwitchAt'
+        ],
+        events: [
+            'lastWatchdogLogTime',
+            'lastWatchdogSnapshot',
+            'lastWatchdogStallBucket',
+            'lastNonActiveEventLogTime',
+            'nonActiveEventCounts',
+            'lastActiveEventLogTime',
+            'lastActiveEventSummaryTime',
+            'activeEventCounts'
+        ],
+        media: [
+            'lastSrc',
+            'lastSrcAttr',
+            'lastReadyState',
+            'lastNetworkState',
+            'lastSrcChangeTime',
+            'lastReadyStateChangeTime',
+            'lastNetworkStateChangeTime',
+            'lastBufferedLengthChangeTime',
+            'lastBufferedLength',
+            'mediaStateVerboseLogged',
+            'deadCandidateSince',
+            'deadCandidateUntil'
+        ],
+        stall: [
+            'lastStallEventTime',
+            'pauseFromStall',
+            'stallStartTime',
+            'bufferStarvedSince',
+            'bufferStarved',
+            'bufferStarveUntil',
+            'lastBufferStarveLogTime',
+            'lastBufferStarveBucket',
+            'lastBufferStarveSkipLogTime',
+            'lastBufferStarveRescanTime',
+            'lastBufferAhead',
+            'lastBufferAheadUpdateTime',
+            'lastBufferAheadIncreaseTime',
+            'lastSelfRecoverSkipLogTime',
+            'lastAdGapSignatureLogTime',
+            'lastResourceWindowLogTime'
+        ],
+        sync: [
+            'lastSyncWallTime',
+            'lastSyncMediaTime',
+            'lastSyncLogTime'
+        ],
+        reset: [
+            'resetPendingAt',
+            'resetPendingReason',
+            'resetPendingType',
+            'resetPendingCallback'
+        ],
+        catchUp: [
+            'catchUpTimeoutId',
+            'catchUpAttempts',
+            'lastCatchUpTime'
+        ]
+    });
+
+    const SPECIAL_PATHS = Object.freeze({
+        state: ['status', 'value']
+    });
+
+    const buildAliasMap = () => {
+        const aliasMap = {};
+        Object.entries(GROUPS).forEach(([section, aliases]) => {
+            aliases.forEach((alias) => {
+                aliasMap[alias] = SPECIAL_PATHS[alias] || [section, alias];
+            });
+        });
+        return aliasMap;
+    };
+
+    return {
+        aliasMap: buildAliasMap()
+    };
+})();
+
+// @module PlaybackStateDefaults
+// @depends PlaybackLogHelper, PlaybackStateAliases
 // --- PlaybackStateDefaults ---
 /**
  * Provides initial playback state structure and alias map.
@@ -4020,88 +4212,9 @@ const PlaybackStateDefaults = (() => {
         }
     });
 
-    const aliasMap = {
-        state: ['status', 'value'],
-        lastProgressTime: ['progress', 'lastProgressTime'],
-        lastTime: ['progress', 'lastTime'],
-        progressStartTime: ['progress', 'progressStartTime'],
-        progressStreakMs: ['progress', 'progressStreakMs'],
-        progressEligible: ['progress', 'progressEligible'],
-        hasProgress: ['progress', 'hasProgress'],
-        firstSeenTime: ['progress', 'firstSeenTime'],
-        firstReadyTime: ['progress', 'firstReadyTime'],
-        initialProgressTimeoutLogged: ['progress', 'initialProgressTimeoutLogged'],
-        initLogEmitted: ['progress', 'initLogEmitted'],
-        noHealPointCount: ['heal', 'noHealPointCount'],
-        noHealPointRefreshUntil: ['heal', 'noHealPointRefreshUntil'],
-        noHealPointQuietUntil: ['heal', 'noHealPointQuietUntil'],
-        nextHealAllowedTime: ['heal', 'nextHealAllowedTime'],
-        playErrorCount: ['heal', 'playErrorCount'],
-        nextPlayHealAllowedTime: ['heal', 'nextPlayHealAllowedTime'],
-        lastPlayErrorTime: ['heal', 'lastPlayErrorTime'],
-        lastPlayBackoffLogTime: ['heal', 'lastPlayBackoffLogTime'],
-        lastHealPointKey: ['heal', 'lastHealPointKey'],
-        healPointRepeatCount: ['heal', 'healPointRepeatCount'],
-        lastBackoffLogTime: ['heal', 'lastBackoffLogTime'],
-        lastBackoffRemainingBucket: ['heal', 'lastBackoffRemainingBucket'],
-        lastBackoffNoHealPointCount: ['heal', 'lastBackoffNoHealPointCount'],
-        lastHealAttemptTime: ['heal', 'lastHealAttemptTime'],
-        lastHealDeferralLogTime: ['heal', 'lastHealDeferralLogTime'],
-        healDeferSince: ['heal', 'healDeferSince'],
-        healDeferCount: ['heal', 'healDeferCount'],
-        lastRefreshAt: ['heal', 'lastRefreshAt'],
-        lastEmergencySwitchAt: ['heal', 'lastEmergencySwitchAt'],
-        lastWatchdogLogTime: ['events', 'lastWatchdogLogTime'],
-        lastWatchdogSnapshot: ['events', 'lastWatchdogSnapshot'],
-        lastWatchdogStallBucket: ['events', 'lastWatchdogStallBucket'],
-        lastNonActiveEventLogTime: ['events', 'lastNonActiveEventLogTime'],
-        nonActiveEventCounts: ['events', 'nonActiveEventCounts'],
-        lastActiveEventLogTime: ['events', 'lastActiveEventLogTime'],
-        lastActiveEventSummaryTime: ['events', 'lastActiveEventSummaryTime'],
-        activeEventCounts: ['events', 'activeEventCounts'],
-        lastSrc: ['media', 'lastSrc'],
-        lastSrcAttr: ['media', 'lastSrcAttr'],
-        lastReadyState: ['media', 'lastReadyState'],
-        lastNetworkState: ['media', 'lastNetworkState'],
-        lastSrcChangeTime: ['media', 'lastSrcChangeTime'],
-        lastReadyStateChangeTime: ['media', 'lastReadyStateChangeTime'],
-        lastNetworkStateChangeTime: ['media', 'lastNetworkStateChangeTime'],
-        lastBufferedLengthChangeTime: ['media', 'lastBufferedLengthChangeTime'],
-        lastBufferedLength: ['media', 'lastBufferedLength'],
-        mediaStateVerboseLogged: ['media', 'mediaStateVerboseLogged'],
-        deadCandidateSince: ['media', 'deadCandidateSince'],
-        deadCandidateUntil: ['media', 'deadCandidateUntil'],
-        lastStallEventTime: ['stall', 'lastStallEventTime'],
-        pauseFromStall: ['stall', 'pauseFromStall'],
-        stallStartTime: ['stall', 'stallStartTime'],
-        bufferStarvedSince: ['stall', 'bufferStarvedSince'],
-        bufferStarved: ['stall', 'bufferStarved'],
-        bufferStarveUntil: ['stall', 'bufferStarveUntil'],
-        lastBufferStarveLogTime: ['stall', 'lastBufferStarveLogTime'],
-        lastBufferStarveBucket: ['stall', 'lastBufferStarveBucket'],
-        lastBufferStarveSkipLogTime: ['stall', 'lastBufferStarveSkipLogTime'],
-        lastBufferStarveRescanTime: ['stall', 'lastBufferStarveRescanTime'],
-        lastBufferAhead: ['stall', 'lastBufferAhead'],
-        lastBufferAheadUpdateTime: ['stall', 'lastBufferAheadUpdateTime'],
-        lastBufferAheadIncreaseTime: ['stall', 'lastBufferAheadIncreaseTime'],
-        lastSelfRecoverSkipLogTime: ['stall', 'lastSelfRecoverSkipLogTime'],
-        lastAdGapSignatureLogTime: ['stall', 'lastAdGapSignatureLogTime'],
-        lastResourceWindowLogTime: ['stall', 'lastResourceWindowLogTime'],
-        lastSyncWallTime: ['sync', 'lastSyncWallTime'],
-        lastSyncMediaTime: ['sync', 'lastSyncMediaTime'],
-        lastSyncLogTime: ['sync', 'lastSyncLogTime'],
-        resetPendingAt: ['reset', 'resetPendingAt'],
-        resetPendingReason: ['reset', 'resetPendingReason'],
-        resetPendingType: ['reset', 'resetPendingType'],
-        resetPendingCallback: ['reset', 'resetPendingCallback'],
-        catchUpTimeoutId: ['catchUp', 'catchUpTimeoutId'],
-        catchUpAttempts: ['catchUp', 'catchUpAttempts'],
-        lastCatchUpTime: ['catchUp', 'lastCatchUpTime']
-    };
-
     return {
         create,
-        aliasMap
+        aliasMap: PlaybackStateAliases.aliasMap
     };
 })();
 
@@ -4275,7 +4388,7 @@ const PlaybackStateStore = (() => {
         });
     };
 
-    const applyAliases = (target, map) => {
+    const applyAliases = (target, map = {}) => {
         Object.entries(map).forEach(([key, path]) => defineAlias(target, key, path));
     };
 
@@ -6615,6 +6728,68 @@ const CandidateSelectionLogger = (() => {
     return { create };
 })();
 
+// @module ActiveCandidateState
+// @depends CandidateSelectionLogger
+/**
+ * Centralizes active/last-good candidate state and evaluation timing.
+ */
+const ActiveCandidateState = (() => {
+    const create = (options = {}) => {
+        const onSwitch = options.onSwitch || (() => {});
+        const onActive = options.onActive || (() => {});
+
+        const state = {
+            activeCandidateId: null,
+            lastGoodCandidateId: null,
+            lastEvaluationAt: 0,
+            lastEvaluationReason: null
+        };
+
+        const activateCandidate = (id, reason = 'manual') => {
+            const previousActiveId = state.activeCandidateId;
+            if (previousActiveId && previousActiveId !== id) {
+                onSwitch({
+                    fromId: previousActiveId,
+                    toId: id,
+                    reason
+                });
+            }
+            state.activeCandidateId = id;
+            onActive(id, reason);
+            return id;
+        };
+
+        const clearActive = (reason = 'manual_clear') => activateCandidate(null, reason);
+        const getActiveId = () => state.activeCandidateId;
+        const getLastGoodId = () => state.lastGoodCandidateId;
+        const setLastGoodId = (id) => {
+            state.lastGoodCandidateId = id;
+            return id;
+        };
+        const noteEvaluation = (reason, now = Date.now()) => {
+            state.lastEvaluationAt = now;
+            state.lastEvaluationReason = reason || null;
+        };
+        const shouldRunIntervalEvaluation = (minGapMs, now = Date.now()) => {
+            if (!state.lastEvaluationAt) return true;
+            if (!Number.isFinite(minGapMs) || minGapMs <= 0) return true;
+            return (now - state.lastEvaluationAt) >= minGapMs;
+        };
+
+        return {
+            activateCandidate,
+            clearActive,
+            getActiveId,
+            getLastGoodId,
+            setLastGoodId,
+            noteEvaluation,
+            shouldRunIntervalEvaluation
+        };
+    };
+
+    return { create };
+})();
+
 // --- CandidateForceSwitch ---
 // @module CandidateForceSwitch
 // @depends CandidateSelectionLogger
@@ -6626,7 +6801,7 @@ const CandidateForceSwitch = (() => {
         const monitorsById = options.monitorsById;
         const isFallbackSource = options.isFallbackSource;
         const getActiveId = options.getActiveId;
-        const setActiveId = options.setActiveId;
+        const activateCandidate = options.activateCandidate || options.setActiveId;
         const observeFormerStreams = options.observeFormerStreams;
         const logDebug = options.logDebug || (() => {});
 
@@ -6708,7 +6883,7 @@ const CandidateForceSwitch = (() => {
             }
 
             const fromId = context.activeId;
-            setActiveId(best.id, `force_switch:${reason}`);
+            activateCandidate(best.id, `force_switch:${reason}`);
             Logger.add(LogEvents.tagged('CANDIDATE', options.label || 'Forced switch'), {
                 from: fromId,
                 to: best.id,
@@ -6734,7 +6909,7 @@ const CandidateForceSwitch = (() => {
 
 // --- CandidateSelector ---
 // @module CandidateSelector
-// @depends CandidateForceSwitch
+// @depends CandidateForceSwitch, ActiveCandidateState
 /**
  * Scores and selects the best video candidate for healing.
  */
@@ -6747,10 +6922,6 @@ const CandidateSelector = (() => {
         const switchDelta = options.switchDelta;
         const isFallbackSource = options.isFallbackSource;
 
-        const state = {
-            activeCandidateId: null,
-            lastGoodCandidateId: null
-        };
         let lockChecker = null;
         const streamIdentity = StreamIdentityModel.create({
             monitorsById,
@@ -6783,41 +6954,41 @@ const CandidateSelector = (() => {
         const logOutcome = selectionLogger.logOutcome;
 
         const scoreVideo = (video, monitor, videoId) => scorer.score(video, monitor, videoId);
-        const getActiveIdRaw = () => state.activeCandidateId;
         const formerStreamTracker = FormerStreamTracker.create({
             monitorsById,
             scoreVideo
         });
-        const setActiveId = (id, reason = 'manual') => {
-            const previousActiveId = state.activeCandidateId;
-            if (previousActiveId && previousActiveId !== id) {
+        const activeState = ActiveCandidateState.create({
+            onSwitch: ({ fromId, toId, reason }) => {
                 formerStreamTracker.trackSwitch({
-                    fromId: previousActiveId,
-                    toId: id,
+                    fromId,
+                    toId,
                     reason
                 });
+            },
+            onActive: (id, reason) => {
+                formerStreamTracker.onActive(id);
+                streamIdentity.observeActive(id, reason);
             }
-            state.activeCandidateId = id;
-            formerStreamTracker.onActive(id);
-            streamIdentity.observeActive(id, reason);
-        };
-        const getLastGoodId = () => state.lastGoodCandidateId;
-        const setLastGoodId = (id) => {
-            state.lastGoodCandidateId = id;
-        };
+        });
+        const activateCandidate = (id, reason = 'manual') => activeState.activateCandidate(id, reason);
+        const clearActive = (reason = 'manual_clear') => activeState.clearActive(reason);
+        const getActiveIdRaw = () => activeState.getActiveId();
+        const getLastGoodId = () => activeState.getLastGoodId();
+        const setLastGoodId = (id) => activeState.setLastGoodId(id);
         const observeFormerStreams = (reason) => {
             formerStreamTracker.observe({
                 reason,
-                activeId: state.activeCandidateId
+                activeId: activeState.getActiveId()
             });
         };
 
-        const getActiveId = () => state.activeCandidateId;
+        const getActiveId = () => activeState.getActiveId();
         const forceSwitchController = CandidateForceSwitch.create({
             monitorsById,
             isFallbackSource,
             getActiveId,
-            setActiveId,
+            activateCandidate,
             observeFormerStreams,
             logDebug
         });
@@ -6837,6 +7008,7 @@ const CandidateSelector = (() => {
         const evaluateCandidates = (reason) => {
             streamIdentity.observeActive(getActiveIdRaw(), `pre_eval:${reason}`);
             const result = selectionEngine.evaluateCandidates(reason);
+            activeState.noteEvaluation(reason, result?.now || Date.now());
             if (!result) {
                 observeFormerStreams(reason);
                 return null;
@@ -6852,7 +7024,7 @@ const CandidateSelector = (() => {
             }
 
             if (result.status === 'empty') {
-                setActiveId(null, 'empty');
+                clearActive('empty');
                 setLastGoodId(null);
                 observeFormerStreams(reason);
                 return null;
@@ -6869,7 +7041,7 @@ const CandidateSelector = (() => {
                     streamOriginVideoId: streamIdentity.getSnapshot().originVideoId,
                     scores: result.scores
                 });
-                setActiveId(result.activation.toId, `activation:${result.activation.reason}`);
+                activateCandidate(result.activation.toId, `activation:${result.activation.reason}`);
             }
 
             const decision = result.decision;
@@ -6889,7 +7061,7 @@ const CandidateSelector = (() => {
                         preferredTrusted: decision.preferred.trusted,
                         streamOriginVideoId: streamIdentity.getSnapshot().originVideoId
                     });
-                    setActiveId(decision.toId, `fast_switch:${decision.reason}`);
+                    activateCandidate(decision.toId, `fast_switch:${decision.reason}`);
                     logOutcome(decision);
                     observeFormerStreams(reason);
                     return result.preferred;
@@ -6911,7 +7083,7 @@ const CandidateSelector = (() => {
                         streamOriginVideoId: streamIdentity.getSnapshot().originVideoId,
                         scores: result.scores
                     });
-                    setActiveId(decision.toId, `switch:${decision.reason}`);
+                    activateCandidate(decision.toId, `switch:${decision.reason}`);
                 }
 
                 logOutcome(decision);
@@ -6934,7 +7106,7 @@ const CandidateSelector = (() => {
             monitorsById,
             scoreVideo,
             getActiveId: getActiveIdRaw,
-            setActiveId,
+            activateCandidate,
             isFallbackSource,
             logDebug
         });
@@ -6944,13 +7116,16 @@ const CandidateSelector = (() => {
             pruneMonitors: pruner.pruneMonitors,
             scoreVideo,
             getActiveId,
-            setActiveId,
+            activateCandidate,
+            clearActive,
+            setActiveId: activateCandidate,
             setLockChecker,
             activateProbation,
             isProbationActive,
             selectEmergencyCandidate: emergencyPicker.selectEmergencyCandidate,
             getActiveContext,
-            forceSwitch
+            forceSwitch,
+            shouldRunIntervalEvaluation: activeState.shouldRunIntervalEvaluation
         };
     };
 
@@ -7138,7 +7313,7 @@ const EmergencyCandidatePicker = (() => {
         const monitorsById = options.monitorsById;
         const scoreVideo = options.scoreVideo;
         const getActiveId = options.getActiveId;
-        const setActiveId = options.setActiveId;
+        const activateCandidate = options.activateCandidate || options.setActiveId;
         const isFallbackSource = options.isFallbackSource || (() => false);
 
         const isFallbackCandidate = (result) => {
@@ -7195,7 +7370,7 @@ const EmergencyCandidatePicker = (() => {
             if (!best) return null;
 
             const fromId = activeCandidateId;
-            setActiveId(best.id, `emergency:${reason}`);
+            activateCandidate(best.id, `emergency:${reason}`);
             Logger.add(LogEvents.tagged('CANDIDATE', label), {
                 from: fromId,
                 to: best.id,
@@ -8011,10 +8186,10 @@ const RecoveryDecisionApplier = (() => {
         const applyNoHealPointDecision = (decision) => {
             if (!decision || decision.type !== 'no_heal_point') {
                 return {
+                    action: 'none',
                     shouldFailover: false,
                     failoverEligible: false,
                     refreshEligible: false,
-                    primaryAction: 'none',
                     probationTriggered: false,
                     emergencySwitched: false
                 };
@@ -8036,10 +8211,10 @@ const RecoveryDecisionApplier = (() => {
                     bufferStarved: data.bufferStarved
                 });
                 return {
+                    action: 'none',
                     shouldFailover: false,
                     failoverEligible: false,
                     refreshEligible: false,
-                    primaryAction: 'none',
                     probationTriggered: false,
                     emergencySwitched: false
                 };
@@ -8084,14 +8259,14 @@ const RecoveryDecisionApplier = (() => {
                 : false;
             const failoverEligible = Boolean(data.failoverEligible ?? data.shouldFailover);
             const refreshEligible = Boolean(data.refreshEligible);
-            const primaryAction = data.primaryAction
+            const action = data.action
                 || (failoverEligible ? 'failover' : (refreshEligible ? 'refresh' : 'none'));
 
             return {
+                action,
                 shouldFailover: failoverEligible,
                 failoverEligible,
                 refreshEligible,
-                primaryAction,
                 probationTriggered,
                 emergencySwitched: emergencySwitched || lastResortSwitched
             };
@@ -8298,7 +8473,7 @@ const NoHealPointPolicy = (() => {
             const refreshEligible = hardFailureMode
                 ? true
                 : canRefresh(monitorState, nextNoHealPointCount, now, refreshUntil);
-            const primaryAction = shouldFailover
+            const action = shouldFailover
                 ? 'failover'
                 : (refreshEligible ? 'refresh' : 'none');
 
@@ -8322,7 +8497,7 @@ const NoHealPointPolicy = (() => {
                 lastResortEligible: !hardFailureMode
                     && canLastResortSwitch(monitorState, nextNoHealPointCount, now),
                 refreshEligible,
-                primaryAction,
+                action,
                 hardFailureMode
             });
         };
@@ -8961,7 +9136,11 @@ const FailoverManager = (() => {
             state.baselineCurrentTime = baseline.baselineCurrentTime;
             state.baselineProgressTime = baseline.baselineProgressTime;
 
-            candidateSelector.setActiveId(toId);
+            if (typeof candidateSelector.activateCandidate === 'function') {
+                candidateSelector.activateCandidate(toId, `failover:${reason}`);
+            } else {
+                candidateSelector.setActiveId?.(toId);
+            }
             if (candidate.selectionMode === 'viable_untrusted_fallback') {
                 Logger.add(LogEvents.tagged('FAILOVER', 'Using viable untrusted fallback candidate'), {
                     from: fromVideoId,
@@ -9039,7 +9218,11 @@ const FailoverManager = (() => {
                     });
                     state.recentFailures.set(toId, Date.now());
                     if (fromEntry) {
-                        candidateSelector.setActiveId(fromVideoId);
+                        if (typeof candidateSelector.activateCandidate === 'function') {
+                            candidateSelector.activateCandidate(fromVideoId, `failover_revert:${reason}`);
+                        } else {
+                            candidateSelector.setActiveId?.(fromVideoId);
+                        }
                     }
                 }
 
@@ -9337,13 +9520,13 @@ const RecoveryManager = (() => {
             const result = policy.handleNoHealPoint(context, policyReason);
             const failoverEligible = Boolean(result?.failoverEligible ?? result?.shouldFailover);
             const refreshEligible = Boolean(result?.refreshEligible);
-            const primaryAction = result?.primaryAction
+            const action = result?.action
                 || (failoverEligible ? 'failover' : (refreshEligible ? 'refresh' : 'none'));
             Logger.add(LogEvents.tagged('BACKOFF', 'No-heal action selected'), {
                 videoId: context.videoId,
                 reason: policyReason,
                 trigger: reason,
-                primaryAction,
+                action,
                 failoverEligible,
                 refreshEligible
             });
@@ -9364,7 +9547,7 @@ const RecoveryManager = (() => {
                 return refreshed;
             };
 
-            if (primaryAction === 'failover' && failoverEligible) {
+            if (action === 'failover' && failoverEligible) {
                 const failoverStarted = failoverManager.attemptFailover(context.videoId, policyReason, context.monitorState);
                 if (failoverStarted) {
                     return;
@@ -9380,7 +9563,7 @@ const RecoveryManager = (() => {
                 return;
             }
 
-            if (primaryAction === 'refresh' || refreshEligible) {
+            if (action === 'refresh' || refreshEligible) {
                 tryRefreshFallback();
             }
         };
@@ -11193,8 +11376,12 @@ const ExternalAssetRecoveryOps = (() => {
         }
 
         const fromId = getActiveId(candidateSelector);
-        if (videoId !== fromId && typeof candidateSelector?.setActiveId === 'function') {
-            candidateSelector.setActiveId(videoId);
+        if (videoId !== fromId) {
+            if (typeof candidateSelector?.activateCandidate === 'function') {
+                candidateSelector.activateCandidate(videoId, `processing_asset:${step}`);
+            } else if (typeof candidateSelector?.setActiveId === 'function') {
+                candidateSelector.setActiveId(videoId);
+            }
         }
         const activeNow = getActiveId(candidateSelector);
         const playPromise = entry.video?.play?.();

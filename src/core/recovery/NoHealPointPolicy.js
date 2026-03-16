@@ -105,7 +105,7 @@ const NoHealPointPolicy = (() => {
             const refreshEligible = hardFailureMode
                 ? true
                 : canRefresh(monitorState, nextNoHealPointCount, now, refreshUntil);
-            const primaryAction = shouldFailover
+            const action = shouldFailover
                 ? 'failover'
                 : (refreshEligible ? 'refresh' : 'none');
 
@@ -129,7 +129,7 @@ const NoHealPointPolicy = (() => {
                 lastResortEligible: !hardFailureMode
                     && canLastResortSwitch(monitorState, nextNoHealPointCount, now),
                 refreshEligible,
-                primaryAction,
+                action,
                 hardFailureMode
             });
         };
