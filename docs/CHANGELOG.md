@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.15.4 - 2026-03-16T21:36:12.464Z
+Previous: 4.15.3
+Commit: a4907f4
+Changes:
+- Remove thin asset flow wrapper and add seam tests
+
 ## 4.15.3 - 2026-03-16T21:21:04.359Z
 Previous: 4.15.2
 Commit: 6f225ebf

@@ -73,11 +73,12 @@
 
 ## Workflow (always)
 1) Make changes (consider test impact; update or add tests as needed)
-2) Choose bump per policy, set `BUMP=patch|minor|major`, then run `npm.cmd run agent:verify` (tests + build + status; build bumps version + generates dist)
+2) Choose bump per policy, set `BUMP=patch|minor|major`, then run `npm.cmd run agent:verify` (sync-docs + tests + build + verification checks + status; build bumps version/changelog and generates dist)
 3) Set `COMMIT_MSG="..."` and run `npm.cmd run agent:commit` if verify succeeds
 
 - If build/test cannot run, stop and report why before making changes.
 - Use `npm.cmd` on Windows to avoid PowerShell script policy blocks.
+- `BUMP=none` is allowed for exploratory/local verification when you explicitly do not want version/changelog changes.
 - Doc-only changes: skip `npm.cmd run agent:verify` (no version bump/build). Commit and push directly; do not touch generated files.
 - When reporting `agent:verify` results, always include warning count (explicitly state `0` when none).
 - Documentation sync is mandatory: whenever code/config/behavior/logging/debug hooks change, update the corresponding docs in the same change set.
@@ -98,6 +99,7 @@
 - Patch: refactors, docs, tests, internal tooling
 - Minor: new user-visible features or behavior changes
 - Major: breaking changes to config, API, or expected behavior
+- None: exploratory/local verification only; no release artifact version or changelog change
 
 ## Constraints (do not violate)
 - `dist/code.js` and `build/version.txt` are generated.

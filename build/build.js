@@ -14,19 +14,23 @@ const CONFIG = {
     CHANGELOG: path.join(__dirname, '..', 'docs', 'CHANGELOG.md')
 };
 
-/**
- * Updates the semantic version in the version file.
- * @param {'major'|'minor'|'patch'} type - The type of version bump.
- * @returns {{old: string, new: string}} The old and new versions.
- */
-const updateVersion = (type = 'patch') => {
+const readCurrentVersion = () => {
     let version = '1.0.0';
     try {
         version = fs.readFileSync(CONFIG.VERSION, 'utf8').trim();
     } catch (e) {
         // Version file might not exist yet, defaulting to 1.0.0
     }
+    return version;
+};
 
+/**
+ * Updates the semantic version in the version file.
+ * @param {'major'|'minor'|'patch'} type - The type of version bump.
+ * @returns {{old: string, new: string}} The old and new versions.
+ */
+const updateVersion = (type = 'patch') => {
+    const version = readCurrentVersion();
     const parts = version.split('.').map(Number);
 
     if (type === 'major') {
@@ -43,7 +47,6 @@ const updateVersion = (type = 'patch') => {
     const newVersion = parts.join('.');
     fs.writeFileSync(CONFIG.VERSION, newVersion);
 
-    // Sync with package.json and package-lock.json
     const packageJsonPath = path.join(CONFIG.BASE, 'package.json');
     let packageJson = null;
     if (fs.existsSync(packageJsonPath)) {
@@ -64,7 +67,6 @@ const updateVersion = (type = 'patch') => {
         fs.writeFileSync(packageLockPath, JSON.stringify(packageLock, null, 2));
     }
 
-    // Sync README current version
     const readmePath = path.join(CONFIG.BASE, 'README.md');
     if (fs.existsSync(readmePath)) {
         const readme = fs.readFileSync(readmePath, 'utf8');
@@ -122,7 +124,7 @@ const updateChangelog = (oldVersion, newVersion) => {
 
     const maxCommits = 20;
     const hasMore = commits.length > maxCommits;
-    const commitLines = commits.slice(0, maxCommits).map(line => `- ${line}`);
+    const commitLines = commits.slice(0, maxCommits).map((line) => `- ${line}`);
     if (hasMore) {
         commitLines.push(`- ...and ${commits.length - maxCommits} more`);
     }
@@ -146,7 +148,7 @@ const updateChangelog = (oldVersion, newVersion) => {
 };
 
 (() => {
-    console.log('🏗️  Building Stream Healer...');
+    console.log('[build] Building Stream Healer...');
 
     const manifestResult = generateManifest({ check: false });
     if (manifestResult.updated) {
@@ -156,7 +158,7 @@ const updateChangelog = (oldVersion, newVersion) => {
     const normalizeBump = (value) => {
         if (!value) return null;
         const normalized = String(value).trim().toLowerCase();
-        if (['major', 'minor', 'patch'].includes(normalized)) {
+        if (['major', 'minor', 'patch', 'none'].includes(normalized)) {
             return normalized;
         }
         return null;
@@ -169,6 +171,8 @@ const updateChangelog = (oldVersion, newVersion) => {
         versionType = 'major';
     } else if (args.includes('--minor')) {
         versionType = 'minor';
+    } else if (args.includes('--no-bump')) {
+        versionType = 'none';
     }
 
     const envBumpRaw = process.env.BUMP;
@@ -181,11 +185,17 @@ const updateChangelog = (oldVersion, newVersion) => {
         }
     }
 
-    const { old, new: version } = updateVersion(versionType);
-    console.log(`📦 Version: ${old} → ${version} (${versionType})`);
+    let version = readCurrentVersion();
+    if (versionType === 'none') {
+        console.log(`[build] Version unchanged: ${version} (no bump)`);
+    } else {
+        const result = updateVersion(versionType);
+        version = result.new;
+        console.log(`[build] Version: ${result.old} -> ${version} (${versionType})`);
+    }
 
     if (path.basename(CONFIG.OUT) === path.basename(__filename)) {
-        return console.error('❌ Output cannot be build script');
+        return console.error('[build] Output cannot be build script');
     }
 
     const srcDir = path.join(CONFIG.BASE, 'src');
@@ -195,14 +205,16 @@ const updateChangelog = (oldVersion, newVersion) => {
     });
     console.log(`[build] Manifest mode: ${manifestMode}`);
     if (graphReport) {
-        console.log(`[build] Graph validation: duplicate=${graphReport.duplicateModules.length}, unresolved=${graphReport.unresolvedDependencies.length}, cycles=${graphReport.cycleNodes.length}`);
+        console.log(
+            `[build] Graph validation: duplicate=${graphReport.duplicateModules.length}, unresolved=${graphReport.unresolvedDependencies.length}, cycles=${graphReport.cycleNodes.length}`
+        );
     }
 
     const headerContent = fs.existsSync(CONFIG.HEADER)
         ? fs.readFileSync(CONFIG.HEADER, 'utf8').replace('{{VERSION}}', version) + '\n'
         : '';
 
-    const combinedContent = [...priorityFiles, ...otherFiles, entryFile].map(file => {
+    const combinedContent = [...priorityFiles, ...otherFiles, entryFile].map((file) => {
         console.log(`   + ${path.relative(srcDir, file)}`);
         return fs.readFileSync(file, 'utf8');
     }).join('\n');
@@ -211,8 +223,8 @@ const updateChangelog = (oldVersion, newVersion) => {
         const injectedContent = combinedContent.replace(/__BUILD_VERSION__/g, version);
         const finalOutput = `${headerContent}(function () {\n    'use strict';\n\n${injectedContent}\n})();\n`;
         fs.writeFileSync(CONFIG.OUT, finalOutput);
-        console.log(`✅ Built: ${CONFIG.OUT} (${(injectedContent.length / 1024).toFixed(2)} KB)`);
+        console.log(`[build] Built: ${CONFIG.OUT} (${(injectedContent.length / 1024).toFixed(2)} KB)`);
     } catch (e) {
-        console.error(`❌ Error: ${e.message}`);
+        console.error(`[build] Error: ${e.message}`);
     }
 })();

@@ -12,6 +12,8 @@ const run = (command, args) => {
 
 const npmCmd = process.platform === 'win32' ? 'npm.cmd' : 'npm';
 
+run('node', ['build/sync-docs.js']);
+run(npmCmd, ['test']);
 run(npmCmd, ['run', 'build']);
 run('node', ['build/check-file-size.js']);
 run('node', ['build/check-manifest-metadata.js']);
