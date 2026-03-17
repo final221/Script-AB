@@ -110,6 +110,8 @@ Use this to route changes quickly.
 - Sustained low-rate / high-drift sync samples can now mark the active stream as degraded for candidate switching even when playback has not fully collapsed.
 - Severe post-heal sync collapse on the active stream now escalates through recovery even with only one monitored video when no better candidate appears.
 - Paused edge-stuck alternates can now age into dead candidates instead of lingering indefinitely as switch targets.
+- Buffer-starved probation rescans no longer switch to paused, stale, untrusted alternates just because they score slightly less badly than the active stream.
+- A recovered origin-stream candidate can now reclaim ownership from an untrusted healing active candidate before full switch eligibility finishes rebuilding.
 
 ## Debugging Tools
 The following global functions are exposed for debugging:

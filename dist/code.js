@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.17.0
+// @version       4.18.0
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -185,7 +185,7 @@ const CONFIG = (() => {
  * Build metadata helpers (version injected at build time).
  */
 const BuildInfo = (() => {
-    const VERSION = '4.17.0';
+    const VERSION = '4.18.0';
 
     const getVersion = () => {
         const gmVersion = (typeof GM_info !== 'undefined' && GM_info?.script?.version)
@@ -196,7 +196,7 @@ const BuildInfo = (() => {
             ? unsafeWindow.GM_info.script.version
             : null;
         if (unsafeVersion) return unsafeVersion;
-        if (VERSION && VERSION !== '4.17.0') return VERSION;
+        if (VERSION && VERSION !== '4.18.0') return VERSION;
         return null;
     };
 
@@ -6432,6 +6432,27 @@ const CandidateSwitchPolicy = (() => {
             ...detail
         });
 
+        const hasReason = (candidate, reason) => Boolean(candidate?.reasons?.includes(reason));
+
+        const hasFreshProgress = (candidate) => (
+            Number.isFinite(candidate?.progressAgoMs)
+            && candidate.progressAgoMs <= CONFIG.monitoring.PROGRESS_RECENT_MS
+        );
+
+        const hasStrongIdentity = (candidate) => (
+            hasReason(candidate, 'identity_origin_video')
+            || hasReason(candidate, 'identity_recent_active')
+            || hasReason(candidate, 'identity_origin_src_match')
+        );
+
+        const isWeakProbationCandidate = (candidate) => (
+            !candidate?.trusted
+            && candidate?.trustReason === 'progress_stale'
+            && Boolean(candidate?.vs?.paused)
+            && !hasFreshProgress(candidate)
+            && !hasStrongIdentity(candidate)
+        );
+
         const evaluateEligibility = ({
             preferred,
             probationActive,
@@ -6449,6 +6470,11 @@ const CandidateSwitchPolicy = (() => {
             }
             if (currentTrusted && !preferred.trusted) {
                 return { allow: false, suppression: 'trusted_active_blocks_untrusted', reason };
+            }
+            if (probationActive
+                && reason === 'scan_buffer_starved'
+                && isWeakProbationCandidate(preferred)) {
+                return { allow: false, suppression: 'weak_probation_candidate', reason };
             }
             if (!preferred.trusted && !probationActive) {
                 return { allow: false, suppression: 'untrusted_outside_probation', reason };
@@ -6565,8 +6591,26 @@ const CandidateSwitchPolicy = (() => {
                 currentTrusted: current ? current.trusted : false
             };
 
+            const fastReturnAllowed = activeHealing
+                && !baseDecision.currentTrusted
+                && hasStrongIdentity(preferred)
+                && hasFreshProgress(preferred)
+                && !preferred.vs.paused
+                && preferred.vs.readyState >= CONFIG.monitoring.PROBATION_READY_STATE
+                && preferred.progressStreakMs >= CONFIG.monitoring.PROBATION_MIN_PROGRESS_MS;
+
+            if (fastReturnAllowed) {
+                return buildDecision('fast_switch', {
+                    fastSwitchKind: 'reclaim_origin',
+                    ...baseDecision
+                });
+            }
+
             if (fastSwitchAllowed) {
-                return buildDecision('fast_switch', baseDecision);
+                return buildDecision('fast_switch', {
+                    fastSwitchKind: 'healing_dead_end',
+                    ...baseDecision
+                });
             }
 
             const eligibility = evaluateEligibility({
@@ -6865,6 +6909,9 @@ const CandidateSelectionLogger = (() => {
             if (decision.action === 'switch' || decision.action === 'fast_switch') {
                 detail.from = decision.fromId;
                 detail.to = decision.toId;
+                if (decision.fastSwitchKind) {
+                    detail.fastSwitchKind = decision.fastSwitchKind;
+                }
             }
 
             return detail;
@@ -7295,10 +7342,14 @@ const CandidateSelector = (() => {
             if (decision) {
                 if (decision.action === 'fast_switch') {
                     const fromId = decision.fromId;
-                    Logger.add(LogEvents.tagged('CANDIDATE', 'Fast switch from healing dead-end'), {
+                    const reclaimedOrigin = decision.fastSwitchKind === 'reclaim_origin';
+                    Logger.add(LogEvents.tagged('CANDIDATE', reclaimedOrigin
+                        ? 'Recovered origin stream reclaimed'
+                        : 'Fast switch from healing dead-end'), {
                         from: fromId,
                         to: decision.toId,
                         reason: decision.reason,
+                        fastSwitchKind: decision.fastSwitchKind || 'healing_dead_end',
                         activeState: decision.activeState,
                         noHealPointCount: decision.activeNoHealPoints,
                         stalledForMs: decision.activeStalledForMs,

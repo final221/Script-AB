@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.18.0 - 2026-03-17T17:25:28.399Z
+Previous: 4.17.0
+Commit: e513f08
+Changes:
+- Escalate severe post-heal degraded playback
+
 ## 4.17.0 - 2026-03-17T16:23:04.117Z
 Previous: 4.16.0
 Commit: 76fd7f1

@@ -46,6 +46,9 @@ const CandidateSelectionLogger = (() => {
             if (decision.action === 'switch' || decision.action === 'fast_switch') {
                 detail.from = decision.fromId;
                 detail.to = decision.toId;
+                if (decision.fastSwitchKind) {
+                    detail.fastSwitchKind = decision.fastSwitchKind;
+                }
             }
 
             return detail;

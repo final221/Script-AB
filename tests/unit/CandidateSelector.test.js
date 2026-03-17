@@ -347,6 +347,67 @@ describe('CandidateSelector', () => {
         expect(selector.getActiveId()).toBe('video-2');
     });
 
+    it('does not switch to a paused stale probation candidate during buffer-starved rescans', () => {
+        const CandidateSelector = window.CandidateSelector;
+        const monitorsById = new Map();
+        const selector = CandidateSelector.create({
+            monitorsById,
+            logDebug: () => {},
+            maxMonitors: 3,
+            minProgressMs: 5000,
+            switchDelta: 2,
+            isFallbackSource: () => false
+        });
+
+        const now = Date.now();
+        const originVideo = makeVideo({
+            paused: true,
+            readyState: 2,
+            currentTime: 1691.479,
+            currentSrc: 'blob:origin',
+            buffered: { length: 1, start: () => 1662, end: () => 1691.48 }
+        });
+        const weakAltVideo = makeVideo({
+            paused: true,
+            readyState: 1,
+            currentTime: 12.073,
+            currentSrc: 'blob:weak',
+            buffered: { length: 1, start: () => 0.09, end: () => 12.073 }
+        });
+
+        monitorsById.set('video-1', {
+            video: originVideo,
+            monitor: {
+                state: {
+                    state: 'STALLED',
+                    hasProgress: true,
+                    lastProgressTime: now - (CONFIG.monitoring.TRUST_STALE_MS + 3000),
+                    progressStreakMs: CONFIG.monitoring.CANDIDATE_MIN_PROGRESS_MS + 100,
+                    progressEligible: true,
+                    deadCandidateUntil: now + 5000
+                }
+            }
+        });
+        monitorsById.set('video-2', {
+            video: weakAltVideo,
+            monitor: {
+                state: {
+                    state: 'STALLED',
+                    hasProgress: true,
+                    lastProgressTime: now - (CONFIG.monitoring.TRUST_STALE_MS + 1000),
+                    progressStreakMs: CONFIG.monitoring.CANDIDATE_MIN_PROGRESS_MS + 100,
+                    progressEligible: true
+                }
+            }
+        });
+
+        selector.setActiveId('video-1', 'test_setup');
+        selector.activateProbation('buffer_starved');
+        selector.evaluateCandidates('scan_buffer_starved');
+
+        expect(selector.getActiveId()).toBe('video-1');
+    });
+
     it('switches away from an actively degraded candidate once a trusted replacement is stable', () => {
         const CandidateSelector = window.CandidateSelector;
         const monitorsById = new Map();
@@ -405,5 +466,66 @@ describe('CandidateSelector', () => {
         selector.evaluateCandidates('degraded_active');
 
         expect(selector.getActiveId()).toBe('video-2');
+    });
+
+    it('reclaims the recovered origin stream while an untrusted active candidate is still healing', () => {
+        const CandidateSelector = window.CandidateSelector;
+        const monitorsById = new Map();
+        const selector = CandidateSelector.create({
+            monitorsById,
+            logDebug: () => {},
+            maxMonitors: 3,
+            minProgressMs: 5000,
+            switchDelta: 2,
+            isFallbackSource: () => false
+        });
+
+        const now = Date.now();
+        const originVideo = makeVideo({
+            paused: false,
+            readyState: 4,
+            currentTime: 1695.488,
+            currentSrc: 'https://usher.ttvnw.net/api/channel/hls/foo.m3u8?token=origin',
+            buffered: { length: 1, start: () => 1695.48, end: () => 1697.99 }
+        });
+        const healingVideo = makeVideo({
+            paused: true,
+            readyState: 1,
+            currentTime: 0,
+            currentSrc: 'blob:healing',
+            buffered: { length: 0, start: () => 0, end: () => 0 }
+        });
+
+        monitorsById.set('video-1', {
+            video: originVideo,
+            monitor: {
+                state: {
+                    state: 'PLAYING',
+                    hasProgress: true,
+                    lastProgressTime: now,
+                    progressStreakMs: CONFIG.monitoring.PROBATION_MIN_PROGRESS_MS + 100,
+                    progressEligible: false
+                }
+            }
+        });
+        monitorsById.set('video-2', {
+            video: healingVideo,
+            monitor: {
+                state: {
+                    state: 'HEALING',
+                    hasProgress: true,
+                    lastProgressTime: now - 20000,
+                    progressStreakMs: CONFIG.monitoring.CANDIDATE_MIN_PROGRESS_MS + 100,
+                    progressEligible: true
+                }
+            }
+        });
+
+        selector.setActiveId('video-1', 'test_setup');
+        monitorsById.get('video-2').monitor.state.lastProgressTime = now - 20000;
+        selector.setActiveId('video-2', 'forced_alt');
+        selector.evaluateCandidates('stall');
+
+        expect(selector.getActiveId()).toBe('video-1');
     });
 });

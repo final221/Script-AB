@@ -15,6 +15,27 @@ const CandidateSwitchPolicy = (() => {
             ...detail
         });
 
+        const hasReason = (candidate, reason) => Boolean(candidate?.reasons?.includes(reason));
+
+        const hasFreshProgress = (candidate) => (
+            Number.isFinite(candidate?.progressAgoMs)
+            && candidate.progressAgoMs <= CONFIG.monitoring.PROGRESS_RECENT_MS
+        );
+
+        const hasStrongIdentity = (candidate) => (
+            hasReason(candidate, 'identity_origin_video')
+            || hasReason(candidate, 'identity_recent_active')
+            || hasReason(candidate, 'identity_origin_src_match')
+        );
+
+        const isWeakProbationCandidate = (candidate) => (
+            !candidate?.trusted
+            && candidate?.trustReason === 'progress_stale'
+            && Boolean(candidate?.vs?.paused)
+            && !hasFreshProgress(candidate)
+            && !hasStrongIdentity(candidate)
+        );
+
         const evaluateEligibility = ({
             preferred,
             probationActive,
@@ -32,6 +53,11 @@ const CandidateSwitchPolicy = (() => {
             }
             if (currentTrusted && !preferred.trusted) {
                 return { allow: false, suppression: 'trusted_active_blocks_untrusted', reason };
+            }
+            if (probationActive
+                && reason === 'scan_buffer_starved'
+                && isWeakProbationCandidate(preferred)) {
+                return { allow: false, suppression: 'weak_probation_candidate', reason };
             }
             if (!preferred.trusted && !probationActive) {
                 return { allow: false, suppression: 'untrusted_outside_probation', reason };
@@ -148,8 +174,26 @@ const CandidateSwitchPolicy = (() => {
                 currentTrusted: current ? current.trusted : false
             };
 
+            const fastReturnAllowed = activeHealing
+                && !baseDecision.currentTrusted
+                && hasStrongIdentity(preferred)
+                && hasFreshProgress(preferred)
+                && !preferred.vs.paused
+                && preferred.vs.readyState >= CONFIG.monitoring.PROBATION_READY_STATE
+                && preferred.progressStreakMs >= CONFIG.monitoring.PROBATION_MIN_PROGRESS_MS;
+
+            if (fastReturnAllowed) {
+                return buildDecision('fast_switch', {
+                    fastSwitchKind: 'reclaim_origin',
+                    ...baseDecision
+                });
+            }
+
             if (fastSwitchAllowed) {
-                return buildDecision('fast_switch', baseDecision);
+                return buildDecision('fast_switch', {
+                    fastSwitchKind: 'healing_dead_end',
+                    ...baseDecision
+                });
             }
 
             const eligibility = evaluateEligibility({

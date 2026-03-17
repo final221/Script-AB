@@ -139,10 +139,14 @@ const CandidateSelector = (() => {
             if (decision) {
                 if (decision.action === 'fast_switch') {
                     const fromId = decision.fromId;
-                    Logger.add(LogEvents.tagged('CANDIDATE', 'Fast switch from healing dead-end'), {
+                    const reclaimedOrigin = decision.fastSwitchKind === 'reclaim_origin';
+                    Logger.add(LogEvents.tagged('CANDIDATE', reclaimedOrigin
+                        ? 'Recovered origin stream reclaimed'
+                        : 'Fast switch from healing dead-end'), {
                         from: fromId,
                         to: decision.toId,
                         reason: decision.reason,
+                        fastSwitchKind: decision.fastSwitchKind || 'healing_dead_end',
                         activeState: decision.activeState,
                         noHealPointCount: decision.activeNoHealPoints,
                         stalledForMs: decision.activeStalledForMs,
