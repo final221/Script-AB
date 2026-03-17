@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.16.0 - 2026-03-17T16:01:54.179Z
+Previous: 4.15.5
+Commit: 46f07f9
+Changes:
+- Split core bootstrap and debug hook seams
+
 ## 4.15.5 - 2026-03-16T21:56:54.999Z
 Previous: 4.15.4
 Commit: 21a893b

@@ -103,7 +103,10 @@ const PlaybackStateDefaults = (() => {
         sync: {
             lastSyncWallTime: 0,
             lastSyncMediaTime: 0,
-            lastSyncLogTime: 0
+            lastSyncLogTime: 0,
+            lastSyncRate: null,
+            lastSyncDriftMs: 0,
+            degradedSyncCount: 0
         },
         reset: {
             resetPendingAt: 0,

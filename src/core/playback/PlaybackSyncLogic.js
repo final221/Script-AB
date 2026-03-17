@@ -34,14 +34,20 @@ const PlaybackSyncLogic = (() => {
 
             const rate = mediaDelta / wallDelta;
             const driftMs = wallDelta - mediaDelta;
+            const degraded = driftMs >= CONFIG.monitoring.SYNC_DRIFT_MAX_MS
+                || rate <= CONFIG.monitoring.SYNC_RATE_MIN;
+            state.lastSyncRate = rate;
+            state.lastSyncDriftMs = driftMs;
+            state.degradedSyncCount = degraded
+                ? (state.degradedSyncCount || 0) + 1
+                : 0;
             const ranges = BufferGapFinder.getBufferRanges(video);
             const bufferEndDelta = ranges.length
                 ? (ranges[ranges.length - 1].end - video.currentTime)
                 : null;
 
             const shouldLog = (now - state.lastSyncLogTime >= CONFIG.logging.SYNC_LOG_MS)
-                || driftMs >= CONFIG.monitoring.SYNC_DRIFT_MAX_MS
-                || rate <= CONFIG.monitoring.SYNC_RATE_MIN;
+                || degraded;
 
             if (!shouldLog) {
                 return;

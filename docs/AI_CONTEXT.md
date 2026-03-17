@@ -107,6 +107,8 @@ Use this to route changes quickly.
 - Candidate reevaluation is now event-first with a throttled interval safety pulse; recent event-driven evaluations suppress redundant interval passes.
 - Placeholder/no-source suppression keeps the first few per-element diagnostics visible before collapsing later churn into suppression summaries.
 - Refresh execution is centralized in `src/core/video/RefreshCoordinator.js`; refresh eligibility still lives in `src/core/recovery/RecoveryRefreshController.js`.
+- Sustained low-rate / high-drift sync samples can now mark the active stream as degraded for candidate switching even when playback has not fully collapsed.
+- Paused edge-stuck alternates can now age into dead candidates instead of lingering indefinitely as switch targets.
 
 ## Debugging Tools
 The following global functions are exposed for debugging:

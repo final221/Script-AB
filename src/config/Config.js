@@ -107,6 +107,8 @@ const CONFIG = (() => {
             SYNC_SAMPLE_MS: 5000,           // Sample window for drift detection
             SYNC_DRIFT_MAX_MS: 1000,        // Log if drift exceeds this threshold
             SYNC_RATE_MIN: 0.9,             // Log if playback rate falls below this ratio
+            DEGRADED_ACTIVE_SAMPLE_COUNT: 2, // Consecutive degraded sync samples before active playback is treated as degraded
+            DEAD_CANDIDATE_BUFFER_AHEAD_S: 0.15, // Treat paused edge-stuck candidates below this headroom as dead candidates
         },
 
         recovery: {

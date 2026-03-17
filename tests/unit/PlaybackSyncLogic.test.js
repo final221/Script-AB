@@ -37,4 +37,33 @@ describe('PlaybackSyncLogic', () => {
 
         expect(logDebugLazy).toHaveBeenCalledTimes(1);
     });
+
+    it('tracks degraded sync samples and clears them after recovery', () => {
+        vi.useFakeTimers();
+        vi.setSystemTime(CONFIG.monitoring.SYNC_SAMPLE_MS + 10);
+
+        const video = createVideo({ paused: false, readyState: 3, currentTime: 0.5 });
+        setBufferedRanges(video, [[0, 10]]);
+        const state = {
+            lastSyncWallTime: 1,
+            lastSyncMediaTime: 0,
+            lastSyncLogTime: 0,
+            degradedSyncCount: 0
+        };
+        const logDebugLazy = vi.fn();
+
+        const logic = PlaybackSyncLogic.create({ video, state, logDebugLazy });
+        logic.logSyncStatus();
+
+        expect(state.degradedSyncCount).toBe(1);
+        expect(state.lastSyncRate).toBeLessThanOrEqual(CONFIG.monitoring.SYNC_RATE_MIN);
+        expect(state.lastSyncDriftMs).toBeGreaterThanOrEqual(CONFIG.monitoring.SYNC_DRIFT_MAX_MS);
+
+        vi.setSystemTime((CONFIG.monitoring.SYNC_SAMPLE_MS * 2) + 20);
+        Object.defineProperty(video, 'currentTime', { value: 5.55, configurable: true });
+        logic.logSyncStatus();
+
+        expect(state.degradedSyncCount).toBe(0);
+        expect(state.lastSyncRate).toBeGreaterThan(CONFIG.monitoring.SYNC_RATE_MIN);
+    });
 });

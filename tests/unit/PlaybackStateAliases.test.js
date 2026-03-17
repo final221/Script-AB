@@ -6,6 +6,7 @@ describe('PlaybackStateAliases', () => {
         expect(window.PlaybackStateAliases.aliasMap.state).toEqual(['status', 'value']);
         expect(window.PlaybackStateAliases.aliasMap.lastRefreshAt).toEqual(['heal', 'lastRefreshAt']);
         expect(window.PlaybackStateAliases.aliasMap.bufferStarved).toEqual(['stall', 'bufferStarved']);
+        expect(window.PlaybackStateAliases.aliasMap.degradedSyncCount).toEqual(['sync', 'degradedSyncCount']);
     });
 
     it('keeps alias-backed state mutations wired to grouped sections', () => {

@@ -27,6 +27,7 @@ const CandidateSelectionLogger = (() => {
                 reason: decision.reason,
                 action: decision.action,
                 activeState: decision.activeState,
+                activeIsDegraded: decision.activeIsDegraded,
                 preferredScore: preferred?.score,
                 preferredProgressEligible: preferred?.progressEligible,
                 preferredTrusted: preferred?.trusted,
@@ -58,6 +59,7 @@ const CandidateSelectionLogger = (() => {
                 reason: decision.reason,
                 cause: decision.suppression,
                 activeState: decision.activeState,
+                activeIsDegraded: decision.activeIsDegraded,
                 probationActive: decision.probationActive,
                 scores: decision.scores
             };

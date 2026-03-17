@@ -40,4 +40,22 @@ describe('CandidateTrust', () => {
         expect(info.trusted).toBe(true);
         expect(info.reason).toBe('trusted');
     });
+
+    it('rejects degraded or dead candidates even with recent progress', () => {
+        const degraded = CandidateTrust.getTrustInfo({
+            progressEligible: true,
+            reasons: ['degraded_sync'],
+            progressAgoMs: 1000
+        });
+        const dead = CandidateTrust.getTrustInfo({
+            progressEligible: true,
+            reasons: ['dead_candidate'],
+            progressAgoMs: 1000
+        });
+
+        expect(degraded.trusted).toBe(false);
+        expect(degraded.reason).toBe('bad_reason');
+        expect(dead.trusted).toBe(false);
+        expect(dead.reason).toBe('bad_reason');
+    });
 });

@@ -61,6 +61,8 @@ Look for:
 - Placeholder/no-source suppression now leaves the first few matching logs visible before collapsing the rest into a suppression summary, so loop starts are easier to diagnose.
 - Stalls without `HEALER:START` likely indicate the video never became active or a failover lock is active.
 - Repeated `FAILOVER_REVERT` means candidates are present but not progressing; check readiness logs.
+- Repeated low-rate / high-drift `SYNC` samples can now mark the active stream as degraded even if audio keeps moving; look for `rate` collapsing well below normal before candidate switch decisions.
+- Non-active candidates that freeze near the buffer edge should now age into `dead_candidate` instead of lingering indefinitely as pseudo-viable alternates.
 
 ## Tuning Cheat Sheet
 Use this mapping to connect config knobs to the log lines they influence.
@@ -71,6 +73,8 @@ Use this mapping to connect config knobs to the log lines they influence.
 - `monitoring.CANDIDATE_*`: `[HEALER:CANDIDATE]` switch/suppress logs
 - `monitoring.TRUST_STALE_MS`: candidate snapshot `trustReason: progress_stale`
 - `monitoring.PROBE_COOLDOWN_MS`: `[HEALER:PROBE_SKIP] Probe cooldown active`
+- `monitoring.SYNC_RATE_MIN` / `SYNC_DRIFT_MAX_MS`: `[SYNC] Playback drift sample`
+- `monitoring.DEGRADED_ACTIVE_SAMPLE_COUNT`: repeated degraded `SYNC` samples before the active stream is treated as degraded
 - `logging.ACTIVE_LOG_MS` / `NON_ACTIVE_LOG_MS`: `[HEALER:WATCHDOG] No progress observed`
 - `logging.CONSOLE_SIGNAL_THROTTLE_MS`: `[INSTRUMENT:CONSOLE_HINT]` frequency
 - `logging.RESOURCE_HINT_THROTTLE_MS`: `[INSTRUMENT:RESOURCE_HINT]` frequency

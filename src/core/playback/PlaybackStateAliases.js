@@ -84,7 +84,10 @@ const PlaybackStateAliases = (() => {
         sync: [
             'lastSyncWallTime',
             'lastSyncMediaTime',
-            'lastSyncLogTime'
+            'lastSyncLogTime',
+            'lastSyncRate',
+            'lastSyncDriftMs',
+            'degradedSyncCount'
         ],
         reset: [
             'resetPendingAt',

@@ -346,4 +346,64 @@ describe('CandidateSelector', () => {
 
         expect(selector.getActiveId()).toBe('video-2');
     });
+
+    it('switches away from an actively degraded candidate once a trusted replacement is stable', () => {
+        const CandidateSelector = window.CandidateSelector;
+        const monitorsById = new Map();
+        const selector = CandidateSelector.create({
+            monitorsById,
+            logDebug: () => {},
+            maxMonitors: 3,
+            minProgressMs: 5000,
+            switchDelta: 2,
+            isFallbackSource: () => false
+        });
+
+        const now = Date.now();
+        const degradedVideo = makeVideo({
+            paused: false,
+            readyState: 4,
+            currentTime: 1508,
+            currentSrc: 'blob:degraded',
+            buffered: { length: 1, start: () => 1483, end: () => 1515 }
+        });
+        const stableVideo = makeVideo({
+            paused: false,
+            readyState: 4,
+            currentTime: 1510,
+            currentSrc: 'blob:stable',
+            buffered: { length: 1, start: () => 1500, end: () => 1520 }
+        });
+
+        monitorsById.set('video-1', {
+            video: degradedVideo,
+            monitor: {
+                state: {
+                    state: 'PLAYING',
+                    hasProgress: true,
+                    lastProgressTime: now,
+                    progressStreakMs: 8000,
+                    progressEligible: true,
+                    degradedSyncCount: CONFIG.monitoring.DEGRADED_ACTIVE_SAMPLE_COUNT
+                }
+            }
+        });
+        monitorsById.set('video-2', {
+            video: stableVideo,
+            monitor: {
+                state: {
+                    state: 'PLAYING',
+                    hasProgress: true,
+                    lastProgressTime: now,
+                    progressStreakMs: 9000,
+                    progressEligible: true
+                }
+            }
+        });
+
+        selector.setActiveId('video-1', 'test_setup');
+        selector.evaluateCandidates('degraded_active');
+
+        expect(selector.getActiveId()).toBe('video-2');
+    });
 });

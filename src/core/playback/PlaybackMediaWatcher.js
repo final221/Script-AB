@@ -1,5 +1,5 @@
 // @module PlaybackMediaWatcher
-// @depends PlaybackStateDefaults
+// @depends BufferGapFinder, PlaybackStateDefaults
 // --- PlaybackMediaWatcher ---
 /**
  * Tracks media element property changes for watchdog logs.
@@ -87,11 +87,25 @@ const PlaybackMediaWatcher = (() => {
             }
 
             const hasSrc = Boolean(currentSrc || srcAttr);
-            if (!hasSrc && readyState === 0) {
+            const bufferInfo = BufferGapFinder.getBufferAhead(video);
+            const bufferAhead = bufferInfo?.bufferAhead ?? null;
+            const staleProgressMs = state.hasProgress && state.lastProgressTime
+                ? (now - state.lastProgressTime)
+                : 0;
+            const stalledAtBufferEdge = hasSrc
+                && staleProgressMs >= CONFIG.monitoring.DEAD_CANDIDATE_AFTER_MS
+                && video.paused
+                && readyState <= 3
+                && Number.isFinite(bufferAhead)
+                && bufferAhead <= CONFIG.monitoring.DEAD_CANDIDATE_BUFFER_AHEAD_S;
+
+            if ((!hasSrc && readyState === 0) || stalledAtBufferEdge) {
                 if (!state.deadCandidateSince) {
                     state.deadCandidateSince = now;
                 }
-                if ((now - state.deadCandidateSince) >= CONFIG.monitoring.DEAD_CANDIDATE_AFTER_MS) {
+                if ((!hasSrc && readyState === 0)
+                    ? ((now - state.deadCandidateSince) >= CONFIG.monitoring.DEAD_CANDIDATE_AFTER_MS)
+                    : true) {
                     state.deadCandidateUntil = now + CONFIG.monitoring.DEAD_CANDIDATE_COOLDOWN_MS;
                 }
             } else if (state.deadCandidateSince || state.deadCandidateUntil) {

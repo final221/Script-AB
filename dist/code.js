@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.15.5
+// @version       4.16.0
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -121,6 +121,8 @@ const CONFIG = (() => {
             SYNC_SAMPLE_MS: 5000,           // Sample window for drift detection
             SYNC_DRIFT_MAX_MS: 1000,        // Log if drift exceeds this threshold
             SYNC_RATE_MIN: 0.9,             // Log if playback rate falls below this ratio
+            DEGRADED_ACTIVE_SAMPLE_COUNT: 2, // Consecutive degraded sync samples before active playback is treated as degraded
+            DEAD_CANDIDATE_BUFFER_AHEAD_S: 0.15, // Treat paused edge-stuck candidates below this headroom as dead candidates
         },
 
         recovery: {
@@ -180,7 +182,7 @@ const CONFIG = (() => {
  * Build metadata helpers (version injected at build time).
  */
 const BuildInfo = (() => {
-    const VERSION = '4.15.5';
+    const VERSION = '4.16.0';
 
     const getVersion = () => {
         const gmVersion = (typeof GM_info !== 'undefined' && GM_info?.script?.version)
@@ -191,7 +193,7 @@ const BuildInfo = (() => {
             ? unsafeWindow.GM_info.script.version
             : null;
         if (unsafeVersion) return unsafeVersion;
-        if (VERSION && VERSION !== '4.15.5') return VERSION;
+        if (VERSION && VERSION !== '4.16.0') return VERSION;
         return null;
     };
 
@@ -4225,7 +4227,10 @@ const PlaybackStateAliases = (() => {
         sync: [
             'lastSyncWallTime',
             'lastSyncMediaTime',
-            'lastSyncLogTime'
+            'lastSyncLogTime',
+            'lastSyncRate',
+            'lastSyncDriftMs',
+            'degradedSyncCount'
         ],
         reset: [
             'resetPendingAt',
@@ -4364,7 +4369,10 @@ const PlaybackStateDefaults = (() => {
         sync: {
             lastSyncWallTime: 0,
             lastSyncMediaTime: 0,
-            lastSyncLogTime: 0
+            lastSyncLogTime: 0,
+            lastSyncRate: null,
+            lastSyncDriftMs: 0,
+            degradedSyncCount: 0
         },
         reset: {
             resetPendingAt: 0,
@@ -4386,7 +4394,7 @@ const PlaybackStateDefaults = (() => {
 })();
 
 // @module PlaybackMediaWatcher
-// @depends PlaybackStateDefaults
+// @depends BufferGapFinder, PlaybackStateDefaults
 // --- PlaybackMediaWatcher ---
 /**
  * Tracks media element property changes for watchdog logs.
@@ -4474,11 +4482,25 @@ const PlaybackMediaWatcher = (() => {
             }
 
             const hasSrc = Boolean(currentSrc || srcAttr);
-            if (!hasSrc && readyState === 0) {
+            const bufferInfo = BufferGapFinder.getBufferAhead(video);
+            const bufferAhead = bufferInfo?.bufferAhead ?? null;
+            const staleProgressMs = state.hasProgress && state.lastProgressTime
+                ? (now - state.lastProgressTime)
+                : 0;
+            const stalledAtBufferEdge = hasSrc
+                && staleProgressMs >= CONFIG.monitoring.DEAD_CANDIDATE_AFTER_MS
+                && video.paused
+                && readyState <= 3
+                && Number.isFinite(bufferAhead)
+                && bufferAhead <= CONFIG.monitoring.DEAD_CANDIDATE_BUFFER_AHEAD_S;
+
+            if ((!hasSrc && readyState === 0) || stalledAtBufferEdge) {
                 if (!state.deadCandidateSince) {
                     state.deadCandidateSince = now;
                 }
-                if ((now - state.deadCandidateSince) >= CONFIG.monitoring.DEAD_CANDIDATE_AFTER_MS) {
+                if ((!hasSrc && readyState === 0)
+                    ? ((now - state.deadCandidateSince) >= CONFIG.monitoring.DEAD_CANDIDATE_AFTER_MS)
+                    : true) {
                     state.deadCandidateUntil = now + CONFIG.monitoring.DEAD_CANDIDATE_COOLDOWN_MS;
                 }
             } else if (state.deadCandidateSince || state.deadCandidateUntil) {
@@ -5291,14 +5313,20 @@ const PlaybackSyncLogic = (() => {
 
             const rate = mediaDelta / wallDelta;
             const driftMs = wallDelta - mediaDelta;
+            const degraded = driftMs >= CONFIG.monitoring.SYNC_DRIFT_MAX_MS
+                || rate <= CONFIG.monitoring.SYNC_RATE_MIN;
+            state.lastSyncRate = rate;
+            state.lastSyncDriftMs = driftMs;
+            state.degradedSyncCount = degraded
+                ? (state.degradedSyncCount || 0) + 1
+                : 0;
             const ranges = BufferGapFinder.getBufferRanges(video);
             const bufferEndDelta = ranges.length
                 ? (ranges[ranges.length - 1].end - video.currentTime)
                 : null;
 
             const shouldLog = (now - state.lastSyncLogTime >= CONFIG.logging.SYNC_LOG_MS)
-                || driftMs >= CONFIG.monitoring.SYNC_DRIFT_MAX_MS
-                || rate <= CONFIG.monitoring.SYNC_RATE_MIN;
+                || degraded;
 
             if (!shouldLog) {
                 return;
@@ -6262,6 +6290,11 @@ const CandidateScorer = (() => {
                 reasons.push('dead_candidate');
             }
 
+            if ((state.degradedSyncCount || 0) >= CONFIG.monitoring.DEGRADED_ACTIVE_SAMPLE_COUNT) {
+                score -= 3;
+                reasons.push('degraded_sync');
+            }
+
             if (isFallbackSource(vs.currentSrc)) {
                 score -= 4;
                 reasons.push('fallback_src');
@@ -6366,13 +6399,14 @@ const CandidateSwitchPolicy = (() => {
             probationActive,
             probationReady,
             activeIsStalled,
+            activeIsDegraded,
             currentTrusted,
             reason
         }) => {
             if (!preferred.progressEligible && !probationReady) {
                 return { allow: false, suppression: 'preferred_not_progress_eligible', reason };
             }
-            if (!activeIsStalled) {
+            if (!activeIsStalled && !activeIsDegraded) {
                 return { allow: false, suppression: 'active_not_stalled', reason };
             }
             if (currentTrusted && !preferred.trusted) {
@@ -6395,7 +6429,9 @@ const CandidateSwitchPolicy = (() => {
                 || current.reasons.includes('ended')
                 || current.reasons.includes('not_in_dom')
                 || current.reasons.includes('reset')
-                || current.reasons.includes('error_state');
+                || current.reasons.includes('error_state')
+                || current.reasons.includes('dead_candidate')
+                || current.reasons.includes('degraded_sync');
             let suppression = null;
             let allow = true;
 
@@ -6459,6 +6495,8 @@ const CandidateSwitchPolicy = (() => {
                 MonitorStates.ERROR,
                 MonitorStates.ENDED
             ].includes(activeState);
+            const activeIsDegraded = Boolean(current?.reasons?.includes('degraded_sync')
+                || current?.reasons?.includes('dead_candidate'));
             const probationProgressOk = preferred.progressStreakMs >= CONFIG.monitoring.PROBATION_MIN_PROGRESS_MS;
             const probationReady = probationActive
                 && probationProgressOk
@@ -6479,6 +6517,7 @@ const CandidateSwitchPolicy = (() => {
                 toId: preferred.id,
                 activeState,
                 activeIsStalled,
+                activeIsDegraded,
                 activeNoHealPoints,
                 activeStalledForMs,
                 probationActive,
@@ -6497,6 +6536,7 @@ const CandidateSwitchPolicy = (() => {
                 probationActive,
                 probationReady,
                 activeIsStalled,
+                activeIsDegraded,
                 currentTrusted: baseDecision.currentTrusted,
                 reason
             });
@@ -6570,7 +6610,7 @@ const CandidateDecision = (() => {
  * Determines whether a candidate is trusted for switching/failover.
  */
 const CandidateTrust = (() => {
-    const BAD_REASONS = ['fallback_src', 'ended', 'not_in_dom', 'reset', 'reset_pending', 'error_state', 'error'];
+    const BAD_REASONS = ['fallback_src', 'ended', 'not_in_dom', 'reset', 'reset_pending', 'error_state', 'error', 'dead_candidate', 'degraded_sync'];
 
     const getTrustInfo = (result) => {
         if (!result || !result.progressEligible) {
@@ -6768,6 +6808,7 @@ const CandidateSelectionLogger = (() => {
                 reason: decision.reason,
                 action: decision.action,
                 activeState: decision.activeState,
+                activeIsDegraded: decision.activeIsDegraded,
                 preferredScore: preferred?.score,
                 preferredProgressEligible: preferred?.progressEligible,
                 preferredTrusted: preferred?.trusted,
@@ -6799,6 +6840,7 @@ const CandidateSelectionLogger = (() => {
                 reason: decision.reason,
                 cause: decision.suppression,
                 activeState: decision.activeState,
+                activeIsDegraded: decision.activeIsDegraded,
                 probationActive: decision.probationActive,
                 scores: decision.scores
             };

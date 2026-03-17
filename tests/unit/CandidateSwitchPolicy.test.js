@@ -116,4 +116,40 @@ describe('CandidateSwitchPolicy', () => {
         expect(decision.action).toBe('stay');
         expect(decision.suppression).toBe('active_not_stalled');
     });
+
+    it('allows switching when the active candidate is degraded by sustained sync drift', () => {
+        const policy = window.CandidateSwitchPolicy.create({
+            switchDelta: CONFIG.monitoring.CANDIDATE_SWITCH_DELTA,
+            minProgressMs: CONFIG.monitoring.CANDIDATE_MIN_PROGRESS_MS,
+            logDebug: () => {}
+        });
+
+        const decision = policy.decide({
+            now: 70000,
+            current: {
+                id: 'video-1',
+                score: 5,
+                reasons: ['degraded_sync'],
+                state: MonitorStates.PLAYING,
+                monitorState: { lastProgressTime: 65000 },
+                trusted: false
+            },
+            preferred: {
+                id: 'video-2',
+                score: 8,
+                progressEligible: true,
+                progressStreakMs: CONFIG.monitoring.CANDIDATE_MIN_PROGRESS_MS,
+                trusted: true,
+                vs: { readyState: 3, currentSrc: 'blob:stream' },
+                reasons: []
+            },
+            activeCandidateId: 'video-1',
+            probationActive: false,
+            scores: [],
+            reason: 'interval'
+        });
+
+        expect(decision.action).toBe('switch');
+        expect(decision.activeIsDegraded).toBe(true);
+    });
 });

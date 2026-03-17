@@ -20,13 +20,14 @@ const CandidateSwitchPolicy = (() => {
             probationActive,
             probationReady,
             activeIsStalled,
+            activeIsDegraded,
             currentTrusted,
             reason
         }) => {
             if (!preferred.progressEligible && !probationReady) {
                 return { allow: false, suppression: 'preferred_not_progress_eligible', reason };
             }
-            if (!activeIsStalled) {
+            if (!activeIsStalled && !activeIsDegraded) {
                 return { allow: false, suppression: 'active_not_stalled', reason };
             }
             if (currentTrusted && !preferred.trusted) {
@@ -49,7 +50,9 @@ const CandidateSwitchPolicy = (() => {
                 || current.reasons.includes('ended')
                 || current.reasons.includes('not_in_dom')
                 || current.reasons.includes('reset')
-                || current.reasons.includes('error_state');
+                || current.reasons.includes('error_state')
+                || current.reasons.includes('dead_candidate')
+                || current.reasons.includes('degraded_sync');
             let suppression = null;
             let allow = true;
 
@@ -113,6 +116,8 @@ const CandidateSwitchPolicy = (() => {
                 MonitorStates.ERROR,
                 MonitorStates.ENDED
             ].includes(activeState);
+            const activeIsDegraded = Boolean(current?.reasons?.includes('degraded_sync')
+                || current?.reasons?.includes('dead_candidate'));
             const probationProgressOk = preferred.progressStreakMs >= CONFIG.monitoring.PROBATION_MIN_PROGRESS_MS;
             const probationReady = probationActive
                 && probationProgressOk
@@ -133,6 +138,7 @@ const CandidateSwitchPolicy = (() => {
                 toId: preferred.id,
                 activeState,
                 activeIsStalled,
+                activeIsDegraded,
                 activeNoHealPoints,
                 activeStalledForMs,
                 probationActive,
@@ -151,6 +157,7 @@ const CandidateSwitchPolicy = (() => {
                 probationActive,
                 probationReady,
                 activeIsStalled,
+                activeIsDegraded,
                 currentTrusted: baseDecision.currentTrusted,
                 reason
             });

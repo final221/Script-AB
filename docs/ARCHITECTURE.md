@@ -278,7 +278,7 @@ Script Logger.add() -> Logger.getMergedTimeline()
 - **PlaybackEventHandlersStall.js** - Waiting/stall/pause handlers
 - **PlaybackEventHandlersLifecycle.js** - Abort/emptied/error/ended handlers
 - **PlaybackEventHandlers.js** - Video event wiring for playback monitoring
-- **PlaybackMediaWatcher.js** - Media element change tracker for watchdog logs
+- **PlaybackMediaWatcher.js** - Media element change tracker for watchdog logs; marks paused edge-stuck dead-end candidates as dead after a cooldown window
 - **PlaybackWatchdog.js** - Watchdog interval for stall checks
 - **PlaybackMonitor.js** - Event-driven playback monitoring with watchdog
 - **PlaybackLogHelper.js** - Shared log snapshot helpers
@@ -286,9 +286,9 @@ Script Logger.add() -> Logger.getMergedTimeline()
 
 #### Candidate selection (src/core/candidate)
 - **ActiveCandidateState.js** - Central active/last-good candidate state + evaluation timing
-- **CandidateScorer.js** - Scores video candidates
-- **CandidateSwitchPolicy.js** - Switch decision logic
-- **CandidateTrust.js** - Trust window tracking
+- **CandidateScorer.js** - Scores video candidates, including sustained degraded-sync penalties
+- **CandidateSwitchPolicy.js** - Switch decision logic; degraded active playback can qualify for switching before a full hard stall
+- **CandidateTrust.js** - Trust window tracking; dead/degraded candidates are not trusted
 - **CandidateScoreRecord.js** - Standardized candidate score records
 - **CandidateProbation.js** - Probation window tracking
 - **CandidateEvaluation.js** - Candidate scoring aggregation

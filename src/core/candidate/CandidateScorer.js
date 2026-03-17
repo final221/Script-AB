@@ -59,6 +59,11 @@ const CandidateScorer = (() => {
                 reasons.push('dead_candidate');
             }
 
+            if ((state.degradedSyncCount || 0) >= CONFIG.monitoring.DEGRADED_ACTIVE_SAMPLE_COUNT) {
+                score -= 3;
+                reasons.push('degraded_sync');
+            }
+
             if (isFallbackSource(vs.currentSrc)) {
                 score -= 4;
                 reasons.push('fallback_src');
