@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.17.0 - 2026-03-17T16:23:04.117Z
+Previous: 4.16.0
+Commit: 76fd7f1
+Changes:
+- Handle degraded active playback and dead-end candidates
+
 ## 4.16.0 - 2026-03-17T16:01:54.179Z
 Previous: 4.15.5
 Commit: 46f07f9

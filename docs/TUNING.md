@@ -11,6 +11,7 @@ All settings live in `src/config/Config.js`.
 - `stall.INIT_PROGRESS_GRACE_MS`: Initial grace window before stall detection starts.
 - `stall.SELF_RECOVER_GRACE_MS`: Grace window to allow self-recovery signals before healing.
 - `stall.SELF_RECOVER_MAX_MS`: Optional max window for self-recovery skips.
+- `stall.PLAY_BACKOFF_CLEAR_PROGRESS_MS`: Healthy resumed-progress window required before play-error backoff is cleared.
 - `stall.SELF_RECOVER_EXTRA_MS`: Extra grace when buffer grows or readyState improves.
 
 ## Healing + Backoff
@@ -49,6 +50,7 @@ All settings live in `src/config/Config.js`.
 - `monitoring.TRUST_STALE_MS`: How quickly trust decays for idle candidates.
 - `monitoring.PROBE_COOLDOWN_MS`: Minimum time between candidate probes.
 - `monitoring.SYNC_RATE_MIN` / `SYNC_DRIFT_MAX_MS`: Low playback-rate or high-drift samples; repeated degraded samples can now make the active stream eligible for a switch even if it is still limping forward.
+- `monitoring.SYNC_SEVERE_RATE_MIN` / `SYNC_SEVERE_DRIFT_MS`: Severe sync-collapse thresholds; when the active stream hits these after a heal failure and no better candidate appears, recovery escalates to forced self-recovery.
 - `monitoring.DEGRADED_ACTIVE_SAMPLE_COUNT`: Consecutive degraded sync samples required before the active stream is treated as degraded.
 - `monitoring.DEAD_CANDIDATE_AFTER_MS`: Mark candidate dead after sustained empty src + readyState 0, or after a paused edge-stuck dead-end sits without progress long enough.
 - `monitoring.DEAD_CANDIDATE_BUFFER_AHEAD_S`: Buffer headroom threshold for treating a paused edge-stuck candidate as dead.

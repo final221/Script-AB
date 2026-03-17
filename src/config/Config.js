@@ -48,6 +48,7 @@ const CONFIG = (() => {
             PLAY_ABORT_BACKOFF_BASE_MS: 8000, // Base backoff after AbortError failures
             PLAY_ABORT_BACKOFF_MAX_MS: 30000, // Max backoff after repeated AbortError failures
             PLAY_ERROR_DECAY_MS: 15000,    // Reset play-error count after this idle window
+            PLAY_BACKOFF_CLEAR_PROGRESS_MS: 3000, // Require healthy resumed progress before clearing play-error backoff
             PLAY_STUCK_REFRESH_AFTER: 2,   // Refresh after this many PLAY_STUCK failures
             PLAY_STUCK_LAST_RESORT_PAGE_REFRESH_AFTER: 6, // Force page refresh after repeated PLAY_STUCK + failover dead-end
             PLAY_STUCK_LAST_RESORT_MIN_STALL_MS: 30000, // Require persistent stall before last-resort page refresh
@@ -106,7 +107,9 @@ const CONFIG = (() => {
             DEAD_CANDIDATE_COOLDOWN_MS: 20000, // Exclude dead candidates for this long
             SYNC_SAMPLE_MS: 5000,           // Sample window for drift detection
             SYNC_DRIFT_MAX_MS: 1000,        // Log if drift exceeds this threshold
+            SYNC_SEVERE_DRIFT_MS: 3000,     // Treat sync collapse above this drift as immediate severe degradation
             SYNC_RATE_MIN: 0.9,             // Log if playback rate falls below this ratio
+            SYNC_SEVERE_RATE_MIN: 0.6,      // Treat sync collapse below this rate as immediate severe degradation
             DEGRADED_ACTIVE_SAMPLE_COUNT: 2, // Consecutive degraded sync samples before active playback is treated as degraded
             DEAD_CANDIDATE_BUFFER_AHEAD_S: 0.15, // Treat paused edge-stuck candidates below this headroom as dead candidates
         },

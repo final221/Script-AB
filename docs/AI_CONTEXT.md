@@ -108,6 +108,7 @@ Use this to route changes quickly.
 - Placeholder/no-source suppression keeps the first few per-element diagnostics visible before collapsing later churn into suppression summaries.
 - Refresh execution is centralized in `src/core/video/RefreshCoordinator.js`; refresh eligibility still lives in `src/core/recovery/RecoveryRefreshController.js`.
 - Sustained low-rate / high-drift sync samples can now mark the active stream as degraded for candidate switching even when playback has not fully collapsed.
+- Severe post-heal sync collapse on the active stream now escalates through recovery even with only one monitored video when no better candidate appears.
 - Paused edge-stuck alternates can now age into dead candidates instead of lingering indefinitely as switch targets.
 
 ## Debugging Tools

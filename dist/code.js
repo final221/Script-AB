@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.16.0
+// @version       4.17.0
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -62,6 +62,7 @@ const CONFIG = (() => {
             PLAY_ABORT_BACKOFF_BASE_MS: 8000, // Base backoff after AbortError failures
             PLAY_ABORT_BACKOFF_MAX_MS: 30000, // Max backoff after repeated AbortError failures
             PLAY_ERROR_DECAY_MS: 15000,    // Reset play-error count after this idle window
+            PLAY_BACKOFF_CLEAR_PROGRESS_MS: 3000, // Require healthy resumed progress before clearing play-error backoff
             PLAY_STUCK_REFRESH_AFTER: 2,   // Refresh after this many PLAY_STUCK failures
             PLAY_STUCK_LAST_RESORT_PAGE_REFRESH_AFTER: 6, // Force page refresh after repeated PLAY_STUCK + failover dead-end
             PLAY_STUCK_LAST_RESORT_MIN_STALL_MS: 30000, // Require persistent stall before last-resort page refresh
@@ -120,7 +121,9 @@ const CONFIG = (() => {
             DEAD_CANDIDATE_COOLDOWN_MS: 20000, // Exclude dead candidates for this long
             SYNC_SAMPLE_MS: 5000,           // Sample window for drift detection
             SYNC_DRIFT_MAX_MS: 1000,        // Log if drift exceeds this threshold
+            SYNC_SEVERE_DRIFT_MS: 3000,     // Treat sync collapse above this drift as immediate severe degradation
             SYNC_RATE_MIN: 0.9,             // Log if playback rate falls below this ratio
+            SYNC_SEVERE_RATE_MIN: 0.6,      // Treat sync collapse below this rate as immediate severe degradation
             DEGRADED_ACTIVE_SAMPLE_COUNT: 2, // Consecutive degraded sync samples before active playback is treated as degraded
             DEAD_CANDIDATE_BUFFER_AHEAD_S: 0.15, // Treat paused edge-stuck candidates below this headroom as dead candidates
         },
@@ -182,7 +185,7 @@ const CONFIG = (() => {
  * Build metadata helpers (version injected at build time).
  */
 const BuildInfo = (() => {
-    const VERSION = '4.16.0';
+    const VERSION = '4.17.0';
 
     const getVersion = () => {
         const gmVersion = (typeof GM_info !== 'undefined' && GM_info?.script?.version)
@@ -193,7 +196,7 @@ const BuildInfo = (() => {
             ? unsafeWindow.GM_info.script.version
             : null;
         if (unsafeVersion) return unsafeVersion;
-        if (VERSION && VERSION !== '4.16.0') return VERSION;
+        if (VERSION && VERSION !== '4.17.0') return VERSION;
         return null;
     };
 
@@ -3642,6 +3645,9 @@ const MonitorRegistry = (() => {
                         }
                     }
                 },
+                onDegradedSync: (detail, state) => {
+                    recoveryManager?.handleDegradedPlayback?.(video, state, detail);
+                },
                 videoId
             });
 
@@ -5028,6 +5034,16 @@ const PlaybackProgressReset = (() => {
 
         const clearPlayBackoffOnProgress = (reason, now) => {
             if (state.playErrorCount > 0 || state.nextPlayHealAllowedTime > 0 || state.healPointRepeatCount > 0) {
+                const minHealthyProgressMs = CONFIG.stall.PLAY_BACKOFF_CLEAR_PROGRESS_MS || 0;
+                const hasHealthyProgress = (state.progressStreakMs || 0) >= minHealthyProgressMs;
+                const hasPostErrorSyncSample = !state.lastPlayErrorTime
+                    || (state.lastSyncWallTime && state.lastSyncWallTime >= state.lastPlayErrorTime);
+                const syncStillDegraded = (state.degradedSyncCount || 0) > 0
+                    || (Number.isFinite(state.lastSyncRate) && state.lastSyncRate <= CONFIG.monitoring.SYNC_RATE_MIN)
+                    || ((state.lastSyncDriftMs || 0) >= CONFIG.monitoring.SYNC_DRIFT_MAX_MS);
+                if (!hasHealthyProgress || !hasPostErrorSyncSample || syncStillDegraded) {
+                    return;
+                }
                 logDebugLazy(LogEvents.tagged('PLAY_BACKOFF', 'Cleared after progress'), () => ({
                     reason,
                     previousPlayErrors: state.playErrorCount,
@@ -5288,6 +5304,7 @@ const PlaybackSyncLogic = (() => {
         const video = options.video;
         const state = options.state;
         const logDebugLazy = options.logDebugLazy || (() => {});
+        const onDegradedSync = options.onDegradedSync || (() => {});
 
         const logSyncStatus = () => {
             const now = Date.now();
@@ -5315,15 +5332,32 @@ const PlaybackSyncLogic = (() => {
             const driftMs = wallDelta - mediaDelta;
             const degraded = driftMs >= CONFIG.monitoring.SYNC_DRIFT_MAX_MS
                 || rate <= CONFIG.monitoring.SYNC_RATE_MIN;
+            const severe = driftMs >= CONFIG.monitoring.SYNC_SEVERE_DRIFT_MS
+                || rate <= CONFIG.monitoring.SYNC_SEVERE_RATE_MIN;
             state.lastSyncRate = rate;
             state.lastSyncDriftMs = driftMs;
             state.degradedSyncCount = degraded
                 ? (state.degradedSyncCount || 0) + 1
                 : 0;
+            if (severe && state.degradedSyncCount < CONFIG.monitoring.DEGRADED_ACTIVE_SAMPLE_COUNT) {
+                state.degradedSyncCount = CONFIG.monitoring.DEGRADED_ACTIVE_SAMPLE_COUNT;
+            }
             const ranges = BufferGapFinder.getBufferRanges(video);
             const bufferEndDelta = ranges.length
                 ? (ranges[ranges.length - 1].end - video.currentTime)
                 : null;
+
+            if (degraded) {
+                onDegradedSync({
+                    currentTime: video.currentTime,
+                    driftMs: Math.round(driftMs),
+                    rate,
+                    degraded: true,
+                    severe,
+                    degradedSyncCount: state.degradedSyncCount,
+                    bufferEndDeltaS: bufferEndDelta
+                });
+            }
 
             const shouldLog = (now - state.lastSyncLogTime >= CONFIG.logging.SYNC_LOG_MS)
                 || degraded;
@@ -5467,7 +5501,7 @@ const PlaybackStarvationLogic = (() => {
  * Shared playback state tracking for PlaybackMonitor.
  */
 const PlaybackStateTracker = (() => {
-    const create = (video, videoId, logDebug) => {
+    const create = (video, videoId, logDebug, options = {}) => {
         const state = PlaybackStateStore.create(video);
 
         const logHelper = PlaybackLogHelper.create({ video, videoId, state });
@@ -5508,7 +5542,8 @@ const PlaybackStateTracker = (() => {
         const syncLogic = PlaybackSyncLogic.create({
             video,
             state,
-            logDebugLazy
+            logDebugLazy,
+            onDegradedSync: options.onDegradedSync
         });
 
         const starvationLogic = PlaybackStarvationLogic.create({
@@ -6033,6 +6068,7 @@ const PlaybackMonitor = (() => {
         const onStall = options.onStall || (() => {});
         const onRemoved = options.onRemoved || (() => {});
         const onReset = options.onReset || (() => {});
+        const onDegradedSync = options.onDegradedSync || (() => {});
         const isActive = options.isActive || (() => true);
         const videoId = options.videoId || 'unknown';
 
@@ -6040,7 +6076,9 @@ const PlaybackMonitor = (() => {
             baseDetail: { videoId }
         });
 
-        const tracker = PlaybackStateTracker.create(video, videoId, logDebug);
+        const tracker = PlaybackStateTracker.create(video, videoId, logDebug, {
+            onDegradedSync: (detail) => onDegradedSync(detail, state)
+        });
         const state = tracker.state;
         const logHelper = PlaybackLogHelper.create({ video, videoId, state });
 
@@ -9650,9 +9688,89 @@ const RecoveryRefreshController = (() => {
     return { create };
 })();
 
+// @module DegradedPlaybackRecovery
+// @depends RecoveryRefreshController
+/**
+ * Escalates severe post-heal degraded playback when no better candidate exists.
+ */
+const DegradedPlaybackRecovery = (() => {
+    const create = (options = {}) => {
+        const refreshController = options.refreshController;
+        const candidateSelector = options.candidateSelector;
+
+        const handleDegradedPlayback = (videoOrContext, monitorStateOverride, detail = {}) => {
+            const context = refreshController.buildContext(videoOrContext, monitorStateOverride, {
+                reason: 'degraded_sync',
+                trigger: detail.trigger || 'sync'
+            });
+            if (!context.monitorState) return false;
+
+            const activeBefore = candidateSelector.getActiveId?.() || null;
+            if (activeBefore && activeBefore !== context.videoId) {
+                return false;
+            }
+
+            candidateSelector.evaluateCandidates?.('degraded_sync');
+            const activeAfter = candidateSelector.getActiveId?.() || null;
+            if (activeAfter && activeAfter !== context.videoId) {
+                return false;
+            }
+
+            const severe = Boolean(detail.severe);
+            const hasRecentPlayError = (context.monitorState.playErrorCount || 0) > 0;
+            const bufferEndDeltaS = Number.isFinite(detail.bufferEndDeltaS) ? detail.bufferEndDeltaS : null;
+            const bufferedEnough = bufferEndDeltaS === null
+                || bufferEndDeltaS >= CONFIG.recovery.MIN_HEAL_HEADROOM_S;
+            if (!severe || !hasRecentPlayError || !bufferedEnough) {
+                return false;
+            }
+
+            const now = Date.now();
+            const eligibility = refreshController.evaluateRefreshEligibility(context, {
+                reason: 'post_heal_degraded',
+                trigger: detail.trigger || 'sync',
+                now
+            });
+            const refreshed = eligibility.allow && refreshController.requestRefresh(
+                context.videoId,
+                context.monitorState,
+                {
+                    reason: 'post_heal_degraded',
+                    trigger: detail.trigger || 'sync',
+                    detail: 'severe_post_heal_sync_collapse',
+                    forcePageRefresh: true,
+                    eligibility
+                }
+            );
+
+            Logger.add(LogEvents.tagged('REFRESH', 'Post-heal degraded playback escalation applied'), {
+                videoId: context.videoId,
+                severe,
+                playErrorCount: context.monitorState.playErrorCount || 0,
+                rate: Number.isFinite(detail.rate) ? detail.rate.toFixed(3) : null,
+                driftMs: detail.driftMs ?? null,
+                bufferEndDelta: bufferEndDeltaS !== null ? bufferEndDeltaS.toFixed(2) + 's' : null,
+                activeBefore,
+                activeAfter,
+                refreshEligible: eligibility.allow,
+                refreshEligibilityReason: eligibility.reason || null,
+                refreshed
+            });
+
+            return refreshed;
+        };
+
+        return {
+            handleDegradedPlayback
+        };
+    };
+
+    return { create };
+})();
+
 // --- RecoveryManager ---
 // @module RecoveryManager
-// @depends RecoveryRefreshController, RecoveryPolicy, FailoverManager, RecoveryContext
+// @depends RecoveryRefreshController, RecoveryPolicy, FailoverManager, RecoveryContext, DegradedPlaybackRecovery
 /**
  * Coordinates backoff and failover recovery strategies.
  */
@@ -9708,6 +9826,10 @@ const RecoveryManager = (() => {
             onProcessingAssetExhausted: (videoId, atMs, reason) => (
                 activateProcessingAssetHardFailureWindow(videoId, reason, atMs)
             )
+        });
+        const degradedPlaybackRecovery = DegradedPlaybackRecovery.create({
+            refreshController,
+            candidateSelector
         });
 
         const handleNoHealPoint = (videoOrContext, monitorStateOverride, reason) => {
@@ -9880,6 +10002,7 @@ const RecoveryManager = (() => {
             resetPlayError,
             handleNoHealPoint,
             handlePlayFailure,
+            handleDegradedPlayback: degradedPlaybackRecovery.handleDegradedPlayback,
             requestRefresh,
             canRequestRefresh,
             shouldSkipStall,

@@ -531,4 +531,81 @@ describe('RecoveryManager refresh gating', () => {
             vi.useRealTimers();
         }
     });
+
+    it('forces page refresh when severe post-heal degradation persists without a better candidate', () => {
+        const monitorsById = new Map();
+        const candidateSelector = {
+            getActiveId: () => 'video-1',
+            evaluateCandidates: vi.fn()
+        };
+        const onPersistentFailure = vi.fn();
+        const manager = window.RecoveryManager.create({
+            monitorsById,
+            candidateSelector,
+            getVideoId: () => 'video-1',
+            logDebug: () => {},
+            onRescan: () => {},
+            onPersistentFailure
+        });
+
+        const video = createVideo({ currentSrc: 'blob:https://www.twitch.tv/stream' });
+        const monitorState = {
+            playErrorCount: 1,
+            lastRefreshAt: 0
+        };
+        monitorsById.set('video-1', { video, monitor: { state: monitorState } });
+
+        const refreshed = manager.handleDegradedPlayback(video, monitorState, {
+            severe: true,
+            rate: 0.31,
+            driftMs: 11864,
+            bufferEndDeltaS: 2.5
+        });
+
+        expect(candidateSelector.evaluateCandidates).toHaveBeenCalledWith('degraded_sync');
+        expect(refreshed).toBe(true);
+        expect(onPersistentFailure).toHaveBeenCalledWith('video-1', expect.objectContaining({
+            reason: 'post_heal_degraded',
+            detail: 'severe_post_heal_sync_collapse',
+            forcePageRefresh: true
+        }));
+    });
+
+    it('does not refresh when degraded-sync reevaluation switches to a different active candidate', () => {
+        let activeId = 'video-1';
+        const monitorsById = new Map();
+        const candidateSelector = {
+            getActiveId: () => activeId,
+            evaluateCandidates: vi.fn(() => {
+                activeId = 'video-2';
+            })
+        };
+        const onPersistentFailure = vi.fn();
+        const manager = window.RecoveryManager.create({
+            monitorsById,
+            candidateSelector,
+            getVideoId: () => 'video-1',
+            logDebug: () => {},
+            onRescan: () => {},
+            onPersistentFailure
+        });
+
+        const video = createVideo({ currentSrc: 'blob:https://www.twitch.tv/stream' });
+        const monitorState = {
+            playErrorCount: 1,
+            lastRefreshAt: 0
+        };
+        monitorsById.set('video-1', { video, monitor: { state: monitorState } });
+
+        const refreshed = manager.handleDegradedPlayback(video, monitorState, {
+            severe: true,
+            rate: 0.31,
+            driftMs: 11864,
+            bufferEndDeltaS: 2.5
+        });
+
+        expect(candidateSelector.evaluateCandidates).toHaveBeenCalledWith('degraded_sync');
+        expect(refreshed).toBe(false);
+        expect(onPersistentFailure).not.toHaveBeenCalled();
+    });
 });

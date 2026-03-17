@@ -118,6 +118,10 @@ describe('PlaybackStateTracker.updateProgress', () => {
         tracker.state.nextPlayHealAllowedTime = Date.now() + 10000;
         tracker.state.healPointRepeatCount = 2;
         tracker.state.lastHealPointKey = '1.00-2.00';
+        tracker.state.progressStartTime = Date.now() - (CONFIG.stall.PLAY_BACKOFF_CLEAR_PROGRESS_MS + 1);
+        tracker.state.lastSyncWallTime = Date.now();
+        tracker.state.lastSyncRate = CONFIG.monitoring.SYNC_RATE_MIN + 0.1;
+        tracker.state.lastSyncDriftMs = CONFIG.monitoring.SYNC_DRIFT_MAX_MS - 1;
 
         defineVideoProps(video, { currentTime: 1 });
         tracker.updateProgress('timeupdate');
@@ -126,6 +130,27 @@ describe('PlaybackStateTracker.updateProgress', () => {
         expect(tracker.state.nextPlayHealAllowedTime).toBe(0);
         expect(tracker.state.healPointRepeatCount).toBe(0);
         expect(tracker.state.lastHealPointKey).toBe(null);
+    });
+
+    it('emits degraded-sync callbacks from sync sampling', () => {
+        vi.useFakeTimers();
+        vi.setSystemTime(CONFIG.monitoring.SYNC_SAMPLE_MS + 10);
+
+        const video = createVideo({ currentTime: 0.4, paused: false, readyState: 4, currentSrc: 'blob:stream' });
+        const logDebug = vi.fn();
+        const onDegradedSync = vi.fn();
+        const tracker = PlaybackStateTracker.create(video, 'video-6b', logDebug, { onDegradedSync });
+
+        tracker.state.lastSyncWallTime = 1;
+        tracker.state.lastSyncMediaTime = 0;
+        tracker.logSyncStatus();
+
+        expect(onDegradedSync).toHaveBeenCalledWith(expect.objectContaining({
+            severe: true,
+            degraded: true
+        }));
+
+        vi.useRealTimers();
     });
 });
 

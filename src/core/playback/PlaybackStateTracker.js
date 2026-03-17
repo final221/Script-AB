@@ -5,7 +5,7 @@
  * Shared playback state tracking for PlaybackMonitor.
  */
 const PlaybackStateTracker = (() => {
-    const create = (video, videoId, logDebug) => {
+    const create = (video, videoId, logDebug, options = {}) => {
         const state = PlaybackStateStore.create(video);
 
         const logHelper = PlaybackLogHelper.create({ video, videoId, state });
@@ -46,7 +46,8 @@ const PlaybackStateTracker = (() => {
         const syncLogic = PlaybackSyncLogic.create({
             video,
             state,
-            logDebugLazy
+            logDebugLazy,
+            onDegradedSync: options.onDegradedSync
         });
 
         const starvationLogic = PlaybackStarvationLogic.create({

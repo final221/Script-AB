@@ -9,6 +9,7 @@ const PlaybackSyncLogic = (() => {
         const video = options.video;
         const state = options.state;
         const logDebugLazy = options.logDebugLazy || (() => {});
+        const onDegradedSync = options.onDegradedSync || (() => {});
 
         const logSyncStatus = () => {
             const now = Date.now();
@@ -36,15 +37,32 @@ const PlaybackSyncLogic = (() => {
             const driftMs = wallDelta - mediaDelta;
             const degraded = driftMs >= CONFIG.monitoring.SYNC_DRIFT_MAX_MS
                 || rate <= CONFIG.monitoring.SYNC_RATE_MIN;
+            const severe = driftMs >= CONFIG.monitoring.SYNC_SEVERE_DRIFT_MS
+                || rate <= CONFIG.monitoring.SYNC_SEVERE_RATE_MIN;
             state.lastSyncRate = rate;
             state.lastSyncDriftMs = driftMs;
             state.degradedSyncCount = degraded
                 ? (state.degradedSyncCount || 0) + 1
                 : 0;
+            if (severe && state.degradedSyncCount < CONFIG.monitoring.DEGRADED_ACTIVE_SAMPLE_COUNT) {
+                state.degradedSyncCount = CONFIG.monitoring.DEGRADED_ACTIVE_SAMPLE_COUNT;
+            }
             const ranges = BufferGapFinder.getBufferRanges(video);
             const bufferEndDelta = ranges.length
                 ? (ranges[ranges.length - 1].end - video.currentTime)
                 : null;
+
+            if (degraded) {
+                onDegradedSync({
+                    currentTime: video.currentTime,
+                    driftMs: Math.round(driftMs),
+                    rate,
+                    degraded: true,
+                    severe,
+                    degradedSyncCount: state.degradedSyncCount,
+                    bufferEndDeltaS: bufferEndDelta
+                });
+            }
 
             const shouldLog = (now - state.lastSyncLogTime >= CONFIG.logging.SYNC_LOG_MS)
                 || degraded;

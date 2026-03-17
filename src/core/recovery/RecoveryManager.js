@@ -1,6 +1,6 @@
 // --- RecoveryManager ---
 // @module RecoveryManager
-// @depends RecoveryRefreshController, RecoveryPolicy, FailoverManager, RecoveryContext
+// @depends RecoveryRefreshController, RecoveryPolicy, FailoverManager, RecoveryContext, DegradedPlaybackRecovery
 /**
  * Coordinates backoff and failover recovery strategies.
  */
@@ -56,6 +56,10 @@ const RecoveryManager = (() => {
             onProcessingAssetExhausted: (videoId, atMs, reason) => (
                 activateProcessingAssetHardFailureWindow(videoId, reason, atMs)
             )
+        });
+        const degradedPlaybackRecovery = DegradedPlaybackRecovery.create({
+            refreshController,
+            candidateSelector
         });
 
         const handleNoHealPoint = (videoOrContext, monitorStateOverride, reason) => {
@@ -228,6 +232,7 @@ const RecoveryManager = (() => {
             resetPlayError,
             handleNoHealPoint,
             handlePlayFailure,
+            handleDegradedPlayback: degradedPlaybackRecovery.handleDegradedPlayback,
             requestRefresh,
             canRequestRefresh,
             shouldSkipStall,

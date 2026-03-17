@@ -143,32 +143,33 @@ The build uses a priority list followed by auto-discovered modules, then the ent
 98. `core/recovery/FailoverProbeController.js`
 99. `core/recovery/FailoverManager.js`
 100. `core/recovery/RecoveryRefreshController.js`
-101. `core/recovery/RecoveryManager.js`
-102. `core/recovery/CatchUpController.js`
-103. `core/recovery/HealAttemptUtils.js`
-104. `core/recovery/HealAttemptLogger.js`
-105. `core/recovery/HealAttemptRunner.js`
-106. `core/recovery/HealPointPoller.js`
-107. `core/recovery/HealPipeline.js`
-108. `core/recovery/AdGapSignals.js`
-109. `core/recovery/PlayheadAttribution.js`
-110. `core/recovery/HealPipelinePoller.js`
-111. `core/recovery/HealPipelineRevalidate.js`
-112. `core/recovery/HealPipelineSeek.js`
-113. `core/recovery/StallHandler.js`
-114. `core/external/ExternalSignalUtils.js`
-115. `core/external/ExternalSignalHandlerStall.js`
-116. `core/external/ExternalAssetRecoveryOps.js`
-117. `core/external/ExternalAssetRecoveryProcess.js`
-118. `core/external/ExternalSignalHandlerAsset.js`
-119. `core/external/ExternalSignalHandlerAdblock.js`
-120. `core/external/ExternalSignalHandlerDecoder.js`
-121. `core/external/ExternalSignalHandlerFallback.js`
-122. `core/external/ExternalSignalRouter.js`
-123. `core/orchestrators/MonitoringOrchestrator.js`
-124. `core/orchestrators/RecoveryOrchestrator.js`
-125. `core/orchestrators/StreamHealer.js`
-126. `core/orchestrators/CoreOrchestrator.js`
+101. `core/recovery/DegradedPlaybackRecovery.js`
+102. `core/recovery/RecoveryManager.js`
+103. `core/recovery/CatchUpController.js`
+104. `core/recovery/HealAttemptUtils.js`
+105. `core/recovery/HealAttemptLogger.js`
+106. `core/recovery/HealAttemptRunner.js`
+107. `core/recovery/HealPointPoller.js`
+108. `core/recovery/HealPipeline.js`
+109. `core/recovery/AdGapSignals.js`
+110. `core/recovery/PlayheadAttribution.js`
+111. `core/recovery/HealPipelinePoller.js`
+112. `core/recovery/HealPipelineRevalidate.js`
+113. `core/recovery/HealPipelineSeek.js`
+114. `core/recovery/StallHandler.js`
+115. `core/external/ExternalSignalUtils.js`
+116. `core/external/ExternalSignalHandlerStall.js`
+117. `core/external/ExternalAssetRecoveryOps.js`
+118. `core/external/ExternalAssetRecoveryProcess.js`
+119. `core/external/ExternalSignalHandlerAsset.js`
+120. `core/external/ExternalSignalHandlerAdblock.js`
+121. `core/external/ExternalSignalHandlerDecoder.js`
+122. `core/external/ExternalSignalHandlerFallback.js`
+123. `core/external/ExternalSignalRouter.js`
+124. `core/orchestrators/MonitoringOrchestrator.js`
+125. `core/orchestrators/RecoveryOrchestrator.js`
+126. `core/orchestrators/StreamHealer.js`
+127. `core/orchestrators/CoreOrchestrator.js`
 <!-- LOAD_ORDER_END -->
 
 
@@ -267,7 +268,7 @@ Script Logger.add() -> Logger.getMergedTimeline()
 - **PlaybackStateAliases.js** - Generated alias schema for legacy flat state access
 - **PlaybackStateStore.js** - Playback state construction and alias mapping
 - **PlaybackResetLogic.js** - Reset evaluation and pending reset handling
-- **PlaybackProgressReset.js** - Clears heal/play backoff and starvation flags on progress
+- **PlaybackProgressReset.js** - Clears heal/play backoff and starvation flags on progress, but now waits for healthy resumed playback before dropping play-error backoff
 - **PlaybackProgressLogic.js** - Progress/ready/stall tracking; initial progress grace window defers stall handling until `stall.INIT_PROGRESS_GRACE_MS`
 - **PlaybackProgressTracker.js** - Progress streak resets after `monitoring.PROGRESS_STREAK_RESET_MS`; eligibility after `monitoring.CANDIDATE_MIN_PROGRESS_MS`
 - **PlaybackSyncLogic.js** - Playback drift sampling
@@ -289,6 +290,7 @@ Script Logger.add() -> Logger.getMergedTimeline()
 - **CandidateScorer.js** - Scores video candidates, including sustained degraded-sync penalties
 - **CandidateSwitchPolicy.js** - Switch decision logic; degraded active playback can qualify for switching before a full hard stall
 - **CandidateTrust.js** - Trust window tracking; dead/degraded candidates are not trusted
+- **RecoveryManager.js** - Arbitrates no-heal/play-failure recovery and now escalates severe post-heal degraded sync into forced self-recovery when no better candidate exists
 - **CandidateScoreRecord.js** - Standardized candidate score records
 - **CandidateProbation.js** - Probation window tracking
 - **CandidateEvaluation.js** - Candidate scoring aggregation
@@ -301,6 +303,7 @@ Script Logger.add() -> Logger.getMergedTimeline()
 - **ProbationPolicy.js** - Probation window policy
 - **NoHealPointPolicy.js** - No-heal-point handling rules
 - **PlayErrorPolicy.js** - Play error handling rules
+- **DegradedPlaybackRecovery.js** - Escalates severe post-heal degraded sync when candidate reevaluation finds no better path
 - **StallSkipPolicy.js** - Stall skip rules for non-active videos
 - **RecoveryPolicyFactory.js** - Policy composition
 - **RecoveryPolicy.js** - Policy interface

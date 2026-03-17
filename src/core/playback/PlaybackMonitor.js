@@ -15,6 +15,7 @@ const PlaybackMonitor = (() => {
         const onStall = options.onStall || (() => {});
         const onRemoved = options.onRemoved || (() => {});
         const onReset = options.onReset || (() => {});
+        const onDegradedSync = options.onDegradedSync || (() => {});
         const isActive = options.isActive || (() => true);
         const videoId = options.videoId || 'unknown';
 
@@ -22,7 +23,9 @@ const PlaybackMonitor = (() => {
             baseDetail: { videoId }
         });
 
-        const tracker = PlaybackStateTracker.create(video, videoId, logDebug);
+        const tracker = PlaybackStateTracker.create(video, videoId, logDebug, {
+            onDegradedSync: (detail) => onDegradedSync(detail, state)
+        });
         const state = tracker.state;
         const logHelper = PlaybackLogHelper.create({ video, videoId, state });
 

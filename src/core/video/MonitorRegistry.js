@@ -176,6 +176,9 @@ const MonitorRegistry = (() => {
                         }
                     }
                 },
+                onDegradedSync: (detail, state) => {
+                    recoveryManager?.handleDegradedPlayback?.(video, state, detail);
+                },
                 videoId
             });
 

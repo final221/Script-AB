@@ -24,6 +24,16 @@ const PlaybackProgressReset = (() => {
 
         const clearPlayBackoffOnProgress = (reason, now) => {
             if (state.playErrorCount > 0 || state.nextPlayHealAllowedTime > 0 || state.healPointRepeatCount > 0) {
+                const minHealthyProgressMs = CONFIG.stall.PLAY_BACKOFF_CLEAR_PROGRESS_MS || 0;
+                const hasHealthyProgress = (state.progressStreakMs || 0) >= minHealthyProgressMs;
+                const hasPostErrorSyncSample = !state.lastPlayErrorTime
+                    || (state.lastSyncWallTime && state.lastSyncWallTime >= state.lastPlayErrorTime);
+                const syncStillDegraded = (state.degradedSyncCount || 0) > 0
+                    || (Number.isFinite(state.lastSyncRate) && state.lastSyncRate <= CONFIG.monitoring.SYNC_RATE_MIN)
+                    || ((state.lastSyncDriftMs || 0) >= CONFIG.monitoring.SYNC_DRIFT_MAX_MS);
+                if (!hasHealthyProgress || !hasPostErrorSyncSample || syncStillDegraded) {
+                    return;
+                }
                 logDebugLazy(LogEvents.tagged('PLAY_BACKOFF', 'Cleared after progress'), () => ({
                     reason,
                     previousPlayErrors: state.playErrorCount,

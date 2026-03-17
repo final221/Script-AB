@@ -42,7 +42,7 @@ describe('PlaybackSyncLogic', () => {
         vi.useFakeTimers();
         vi.setSystemTime(CONFIG.monitoring.SYNC_SAMPLE_MS + 10);
 
-        const video = createVideo({ paused: false, readyState: 3, currentTime: 0.5 });
+        const video = createVideo({ paused: false, readyState: 3, currentTime: 4.3 });
         setBufferedRanges(video, [[0, 10]]);
         const state = {
             lastSyncWallTime: 1,
@@ -57,13 +57,39 @@ describe('PlaybackSyncLogic', () => {
 
         expect(state.degradedSyncCount).toBe(1);
         expect(state.lastSyncRate).toBeLessThanOrEqual(CONFIG.monitoring.SYNC_RATE_MIN);
-        expect(state.lastSyncDriftMs).toBeGreaterThanOrEqual(CONFIG.monitoring.SYNC_DRIFT_MAX_MS);
+        expect(state.lastSyncDriftMs).toBeGreaterThan(0);
 
         vi.setSystemTime((CONFIG.monitoring.SYNC_SAMPLE_MS * 2) + 20);
-        Object.defineProperty(video, 'currentTime', { value: 5.55, configurable: true });
+        Object.defineProperty(video, 'currentTime', { value: 9.55, configurable: true });
         logic.logSyncStatus();
 
         expect(state.degradedSyncCount).toBe(0);
         expect(state.lastSyncRate).toBeGreaterThan(CONFIG.monitoring.SYNC_RATE_MIN);
+    });
+
+    it('treats severe sync collapse as immediately degraded and reports it', () => {
+        vi.useFakeTimers();
+        vi.setSystemTime(CONFIG.monitoring.SYNC_SAMPLE_MS + 10);
+
+        const video = createVideo({ paused: false, readyState: 3, currentTime: 0.4 });
+        setBufferedRanges(video, [[0, 8]]);
+        const state = {
+            lastSyncWallTime: 1,
+            lastSyncMediaTime: 0,
+            lastSyncLogTime: 0,
+            degradedSyncCount: 0
+        };
+        const logDebugLazy = vi.fn();
+        const onDegradedSync = vi.fn();
+
+        const logic = PlaybackSyncLogic.create({ video, state, logDebugLazy, onDegradedSync });
+        logic.logSyncStatus();
+
+        expect(state.degradedSyncCount).toBe(CONFIG.monitoring.DEGRADED_ACTIVE_SAMPLE_COUNT);
+        expect(onDegradedSync).toHaveBeenCalledWith(expect.objectContaining({
+            severe: true,
+            degraded: true,
+            driftMs: expect.any(Number)
+        }));
     });
 });
