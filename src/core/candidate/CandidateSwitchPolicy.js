@@ -28,6 +28,11 @@ const CandidateSwitchPolicy = (() => {
             || hasReason(candidate, 'identity_origin_src_match')
         );
 
+        const hasTrueOriginIdentity = (candidate) => (
+            hasReason(candidate, 'identity_origin_video')
+            || hasReason(candidate, 'identity_origin_src_match')
+        );
+
         const isWeakProbationCandidate = (candidate) => (
             !candidate?.trusted
             && candidate?.trustReason === 'progress_stale'
@@ -176,7 +181,7 @@ const CandidateSwitchPolicy = (() => {
 
             const fastReturnAllowed = activeHealing
                 && !baseDecision.currentTrusted
-                && hasStrongIdentity(preferred)
+                && hasTrueOriginIdentity(preferred)
                 && hasFreshProgress(preferred)
                 && !preferred.vs.paused
                 && preferred.vs.readyState >= CONFIG.monitoring.PROBATION_READY_STATE

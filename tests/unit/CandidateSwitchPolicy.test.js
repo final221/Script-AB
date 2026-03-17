@@ -234,4 +234,46 @@ describe('CandidateSwitchPolicy', () => {
         expect(decision.fastSwitchKind).toBe('reclaim_origin');
         expect(decision.toId).toBe('video-1');
     });
+
+    it('does not use reclaim-origin fast switch for a merely recent-active candidate', () => {
+        const now = 95000;
+        const policy = window.CandidateSwitchPolicy.create({
+            switchDelta: CONFIG.monitoring.CANDIDATE_SWITCH_DELTA,
+            minProgressMs: CONFIG.monitoring.CANDIDATE_MIN_PROGRESS_MS,
+            logDebug: () => {}
+        });
+
+        const decision = policy.decide({
+            now,
+            current: {
+                id: 'video-1',
+                score: 3,
+                reasons: ['degraded_sync'],
+                state: MonitorStates.HEALING,
+                monitorState: {
+                    noHealPointCount: 0,
+                    lastProgressTime: now - 500
+                },
+                trusted: false
+            },
+            preferred: {
+                id: 'video-5',
+                score: 5,
+                progressAgoMs: 150,
+                progressEligible: false,
+                progressStreakMs: CONFIG.monitoring.PROBATION_MIN_PROGRESS_MS + 50,
+                trusted: false,
+                trustReason: 'progress_ineligible',
+                vs: { paused: false, readyState: 4, currentSrc: 'blob:ad-ish' },
+                reasons: ['identity_recent_active']
+            },
+            activeCandidateId: 'video-1',
+            probationActive: false,
+            scores: [],
+            reason: 'interval'
+        });
+
+        expect(decision.action).toBe('stay');
+        expect(decision.fastSwitchKind).toBeUndefined();
+    });
 });

@@ -73,6 +73,22 @@ const CandidateSelector = (() => {
                 activeId: activeState.getActiveId()
             });
         };
+        const logContinuitySnapshot = (decision, current, preferred) => {
+            if (!decision || !current || !preferred || decision.fromId === decision.toId) {
+                return;
+            }
+            Logger.add(LogEvents.tagged('CANDIDATE', 'Stream continuity snapshot'), {
+                reason: decision.reason,
+                action: decision.action,
+                fastSwitchKind: decision.fastSwitchKind || null,
+                continuity: streamIdentity.buildContinuitySnapshot({
+                    activeId: decision.fromId,
+                    preferredId: decision.toId,
+                    current,
+                    preferred
+                })
+            });
+        };
 
         const getActiveId = () => activeState.getActiveId();
         const forceSwitchController = CandidateForceSwitch.create({
@@ -137,6 +153,7 @@ const CandidateSelector = (() => {
 
             const decision = result.decision;
             if (decision) {
+                logContinuitySnapshot(decision, result.current, decision.preferred || result.preferred);
                 if (decision.action === 'fast_switch') {
                     const fromId = decision.fromId;
                     const reclaimedOrigin = decision.fastSwitchKind === 'reclaim_origin';

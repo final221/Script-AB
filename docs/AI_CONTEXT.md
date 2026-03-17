@@ -111,7 +111,8 @@ Use this to route changes quickly.
 - Severe post-heal sync collapse on the active stream now escalates through recovery even with only one monitored video when no better candidate appears.
 - Paused edge-stuck alternates can now age into dead candidates instead of lingering indefinitely as switch targets.
 - Buffer-starved probation rescans no longer switch to paused, stale, untrusted alternates just because they score slightly less badly than the active stream.
-- A recovered origin-stream candidate can now reclaim ownership from an untrusted healing active candidate before full switch eligibility finishes rebuilding.
+- Recovered-origin fast reclaim now requires true origin evidence (`identity_origin_video` or origin-src match), not merely a recent-active hint.
+- Candidate decisions now emit a `Stream continuity snapshot` that records origin/current/preferred video ids and element ids so ad-vs-stream ownership can be checked from logs.
 
 ## Debugging Tools
 The following global functions are exposed for debugging:

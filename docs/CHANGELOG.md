@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.19.0 - 2026-03-17T19:21:24.385Z
+Previous: 4.18.0
+Commit: 0e1cea2
+Changes:
+- Harden candidate reclamation during ad-shaped stalls
+
 ## 4.18.0 - 2026-03-17T17:25:28.399Z
 Previous: 4.17.0
 Commit: e513f08

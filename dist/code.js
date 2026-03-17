@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.18.0
+// @version       4.19.0
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -185,7 +185,7 @@ const CONFIG = (() => {
  * Build metadata helpers (version injected at build time).
  */
 const BuildInfo = (() => {
-    const VERSION = '4.18.0';
+    const VERSION = '4.19.0';
 
     const getVersion = () => {
         const gmVersion = (typeof GM_info !== 'undefined' && GM_info?.script?.version)
@@ -196,7 +196,7 @@ const BuildInfo = (() => {
             ? unsafeWindow.GM_info.script.version
             : null;
         if (unsafeVersion) return unsafeVersion;
-        if (VERSION && VERSION !== '4.18.0') return VERSION;
+        if (VERSION && VERSION !== '4.19.0') return VERSION;
         return null;
     };
 
@@ -3654,7 +3654,7 @@ const MonitorRegistry = (() => {
             monitor.start();
 
             monitoredVideos.set(video, monitor);
-            monitorsById.set(videoId, { video, monitor });
+            monitorsById.set(videoId, { video, monitor, elementId });
             monitoredCount++;
             startCandidateEvaluation();
             candidateSelector.pruneMonitors(videoId, stopMonitoring);
@@ -6445,6 +6445,11 @@ const CandidateSwitchPolicy = (() => {
             || hasReason(candidate, 'identity_origin_src_match')
         );
 
+        const hasTrueOriginIdentity = (candidate) => (
+            hasReason(candidate, 'identity_origin_video')
+            || hasReason(candidate, 'identity_origin_src_match')
+        );
+
         const isWeakProbationCandidate = (candidate) => (
             !candidate?.trusted
             && candidate?.trustReason === 'progress_stale'
@@ -6593,7 +6598,7 @@ const CandidateSwitchPolicy = (() => {
 
             const fastReturnAllowed = activeHealing
                 && !baseDecision.currentTrusted
-                && hasStrongIdentity(preferred)
+                && hasTrueOriginIdentity(preferred)
                 && hasFreshProgress(preferred)
                 && !preferred.vs.paused
                 && preferred.vs.readyState >= CONFIG.monitoring.PROBATION_READY_STATE
@@ -7276,6 +7281,22 @@ const CandidateSelector = (() => {
                 activeId: activeState.getActiveId()
             });
         };
+        const logContinuitySnapshot = (decision, current, preferred) => {
+            if (!decision || !current || !preferred || decision.fromId === decision.toId) {
+                return;
+            }
+            Logger.add(LogEvents.tagged('CANDIDATE', 'Stream continuity snapshot'), {
+                reason: decision.reason,
+                action: decision.action,
+                fastSwitchKind: decision.fastSwitchKind || null,
+                continuity: streamIdentity.buildContinuitySnapshot({
+                    activeId: decision.fromId,
+                    preferredId: decision.toId,
+                    current,
+                    preferred
+                })
+            });
+        };
 
         const getActiveId = () => activeState.getActiveId();
         const forceSwitchController = CandidateForceSwitch.create({
@@ -7340,6 +7361,7 @@ const CandidateSelector = (() => {
 
             const decision = result.decision;
             if (decision) {
+                logContinuitySnapshot(decision, result.current, decision.preferred || result.preferred);
                 if (decision.action === 'fast_switch') {
                     const fromId = decision.fromId;
                     const reclaimedOrigin = decision.fastSwitchKind === 'reclaim_origin';
@@ -7924,7 +7946,7 @@ const StreamIdentityModel = (() => {
             if (!entry?.video || !entry?.monitor?.state) return null;
             const videoState = VideoState.getLite(entry.video, videoId);
             const monitorState = entry.monitor.state;
-            return { videoState, monitorState };
+            return { videoState, monitorState, elementId: entry.elementId ?? null };
         };
 
         const observeActive = (activeId, reason = 'observe') => {
@@ -7944,7 +7966,8 @@ const StreamIdentityModel = (() => {
                 updatedAt: now,
                 signature,
                 reason,
-                hadRecentProgress: hasRecentProgress
+                hadRecentProgress: hasRecentProgress,
+                elementId: active.elementId ?? null
             });
 
             if (!hasRecentProgress || isFallbackSource(src)) {
@@ -8003,10 +8026,61 @@ const StreamIdentityModel = (() => {
             originUpdatedAt: state.originUpdatedAt
         });
 
+        const buildCandidateSnapshot = (videoId, candidate = null) => {
+            if (!videoId) return null;
+            const now = Date.now();
+            prune(now);
+            const entry = monitorsById?.get(videoId) || null;
+            const videoState = candidate?.vs || (entry?.video ? VideoState.getLite(entry.video, videoId) : null);
+            const monitorState = candidate?.monitorState || entry?.monitor?.state || null;
+            const src = videoState?.currentSrc || videoState?.src || '';
+            const signature = normalizeSignature(src);
+            const recentRecord = state.recentActives.get(videoId);
+            const recentActive = Boolean(recentRecord && (now - recentRecord.updatedAt) <= windowMs);
+            const progressAgoMs = Number.isFinite(candidate?.progressAgoMs)
+                ? candidate.progressAgoMs
+                : (monitorState?.lastProgressTime ? Math.max(now - monitorState.lastProgressTime, 0) : null);
+
+            return {
+                videoId,
+                elementId: entry?.elementId ?? recentRecord?.elementId ?? null,
+                currentTime: videoState?.currentTime ?? null,
+                paused: videoState?.paused ?? null,
+                readyState: videoState?.readyState ?? null,
+                progressAgoMs,
+                progressEligible: candidate?.progressEligible ?? monitorState?.progressEligible ?? null,
+                trusted: candidate?.trusted ?? null,
+                trustReason: candidate?.trustReason ?? null,
+                identityScore: candidate?.identityScore ?? 0,
+                identityReasons: Array.isArray(candidate?.reasons)
+                    ? candidate.reasons.filter((reason) => reason.startsWith('identity_'))
+                    : [],
+                matchesOriginVideo: state.originVideoId === videoId,
+                matchesOriginSignature: Boolean(state.originSignature && signature && state.originSignature === signature),
+                recentActive,
+                recentActiveHadProgress: Boolean(recentRecord?.hadRecentProgress)
+            };
+        };
+
+        const buildContinuitySnapshot = ({ activeId, preferredId, current = null, preferred = null } = {}) => {
+            const now = Date.now();
+            prune(now);
+            const originEntry = state.originVideoId ? monitorsById?.get(state.originVideoId) : null;
+
+            return {
+                originVideoId: state.originVideoId,
+                originElementId: originEntry?.elementId ?? null,
+                originAgeMs: state.originUpdatedAt ? Math.max(now - state.originUpdatedAt, 0) : null,
+                active: buildCandidateSnapshot(activeId, current),
+                preferred: buildCandidateSnapshot(preferredId, preferred)
+            };
+        };
+
         return {
             observeActive,
             scoreCandidate,
-            getSnapshot
+            getSnapshot,
+            buildContinuitySnapshot
         };
     };
 

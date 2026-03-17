@@ -65,7 +65,8 @@ Look for:
 - A severe post-heal `SYNC` collapse on the only active candidate now triggers forced self-recovery instead of simply waiting for more limping progress.
 - Non-active candidates that freeze near the buffer edge should now age into `dead_candidate` instead of lingering indefinitely as pseudo-viable alternates.
 - `scan_buffer_starved` should no longer hand control to a paused `progress_stale` alternate during probation; if it still does, inspect the candidate score/trust snapshot because that now indicates stronger identity or fresh progress than the old ad-shaped failure.
-- `fast_switch` decisions can now also mean a recovered origin stream reclaimed control from an untrusted healing active candidate; check `fastSwitchKind` in the decision summary.
+- `fast_switch` decisions can still mean a recovered origin stream reclaimed control from an untrusted healing active candidate, but only when the target truly matches the stream origin (`identity_origin_video` or origin-src match).
+- `Stream continuity snapshot` logs now show `originVideoId`, `originElementId`, and the active/preferred element ids at switch time; use them to test whether Twitch kept the real stream on the same underlying video while ad-like alternates appeared alongside it.
 
 ## Tuning Cheat Sheet
 Use this mapping to connect config knobs to the log lines they influence.

@@ -185,7 +185,7 @@ const MonitorRegistry = (() => {
             monitor.start();
 
             monitoredVideos.set(video, monitor);
-            monitorsById.set(videoId, { video, monitor });
+            monitorsById.set(videoId, { video, monitor, elementId });
             monitoredCount++;
             startCandidateEvaluation();
             candidateSelector.pruneMonitors(videoId, stopMonitoring);

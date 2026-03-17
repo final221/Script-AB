@@ -288,13 +288,14 @@ Script Logger.add() -> Logger.getMergedTimeline()
 #### Candidate selection (src/core/candidate)
 - **ActiveCandidateState.js** - Central active/last-good candidate state + evaluation timing
 - **CandidateScorer.js** - Scores video candidates, including sustained degraded-sync penalties
-- **CandidateSwitchPolicy.js** - Switch decision logic; degraded active playback can qualify for switching before a full hard stall, weak paused/stale probation candidates are blocked during buffer-starved rescans, and recovered origin candidates can reclaim control from untrusted healing actives
+- **CandidateSwitchPolicy.js** - Switch decision logic; degraded active playback can qualify for switching before a full hard stall, weak paused/stale probation candidates are blocked during buffer-starved rescans, and recovered-origin fast reclaim now requires true origin evidence instead of a mere recent-active hint
 - **CandidateTrust.js** - Trust window tracking; dead/degraded candidates are not trusted
 - **RecoveryManager.js** - Arbitrates no-heal/play-failure recovery and now escalates severe post-heal degraded sync into forced self-recovery when no better candidate exists
 - **CandidateScoreRecord.js** - Standardized candidate score records
 - **CandidateProbation.js** - Probation window tracking
 - **CandidateEvaluation.js** - Candidate scoring aggregation
 - **CandidateSelectionLogger.js** - Candidate selection log summaries
+- **StreamIdentityModel.js** - Tracks origin/recent-active hints and now exposes continuity snapshots for switch diagnostics
 - **CandidateSelector.js** - Scores and selects the active video; delegates active-id ownership to `ActiveCandidateState`
 
 #### Recovery (src/core/recovery)

@@ -54,7 +54,7 @@ const StreamIdentityModel = (() => {
             if (!entry?.video || !entry?.monitor?.state) return null;
             const videoState = VideoState.getLite(entry.video, videoId);
             const monitorState = entry.monitor.state;
-            return { videoState, monitorState };
+            return { videoState, monitorState, elementId: entry.elementId ?? null };
         };
 
         const observeActive = (activeId, reason = 'observe') => {
@@ -74,7 +74,8 @@ const StreamIdentityModel = (() => {
                 updatedAt: now,
                 signature,
                 reason,
-                hadRecentProgress: hasRecentProgress
+                hadRecentProgress: hasRecentProgress,
+                elementId: active.elementId ?? null
             });
 
             if (!hasRecentProgress || isFallbackSource(src)) {
@@ -133,10 +134,61 @@ const StreamIdentityModel = (() => {
             originUpdatedAt: state.originUpdatedAt
         });
 
+        const buildCandidateSnapshot = (videoId, candidate = null) => {
+            if (!videoId) return null;
+            const now = Date.now();
+            prune(now);
+            const entry = monitorsById?.get(videoId) || null;
+            const videoState = candidate?.vs || (entry?.video ? VideoState.getLite(entry.video, videoId) : null);
+            const monitorState = candidate?.monitorState || entry?.monitor?.state || null;
+            const src = videoState?.currentSrc || videoState?.src || '';
+            const signature = normalizeSignature(src);
+            const recentRecord = state.recentActives.get(videoId);
+            const recentActive = Boolean(recentRecord && (now - recentRecord.updatedAt) <= windowMs);
+            const progressAgoMs = Number.isFinite(candidate?.progressAgoMs)
+                ? candidate.progressAgoMs
+                : (monitorState?.lastProgressTime ? Math.max(now - monitorState.lastProgressTime, 0) : null);
+
+            return {
+                videoId,
+                elementId: entry?.elementId ?? recentRecord?.elementId ?? null,
+                currentTime: videoState?.currentTime ?? null,
+                paused: videoState?.paused ?? null,
+                readyState: videoState?.readyState ?? null,
+                progressAgoMs,
+                progressEligible: candidate?.progressEligible ?? monitorState?.progressEligible ?? null,
+                trusted: candidate?.trusted ?? null,
+                trustReason: candidate?.trustReason ?? null,
+                identityScore: candidate?.identityScore ?? 0,
+                identityReasons: Array.isArray(candidate?.reasons)
+                    ? candidate.reasons.filter((reason) => reason.startsWith('identity_'))
+                    : [],
+                matchesOriginVideo: state.originVideoId === videoId,
+                matchesOriginSignature: Boolean(state.originSignature && signature && state.originSignature === signature),
+                recentActive,
+                recentActiveHadProgress: Boolean(recentRecord?.hadRecentProgress)
+            };
+        };
+
+        const buildContinuitySnapshot = ({ activeId, preferredId, current = null, preferred = null } = {}) => {
+            const now = Date.now();
+            prune(now);
+            const originEntry = state.originVideoId ? monitorsById?.get(state.originVideoId) : null;
+
+            return {
+                originVideoId: state.originVideoId,
+                originElementId: originEntry?.elementId ?? null,
+                originAgeMs: state.originUpdatedAt ? Math.max(now - state.originUpdatedAt, 0) : null,
+                active: buildCandidateSnapshot(activeId, current),
+                preferred: buildCandidateSnapshot(preferredId, preferred)
+            };
+        };
+
         return {
             observeActive,
             scoreCandidate,
-            getSnapshot
+            getSnapshot,
+            buildContinuitySnapshot
         };
     };
 
