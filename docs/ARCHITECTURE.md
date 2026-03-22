@@ -82,84 +82,84 @@ The build uses a priority list followed by auto-discovered modules, then the ent
 37. `monitoring/LogDebug.js`
 38. `core/video/VideoState.js`
 39. `core/video/VideoStateSnapshot.js`
-40. `core/video/StateSnapshot.js`
-41. `core/video/MonitorRegistry.js`
-42. `core/video/RefreshCoordinator.js`
-43. `core/video/MonitorCoordinator.js`
-44. `core/video/VideoDiscovery.js`
-45. `core/video/LogContext.js`
-46. `core/playback/PlaybackLogHelper.js`
-47. `core/playback/PlaybackStateAliases.js`
-48. `core/playback/PlaybackStateDefaults.js`
-49. `core/playback/PlaybackMediaWatcher.js`
-50. `core/playback/MediaState.js`
-51. `core/playback/PlaybackStateStore.js`
-52. `core/playback/PlaybackStateTransitions.js`
-53. `core/playback/PlaybackStallStateMachine.js`
-54. `core/playback/PlaybackResetLogic.js`
-55. `core/playback/PlaybackProgressReset.js`
-56. `core/playback/PlaybackProgressTracker.js`
-57. `core/playback/PlaybackProgressLogic.js`
-58. `core/playback/PlaybackSyncLogic.js`
-59. `core/playback/PlaybackStarvationLogic.js`
-60. `core/playback/PlaybackStateTracker.js`
-61. `core/playback/PlaybackEventLogger.js`
-62. `core/playback/PlaybackEventHandlersProgress.js`
-63. `core/playback/PlaybackEventHandlersReady.js`
-64. `core/playback/PlaybackEventHandlersStall.js`
-65. `core/playback/PlaybackEventHandlersLifecycle.js`
-66. `core/playback/PlaybackEventHandlers.js`
-67. `core/playback/PlaybackWatchdog.js`
-68. `core/playback/PlaybackMonitor.js`
-69. `core/playback/ProgressModel.js`
-70. `core/candidate/CandidateScorer.js`
-71. `core/candidate/CandidateSwitchPolicy.js`
-72. `core/candidate/CandidateDecision.js`
-73. `core/candidate/CandidateTrust.js`
-74. `core/candidate/CandidateScoreRecord.js`
-75. `core/candidate/CandidateProbation.js`
-76. `core/candidate/CandidateEvaluation.js`
-77. `core/candidate/CandidateSelectionLogger.js`
-78. `core/candidate/ActiveCandidateState.js`
-79. `core/candidate/CandidateForceSwitch.js`
-80. `core/candidate/CandidateSelector.js`
-81. `core/candidate/CandidatePruner.js`
-82. `core/candidate/CandidateSelectionEngine.js`
-83. `core/candidate/EmergencyCandidatePicker.js`
-84. `core/candidate/FormerStreamTracker.js`
-85. `core/candidate/StreamIdentityModel.js`
-86. `core/recovery/RecoveryContext.js`
-87. `core/recovery/BackoffManager.js`
-88. `core/recovery/ProbationPolicy.js`
-89. `core/recovery/RecoveryLogDetails.js`
-90. `core/recovery/RecoveryStallSkipApplier.js`
-91. `core/recovery/RecoveryDecisionApplier.js`
-92. `core/recovery/NoHealPointPolicy.js`
-93. `core/recovery/PlayErrorPolicy.js`
-94. `core/recovery/StallSkipPolicy.js`
-95. `core/recovery/RecoveryPolicyFactory.js`
-96. `core/recovery/RecoveryPolicy.js`
-97. `core/recovery/FailoverCandidatePicker.js`
-98. `core/recovery/FailoverProbeController.js`
-99. `core/recovery/FailoverManager.js`
-100. `core/recovery/RecoveryRefreshController.js`
-101. `core/recovery/DegradedPlaybackRecovery.js`
-102. `core/recovery/RecoveryManager.js`
-103. `core/recovery/CatchUpController.js`
-104. `core/recovery/HealAttemptUtils.js`
-105. `core/recovery/HealAttemptLogger.js`
-106. `core/recovery/HealAttemptRunner.js`
-107. `core/recovery/HealPointPoller.js`
-108. `core/recovery/HealPipeline.js`
-109. `core/recovery/AdGapSignals.js`
-110. `core/recovery/PlayheadAttribution.js`
-111. `core/recovery/HealPipelinePoller.js`
-112. `core/recovery/HealPipelineRevalidate.js`
-113. `core/recovery/HealPipelineSeek.js`
-114. `core/recovery/StallHandler.js`
-115. `core/external/ExternalSignalUtils.js`
-116. `core/external/ExternalSignalHandlerStall.js`
-117. `core/external/ExternalAssetRecoveryOps.js`
+40. `core/recovery/CatchUpController.js`
+41. `core/recovery/HealAttemptUtils.js`
+42. `core/recovery/HealAttemptLogger.js`
+43. `core/recovery/HealAttemptRunner.js`
+44. `core/recovery/HealPointPoller.js`
+45. `core/video/StateSnapshot.js`
+46. `core/video/MonitorRegistry.js`
+47. `core/video/RefreshCoordinator.js`
+48. `core/video/MonitorCoordinator.js`
+49. `core/video/VideoDiscovery.js`
+50. `core/video/LogContext.js`
+51. `core/playback/PlaybackLogHelper.js`
+52. `core/playback/PlaybackStateAliases.js`
+53. `core/playback/PlaybackStateDefaults.js`
+54. `core/playback/PlaybackMediaWatcher.js`
+55. `core/playback/MediaState.js`
+56. `core/playback/PlaybackStateStore.js`
+57. `core/playback/PlaybackStateTransitions.js`
+58. `core/playback/PlaybackStallStateMachine.js`
+59. `core/playback/PlaybackResetLogic.js`
+60. `core/playback/PlaybackProgressReset.js`
+61. `core/playback/PlaybackProgressTracker.js`
+62. `core/playback/PlaybackProgressLogic.js`
+63. `core/playback/PlaybackSyncLogic.js`
+64. `core/playback/PlaybackStarvationLogic.js`
+65. `core/playback/PlaybackStateTracker.js`
+66. `core/playback/PlaybackEventLogger.js`
+67. `core/playback/PlaybackEventHandlersProgress.js`
+68. `core/playback/PlaybackEventHandlersReady.js`
+69. `core/playback/PlaybackEventHandlersStall.js`
+70. `core/playback/PlaybackEventHandlersLifecycle.js`
+71. `core/playback/PlaybackEventHandlers.js`
+72. `core/playback/PlaybackWatchdog.js`
+73. `core/playback/PlaybackMonitor.js`
+74. `core/playback/ProgressModel.js`
+75. `core/candidate/CandidateScorer.js`
+76. `core/candidate/CandidateSwitchPolicy.js`
+77. `core/candidate/CandidateDecision.js`
+78. `core/candidate/CandidateTrust.js`
+79. `core/candidate/CandidateScoreRecord.js`
+80. `core/candidate/CandidateProbation.js`
+81. `core/candidate/CandidateEvaluation.js`
+82. `core/candidate/CandidateSelectionLogger.js`
+83. `core/candidate/ActiveCandidateState.js`
+84. `core/candidate/CandidateForceSwitch.js`
+85. `core/candidate/CandidateSelector.js`
+86. `core/candidate/CandidatePruner.js`
+87. `core/candidate/CandidateSelectionEngine.js`
+88. `core/candidate/EmergencyCandidatePicker.js`
+89. `core/candidate/FormerStreamTracker.js`
+90. `core/candidate/StreamIdentityModel.js`
+91. `core/recovery/HealPipeline.js`
+92. `core/recovery/AdGapSignals.js`
+93. `core/recovery/PlayheadAttribution.js`
+94. `core/recovery/HealPipelinePoller.js`
+95. `core/recovery/HealPipelineRevalidate.js`
+96. `core/recovery/HealPipelineSeek.js`
+97. `core/recovery/RecoveryContext.js`
+98. `core/recovery/BackoffManager.js`
+99. `core/recovery/ProbationPolicy.js`
+100. `core/recovery/RecoveryLogDetails.js`
+101. `core/recovery/RecoveryStallSkipApplier.js`
+102. `core/recovery/RecoveryDecisionApplier.js`
+103. `core/recovery/NoHealPointPolicy.js`
+104. `core/recovery/PlayErrorPolicy.js`
+105. `core/recovery/StallHandler.js`
+106. `core/external/ExternalSignalUtils.js`
+107. `core/external/ExternalSignalHandlerStall.js`
+108. `core/external/ExternalAssetRecoveryOps.js`
+109. `core/recovery/StallSkipPolicy.js`
+110. `core/recovery/RecoveryPolicyFactory.js`
+111. `core/recovery/RecoveryPolicy.js`
+112. `core/recovery/FailoverCandidatePicker.js`
+113. `core/recovery/FailoverProbeController.js`
+114. `core/recovery/FailoverManager.js`
+115. `core/recovery/RecoveryRefreshController.js`
+116. `core/recovery/DegradedPlaybackRecovery.js`
+117. `core/recovery/RecoveryManager.js`
 118. `core/external/ExternalAssetRecoveryProcess.js`
 119. `core/external/ExternalSignalHandlerAsset.js`
 120. `core/external/ExternalSignalHandlerAdblock.js`
@@ -268,7 +268,7 @@ Script Logger.add() -> Logger.getMergedTimeline()
 - **PlaybackStateAliases.js** - Generated alias schema for legacy flat state access
 - **PlaybackStateStore.js** - Playback state construction and alias mapping
 - **PlaybackResetLogic.js** - Reset evaluation and pending reset handling
-- **PlaybackProgressReset.js** - Clears heal/play backoff and starvation flags on progress, but now waits for healthy resumed playback before dropping play-error backoff
+- **PlaybackProgressReset.js** - Clears heal/play backoff and starvation flags on progress, but now waits for healthy resumed playback before dropping play-error backoff and keeps no-heal backoff pending until a post-resume sync sample is healthy
 - **PlaybackProgressLogic.js** - Progress/ready/stall tracking; initial progress grace window defers stall handling until `stall.INIT_PROGRESS_GRACE_MS`
 - **PlaybackProgressTracker.js** - Progress streak resets after `monitoring.PROGRESS_STREAK_RESET_MS`; eligibility after `monitoring.CANDIDATE_MIN_PROGRESS_MS`
 - **PlaybackSyncLogic.js** - Playback drift sampling
@@ -290,7 +290,7 @@ Script Logger.add() -> Logger.getMergedTimeline()
 - **CandidateScorer.js** - Scores video candidates, including sustained degraded-sync penalties
 - **CandidateSwitchPolicy.js** - Switch decision logic; degraded active playback can qualify for switching before a full hard stall, weak paused/stale probation candidates are blocked during buffer-starved rescans, and recovered-origin fast reclaim now requires true origin evidence instead of a mere recent-active hint
 - **CandidateTrust.js** - Trust window tracking; dead/degraded candidates are not trusted
-- **RecoveryManager.js** - Arbitrates no-heal/play-failure recovery and now escalates severe post-heal degraded sync into forced self-recovery when no better candidate exists
+- **RecoveryManager.js** - Arbitrates no-heal/play-failure recovery and now distinguishes between post-heal severe degradation (forced self-recovery) and post-no-heal severe degradation (bounded catch-up first) when no better candidate exists
 - **CandidateScoreRecord.js** - Standardized candidate score records
 - **CandidateProbation.js** - Probation window tracking
 - **CandidateEvaluation.js** - Candidate scoring aggregation
@@ -304,7 +304,7 @@ Script Logger.add() -> Logger.getMergedTimeline()
 - **ProbationPolicy.js** - Probation window policy
 - **NoHealPointPolicy.js** - No-heal-point handling rules
 - **PlayErrorPolicy.js** - Play error handling rules
-- **DegradedPlaybackRecovery.js** - Escalates severe post-heal degraded sync when candidate reevaluation finds no better path
+- **DegradedPlaybackRecovery.js** - Routes severe degraded sync into bounded catch-up after no-heal self-recovery, or forced self-recovery after post-heal collapse, when candidate reevaluation finds no better path
 - **StallSkipPolicy.js** - Stall skip rules for non-active videos
 - **RecoveryPolicyFactory.js** - Policy composition
 - **RecoveryPolicy.js** - Policy interface
@@ -313,7 +313,7 @@ Script Logger.add() -> Logger.getMergedTimeline()
 - **FailoverManager.js** - Failover attempt logic
 - **RecoveryManager.js** - Backoff and failover coordination; consumes canonical recovery `action` output for no-heal arbitration
 - **RecoveryRefreshController.js** - Refresh eligibility and execution; refresh cooldown persists across same-element re-registration
-- **CatchUpController.js** - Post-heal live-edge catch-up scheduler
+- **CatchUpController.js** - Live-edge catch-up scheduler for healed playback and severe post-no-heal self-recovery drift
 - **HealAttemptUtils.js** - Heal attempt helper utilities
 - **HealAttemptLogger.js** - Heal attempt logging helpers
 - **HealPointPoller.js** - Polls for heal points

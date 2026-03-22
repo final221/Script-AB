@@ -42,6 +42,15 @@ const RecoveryDecisionApplier = (() => {
             const reason = context.reason || data.reason;
             const now = context.now || data.now;
             backoffManager.applyBackoff(videoId, monitorState, reason);
+            if (monitorState) {
+                PlaybackStateStore.markNoHealRecoveryPending(monitorState, now);
+                Logger.add(LogEvents.tagged('BACKOFF', 'Awaiting post-no-heal sync confirmation'), {
+                    videoId,
+                    reason,
+                    noHealPointCount: monitorState.noHealPointCount || 0,
+                    action: data.action || null
+                });
+            }
             if (data.quietEligible && monitorState) {
                 PlaybackStateStore.setNoHealPointQuiet(monitorState, data.quietUntil);
                 Logger.add(LogEvents.tagged('BACKOFF', 'Recovery quieted after repeated no-heal points'), {

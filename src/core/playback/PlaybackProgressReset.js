@@ -11,6 +11,15 @@ const PlaybackProgressReset = (() => {
 
         const clearBackoffOnProgress = (reason, now) => {
             if (state.noHealPointCount > 0 || state.nextHealAllowedTime > 0) {
+                const awaitingSyncConfirmation = Boolean(state.pendingNoHealRecoveryCheck);
+                const hasPostNoHealSyncSample = !state.lastNoHealDecisionTime
+                    || (state.lastSyncWallTime && state.lastSyncWallTime >= state.lastNoHealDecisionTime);
+                const syncStillDegraded = (state.degradedSyncCount || 0) > 0
+                    || (Number.isFinite(state.lastSyncRate) && state.lastSyncRate <= CONFIG.monitoring.SYNC_RATE_MIN)
+                    || ((state.lastSyncDriftMs || 0) >= CONFIG.monitoring.SYNC_DRIFT_MAX_MS);
+                if (awaitingSyncConfirmation && (!hasPostNoHealSyncSample || syncStillDegraded)) {
+                    return;
+                }
                 logDebugLazy(LogEvents.tagged('BACKOFF', 'Cleared after progress'), () => ({
                     reason,
                     previousNoHealPoints: state.noHealPointCount,

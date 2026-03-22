@@ -46,6 +46,9 @@ const PlaybackStateStore = (() => {
         state.nextHealAllowedTime = 0;
         state.noHealPointRefreshUntil = 0;
         state.noHealPointQuietUntil = 0;
+        state.pendingNoHealRecoveryCheck = false;
+        state.lastNoHealDecisionTime = 0;
+        state.noHealRecoveryCatchUpScheduledAt = 0;
         state.lastBackoffRemainingBucket = 0;
         state.lastBackoffNoHealPointCount = 0;
         return true;
@@ -56,6 +59,9 @@ const PlaybackStateStore = (() => {
         state.noHealPointCount = count;
         if (count === 0) {
             state.noHealPointQuietUntil = 0;
+            state.pendingNoHealRecoveryCheck = false;
+            state.lastNoHealDecisionTime = 0;
+            state.noHealRecoveryCatchUpScheduledAt = 0;
             state.lastBackoffRemainingBucket = 0;
             state.lastBackoffNoHealPointCount = 0;
         }
@@ -81,6 +87,20 @@ const PlaybackStateStore = (() => {
         if (until && (!state.nextHealAllowedTime || state.nextHealAllowedTime < until)) {
             state.nextHealAllowedTime = until;
         }
+        return true;
+    };
+
+    const markNoHealRecoveryPending = (state, now) => {
+        if (!state) return false;
+        state.pendingNoHealRecoveryCheck = true;
+        state.lastNoHealDecisionTime = now;
+        state.noHealRecoveryCatchUpScheduledAt = 0;
+        return true;
+    };
+
+    const markNoHealRecoveryCatchUpScheduled = (state, now) => {
+        if (!state) return false;
+        state.noHealRecoveryCatchUpScheduledAt = now;
         return true;
     };
 
@@ -159,6 +179,8 @@ const PlaybackStateStore = (() => {
         setNoHealPointBackoff,
         setNoHealPointRefreshUntil,
         setNoHealPointQuiet,
+        markNoHealRecoveryPending,
+        markNoHealRecoveryCatchUpScheduled,
         markRefresh,
         markEmergencySwitch,
         markBackoffLog,

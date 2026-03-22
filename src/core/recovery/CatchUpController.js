@@ -1,5 +1,5 @@
 // @module CatchUpController
-// @depends RecoveryManager
+// @depends BufferGapFinder, SeekTargetCalculator, VideoStateSnapshot, LogEvents
 // --- CatchUpController ---
 /**
  * Schedules catch-up seeks toward the live edge after healing.

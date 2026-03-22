@@ -120,6 +120,8 @@ describe('RecoveryDecisionApplier', () => {
         expect(result.failoverEligible).toBe(true);
         expect(result.refreshEligible).toBe(true);
         expect(result.action).toBe('failover');
+        expect(monitorState.pendingNoHealRecoveryCheck).toBe(true);
+        expect(monitorState.lastNoHealDecisionTime).toBe(1000);
     });
 
 

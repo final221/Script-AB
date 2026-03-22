@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.20.0 - 2026-03-22T14:11:19.253Z
+Previous: 4.19.0
+Commit: 0f07c1a
+Changes:
+- Narrow origin reclaim and log stream continuity
+
 ## 4.19.0 - 2026-03-17T19:21:24.385Z
 Previous: 4.18.0
 Commit: 0e1cea2

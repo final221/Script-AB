@@ -24,6 +24,7 @@ All settings live in `src/config/Config.js`.
 - `stall.NO_HEAL_POINT_BACKOFF_MAX_MS`: Max backoff after repeated misses.
 - `stall.NO_HEAL_POINT_REFRESH_DELAY_MS`: Delay refresh when headroom is low but src/readyState look valid.
 - `stall.NO_HEAL_POINT_REFRESH_MIN_READY_STATE`: Minimum readyState required to allow refresh delay.
+- Repeated no-heal backoff now remains active until a healthy post-resume sync sample confirms recovery; severe resumed drift is routed through catch-up before broader self-recovery.
 - `stall.NO_HEAL_POINT_EMERGENCY_AFTER`: Emergency switch after this many no-heal points.
 - `stall.NO_HEAL_POINT_EMERGENCY_COOLDOWN_MS`: Cooldown between emergency switches.
 - `stall.NO_HEAL_POINT_EMERGENCY_MIN_READY_STATE`: Minimum readyState for emergency switch candidates.
@@ -50,7 +51,7 @@ All settings live in `src/config/Config.js`.
 - `monitoring.TRUST_STALE_MS`: How quickly trust decays for idle candidates.
 - `monitoring.PROBE_COOLDOWN_MS`: Minimum time between candidate probes.
 - `monitoring.SYNC_RATE_MIN` / `SYNC_DRIFT_MAX_MS`: Low playback-rate or high-drift samples; repeated degraded samples can now make the active stream eligible for a switch even if it is still limping forward.
-- `monitoring.SYNC_SEVERE_RATE_MIN` / `SYNC_SEVERE_DRIFT_MS`: Severe sync-collapse thresholds; when the active stream hits these after a heal failure and no better candidate appears, recovery escalates to forced self-recovery.
+- `monitoring.SYNC_SEVERE_RATE_MIN` / `SYNC_SEVERE_DRIFT_MS`: Severe sync-collapse thresholds; when the active stream hits these after a heal failure and no better candidate appears, recovery escalates either to bounded catch-up (post-no-heal self-recovery) or forced self-recovery (post-heal collapse).
 - `monitoring.DEGRADED_ACTIVE_SAMPLE_COUNT`: Consecutive degraded sync samples required before the active stream is treated as degraded.
 - `monitoring.DEAD_CANDIDATE_AFTER_MS`: Mark candidate dead after sustained empty src + readyState 0, or after a paused edge-stuck dead-end sits without progress long enough.
 - `monitoring.DEAD_CANDIDATE_BUFFER_AHEAD_S`: Buffer headroom threshold for treating a paused edge-stuck candidate as dead.

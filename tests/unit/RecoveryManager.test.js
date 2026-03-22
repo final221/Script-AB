@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { createVideo } from '../helpers/video.js';
+import { createVideo, setBufferedRanges } from '../helpers/video.js';
 
 const createManager = () => {
     const monitorsById = new Map();
@@ -607,5 +607,65 @@ describe('RecoveryManager refresh gating', () => {
         expect(candidateSelector.evaluateCandidates).toHaveBeenCalledWith('degraded_sync');
         expect(refreshed).toBe(false);
         expect(onPersistentFailure).not.toHaveBeenCalled();
+    });
+
+    it('routes severe post-no-heal degraded playback into bounded catch-up before refresh', () => {
+        vi.useFakeTimers();
+        const baseTime = new Date('2026-02-01T00:00:00Z');
+        vi.setSystemTime(baseTime);
+
+        const monitorsById = new Map();
+        const candidateSelector = {
+            getActiveId: () => 'video-1',
+            evaluateCandidates: vi.fn()
+        };
+        const onPersistentFailure = vi.fn();
+        const manager = window.RecoveryManager.create({
+            monitorsById,
+            candidateSelector,
+            getVideoId: () => 'video-1',
+            logDebug: () => {},
+            onRescan: () => {},
+            onPersistentFailure
+        });
+
+        const video = document.createElement('video');
+        Object.defineProperty(video, 'currentTime', { value: 90, writable: true, configurable: true });
+        Object.defineProperty(video, 'paused', { value: false, configurable: true });
+        Object.defineProperty(video, 'readyState', { value: 4, configurable: true });
+        Object.defineProperty(video, 'currentSrc', { value: 'blob:https://www.twitch.tv/stream', configurable: true });
+        setBufferedRanges(video, [[0, 100]]);
+        document.body.appendChild(video);
+
+        const monitorState = {
+            pendingNoHealRecoveryCheck: true,
+            noHealRecoveryCatchUpScheduledAt: 0,
+            progressStreakMs: CONFIG.monitoring.CANDIDATE_MIN_PROGRESS_MS + 1,
+            lastStallEventTime: baseTime.getTime() - (CONFIG.recovery.CATCH_UP_STABLE_MS + 1),
+            catchUpTimeoutId: null,
+            catchUpAttempts: 0,
+            playErrorCount: 0,
+            lastRefreshAt: 0
+        };
+        monitorsById.set('video-1', { video, monitor: { state: monitorState } });
+
+        const handled = manager.handleDegradedPlayback(video, monitorState, {
+            severe: true,
+            rate: 0.25,
+            driftMs: 15791,
+            bufferEndDeltaS: 10
+        });
+
+        expect(candidateSelector.evaluateCandidates).toHaveBeenCalledWith('degraded_sync');
+        expect(handled).toBe(true);
+        expect(onPersistentFailure).not.toHaveBeenCalled();
+
+        vi.advanceTimersByTime(CONFIG.recovery.CATCH_UP_DELAY_MS + 1);
+
+        expect(video.currentTime).toBeGreaterThan(90);
+        expect(monitorState.noHealRecoveryCatchUpScheduledAt).toBeGreaterThan(0);
+
+        video.remove();
+        vi.useRealTimers();
     });
 });
