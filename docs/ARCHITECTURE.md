@@ -271,7 +271,7 @@ Script Logger.add() -> Logger.getMergedTimeline()
 - **PlaybackProgressReset.js** - Clears heal/play backoff and starvation flags on progress, but now waits for healthy resumed playback before dropping play-error backoff and keeps no-heal backoff pending until a post-resume sync sample is healthy
 - **PlaybackProgressLogic.js** - Progress/ready/stall tracking; initial progress grace window defers stall handling until `stall.INIT_PROGRESS_GRACE_MS`
 - **PlaybackProgressTracker.js** - Progress streak resets after `monitoring.PROGRESS_STREAK_RESET_MS`; eligibility after `monitoring.CANDIDATE_MIN_PROGRESS_MS`
-- **PlaybackSyncLogic.js** - Playback drift sampling
+- **PlaybackSyncLogic.js** - Playback drift sampling; pending no-heal recovery uses a faster sync-confirmation window than normal steady-state sampling
 - **PlaybackStarvationLogic.js** - Buffer starvation tracking
 - **PlaybackEventLogger.js** - Event log aggregation + summary logic
 - **PlaybackEventHandlersProgress.js** - Progress/timeupdate handling
@@ -313,7 +313,7 @@ Script Logger.add() -> Logger.getMergedTimeline()
 - **FailoverManager.js** - Failover attempt logic
 - **RecoveryManager.js** - Backoff and failover coordination; consumes canonical recovery `action` output for no-heal arbitration
 - **RecoveryRefreshController.js** - Refresh eligibility and execution; refresh cooldown persists across same-element re-registration
-- **CatchUpController.js** - Live-edge catch-up scheduler for healed playback and severe post-no-heal self-recovery drift
+- **CatchUpController.js** - Live-edge catch-up scheduler for healed playback and severe post-no-heal self-recovery drift, with a faster `post_no_heal` timing profile than generic post-heal catch-up
 - **HealAttemptUtils.js** - Heal attempt helper utilities
 - **HealAttemptLogger.js** - Heal attempt logging helpers
 - **HealPointPoller.js** - Polls for heal points

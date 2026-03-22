@@ -660,7 +660,7 @@ describe('RecoveryManager refresh gating', () => {
         expect(handled).toBe(true);
         expect(onPersistentFailure).not.toHaveBeenCalled();
 
-        vi.advanceTimersByTime(CONFIG.recovery.CATCH_UP_DELAY_MS + 1);
+        vi.advanceTimersByTime(CONFIG.recovery.CATCH_UP_POST_NO_HEAL_DELAY_MS + 1);
 
         expect(video.currentTime).toBeGreaterThan(90);
         expect(monitorState.noHealRecoveryCatchUpScheduledAt).toBeGreaterThan(0);

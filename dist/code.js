@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          Mega Ad Dodger 3000 (Stealth Reactor Core)
-// @version       4.20.0
+// @version       4.21.0
 // @description   🛡️ Stealth Reactor Core: Blocks Twitch ads with self-healing.
 // @author        Senior Expert AI
 // @match         *://*.twitch.tv/*
@@ -120,6 +120,7 @@ const CONFIG = (() => {
             DEAD_CANDIDATE_AFTER_MS: 5000,  // Mark candidate dead after sustained empty src + readyState 0
             DEAD_CANDIDATE_COOLDOWN_MS: 20000, // Exclude dead candidates for this long
             SYNC_SAMPLE_MS: 5000,           // Sample window for drift detection
+            SYNC_PENDING_NO_HEAL_SAMPLE_MS: 1000, // Faster sync confirmation window while no-heal recovery is still pending
             SYNC_DRIFT_MAX_MS: 1000,        // Log if drift exceeds this threshold
             SYNC_SEVERE_DRIFT_MS: 3000,     // Treat sync collapse above this drift as immediate severe degradation
             SYNC_RATE_MIN: 0.9,             // Log if playback rate falls below this ratio
@@ -143,6 +144,9 @@ const CONFIG = (() => {
             CATCH_UP_MIN_S: 2,              // Minimum lag behind live edge before catching up
             CATCH_UP_DELAY_MS: 3000,        // Delay after a heal before attempting catch-up
             CATCH_UP_STABLE_MS: 5000,       // Require this long without stalls before catch-up
+            CATCH_UP_POST_NO_HEAL_DELAY_MS: 1000, // Faster delay before catch-up after degraded no-heal self-recovery
+            CATCH_UP_POST_NO_HEAL_STABLE_MS: 1500, // Shorter stability window for post-no-heal catch-up
+            CATCH_UP_POST_NO_HEAL_PROGRESS_MS: 1000, // Shorter progress window before post-no-heal catch-up
             CATCH_UP_RETRY_MS: 5000,        // Delay before retrying deferred catch-up
             CATCH_UP_MAX_ATTEMPTS: 3,       // Max catch-up attempts per heal
         },
@@ -185,7 +189,7 @@ const CONFIG = (() => {
  * Build metadata helpers (version injected at build time).
  */
 const BuildInfo = (() => {
-    const VERSION = '4.20.0';
+    const VERSION = '4.21.0';
 
     const getVersion = () => {
         const gmVersion = (typeof GM_info !== 'undefined' && GM_info?.script?.version)
@@ -196,7 +200,7 @@ const BuildInfo = (() => {
             ? unsafeWindow.GM_info.script.version
             : null;
         if (unsafeVersion) return unsafeVersion;
-        if (VERSION && VERSION !== '4.20.0') return VERSION;
+        if (VERSION && VERSION !== '4.21.0') return VERSION;
         return null;
     };
 
@@ -3444,18 +3448,35 @@ const VideoStateSnapshot = (() => {
  */
 const CatchUpController = (() => {
     const create = () => {
+        const getProfile = (reason) => {
+            if (reason === 'post_no_heal') {
+                return {
+                    delayMs: CONFIG.recovery.CATCH_UP_POST_NO_HEAL_DELAY_MS,
+                    stableMs: CONFIG.recovery.CATCH_UP_POST_NO_HEAL_STABLE_MS,
+                    progressMs: CONFIG.recovery.CATCH_UP_POST_NO_HEAL_PROGRESS_MS
+                };
+            }
+            return {
+                delayMs: CONFIG.recovery.CATCH_UP_DELAY_MS,
+                stableMs: CONFIG.recovery.CATCH_UP_STABLE_MS,
+                progressMs: CONFIG.monitoring.CANDIDATE_MIN_PROGRESS_MS
+            };
+        };
+
         const scheduleCatchUp = (video, monitorState, videoId, reason) => {
             if (!monitorState || monitorState.catchUpTimeoutId) return;
             monitorState.catchUpAttempts = 0;
-            const delayMs = CONFIG.recovery.CATCH_UP_DELAY_MS;
+            const profile = getProfile(reason);
             Logger.add(LogEvents.tagged('CATCH_UP', 'Scheduled'), {
                 reason,
-                delayMs,
+                delayMs: profile.delayMs,
+                stableMs: profile.stableMs,
+                progressMs: profile.progressMs,
                 videoState: VideoStateSnapshot.forLog(video, videoId)
             });
             monitorState.catchUpTimeoutId = setTimeout(() => {
                 attemptCatchUp(video, monitorState, videoId, reason);
-            }, delayMs);
+            }, profile.delayMs);
         };
 
         const attemptCatchUp = (video, monitorState, videoId, reason) => {
@@ -3472,14 +3493,15 @@ const CatchUpController = (() => {
             }
 
             const now = Date.now();
+            const profile = getProfile(reason);
             const stallAgoMs = monitorState.lastStallEventTime
                 ? (now - monitorState.lastStallEventTime)
                 : null;
-            const progressOk = monitorState.progressStreakMs >= CONFIG.monitoring.CANDIDATE_MIN_PROGRESS_MS;
+            const progressOk = monitorState.progressStreakMs >= profile.progressMs;
             const stableEnough = !video.paused
                 && video.readyState >= 3
                 && progressOk
-                && (stallAgoMs === null || stallAgoMs >= CONFIG.recovery.CATCH_UP_STABLE_MS);
+                && (stallAgoMs === null || stallAgoMs >= profile.stableMs);
 
             if (!stableEnough) {
                 Logger.add(LogEvents.tagged('CATCH_UP', 'Deferred (unstable)'), {
@@ -3488,7 +3510,9 @@ const CatchUpController = (() => {
                     paused: video.paused,
                     readyState: video.readyState,
                     progressStreakMs: monitorState.progressStreakMs,
-                    stallAgoMs
+                    stallAgoMs,
+                    requiredStableMs: profile.stableMs,
+                    requiredProgressMs: profile.progressMs
                 });
                 if (monitorState.catchUpAttempts < CONFIG.recovery.CATCH_UP_MAX_ATTEMPTS) {
                     monitorState.catchUpTimeoutId = setTimeout(() => {
@@ -6075,6 +6099,15 @@ const PlaybackSyncLogic = (() => {
         const state = options.state;
         const logDebugLazy = options.logDebugLazy || (() => {});
         const onDegradedSync = options.onDegradedSync || (() => {});
+        const getEffectiveSampleMs = () => {
+            if (!state.pendingNoHealRecoveryCheck) {
+                return CONFIG.monitoring.SYNC_SAMPLE_MS;
+            }
+            return Math.min(
+                CONFIG.monitoring.SYNC_SAMPLE_MS,
+                CONFIG.monitoring.SYNC_PENDING_NO_HEAL_SAMPLE_MS || CONFIG.monitoring.SYNC_SAMPLE_MS
+            );
+        };
 
         const logSyncStatus = () => {
             const now = Date.now();
@@ -6087,7 +6120,7 @@ const PlaybackSyncLogic = (() => {
                 return;
             }
             const wallDelta = now - state.lastSyncWallTime;
-            if (wallDelta < CONFIG.monitoring.SYNC_SAMPLE_MS) {
+            if (wallDelta < getEffectiveSampleMs()) {
                 return;
             }
             const mediaDelta = (video.currentTime - state.lastSyncMediaTime) * 1000;

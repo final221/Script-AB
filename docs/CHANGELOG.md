@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.21.0 - 2026-03-22T14:24:53.256Z
+Previous: 4.20.0
+Commit: da3d347
+Changes:
+- Route post-no-heal degraded playback into catch-up
+
 ## 4.20.0 - 2026-03-22T14:11:19.253Z
 Previous: 4.19.0
 Commit: 0f07c1a

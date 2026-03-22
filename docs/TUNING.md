@@ -50,6 +50,7 @@ All settings live in `src/config/Config.js`.
 - `monitoring.PROGRESS_STALE_MS`: Stale progress threshold used in scoring.
 - `monitoring.TRUST_STALE_MS`: How quickly trust decays for idle candidates.
 - `monitoring.PROBE_COOLDOWN_MS`: Minimum time between candidate probes.
+- `monitoring.SYNC_PENDING_NO_HEAL_SAMPLE_MS`: Faster sync sample window while no-heal recovery is still waiting to confirm that resumed playback is actually healthy.
 - `monitoring.SYNC_RATE_MIN` / `SYNC_DRIFT_MAX_MS`: Low playback-rate or high-drift samples; repeated degraded samples can now make the active stream eligible for a switch even if it is still limping forward.
 - `monitoring.SYNC_SEVERE_RATE_MIN` / `SYNC_SEVERE_DRIFT_MS`: Severe sync-collapse thresholds; when the active stream hits these after a heal failure and no better candidate appears, recovery escalates either to bounded catch-up (post-no-heal self-recovery) or forced self-recovery (post-heal collapse).
 - `monitoring.DEGRADED_ACTIVE_SAMPLE_COUNT`: Consecutive degraded sync samples required before the active stream is treated as degraded.
@@ -62,6 +63,7 @@ All settings live in `src/config/Config.js`.
 - `logging.NON_ACTIVE_LOG_MS`: Log interval for non-active candidates.
 - `logging.BACKOFF_LOG_INTERVAL_MS`: Log interval for backoff skip logs.
 - `logging.HEAL_DEFER_LOG_MS`: Log interval for low-headroom defers.
+- `recovery.CATCH_UP_POST_NO_HEAL_DELAY_MS` / `CATCH_UP_POST_NO_HEAL_STABLE_MS` / `CATCH_UP_POST_NO_HEAL_PROGRESS_MS`: Faster catch-up profile used only after degraded no-heal self-recovery, not after normal successful heals.
 - `logging.RESOURCE_WINDOW_PAST_MS`: How far back to capture resource requests on stall.
 - `logging.RESOURCE_WINDOW_FUTURE_MS`: How far forward to capture after a stall.
 - `logging.RESOURCE_WINDOW_MAX`: Max retained resource events for window logging.

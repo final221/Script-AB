@@ -37,4 +37,36 @@ describe('CatchUpController', () => {
 
         video.remove();
     });
+
+    it('uses the faster post-no-heal profile', () => {
+        vi.useFakeTimers();
+        const baseTime = new Date('2026-02-01T00:00:00Z');
+        vi.setSystemTime(baseTime);
+
+        const video = document.createElement('video');
+        Object.defineProperty(video, 'currentTime', { value: 90, writable: true, configurable: true });
+        Object.defineProperty(video, 'paused', { value: false, configurable: true });
+        Object.defineProperty(video, 'readyState', { value: 4, configurable: true });
+        Object.defineProperty(video, 'currentSrc', { value: 'blob:stream', configurable: true });
+        setBufferedRanges(video, [[0, 100]]);
+        document.body.appendChild(video);
+
+        const monitorState = {
+            progressStreakMs: CONFIG.recovery.CATCH_UP_POST_NO_HEAL_PROGRESS_MS + 1,
+            lastStallEventTime: baseTime.getTime() - (CONFIG.recovery.CATCH_UP_POST_NO_HEAL_STABLE_MS + 1),
+            catchUpTimeoutId: null,
+            catchUpAttempts: 0
+        };
+
+        const controller = window.CatchUpController.create();
+        controller.scheduleCatchUp(video, monitorState, 'video-1', 'post_no_heal');
+
+        vi.advanceTimersByTime(CONFIG.recovery.CATCH_UP_POST_NO_HEAL_DELAY_MS + 1);
+
+        expect(video.currentTime).toBeGreaterThan(90);
+        expect(monitorState.lastCatchUpTime).toBeGreaterThan(baseTime.getTime());
+        expect(monitorState.catchUpTimeoutId).toBeNull();
+
+        video.remove();
+    });
 });

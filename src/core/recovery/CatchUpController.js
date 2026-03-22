@@ -6,18 +6,35 @@
  */
 const CatchUpController = (() => {
     const create = () => {
+        const getProfile = (reason) => {
+            if (reason === 'post_no_heal') {
+                return {
+                    delayMs: CONFIG.recovery.CATCH_UP_POST_NO_HEAL_DELAY_MS,
+                    stableMs: CONFIG.recovery.CATCH_UP_POST_NO_HEAL_STABLE_MS,
+                    progressMs: CONFIG.recovery.CATCH_UP_POST_NO_HEAL_PROGRESS_MS
+                };
+            }
+            return {
+                delayMs: CONFIG.recovery.CATCH_UP_DELAY_MS,
+                stableMs: CONFIG.recovery.CATCH_UP_STABLE_MS,
+                progressMs: CONFIG.monitoring.CANDIDATE_MIN_PROGRESS_MS
+            };
+        };
+
         const scheduleCatchUp = (video, monitorState, videoId, reason) => {
             if (!monitorState || monitorState.catchUpTimeoutId) return;
             monitorState.catchUpAttempts = 0;
-            const delayMs = CONFIG.recovery.CATCH_UP_DELAY_MS;
+            const profile = getProfile(reason);
             Logger.add(LogEvents.tagged('CATCH_UP', 'Scheduled'), {
                 reason,
-                delayMs,
+                delayMs: profile.delayMs,
+                stableMs: profile.stableMs,
+                progressMs: profile.progressMs,
                 videoState: VideoStateSnapshot.forLog(video, videoId)
             });
             monitorState.catchUpTimeoutId = setTimeout(() => {
                 attemptCatchUp(video, monitorState, videoId, reason);
-            }, delayMs);
+            }, profile.delayMs);
         };
 
         const attemptCatchUp = (video, monitorState, videoId, reason) => {
@@ -34,14 +51,15 @@ const CatchUpController = (() => {
             }
 
             const now = Date.now();
+            const profile = getProfile(reason);
             const stallAgoMs = monitorState.lastStallEventTime
                 ? (now - monitorState.lastStallEventTime)
                 : null;
-            const progressOk = monitorState.progressStreakMs >= CONFIG.monitoring.CANDIDATE_MIN_PROGRESS_MS;
+            const progressOk = monitorState.progressStreakMs >= profile.progressMs;
             const stableEnough = !video.paused
                 && video.readyState >= 3
                 && progressOk
-                && (stallAgoMs === null || stallAgoMs >= CONFIG.recovery.CATCH_UP_STABLE_MS);
+                && (stallAgoMs === null || stallAgoMs >= profile.stableMs);
 
             if (!stableEnough) {
                 Logger.add(LogEvents.tagged('CATCH_UP', 'Deferred (unstable)'), {
@@ -50,7 +68,9 @@ const CatchUpController = (() => {
                     paused: video.paused,
                     readyState: video.readyState,
                     progressStreakMs: monitorState.progressStreakMs,
-                    stallAgoMs
+                    stallAgoMs,
+                    requiredStableMs: profile.stableMs,
+                    requiredProgressMs: profile.progressMs
                 });
                 if (monitorState.catchUpAttempts < CONFIG.recovery.CATCH_UP_MAX_ATTEMPTS) {
                     monitorState.catchUpTimeoutId = setTimeout(() => {

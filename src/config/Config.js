@@ -106,6 +106,7 @@ const CONFIG = (() => {
             DEAD_CANDIDATE_AFTER_MS: 5000,  // Mark candidate dead after sustained empty src + readyState 0
             DEAD_CANDIDATE_COOLDOWN_MS: 20000, // Exclude dead candidates for this long
             SYNC_SAMPLE_MS: 5000,           // Sample window for drift detection
+            SYNC_PENDING_NO_HEAL_SAMPLE_MS: 1000, // Faster sync confirmation window while no-heal recovery is still pending
             SYNC_DRIFT_MAX_MS: 1000,        // Log if drift exceeds this threshold
             SYNC_SEVERE_DRIFT_MS: 3000,     // Treat sync collapse above this drift as immediate severe degradation
             SYNC_RATE_MIN: 0.9,             // Log if playback rate falls below this ratio
@@ -129,6 +130,9 @@ const CONFIG = (() => {
             CATCH_UP_MIN_S: 2,              // Minimum lag behind live edge before catching up
             CATCH_UP_DELAY_MS: 3000,        // Delay after a heal before attempting catch-up
             CATCH_UP_STABLE_MS: 5000,       // Require this long without stalls before catch-up
+            CATCH_UP_POST_NO_HEAL_DELAY_MS: 1000, // Faster delay before catch-up after degraded no-heal self-recovery
+            CATCH_UP_POST_NO_HEAL_STABLE_MS: 1500, // Shorter stability window for post-no-heal catch-up
+            CATCH_UP_POST_NO_HEAL_PROGRESS_MS: 1000, // Shorter progress window before post-no-heal catch-up
             CATCH_UP_RETRY_MS: 5000,        // Delay before retrying deferred catch-up
             CATCH_UP_MAX_ATTEMPTS: 3,       // Max catch-up attempts per heal
         },

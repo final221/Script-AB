@@ -64,6 +64,7 @@ Look for:
 - Repeated low-rate / high-drift `SYNC` samples can now mark the active stream as degraded even if audio keeps moving; look for `rate` collapsing well below normal before candidate switch decisions.
 - A severe post-heal `SYNC` collapse on the only active candidate now triggers forced self-recovery instead of simply waiting for more limping progress.
 - After a `NO_HEAL_POINT` path, `BACKOFF` now stays pending until a healthy post-resume `SYNC` sample arrives; if playback resumes badly desynced, look for `CATCH_UP` scheduling before any stronger recovery step.
+- The pending no-heal sync check now happens sooner than normal `SYNC` sampling; if recovery still feels slow, compare the first resumed `SYNC` sample time against the new `monitoring.SYNC_PENDING_NO_HEAL_SAMPLE_MS` window before changing broader thresholds.
 - Non-active candidates that freeze near the buffer edge should now age into `dead_candidate` instead of lingering indefinitely as pseudo-viable alternates.
 - `scan_buffer_starved` should no longer hand control to a paused `progress_stale` alternate during probation; if it still does, inspect the candidate score/trust snapshot because that now indicates stronger identity or fresh progress than the old ad-shaped failure.
 - `fast_switch` decisions can still mean a recovered origin stream reclaimed control from an untrusted healing active candidate, but only when the target truly matches the stream origin (`identity_origin_video` or origin-src match).
@@ -79,9 +80,10 @@ Use this mapping to connect config knobs to the log lines they influence.
 - `monitoring.TRUST_STALE_MS`: candidate snapshot `trustReason: progress_stale`
 - `monitoring.PROBE_COOLDOWN_MS`: `[HEALER:PROBE_SKIP] Probe cooldown active`
 - `monitoring.SYNC_RATE_MIN` / `SYNC_DRIFT_MAX_MS`: `[SYNC] Playback drift sample`
+- `monitoring.SYNC_PENDING_NO_HEAL_SAMPLE_MS`: faster `[SYNC]` confirmation window while no-heal recovery is still pending
 - `monitoring.DEGRADED_ACTIVE_SAMPLE_COUNT`: repeated degraded `SYNC` samples before the active stream is treated as degraded
 - `monitoring.SYNC_SEVERE_RATE_MIN` / `SYNC_SEVERE_DRIFT_MS`: immediate severe-sync thresholds used for forced post-heal self-recovery
-- `recovery.CATCH_UP_*`: `[HEALER:CATCH_UP]` scheduling/seek logs, including bounded post-no-heal resync
+- `recovery.CATCH_UP_*`: `[HEALER:CATCH_UP]` scheduling/seek logs, including the faster `post_no_heal` delay/stability profile
 - `stall.PLAY_BACKOFF_CLEAR_PROGRESS_MS`: minimum healthy resumed-progress window before play-error backoff clears
 - `logging.ACTIVE_LOG_MS` / `NON_ACTIVE_LOG_MS`: `[HEALER:WATCHDOG] No progress observed`
 - `logging.CONSOLE_SIGNAL_THROTTLE_MS`: `[INSTRUMENT:CONSOLE_HINT]` frequency

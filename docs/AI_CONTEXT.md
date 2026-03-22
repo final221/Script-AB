@@ -110,6 +110,7 @@ Use this to route changes quickly.
 - Sustained low-rate / high-drift sync samples can now mark the active stream as degraded for candidate switching even when playback has not fully collapsed.
 - Severe post-heal sync collapse on the active stream now escalates through recovery even with only one monitored video when no better candidate appears.
 - No-heal self-recovery now stays in a pending state until a healthy post-resume sync sample arrives; severe resumed drift on the only active stream is routed into bounded catch-up before stronger refresh action.
+- Pending no-heal sync confirmation now samples faster than the normal drift window, and `post_no_heal` catch-up uses a faster delay/stability profile than normal post-heal catch-up.
 - Paused edge-stuck alternates can now age into dead candidates instead of lingering indefinitely as switch targets.
 - Buffer-starved probation rescans no longer switch to paused, stale, untrusted alternates just because they score slightly less badly than the active stream.
 - Recovered-origin fast reclaim now requires true origin evidence (`identity_origin_video` or origin-src match), not merely a recent-active hint.

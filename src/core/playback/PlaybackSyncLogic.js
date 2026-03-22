@@ -10,6 +10,15 @@ const PlaybackSyncLogic = (() => {
         const state = options.state;
         const logDebugLazy = options.logDebugLazy || (() => {});
         const onDegradedSync = options.onDegradedSync || (() => {});
+        const getEffectiveSampleMs = () => {
+            if (!state.pendingNoHealRecoveryCheck) {
+                return CONFIG.monitoring.SYNC_SAMPLE_MS;
+            }
+            return Math.min(
+                CONFIG.monitoring.SYNC_SAMPLE_MS,
+                CONFIG.monitoring.SYNC_PENDING_NO_HEAL_SAMPLE_MS || CONFIG.monitoring.SYNC_SAMPLE_MS
+            );
+        };
 
         const logSyncStatus = () => {
             const now = Date.now();
@@ -22,7 +31,7 @@ const PlaybackSyncLogic = (() => {
                 return;
             }
             const wallDelta = now - state.lastSyncWallTime;
-            if (wallDelta < CONFIG.monitoring.SYNC_SAMPLE_MS) {
+            if (wallDelta < getEffectiveSampleMs()) {
                 return;
             }
             const mediaDelta = (video.currentTime - state.lastSyncMediaTime) * 1000;

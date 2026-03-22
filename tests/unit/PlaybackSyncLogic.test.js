@@ -92,4 +92,27 @@ describe('PlaybackSyncLogic', () => {
             driftMs: expect.any(Number)
         }));
     });
+
+    it('uses a faster sync sample window while no-heal recovery is pending', () => {
+        vi.useFakeTimers();
+        vi.setSystemTime(CONFIG.monitoring.SYNC_PENDING_NO_HEAL_SAMPLE_MS + 10);
+
+        const video = createVideo({ paused: false, readyState: 3, currentTime: 0.3 });
+        setBufferedRanges(video, [[0, 8]]);
+        const state = {
+            lastSyncWallTime: 1,
+            lastSyncMediaTime: 0,
+            lastSyncLogTime: 0,
+            pendingNoHealRecoveryCheck: true,
+            degradedSyncCount: 0
+        };
+        const logDebugLazy = vi.fn();
+        const onDegradedSync = vi.fn();
+
+        const logic = PlaybackSyncLogic.create({ video, state, logDebugLazy, onDegradedSync });
+        logic.logSyncStatus();
+
+        expect(onDegradedSync).toHaveBeenCalledTimes(1);
+        expect(state.lastSyncWallTime).toBe(CONFIG.monitoring.SYNC_PENDING_NO_HEAL_SAMPLE_MS + 10);
+    });
 });
