@@ -105,10 +105,10 @@ Copy this file to a target repository as `AGENTS.md`, then replace placeholders 
 
 ## Bump / release policy
 - Preferred interface: `BUMP=patch|minor|major|none` passed into `agent:verify`
-- Patch: `<PATCH_POLICY>`
-- Minor: `<MINOR_POLICY>`
-- Major: `<MAJOR_POLICY>`
-- None / local-only: `<NONE_POLICY>`
+- Patch: refactors, docs, tests, internal tooling
+- Minor: new user-visible features or behavior changes
+- Major: breaking changes to config, API, or expected behavior
+- None / local-only: exploratory or local verification only; no release artifact version or changelog change
 
 ## Constraints (do not violate)
 - Generated files: `<GENERATED_FILES>`
