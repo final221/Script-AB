@@ -1,0 +1,203 @@
+[STREAM HEALER METRICS]
+Version: 4.19.0
+Uptime: 3479.5s
+Stalls Detected: 1
+Heals Successful: 0
+Heals Failed: 1
+Heal Rate: 0.0%
+Errors: 0
+Stall durations: count 4, avg 4.4s, max 16.1s, last 16.1s
+Recent stalls: 0.8s, 0.3s, 0.3s, 16.1s
+Healer: isHealing false, attempts 1, monitors 2
+
+[LEGEND]
+🩺 = Healer core (STATE/STALL/HEAL)
+🎯 = Candidate selection (CANDIDATE/PROBATION/SUPPRESSION)
+🧭 = Monitor & video (VIDEO/MONITOR/SCAN/SRC/MEDIA_STATE/EVENT)
+🧪 = Instrumentation & signals (INSTRUMENT/RESOURCE/CONSOLE_HINT)
+🧰 = Recovery & failover (FAILOVER/BACKOFF/RESET/CATCH_UP)
+🧾 = Metrics & config (SYNC/CONFIG)
+⚙️ = Core/system
+📋 = Console.log/info/debug
+⚠️ = Console.warn
+❌ = Console.error
+[TIMELINE - Merged script + console logs]
+[12:57:00.870] ⚙️ [CORE]                                 | Initializing Stream Healer
+[12:57:00.871] 🧪 [INSTRUMENT:INIT]                      | Instrumentation initialized                       | {"features":["globalErrors","consoleLogs","consoleInfo","consoleDebug","consoleErrors","consoleWarns"],"consoleCapture":true,"externalSignals":true}
+[12:57:00.871] ⚙️ [CORE]                                 | DOM observer started
+[12:57:00.871] ⚙️ [CORE]                                 | Stream Healer ready                               | {"config":{"watchdogInterval":"1000ms","healTimeout":"15s"}}
+[12:57:01.313] ⚙️ [CORE]                                 | New video detected in DOM                         | {"count":1}
+[12:57:01.313] ⚙️ [CORE]                                 | Video elements found, starting StreamHealer       | {"count":1}
+[12:57:01.313] 🧭 [VIDEO]                                | Video registered                                  | {"video":1,"elementId":1,"videoState":{"id":1,"currentTime":"0.000","paused":true,"readyState":0,"networkState":0,"buffered":"none","duration":"NaN","ended":false,"currentSrc":"","src":"","errorCode":null}}
+[12:57:01.314] 🧭 [MONITOR]                              | PlaybackMonitor started                           | {"video":1,"state":"PLAYING"}
+[12:57:01.314] 🎯 [CANDIDATE]                            | Active video set                                  | {"to":1,"reason":"no_active","streamOriginVideoId":null,"scores":[{"id":1,"score":-7,"progressAgoMs":null,"progressStreakMs":0,"progressEligible":false,"paused":true,"readyState":0,"hasSrc":false,"deadCandidate":false,"identityScore":0,"state":"PLAYING","reasons":["paused","ready_low","no_progress","progress_short"],"trusted":false,"trustReason":"progress_ineligible"}]}
+[12:57:01.314] 🧭 [MONITOR]                              | Started monitoring video                          | {"video":1,"elementId":1,"debug":true,"checkInterval":"1000ms","totalMonitors":1}
+[12:57:02.185] 📋 (playback-monitor)                     | Config changed {}                                 | {}
+[12:57:02.187] 🩺 [READY]                                | Initial ready state observed                      | {"video":1,"reason":"loadedmetadata","readyState":1}
+[12:57:02.187] 🧭 [EVENT]                                | loadedmetadata                                    | {"video":1,"state":"PLAYING"}
+[12:57:02.187] 🧭 [EVENT_SUMMARY]                        | Active                                            | {"video":1,"events":{"loadedmetadata":1},"sinceMs":null,"state":"PLAYING"}
+[12:57:02.320] 🩺 [STALL]                                | Marked paused due to stall                        | {"video":1,"reason":"watchdog_pause_buffer_exhausted","currentTime":0}
+[12:57:02.320] 🩺 [STATE]                                |                                                   | {"video":1,"from":"PLAYING","to":"STALLED","reason":"paused_buffer_exhausted","currentTime":0,"paused":true,"readyState":4,"networkState":2,"buffered":"[0.04-2.02]","lastProgressAgoMs":null,"progressStreakMs":0,"progressEligible":false,"pauseFromStall":true}
+[12:57:02.320] 🩺 [WATCHDOG]                             | Awaiting initial progress                         | {"video":1,"state":"STALLED","graceMs":5000,"baseline":"ready"}
+[12:57:02.345] 📋 (playback-monitor)                     | Play - moving to buffered region 0.044666 0       | {}
+[12:57:02.345] ⚠️ Console                                | Moving to buffered region 0.044666 0              | {}
+[12:57:02.347] 🩺 [STATE]                                |                                                   | {"video":1,"from":"STALLED","to":"PLAYING","reason":"playing","currentTime":0.045,"paused":false,"readyState":4,"networkState":2,"buffered":"[0.04-2.05]","lastProgressAgoMs":null,"progressStreakMs":0,"progressEligible":false,"pauseFromStall":false}
+[12:57:02.778] 🩺 [STALL]                                | Marked paused due to stall                        | {"video":1,"reason":"waiting","currentTime":0.045}
+[12:57:02.779] 🩺 [STATE]                                |                                                   | {"video":1,"from":"PLAYING","to":"STALLED","reason":"waiting","currentTime":0.045,"paused":false,"readyState":1,"networkState":2,"buffered":"[0.04-3.77]","lastProgressAgoMs":null,"progressStreakMs":0,"progressEligible":false,"pauseFromStall":true}
+[12:57:02.787] 🩺 [STATE]                                |                                                   | {"video":1,"from":"STALLED","to":"PLAYING","reason":"timeupdate","currentTime":0.045,"paused":false,"readyState":4,"networkState":2,"buffered":"[0.04-3.82]","lastProgressAgoMs":null,"progressStreakMs":0,"progressEligible":false,"pauseFromStall":true}
+[12:57:03.117] 🩺 [STALL_DURATION]                       |                                                   | {"video":1,"reason":"timeupdate","durationMs":797,"currentTime":0.308,"bufferAhead":null,"readyState":4,"networkState":2}
+[12:57:03.117] 🩺 [PROGRESS]                             | Initial progress observed                         | {"video":1,"reason":"timeupdate","currentTime":0.308}
+[12:57:03.331] 🧭 [SRC]                                  | Source changed                                    | {"video":1,"changed":true,"videoState":{"id":1,"currentTime":"0.541","paused":false,"readyState":4,"networkState":2,"buffered":"[0.04-4.02]","duration":"9223372036854.775","ended":false,"currentSrc":"blob:twitch#e94b...8775","src":"blob:twitch#e94b...8775","errorCode":null}}
+[12:57:03.331] 🧭 [MEDIA_STATE]                          | src attribute changed                             | {"video":1,"changed":true,"videoState":{"id":1,"currentTime":"0.541","paused":false,"readyState":4,"networkState":2,"bufferedLength":1,"duration":"9223372036854.775","ended":false,"errorCode":null}}
+[12:57:03.331] 🧭 [MEDIA_STATE]                          | readyState changed 0 -> 4                         | {"video":1}
+[12:57:03.331] 🧭 [MEDIA_STATE]                          | networkState changed 0 -> 2                       | {"video":1}
+[12:57:03.331] 🧭 [MEDIA_STATE]                          | buffered range count changed 0 -> 1               | {"video":1}
+[12:57:08.374] 🧾 [SYNC]                                 | Playback drift sample                             | {"video":1,"wallDeltaMs":5043,"mediaDeltaMs":5027,"driftMs":16,"rate":"0.997","bufferEndDelta":"4.45s"}
+[12:57:08.389] 🩺 [PROGRESS]                             | Candidate eligibility reached                     | {"video":1,"reason":"timeupdate","currentTime":5.616,"progressStreakMs":5272,"minProgressMs":5000}
+[13:02:11.090] 🧾 [SYNC]                                 | Playback drift sample                             | {"video":1,"wallDeltaMs":5052,"mediaDeltaMs":5035,"driftMs":17,"rate":"0.997","bufferEndDelta":"4.10s"}
+[13:04:53.608] 🧭 [MEDIA_STATE]                          | buffered range count changed 1 -> 2               | {"video":1}
+[13:04:54.618] 🧭 [MEDIA_STATE]                          | buffered range count changed 2 -> 1               | {"video":1}
+[13:07:13.871] 🧾 [SYNC]                                 | Playback drift sample                             | {"video":1,"wallDeltaMs":5049,"mediaDeltaMs":5034,"driftMs":15,"rate":"0.997","bufferEndDelta":"4.89s"}
+[13:12:16.734] 🧾 [SYNC]                                 | Playback drift sample                             | {"video":1,"wallDeltaMs":5035,"mediaDeltaMs":5017,"driftMs":18,"rate":"0.996","bufferEndDelta":"4.01s"}
+[13:13:59.518] 🧭 [MEDIA_STATE]                          | buffered range count changed 1 -> 2               | {"video":1}
+[13:14:00.524] 🧭 [MEDIA_STATE]                          | buffered range count changed 2 -> 1               | {"video":1}
+[13:14:38.222] ⚙️ [CORE]                                 | New video detected in DOM                         | {"count":1}
+[13:14:38.222] ⚙️ [CORE]                                 | Video elements found, starting StreamHealer       | {"count":1}
+[13:14:38.222] 🧭 [VIDEO]                                | Video registered                                  | {"video":2,"elementId":2,"videoState":{"id":2,"currentTime":"0.000","paused":true,"readyState":0,"networkState":0,"buffered":"none","duration":"NaN","ended":false,"currentSrc":"","src":"","errorCode":null}}
+[13:14:38.222] 🧭 [MONITOR]                              | PlaybackMonitor started                           | {"video":2,"state":"PLAYING"}
+[13:14:38.222] 🧭 [MONITOR]                              | Started monitoring video                          | {"video":2,"elementId":2,"debug":true,"checkInterval":"1000ms","totalMonitors":2}
+[13:14:38.222] ⚙️ [CORE]                                 | New video detected in DOM                         | {"count":1}
+[13:14:38.222] ⚙️ [CORE]                                 | Video elements found, starting StreamHealer       | {"count":1}
+[13:14:38.650] 📋 (playback-monitor)                     | Config changed {}                                 | {}
+[13:14:38.652] 🩺 [READY]                                | Initial ready state observed                      | {"video":2,"reason":"loadedmetadata","readyState":1}
+[13:14:38.652] 🧭 [EVENT_SUMMARY]                        | Non-active                                        | {"video":2,"events":{"loadedmetadata":1},"sinceMs":null,"state":"PLAYING"}
+[13:14:38.690] 🩺 [STALL]                                | Marked paused due to stall                        | {"video":2,"reason":"waiting","currentTime":0.071}
+[13:14:38.690] 🩺 [STATE]                                |                                                   | {"video":2,"from":"PLAYING","to":"STALLED","reason":"waiting","currentTime":0.071,"paused":false,"readyState":1,"networkState":2,"buffered":"[0.07-2.69]","lastProgressAgoMs":null,"progressStreakMs":0,"progressEligible":false,"pauseFromStall":true}
+[13:14:38.690] 📋 (playback-monitor)                     | Play - moving to buffered region 0.071 0          | {}
+[13:14:38.690] ⚠️ Console                                | Moving to buffered region 0.071 0                 | {}
+[13:14:38.700] 🩺 [STATE]                                |                                                   | {"video":2,"from":"STALLED","to":"PLAYING","reason":"timeupdate","currentTime":0.071,"paused":false,"readyState":4,"networkState":2,"buffered":"[0.07-4.07]","lastProgressAgoMs":null,"progressStreakMs":0,"progressEligible":false,"pauseFromStall":true}
+[13:14:38.985] 🩺 [STALL_DURATION]                       |                                                   | {"video":2,"reason":"timeupdate","durationMs":295,"currentTime":0.345,"bufferAhead":null,"readyState":4,"networkState":2}
+[13:14:38.985] 🩺 [PROGRESS]                             | Initial progress observed                         | {"video":2,"reason":"timeupdate","currentTime":0.345}
+[13:14:39.233] 🧭 [SRC]                                  | Source changed                                    | {"video":2,"changed":true,"videoState":{"id":2,"currentTime":"0.577","paused":false,"readyState":4,"networkState":2,"buffered":"[0.07-4.07]","duration":"9223372036854.775","ended":false,"currentSrc":"blob:twitch#01f2...1f94","src":"blob:twitch#01f2...1f94","errorCode":null}}
+[13:14:39.233] 🧭 [MEDIA_STATE]                          | src attribute changed                             | {"video":2,"changed":true,"videoState":{"id":2,"currentTime":"0.577","paused":false,"readyState":4,"networkState":2,"bufferedLength":1,"duration":"9223372036854.775","ended":false,"errorCode":null}}
+[13:14:39.233] 🧭 [MEDIA_STATE]                          | readyState changed 0 -> 4                         | {"video":2}
+[13:14:39.233] 🧭 [MEDIA_STATE]                          | networkState changed 0 -> 2                       | {"video":2}
+[13:14:39.233] 🧭 [MEDIA_STATE]                          | buffered range count changed 0 -> 1               | {"video":2}
+[13:14:44.009] 🩺 [PROGRESS]                             | Candidate eligibility reached                     | {"video":2,"reason":"timeupdate","currentTime":5.369,"progressStreakMs":5024,"minProgressMs":5000}
+[13:14:44.273] 🧾 [SYNC]                                 | Playback drift sample                             | {"video":2,"wallDeltaMs":5040,"mediaDeltaMs":5024,"driftMs":16,"rate":"0.997","bufferEndDelta":"2.46s"}
+[13:14:52.621] ⚠️ Console                                | Playhead stalling at 13.980339, buffer end 14.034 | {}
+[13:14:52.622] 🧪 [INSTRUMENT:CONSOLE_HINT]              | Playhead stalling at 13.980339, buffer end 14.034 | {"type":"playhead_stall","level":"warn","playheadSeconds":13.980339,"bufferEndSeconds":14.034}
+[13:14:52.622] 🩺 [STALL_HINT]                           | Playhead stalling at 13.980339, buffer end 14.034 | {"video":2,"level":"warn","playheadSeconds":13.98,"bufferEndSeconds":14.034,"attribution":"closest_match","activeVideoId":1,"deltaSeconds":0,"lastProgressAgoMs":1,"videoState":{"id":2,"currentTime":"13.980","paused":false,"readyState":4,"networkState":2,"buffered":"[0.07-14.03]","duration":"9223372036854.775","ended":false,"errorCode":null}}
+[13:14:52.623] 🩺 [STATE]                                |                                                   | {"video":2,"from":"PLAYING","to":"STALLED","reason":"pause_buffer_exhausted","currentTime":13.98,"paused":true,"readyState":3,"networkState":2,"buffered":"[0.07-14.03]","lastProgressAgoMs":2,"progressStreakMs":13636,"progressEligible":true,"pauseFromStall":true}
+[13:14:53.350] 🧭 [MEDIA_STATE]                          | readyState changed 4 -> 3                         | {"video":2}
+[13:14:55.364] 🩺 [WATCHDOG]                             |                                                   | {"video":2,"stalledForMs":2743,"bufferExhausted":true,"state":"STALLED","paused":true,"pauseFromStall":true,"currentTime":13.98,"readyState":3,"networkState":2,"buffered":"[0.07-14.03]"}
+[13:14:55.365] 🩺 [SELF_RECOVER_SKIP]                    | Stall skipped for self-recovery window            | {"video":2,"stalledForMs":2743,"graceMs":7000,"extraGraceMs":3000,"signals":["ready_state"],"bufferAhead":null,"bufferStarved":false}
+[13:15:00.410] 🩺 [STALL_SKIP]                           | Stall on non-active video                         | {"video":2,"activeVideoId":1,"stalledFor":"7788ms"}
+[13:15:34.749] 🧭 [EVENT]                                | abort                                             | {"video":2,"state":"STALLED"}
+[13:15:34.749] 🩺 [STATE]                                |                                                   | {"video":2,"from":"STALLED","to":"PAUSED","reason":"abort","currentTime":0,"paused":true,"readyState":0,"networkState":0,"buffered":"none","lastProgressAgoMs":42128,"progressStreakMs":13636,"progressEligible":true,"pauseFromStall":false}
+[13:15:34.749] 🧰 [RESET_CHECK]                          | Reset evaluation                                  | {"video":2,"reason":"abort","hasSrc":false,"readyState":0,"networkState":0,"bufferRanges":"none","lastSrc":"blob:https://www.twitch.tv/01f2a497-fdfa-4e79-8119-4daf8e1c1f94","hardReset":true,"softReset":true}
+[13:15:34.749] 🧰 [RESET_PENDING]                        | Reset pending                                     | {"video":2,"reason":"abort","resetType":"hard","graceMs":2000,"hasSrc":false,"hasBuffer":false,"readyState":0,"networkState":0}
+[13:15:34.750] 🧭 [EVENT]                                | emptied                                           | {"video":2,"state":"PAUSED"}
+[13:15:34.750] 🧰 [RESET_CHECK]                          | Reset evaluation                                  | {"video":2,"reason":"emptied","hasSrc":false,"readyState":0,"networkState":0,"bufferRanges":"none","lastSrc":"blob:https://www.twitch.tv/01f2a497-fdfa-4e79-8119-4daf8e1c1f94","hardReset":true,"softReset":true}
+[13:15:37.712] 🧰 [RESET]                                | Video reset                                       | {"video":2,"reason":"abort","resetType":"hard","pendingForMs":2963,"graceMs":2000,"hasSrc":false,"hasBuffer":false,"readyState":0,"networkState":0}
+[13:15:37.712] 🧰 [RESET]                                | Video reset detected                              | {"video":2,"reason":"abort","resetType":"hard","pendingForMs":2963,"videoState":{"id":2,"currentTime":"0.000","paused":true,"readyState":0,"networkState":0,"buffered":"none","duration":"NaN","ended":false,"errorCode":null}}
+[13:15:37.712] 🧰 [RESET_SKIP]                           | Dropped non-active hard-reset placeholder         | {"video":2,"resetType":"hard","trigger":"abort"}
+[13:15:37.712] 🧭 [MONITOR]                              | PlaybackMonitor stopped                           | {"video":2,"state":"RESET"}
+[13:15:37.713] 🩺 [STOP]                                 | Stopped monitoring video                          | {"remainingMonitors":1,"video":2,"elementId":2}
+[13:15:37.713] 🩺 [STALL]                                | Marked paused due to stall                        | {"video":2,"reason":"watchdog_pause_buffer_exhausted","currentTime":0}
+[13:15:37.713] 🩺 [STATE]                                |                                                   | {"video":2,"from":"RESET","to":"STALLED","reason":"paused_buffer_exhausted","currentTime":0,"paused":true,"readyState":0,"networkState":0,"buffered":"none","lastProgressAgoMs":45092,"progressStreakMs":13636,"progressEligible":true,"pauseFromStall":true}
+[13:15:37.713] 🧭 [SRC]                                  | Source changed                                    | {"video":2,"changed":true,"videoState":{"id":2,"currentTime":"0.000","paused":true,"readyState":0,"networkState":0,"buffered":"none","duration":"NaN","ended":false,"errorCode":null}}
+[13:15:37.713] 🧭 [MEDIA_STATE]                          | src attribute changed "blob:twitch#01f2...1f94"... | {"video":2,"changed":true}
+[13:15:37.713] 🧭 [MEDIA_STATE]                          | readyState changed 3 -> 0                         | {"video":2}
+[13:15:37.713] 🧭 [MEDIA_STATE]                          | networkState changed 2 -> 0                       | {"video":2}
+[13:15:37.713] 🧭 [MEDIA_STATE]                          | buffered range count changed 1 -> 0               | {"video":2}
+[13:15:37.713] 🧰 [REFRESH]                              | Refreshing video after source loss                | {"video":2,"reason":"no_source","noHealPointCount":0,"trigger":"WATCHDOG","resetType":null,"forcePageRefresh":false}
+[13:17:18.957] 🧾 [SYNC]                                 | Playback drift sample                             | {"video":1,"wallDeltaMs":5016,"mediaDeltaMs":5048,"driftMs":-32,"rate":"1.006","bufferEndDelta":"3.77s"}
+[13:22:20.141] 🧾 [SYNC]                                 | Playback drift sample                             | {"video":1,"wallDeltaMs":5017,"mediaDeltaMs":5049,"driftMs":-32,"rate":"1.006","bufferEndDelta":"4.59s"}
+[13:27:21.248] 🧾 [SYNC]                                 | Playback drift sample                             | {"video":1,"wallDeltaMs":5015,"mediaDeltaMs":5045,"driftMs":-30,"rate":"1.006","bufferEndDelta":"3.48s"}
+[13:28:13.426] 🧭 [MEDIA_STATE]                          | buffered range count changed 1 -> 2               | {"video":1}
+[13:28:14.428] 🧭 [MEDIA_STATE]                          | buffered range count changed 2 -> 1               | {"video":1}
+[13:32:22.261] 🧾 [SYNC]                                 | Playback drift sample                             | {"video":1,"wallDeltaMs":5022,"mediaDeltaMs":5005,"driftMs":17,"rate":"0.997","bufferEndDelta":"4.49s"}
+[13:37:23.311] 🧾 [SYNC]                                 | Playback drift sample                             | {"video":1,"wallDeltaMs":5017,"mediaDeltaMs":5002,"driftMs":15,"rate":"0.997","bufferEndDelta":"3.44s"}
+[13:42:24.409] 🧾 [SYNC]                                 | Playback drift sample                             | {"video":1,"wallDeltaMs":5015,"mediaDeltaMs":5000,"driftMs":15,"rate":"0.997","bufferEndDelta":"4.35s"}
+[13:47:25.538] 🧾 [SYNC]                                 | Playback drift sample                             | {"video":1,"wallDeltaMs":5022,"mediaDeltaMs":5037,"driftMs":-15,"rate":"1.003","bufferEndDelta":"5.21s"}
+[13:52:26.572] 🧾 [SYNC]                                 | Playback drift sample                             | {"video":1,"wallDeltaMs":5014,"mediaDeltaMs":4999,"driftMs":15,"rate":"0.997","bufferEndDelta":"4.18s"}
+[13:54:09.694] ⚙️ [CORE]                                 | New video detected in DOM                         | {"count":1}
+[13:54:09.694] ⚙️ [CORE]                                 | Video elements found, starting StreamHealer       | {"count":1}
+[13:54:09.694] 🧭 [VIDEO]                                | Video registered                                  | {"video":3,"elementId":3,"videoState":{"id":3,"currentTime":"0.000","paused":true,"readyState":0,"networkState":0,"buffered":"none","duration":"NaN","ended":false,"currentSrc":"","src":"","errorCode":null}}
+[13:54:09.695] 🧭 [MONITOR]                              | PlaybackMonitor started                           | {"video":3,"state":"PLAYING"}
+[13:54:09.695] 🧭 [MONITOR]                              | Started monitoring video                          | {"video":3,"elementId":3,"debug":true,"checkInterval":"1000ms","totalMonitors":2}
+[13:54:09.695] ⚙️ [CORE]                                 | New video detected in DOM                         | {"count":1}
+[13:54:09.695] ⚙️ [CORE]                                 | Video elements found, starting StreamHealer       | {"count":1}
+[13:54:10.142] 📋 (playback-monitor)                     | Config changed {}                                 | {}
+[13:54:10.144] 🩺 [READY]                                | Initial ready state observed                      | {"video":3,"reason":"loadedmetadata","readyState":1}
+[13:54:10.144] 🧭 [EVENT_SUMMARY]                        | Non-active                                        | {"video":3,"events":{"loadedmetadata":1},"sinceMs":null,"state":"PLAYING"}
+[13:54:10.185] 🩺 [STALL]                                | Marked paused due to stall                        | {"video":3,"reason":"waiting","currentTime":0.076}
+[13:54:10.185] 🩺 [STATE]                                |                                                   | {"video":3,"from":"PLAYING","to":"STALLED","reason":"waiting","currentTime":0.076,"paused":false,"readyState":1,"networkState":2,"buffered":"[0.08-2.74]","lastProgressAgoMs":null,"progressStreakMs":0,"progressEligible":false,"pauseFromStall":true}
+[13:54:10.185] 📋 (playback-monitor)                     | Play - moving to buffered region 0.076333 0       | {}
+[13:54:10.185] ⚠️ Console                                | Moving to buffered region 0.076333 0              | {}
+[13:54:10.193] 🩺 [STATE]                                |                                                   | {"video":3,"from":"STALLED","to":"PLAYING","reason":"timeupdate","currentTime":0.076,"paused":false,"readyState":4,"networkState":2,"buffered":"[0.08-4.07]","lastProgressAgoMs":null,"progressStreakMs":0,"progressEligible":false,"pauseFromStall":true}
+[13:54:10.482] 🩺 [STALL_DURATION]                       |                                                   | {"video":3,"reason":"timeupdate","durationMs":297,"currentTime":0.355,"bufferAhead":null,"readyState":4,"networkState":2}
+[13:54:10.482] 🩺 [PROGRESS]                             | Initial progress observed                         | {"video":3,"reason":"timeupdate","currentTime":0.355}
+[13:54:10.698] 🧭 [SRC]                                  | Source changed                                    | {"video":3,"changed":true,"videoState":{"id":3,"currentTime":"0.539","paused":false,"readyState":4,"networkState":2,"buffered":"[0.08-4.07]","duration":"9223372036854.775","ended":false,"currentSrc":"blob:twitch#d8ce...6406","src":"blob:twitch#d8ce...6406","errorCode":null}}
+[13:54:10.698] 🧭 [MEDIA_STATE]                          | src attribute changed                             | {"video":3,"changed":true,"videoState":{"id":3,"currentTime":"0.539","paused":false,"readyState":4,"networkState":2,"bufferedLength":1,"duration":"9223372036854.775","ended":false,"errorCode":null}}
+[13:54:10.698] 🧭 [MEDIA_STATE]                          | readyState changed 0 -> 4                         | {"video":3}
+[13:54:10.698] 🧭 [MEDIA_STATE]                          | networkState changed 0 -> 2                       | {"video":3}
+[13:54:10.698] 🧭 [MEDIA_STATE]                          | buffered range count changed 0 -> 1               | {"video":3}
+[13:54:15.491] 🩺 [PROGRESS]                             | Candidate eligibility reached                     | {"video":3,"reason":"timeupdate","currentTime":5.363,"progressStreakMs":5008,"minProgressMs":5000}
+[13:54:15.721] 🧾 [SYNC]                                 | Playback drift sample                             | {"video":3,"wallDeltaMs":5023,"mediaDeltaMs":5008,"driftMs":15,"rate":"0.997","bufferEndDelta":"2.52s"}
+[13:54:22.164] 🧪 [INSTRUMENT:CONSOLE_HINT]              | Playhead stalling at 12.036189, buffer end 12.066 | {"type":"playhead_stall","level":"warn","playheadSeconds":12.036189,"bufferEndSeconds":12.066}
+[13:54:22.164] 🩺 [STALL_HINT]                           | Playhead stalling at 12.036189, buffer end 12.066 | {"video":3,"level":"warn","playheadSeconds":12.036,"bufferEndSeconds":12.066,"attribution":"closest_match","activeVideoId":1,"deltaSeconds":0,"lastProgressAgoMs":0,"videoState":{"id":3,"currentTime":"12.036","paused":false,"readyState":4,"networkState":2,"buffered":"[0.08-12.07]","duration":"9223372036854.775","ended":false,"errorCode":null}}
+[13:54:22.164] ⚠️ Console                                | Playhead stalling at 12.036189, buffer end 12.066 | {}
+[13:54:22.166] 🩺 [STATE]                                |                                                   | {"video":3,"from":"PLAYING","to":"STALLED","reason":"pause_buffer_exhausted","currentTime":12.036,"paused":true,"readyState":3,"networkState":2,"buffered":"[0.08-12.07]","lastProgressAgoMs":1,"progressStreakMs":11682,"progressEligible":true,"pauseFromStall":true}
+[13:54:22.752] 🧭 [MEDIA_STATE]                          | readyState changed 4 -> 3                         | {"video":3}
+[13:54:24.759] 🩺 [WATCHDOG]                             |                                                   | {"video":3,"stalledForMs":2595,"bufferExhausted":true,"state":"STALLED","paused":true,"pauseFromStall":true,"currentTime":12.036,"readyState":3,"networkState":2,"buffered":"[0.08-12.07]"}
+[13:54:24.759] 🩺 [SELF_RECOVER_SKIP]                    | Stall skipped for self-recovery window            | {"video":3,"stalledForMs":2595,"graceMs":7000,"extraGraceMs":3000,"signals":["ready_state"],"bufferAhead":null,"bufferStarved":false}
+[13:54:26.749] 🧪 [INSTRUMENT:CONSOLE_HINT]              | Playhead stalling at 3443.948666, buffer end 34... | {"type":"playhead_stall","level":"warn","playheadSeconds":3443.948666,"bufferEndSeconds":3443.948666}
+[13:54:26.749] 🩺 [STALL_HINT]                           | Playhead stalling at 3443.948666, buffer end 34... | {"video":1,"level":"warn","playheadSeconds":3443.949,"bufferEndSeconds":3443.949,"attribution":"active_match","activeVideoId":1,"deltaSeconds":0,"lastProgressAgoMs":0,"videoState":{"id":1,"currentTime":"3443.949","paused":false,"readyState":2,"networkState":2,"buffered":"[3413.93-3443.93]","duration":"9223372036854.775","ended":false,"errorCode":null}}
+[13:54:26.749] 🧭 [EVENT]                                | waiting                                           | {"video":1,"state":"PLAYING"}
+[13:54:26.749] 🧭 [EVENT_SUMMARY]                        | Active                                            | {"video":1,"events":{"loadeddata":1,"canplay":2,"playing":2,"waiting":2,"timeupdate":1},"sinceMs":3444562,"state":"PLAYING"}
+[13:54:26.749] ⚠️ Console                                | Playhead stalling at 3443.948666, buffer end 34... | {}
+[13:54:26.750] 🩺 [STATE]                                |                                                   | {"video":1,"from":"PLAYING","to":"STALLED","reason":"waiting","currentTime":3443.949,"paused":false,"readyState":2,"networkState":2,"buffered":"[3413.93-3443.93]","lastProgressAgoMs":0,"progressStreakMs":3443632,"progressEligible":true,"pauseFromStall":true}
+[13:54:26.764] 🧭 [MEDIA_STATE]                          | readyState changed 3 -> 1                         | {"video":3}
+[13:54:26.764] 🧭 [MEDIA_STATE]                          | buffered range count changed 1 -> 0               | {"video":3}
+[13:54:26.979] 🧭 [MEDIA_STATE]                          | readyState changed 4 -> 2                         | {"video":1}
+[13:54:28.996] 🩺 [STARVE]                               | Buffer starvation detected                        | {"video":1,"reason":"watchdog","bufferAhead":"0.000","threshold":0.75,"confirmMs":2000,"backoffMs":3000}
+[13:54:29.778] 🩺 [SELF_RECOVER_SKIP]                    | Stall skipped for self-recovery window            | {"video":3,"stalledForMs":7614,"graceMs":7000,"extraGraceMs":3000,"signals":["ready_state","buffer_ranges"],"bufferAhead":null,"bufferStarved":false}
+[13:54:30.007] 🩺 [WATCHDOG]                             |                                                   | {"video":1,"stalledForMs":3258,"bufferExhausted":true,"state":"STALLED","paused":true,"pauseFromStall":true,"currentTime":3443.949,"readyState":2,"networkState":2,"buffered":"[3413.93-3443.93]"}
+[13:54:30.007] 🧪 [INSTRUMENT:RESOURCE_WINDOW_SCHEDULED] |                                                   | {"video":1,"reason":"WATCHDOG","stalledFor":"3258ms","windowPastMs":30000,"windowFutureMs":60000}
+[13:54:30.008] 🩺 [STARVE_SKIP]                          | Stall skipped due to buffer starvation            | {"video":1,"remainingMs":1989,"bufferAhead":"0.000"}
+[13:54:32.023] 🎯 [PROBATION]                            | Window started                                    | {"reason":"buffer_starved","windowMs":10000}
+[13:54:32.023] 🧭 [SCAN]                                 | Video rescan requested                            | {"reason":"buffer_starved","found":2,"video":1,"bufferAhead":null,"hasBuffer":true}
+[13:54:32.023] 🧭 [SCAN]                                 | Video rescan complete                             | {"reason":"buffer_starved","found":2,"alreadyMonitored":2,"newMonitors":0,"totalMonitors":2}
+[13:54:32.023] 🩺 [STALL:DETECTED]                       |                                                   | {"video":1,"trigger":"WATCHDOG","stalledFor":"5274ms","bufferExhausted":true,"paused":true,"pauseFromStall":true,"lastProgressAgoMs":5274,"currentTime":3443.949,"readyState":2,"networkState":2,"buffered":"[3413.93-3443.93]","videoState":{"id":1,"currentTime":"3443.949","paused":true,"readyState":2,"networkState":2,"buffered":"[3413.93-3443.93]","duration":"9223372036854.775","ended":false,"errorCode":null}}
+[13:54:32.023] 🩺 [START]                                |                                                   | {"attempt":1,"lastProgressAgoMs":5274,"currentTime":3443.949,"paused":true,"readyState":2,"networkState":2,"buffered":"[3413.93-3443.93]","video":1,"videoState":{"id":1,"currentTime":"3443.949","paused":true,"readyState":2,"networkState":2,"buffered":"[3413.93-3443.93]","duration":"9223372036854.775","ended":false,"errorCode":null}}
+[13:54:32.024] 🩺 [POLL_START]                           |                                                   | {"timeout":"15000ms","video":1,"videoState":{"id":1,"currentTime":"3443.949","paused":true,"readyState":2,"networkState":2,"buffered":"[3413.93-3443.93]","duration":"9223372036854.775","ended":false,"errorCode":null}}
+[13:54:32.024] 🩺 [DEFER]                                |                                                   | {"bufferHeadroom":"0.35s","minRequired":"0.75s","healPoint":"3443.58-3443.93","buffers":"[3413.93-3443.93]"}
+[13:54:33.807] 🩺 [STALL_SKIP]                           | Stall on non-active video                         | {"video":3,"activeVideoId":1,"stalledFor":"11643ms"}
+[13:54:37.223] 🩺 [DEFER]                                |                                                   | {"bufferHeadroom":"0.35s","minRequired":"0.75s","healPoint":"3443.58-3443.93","buffers":"[3413.93-3443.93]"}
+[13:54:38.039] 🩺 [DEFER]                                | Deferral limit reached, treating as no-heal point | {"bufferHeadroom":"0.35s","minRequired":"0.75s","deferMs":6015,"deferLimitMs":6000,"healPoint":"3443.58-3443.93","buffers":"[3413.93-3443.93]"}
+[13:54:38.039] 🩺 [NO_HEAL_POINT]                        |                                                   | {"duration":"6015ms","currentTime":"3443.949","bufferRanges":"[3413.93-3443.93]","suggestion":"User may need to refresh page","finalState":{"id":1,"currentTime":"3443.949","paused":true,"readyState":2,"networkState":2,"buffered":"[3413.93-3443.93]","duration":"9223372036854.775","ended":false,"errorCode":null}}
+[13:54:38.039] 🧰 [BACKOFF]                              | No heal point                                     | {"video":1,"reason":"no_heal_point","noHealPointCount":1,"backoffMs":5000,"nextHealAllowedInMs":5000}
+[13:54:38.039] 🧰 [BACKOFF]                              | No-heal action selected                           | {"video":1,"reason":"no_heal_point","trigger":"no_heal_point","action":"none","failoverEligible":false,"refreshEligible":false}
+[13:54:38.069] 🩺 [STATE]                                |                                                   | {"video":1,"from":"PAUSED","to":"STALLED","reason":"paused_buffer_exhausted","currentTime":3443.949,"paused":true,"readyState":2,"networkState":2,"buffered":"[3413.93-3443.93]","lastProgressAgoMs":11320,"progressStreakMs":3443632,"progressEligible":true,"pauseFromStall":true}
+[13:54:38.069] 🩺 [WATCHDOG]                             |                                                   | {"video":1,"stalledForMs":11320,"bufferExhausted":true,"state":"STALLED","paused":true,"pauseFromStall":true,"currentTime":3443.949,"readyState":2,"networkState":2,"buffered":"[3413.93-3443.93]"}
+[13:54:38.069] 🧰 [BACKOFF]                              | Stall skipped due to backoff                      | {"video":1,"noHealPointCount":1,"remainingMs":4970}
+[13:54:38.269] 🧭 [EVENT]                                | canplay                                           | {"video":1,"state":"STALLED"}
+[13:54:39.070] 🩺 [STARVE_CLEAR]                         | Buffer starvation cleared                         | {"video":1,"reason":"watchdog","starvedForMs":12091,"bufferAhead":"1.989"}
+[13:54:39.070] 🧭 [MEDIA_STATE]                          | readyState changed 2 -> 4                         | {"video":1}
+[13:54:42.411] 🧭 [EVENT]                                | playing                                           | {"video":1,"state":"STALLED"}
+[13:54:42.411] 🩺 [STATE]                                |                                                   | {"video":1,"from":"STALLED","to":"PLAYING","reason":"playing","currentTime":3443.949,"paused":false,"readyState":4,"networkState":2,"buffered":"[3413.93-3448.05]","lastProgressAgoMs":15662,"progressStreakMs":3443632,"progressEligible":true,"pauseFromStall":false}
+[13:54:42.499] ⚠️ Console                                | MaxListenersExceededWarning: Possible EventEmit... | {}
+[13:54:42.822] 🩺 [STALL_DURATION]                       |                                                   | {"video":1,"reason":"timeupdate","durationMs":16073,"currentTime":3444.228,"bufferAhead":3.9893340000003263,"readyState":4,"networkState":2}
+[13:54:42.822] 🩺 [PROGRESS]                             | Progress streak reset                             | {"video":1,"reason":"timeupdate","currentTime":3444.228,"progressGapMs":16073,"previousStreakMs":3443632}
+[13:54:42.822] 🧰 [BACKOFF]                              | Cleared after progress                            | {"video":1,"reason":"timeupdate","previousNoHealPoints":1,"previousNextHealAllowedMs":217}
+[13:54:42.839] 🧭 [MEDIA_STATE]                          | readyState changed 1 -> 4                         | {"video":3}
+[13:54:42.839] 🧭 [MEDIA_STATE]                          | buffered range count changed 0 -> 1               | {"video":3}
+[13:54:43.084] 🧾 [SYNC]                                 | Playback drift sample                             | {"video":1,"wallDeltaMs":21122,"mediaDeltaMs":5331,"driftMs":15791,"rate":"0.252","bufferEndDelta":"5.46s"}
+[13:54:47.873] 🩺 [PROGRESS]                             | Candidate eligibility reached                     | {"video":1,"reason":"timeupdate","currentTime":3449.278,"progressStreakMs":5051,"minProgressMs":5000}
+
+[CAPTURE STATS]
+Script logs: 161
+Console logs: 13
+Total entries: 174
