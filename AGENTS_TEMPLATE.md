@@ -1,6 +1,8 @@
 # AGENTS.md Template
 
-Copy this file to a target repository as `AGENTS.md`, then replace placeholders and delete sections that do not apply.
+Copy this file to a target repository as `AGENTS.md`.
+If you want the standardized `agent:verify` / `agent:commit` workflow, copy `AGENT_WORKFLOW_TEMPLATE.js` into that repo as well, usually as `build/agent-workflow.js`.
+Then replace placeholders and delete sections that do not apply.
 
 ## Single entrypoint
 - This file is the authoritative agent workflow. Keep other docs thin and refer back here.
@@ -47,25 +49,8 @@ Copy this file to a target repository as `AGENTS.md`, then replace placeholders 
 - When implementation is in progress, continue to completion despite interleaved user messages unless the message explicitly requests an interruption, pause, or redirection.
 - Treat status questions during implementation as non-interrupting by default; answer briefly and continue.
 
-## Role registry (opt-in)
-- Roles are invoked by `Role: <name>` or `Use role: <name>` in the user request.
-
-### Red Team
-- Changes: tests only unless the user explicitly broadens scope.
-- Outputs: top risk list with file refs, an alignment statement, and a spec-gap audit.
-- Focus: adversarial, spec-first tests anchored to architecture docs, config, public contracts, logs, or runtime behavior.
-- Constraints: deterministic, no network, use the repo's existing test stack.
-- Replace repo-specific target rules below with the project's meaningful externally visible behaviors:
-- Allowed targets: `<FAILOVER_OR_EQUIVALENT>`, `<RECOVERY_OR_EQUIVALENT>`, `<STATE_TRANSITIONS>`, `<PUBLIC_API_BEHAVIOR>`.
-- Replace verification commands with the repo's real commands:
-- May run: `<VERIFY_COMMAND>`, `<COMMIT_COMMAND>`.
-
-### Buddy
-- Mission: act as the project specialist and owner's partner; provide professional support in whatever way best fits the request.
-- On invoke: get a feel for the project and follow `AGENTS.md` guidance.
-- Focus: be precise and clear; ask the minimum questions needed to remove ambiguity; prefer quick hypothesis checks before committing; default to lean execution once clarified.
-
 ## Start
+- `AGENT_WORKFLOW_TEMPLATE.js` (or the repo-local file copied from it, typically `build/agent-workflow.js`) if the repo uses the standardized `agent:verify` / `agent:commit` entrypoints
 - `<PROJECT_CONTEXT_DOC>`
 - `<PROJECT_ARCHITECTURE_DOC>`
 
@@ -88,7 +73,7 @@ Copy this file to a target repository as `AGENTS.md`, then replace placeholders 
 - `agent:verify` should honor `BUMP` directly or document that the repo intentionally ignores it.
 - `agent:commit` should require `COMMIT_MSG` (or document a clearly named equivalent).
 - If the repo does not implement those entrypoints yet, either wire them up or replace `<VERIFY_COMMAND>` / `<COMMIT_COMMAND>` with the real equivalents.
-- A single-file starting point for those entrypoints can live in the repo as something like `build/agent-workflow.js`; see the reusable scaffold file if one is provided alongside this template.
+- The preferred single-file starting point for those entrypoints is `AGENT_WORKFLOW_TEMPLATE.js`, usually copied into the target repo as `build/agent-workflow.js`.
 - Document shell-specific command variants if the repo needs them.
 - Define whether a no-bump or local-only verify mode exists: `<NO_BUMP_POLICY>`.
 - For doc-only changes, state whether verification can be skipped: `<DOC_ONLY_POLICY>`.
