@@ -1,5 +1,12 @@
 # Changelog
 
+## 4.21.2 - 2026-04-04T16:12:30.507Z
+Previous: 4.21.1
+Commit: 6a90854
+Changes:
+- Add root agent workflow template file
+- Add reusable agent workflow scaffold
+
 ## 4.21.1 - 2026-04-04T16:04:52.885Z
 Previous: 4.21.0
 Commit: 6f0998e

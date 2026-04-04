@@ -104,7 +104,7 @@ See `docs/CONFIG.md` for the generated defaults and `docs/TUNING.md` for tuning 
 
 ## Version
 
-Current: **4.21.1**
+Current: **4.21.2**
 
 Version increments on bumping builds (patch by default).
 Changelog: `docs/CHANGELOG.md`

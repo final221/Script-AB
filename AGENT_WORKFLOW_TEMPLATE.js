@@ -11,6 +11,9 @@
  *
  * This template is intentionally generic. Edit WORKFLOW to match the repo.
  * It provides the preferred `agent:verify` and `agent:commit` entrypoints,
+ * and the preferred inputs:
+ *   BUMP=patch|minor|major|none
+ *   COMMIT_MSG="..."
  * but it does not guess the repo's real verify/build/stage rules for you.
  */
 
@@ -20,6 +23,7 @@ const path = require('path');
 
 const isWin = process.platform === 'win32';
 const npmCmd = isWin ? 'npm.cmd' : 'npm';
+const VALID_BUMPS = new Set(['patch', 'minor', 'major', 'none']);
 
 const WORKFLOW = {
     verify: {
@@ -57,6 +61,12 @@ const WORKFLOW = {
 const fail = (message) => {
     console.error(message);
     process.exit(1);
+};
+
+const normalizeBump = (value) => {
+    if (!value) return null;
+    const normalized = String(value).trim().toLowerCase();
+    return VALID_BUMPS.has(normalized) ? normalized : null;
 };
 
 const run = (command, args, opts = {}) => {
@@ -131,6 +141,14 @@ const pushWithTrackingIfNeeded = () => {
 };
 
 const runVerify = () => {
+    const bump = process.env.BUMP;
+    if (bump) {
+        const normalizedBump = normalizeBump(bump);
+        if (!normalizedBump) {
+            fail(`[agent-workflow] Invalid BUMP="${bump}". Expected one of: patch, minor, major, none.`);
+        }
+    }
+
     WORKFLOW.verify.steps.forEach((step) => {
         const args = Array.isArray(step.args) ? step.args : [];
         if (step.whenExists && !pathExists(step.whenExists)) {
