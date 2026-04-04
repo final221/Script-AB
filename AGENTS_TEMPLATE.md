@@ -83,6 +83,9 @@ Copy this file to a target repository as `AGENTS.md`, then replace placeholders 
 3) Run the repo's commit or publish command if verification succeeds: `<COMMIT_COMMAND>`.
 
 - If build or test cannot run, stop and report why before making changes.
+- Preferred workflow entrypoints are `agent:verify` and `agent:commit`.
+- If the repo does not implement those entrypoints yet, either wire them up or replace `<VERIFY_COMMAND>` / `<COMMIT_COMMAND>` with the real equivalents.
+- A single-file starting point for those entrypoints can live in the repo as something like `build/agent-workflow.js`; see the reusable scaffold file if one is provided alongside this template.
 - Document shell-specific command variants if the repo needs them.
 - Define whether a no-bump or local-only verify mode exists: `<NO_BUMP_POLICY>`.
 - For doc-only changes, state whether verification can be skipped: `<DOC_ONLY_POLICY>`.

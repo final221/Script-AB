@@ -1,5 +1,13 @@
 # Changelog
 
+## 4.21.1 - 2026-04-04T16:04:52.885Z
+Previous: 4.21.0
+Commit: 6f0998e
+Changes:
+- Add reusable AGENTS template
+- x
+- Speed up post-no-heal sync confirmation and catch-up
+
 ## 4.21.0 - 2026-03-22T14:24:53.256Z
 Previous: 4.20.0
 Commit: da3d347
