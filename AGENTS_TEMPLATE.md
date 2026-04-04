@@ -78,9 +78,9 @@ Copy this file to a target repository as `AGENTS.md`, then replace placeholders 
 - Logging / observability: `<LOGGING_FILES_OR_DIR>`
 
 ## Workflow (always)
-1) Make changes and update or add tests as needed.
-2) Choose bump or release mode per policy, then run the repo's verification command: `<VERIFY_COMMAND>`.
-3) Run the repo's commit or publish command if verification succeeds: `<COMMIT_COMMAND>`.
+1) Make changes (consider test impact; update or add tests as needed)
+2) Choose bump per policy, set `BUMP=patch|minor|major|none`, then run the repo's `agent:verify`
+3) Set `COMMIT_MSG="..."` and run the repo's `agent:commit` if verify succeeds
 
 - If build or test cannot run, stop and report why before making changes.
 - Preferred workflow entrypoints are `agent:verify` and `agent:commit`.
